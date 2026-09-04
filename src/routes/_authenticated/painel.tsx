@@ -113,15 +113,15 @@ function Painel() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map((card) => (
-          <Card key={card.label} className="surface-card hover-lift">
+        {cards.map(({ label, value, icon: Icon, tone }) => (
+          <Card key={label} className="surface-card hover-lift">
             <CardContent className="flex items-start justify-between gap-3 p-5">
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{card.label}</p>
-                <p className="mt-2 text-3xl font-semibold tabular-nums">{card.value}</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+                <p className="mt-2 text-3xl font-semibold tabular-nums">{value}</p>
               </div>
-              <span className={`grid h-10 w-10 place-items-center rounded-xl ring-1 ${card.tone}`}>
-                <card.icon className="h-5 w-5" />
+              <span className={`grid h-10 w-10 place-items-center rounded-xl ring-1 ${tone}`}>
+                <Icon className="h-5 w-5" />
               </span>
             </CardContent>
           </Card>
