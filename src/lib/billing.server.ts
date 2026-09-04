@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { buildTemplateVars, renderTemplate } from "./format";
 
 export type WhatsAppSettings = {
   api_url?: string | null;
@@ -37,10 +38,6 @@ export async function sendViaEvolution(
 
 function iso(date: Date) {
   return date.toISOString().slice(0, 10);
-}
-
-function brl(value: number) {
-  return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
