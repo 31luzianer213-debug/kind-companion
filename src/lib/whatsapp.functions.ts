@@ -14,18 +14,9 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { sendViaEvolution } = await import("./billing.server");
     const { supabase, userId } = context;
-    const { data: settings } = await supabase
-      .from("whatsapp_settings")
-      .select("api_url, api_key, instance_name")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (!settings) {
-      return { ok: false as const, error: "Configure o WhatsApp antes de enviar mensagens." };
-    }
 
     try {
-      await sendViaEvolution(settings, data.phone, data.body);
+      await sendViaEvolution({}, data.phone, data.body, userId);
       await supabase.from("message_logs").insert({
         user_id: userId,
         client_id: data.clientId ?? null,
