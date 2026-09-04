@@ -17,6 +17,7 @@ import { Route as AuthenticatedCobrancasRouteImport } from './routes/_authentica
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedListasRouteImport } from './routes/_authenticated/listas'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
+import { Route as ApiPublicHooksCobrancaDiariaRouteImport } from './routes/api/public/hooks/cobranca-diaria'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +59,12 @@ const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
   path: '/painel',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicHooksCobrancaDiariaRoute =
+  ApiPublicHooksCobrancaDiariaRouteImport.update({
+    id: '/api/public/hooks/cobranca-diaria',
+    path: '/api/public/hooks/cobranca-diaria',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/listas': typeof AuthenticatedListasRoute
   '/painel': typeof AuthenticatedPainelRoute
+  '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -76,6 +84,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/listas': typeof AuthenticatedListasRoute
   '/painel': typeof AuthenticatedPainelRoute
+  '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -87,6 +96,7 @@ export interface FileRoutesById {
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/listas': typeof AuthenticatedListasRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
+  '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/listas'
     | '/painel'
+    | '/api/public/hooks/cobranca-diaria'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/listas'
     | '/painel'
+    | '/api/public/hooks/cobranca-diaria'
   id:
     | '__root__'
     | '/'
@@ -117,12 +129,14 @@ export interface FileRouteTypes {
     | '/_authenticated/configuracoes'
     | '/_authenticated/listas'
     | '/_authenticated/painel'
+    | '/api/public/hooks/cobranca-diaria'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicHooksCobrancaDiariaRoute: typeof ApiPublicHooksCobrancaDiariaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -183,6 +197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPainelRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/hooks/cobranca-diaria': {
+      id: '/api/public/hooks/cobranca-diaria'
+      path: '/api/public/hooks/cobranca-diaria'
+      fullPath: '/api/public/hooks/cobranca-diaria'
+      preLoaderRoute: typeof ApiPublicHooksCobrancaDiariaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -209,6 +230,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicHooksCobrancaDiariaRoute: ApiPublicHooksCobrancaDiariaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
