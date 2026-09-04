@@ -3,8 +3,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Loader2, QrCode, RefreshCw, Smartphone, Unplug } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { sendWhatsAppMessage, testWhatsAppConnection } from "@/lib/whatsapp.functions";
+import {
+  connectWhatsApp,
+  disconnectWhatsApp,
+  getWhatsAppStatus,
+  sendWhatsAppMessage,
+} from "@/lib/whatsapp.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,9 +22,12 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
   head: () => ({
     meta: [
       { title: "WhatsApp — IPTV Manager" },
-      { name: "description", content: "Conecte sua Evolution API e defina a mensagem de cobrança automática." },
+      {
+        name: "description",
+        content: "Conecte seu WhatsApp pelo QR Code e defina a mensagem de cobrança automática.",
+      },
       { property: "og:title", content: "WhatsApp — IPTV Manager" },
-      { property: "og:description", content: "Configuração da cobrança automática pelo WhatsApp." },
+      { property: "og:description", content: "Conexão do WhatsApp e cobrança automática." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -27,9 +36,6 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
 });
 
 type Settings = {
-  api_url: string;
-  api_key: string;
-  instance_name: string;
   message_template: string;
   reminder_days_before: number;
   send_on_due_day: boolean;
@@ -38,9 +44,6 @@ type Settings = {
 };
 
 const defaults: Settings = {
-  api_url: "",
-  api_key: "",
-  instance_name: "",
   message_template:
     "Olá {nome}! Sua mensalidade de {valor} vence em {vencimento}. Qualquer dúvida é só chamar aqui. 😊",
   reminder_days_before: 3,
@@ -49,12 +52,24 @@ const defaults: Settings = {
   auto_send_enabled: false,
 };
 
+const stateLabels: Record<string, { label: string; tone: string }> = {
+  open: { label: "Conectado", tone: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
+  connecting: { label: "Aguardando leitura", tone: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
+  close: { label: "Desconectado", tone: "bg-rose-500/15 text-rose-400 border-rose-500/30" },
+  none: { label: "Sem sessão", tone: "bg-muted text-muted-foreground border-border" },
+};
+
 function Configuracoes() {
   const queryClient = useQueryClient();
-  const test = useServerFn(testWhatsAppConnection);
   const send = useServerFn(sendWhatsAppMessage);
+  const status = useServerFn(getWhatsAppStatus);
+  const connect = useServerFn(connectWhatsApp);
+  const disconnect = useServerFn(disconnectWhatsApp);
+
   const [form, setForm] = useState<Settings>(defaults);
   const [testPhone, setTestPhone] = useState("");
+  const [qr, setQr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const { data } = useQuery({
     queryKey: ["whatsapp-settings"],
@@ -64,12 +79,22 @@ function Configuracoes() {
     },
   });
 
+  const session = useQuery({
+    queryKey: ["whatsapp-session"],
+    queryFn: () => status({}),
+    refetchInterval: qr ? 4000 : 20000,
+  });
+
+  const state = session.data?.state ?? "none";
+  const badge = stateLabels[state] ?? stateLabels["none"]!;
+
+  useEffect(() => {
+    if (state === "open") setQr(null);
+  }, [state]);
+
   useEffect(() => {
     if (data) {
       setForm({
-        api_url: data.api_url ?? "",
-        api_key: data.api_key ?? "",
-        instance_name: data.instance_name ?? "",
         message_template: data.message_template,
         reminder_days_before: data.reminder_days_before,
         send_on_due_day: data.send_on_due_day,
@@ -89,15 +114,48 @@ function Configuracoes() {
     },
     onSuccess: () => {
       toast.success("Configuração salva.");
-      queryClient.invalidateQueries();
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-settings"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
-  async function testar() {
-    const result = await test({});
-    if (result.ok) toast.success("Conexão respondeu com sucesso.");
-    else toast.error(result.error ?? "Não foi possível conectar.");
+  async function gerarQr() {
+    setBusy(true);
+    try {
+      const result = await connect({});
+      if (!result.ok) {
+        toast.error(result.error ?? "Não foi possível gerar o QR Code.");
+        return;
+      }
+      if (result.state === "open") {
+        toast.success("Seu WhatsApp já está conectado.");
+        setQr(null);
+      } else if (result.qr) {
+        setQr(result.qr);
+        toast.info("Escaneie o QR Code no seu WhatsApp.");
+      } else {
+        toast.error("A sessão não devolveu um QR Code. Tente novamente.");
+      }
+      session.refetch();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function desconectar() {
+    setBusy(true);
+    try {
+      const result = await disconnect({});
+      if (result.ok) {
+        toast.success("WhatsApp desconectado.");
+        setQr(null);
+      } else {
+        toast.error(result.error ?? "Não foi possível desconectar.");
+      }
+      session.refetch();
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function enviarTeste() {
@@ -115,11 +173,101 @@ function Configuracoes() {
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <h1 className="text-gradient text-3xl font-bold tracking-tight">Cobrança no WhatsApp</h1>
+        <h1 className="text-gradient text-3xl font-bold tracking-tight">WhatsApp</h1>
         <p className="text-sm text-muted-foreground">
-          Conecte sua Evolution API e escolha como as mensagens são enviadas.
+          Conecte seu número pelo QR Code e escolha como as cobranças são enviadas.
         </p>
       </div>
+
+      <Card className="surface-card overflow-hidden">
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Smartphone className="size-4 text-emerald-400" />
+              Sessão do WhatsApp
+            </CardTitle>
+            <CardDescription>
+              Tudo automático: é só ler o QR Code com o celular que vai enviar as cobranças.
+            </CardDescription>
+          </div>
+          <span className={`rounded-full border px-3 py-1 text-xs font-medium ${badge.tone}`}>
+            {badge.label}
+          </span>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="flex flex-col items-center gap-4 rounded-xl border border-border/70 bg-background/40 p-6 sm:flex-row sm:items-start">
+            <div className="flex size-56 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background">
+              {state === "open" ? (
+                <div className="px-6 text-center text-sm text-emerald-400">
+                  <Smartphone className="mx-auto mb-2 size-8" />
+                  Número conectado e pronto para cobrar.
+                </div>
+              ) : qr ? (
+                <img
+                  src={qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`}
+                  alt="QR Code para conectar o WhatsApp"
+                  className="size-52 rounded-lg bg-white p-2"
+                />
+              ) : (
+                <div className="px-6 text-center text-sm text-muted-foreground">
+                  <QrCode className="mx-auto mb-2 size-8 opacity-60" />
+                  Clique em “Gerar QR Code” para conectar.
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 space-y-3">
+              <ol className="space-y-1 text-sm text-muted-foreground">
+                <li>1. Abra o WhatsApp no celular.</li>
+                <li>2. Toque em Aparelhos conectados.</li>
+                <li>3. Toque em Conectar um aparelho e leia o código.</li>
+              </ol>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" onClick={gerarQr} disabled={busy || state === "open"}>
+                  {busy ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <QrCode className="size-4" />
+                  )}
+                  {qr ? "Gerar novo QR Code" : "Gerar QR Code"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => session.refetch()}
+                  disabled={session.isFetching}
+                >
+                  <RefreshCw className={`size-4 ${session.isFetching ? "animate-spin" : ""}`} />
+                  Atualizar status
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={desconectar}
+                  disabled={busy || state !== "open"}
+                >
+                  <Unplug className="size-4" />
+                  Desconectar
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-2">
+              <Label>Enviar mensagem de teste para</Label>
+              <Input
+                placeholder="85999998888"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+              />
+            </div>
+            <Button type="button" variant="secondary" onClick={enviarTeste}>
+              Enviar teste
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <form
         className="space-y-6"
@@ -128,56 +276,6 @@ function Configuracoes() {
           save.mutate(form);
         }}
       >
-        <Card className="surface-card">
-          <CardHeader>
-            <CardTitle className="text-base">Conexão</CardTitle>
-            <CardDescription>Dados da sua instância da Evolution API.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Endereço da API</Label>
-              <Input
-                placeholder="https://sua-evolution.com"
-                value={form.api_url}
-                onChange={(e) => setForm({ ...form, api_url: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Chave de acesso (apikey)</Label>
-                <Input
-                  type="password"
-                  value={form.api_key}
-                  onChange={(e) => setForm({ ...form, api_key: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Nome da instância</Label>
-                <Input
-                  value={form.instance_name}
-                  onChange={(e) => setForm({ ...form, instance_name: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="flex flex-wrap items-end gap-3">
-              <Button type="button" variant="outline" onClick={testar}>
-                Testar conexão
-              </Button>
-              <div className="space-y-2">
-                <Label>Enviar teste para</Label>
-                <Input
-                  placeholder="85999998888"
-                  value={testPhone}
-                  onChange={(e) => setTestPhone(e.target.value)}
-                />
-              </div>
-              <Button type="button" variant="secondary" onClick={enviarTeste}>
-                Enviar mensagem de teste
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
         <Card className="surface-card">
           <CardHeader>
             <CardTitle className="text-base">Mensagem e regras</CardTitle>
