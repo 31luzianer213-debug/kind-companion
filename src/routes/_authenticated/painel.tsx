@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatBRL, formatDate, formatDateTime } from "@/lib/format";
-import { Send } from "lucide-react";
+import { Send, Users, ListVideo, Wallet, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/painel")({
   head: () => ({
@@ -73,17 +73,37 @@ function Painel() {
   }
 
   const cards = [
-    { label: "Clientes ativos", value: clients.filter((c) => c.status === "active").length },
-    { label: "Listas ativas", value: (data?.lists ?? []).filter((l) => l.status === "active").length },
-    { label: "Receita mensal", value: formatBRL(monthly) },
-    { label: "Em atraso", value: overdue.length },
+    {
+      label: "Clientes ativos",
+      value: clients.filter((c) => c.status === "active").length,
+      icon: Users,
+      tone: "text-primary bg-primary/12 ring-primary/25",
+    },
+    {
+      label: "Listas ativas",
+      value: (data?.lists ?? []).filter((l) => l.status === "active").length,
+      icon: ListVideo,
+      tone: "text-chart-2 bg-chart-2/12 ring-chart-2/25",
+    },
+    {
+      label: "Receita mensal",
+      value: formatBRL(monthly),
+      icon: Wallet,
+      tone: "text-chart-3 bg-chart-3/12 ring-chart-3/25",
+    },
+    {
+      label: "Em atraso",
+      value: overdue.length,
+      icon: AlertTriangle,
+      tone: "text-destructive bg-destructive/12 ring-destructive/25",
+    },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Painel</h1>
+          <h1 className="text-gradient text-3xl font-bold tracking-tight">Painel</h1>
           <p className="text-sm text-muted-foreground">Visão geral do seu negócio.</p>
         </div>
         <Button onClick={run} disabled={running} className="gap-2">
@@ -94,17 +114,22 @@ function Painel() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => (
-          <Card key={card.label}>
-            <CardContent className="p-5">
-              <p className="text-sm text-muted-foreground">{card.label}</p>
-              <p className="mt-2 text-2xl font-semibold">{card.value}</p>
+          <Card key={card.label} className="surface-card hover-lift">
+            <CardContent className="flex items-start justify-between gap-3 p-5">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{card.label}</p>
+                <p className="mt-2 text-3xl font-semibold tabular-nums">{card.value}</p>
+              </div>
+              <span className={`grid h-10 w-10 place-items-center rounded-xl ring-1 ${card.tone}`}>
+                <card.icon className="h-5 w-5" />
+              </span>
             </CardContent>
           </Card>
         ))}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
+        <Card className="surface-card">
           <CardHeader>
             <CardTitle className="text-base">Cobranças em aberto</CardTitle>
           </CardHeader>
@@ -113,7 +138,7 @@ function Painel() {
               <p className="text-sm text-muted-foreground">Nenhuma cobrança em aberto.</p>
             )}
             {open.slice(0, 8).map((invoice) => (
-              <div key={invoice.id} className="flex items-center justify-between gap-2 text-sm">
+              <div key={invoice.id} className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-white/[0.02] px-3 py-2.5 text-sm">
                 <span>
                   {(invoice as unknown as { clients: { name: string } | null }).clients?.name ?? "Cliente"}
                 </span>
@@ -129,7 +154,7 @@ function Painel() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="surface-card">
           <CardHeader>
             <CardTitle className="text-base">Últimas mensagens</CardTitle>
           </CardHeader>
@@ -138,7 +163,7 @@ function Painel() {
               <p className="text-sm text-muted-foreground">Nenhuma mensagem enviada ainda.</p>
             )}
             {(data?.logs ?? []).map((log) => (
-              <div key={log.id} className="text-sm">
+              <div key={log.id} className="rounded-xl border border-border/60 bg-white/[0.02] px-3 py-2.5 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{log.phone}</span>
                   <Badge variant={log.status === "sent" ? "secondary" : "destructive"}>
