@@ -118,11 +118,19 @@ export async function runBillingForUser(supabase: SupabaseClient<any>, userId: s
     const lastSent = invoice.last_reminder_at ? new Date(invoice.last_reminder_at) : null;
     if (lastSent && iso(lastSent) === todayIso) continue;
 
-    const body = template
-      .replace(/\{nome\}/g, client.name)
-      .replace(/\{valor\}/g, brl(invoice.amount))
-      .replace(/\{vencimento\}/g, String(invoice.due_date).split("-").reverse().join("/"))
-      .replace(/\{dias\}/g, String(Math.abs(diffDays)));
+    const chosen =
+      diffDays < 0 && settings?.overdue_template ? settings.overdue_template : template;
+    const body = renderTemplate(
+      chosen,
+      buildTemplateVars({
+        client,
+        list: client.iptv_lists ?? null,
+        settings,
+        amount: invoice.amount,
+        dueDate: invoice.due_date,
+        days: diffDays,
+      }),
+    );
 
     try {
       await sendViaEvolution(settings ?? {}, client.phone, body, userId);
