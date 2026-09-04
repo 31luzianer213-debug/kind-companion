@@ -36,7 +36,18 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
 });
 
 type Settings = {
+  business_name: string;
   message_template: string;
+  overdue_template: string;
+  welcome_template: string;
+  pix_key: string;
+  pix_key_type: string;
+  pix_holder: string;
+  payment_link: string;
+  payment_provider: string;
+  mercadopago_token: string;
+  asaas_token: string;
+  asaas_env: string;
   reminder_days_before: number;
   send_on_due_day: boolean;
   overdue_reminder: boolean;
@@ -44,6 +55,19 @@ type Settings = {
 };
 
 const defaults: Settings = {
+  business_name: "",
+  overdue_template:
+    "Oi {nome}, sua mensalidade de {valor} venceu em {vencimento} ({dias} dias atrás). Para não perder o acesso à lista {lista}, pague pelo PIX {pix}. 🙏",
+  welcome_template:
+    "Seja bem-vindo(a), {nome}! 🎉\n\nLista: {lista}\nServidor: {servidor}\nUsuário: {usuario}\nSenha: {senha}\nTelas: {telas}\n\nVencimento: {vencimento}. Qualquer dúvida é só chamar!",
+  pix_key: "",
+  pix_key_type: "aleatoria",
+  pix_holder: "",
+  payment_link: "",
+  payment_provider: "pix",
+  mercadopago_token: "",
+  asaas_token: "",
+  asaas_env: "production",
   message_template:
     "Olá {nome}! Sua mensalidade de {valor} vence em {vencimento}. Qualquer dúvida é só chamar aqui. 😊",
   reminder_days_before: 3,
@@ -95,6 +119,17 @@ function Configuracoes() {
   useEffect(() => {
     if (data) {
       setForm({
+        business_name: data.business_name ?? "",
+        overdue_template: data.overdue_template ?? defaults.overdue_template,
+        welcome_template: data.welcome_template ?? defaults.welcome_template,
+        pix_key: data.pix_key ?? "",
+        pix_key_type: data.pix_key_type ?? "aleatoria",
+        pix_holder: data.pix_holder ?? "",
+        payment_link: data.payment_link ?? "",
+        payment_provider: data.payment_provider ?? "pix",
+        mercadopago_token: data.mercadopago_token ?? "",
+        asaas_token: data.asaas_token ?? "",
+        asaas_env: data.asaas_env ?? "production",
         message_template: data.message_template,
         reminder_days_before: data.reminder_days_before,
         send_on_due_day: data.send_on_due_day,
