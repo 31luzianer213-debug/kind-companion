@@ -1,9 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type WhatsAppSettings = {
-  api_url: string | null;
-  api_key: string | null;
-  instance_name: string | null;
+  api_url?: string | null;
+  api_key?: string | null;
+  instance_name?: string | null;
   message_template?: string;
   reminder_days_before?: number;
   send_on_due_day?: boolean;
@@ -16,17 +16,18 @@ function normalizeNumber(phone: string) {
 }
 
 export async function sendViaEvolution(
-  settings: WhatsAppSettings,
+  settings: WhatsAppSettings & { user_id?: string },
   phone: string,
   text: string,
+  userId?: string,
 ) {
-  const base = (settings.api_url ?? "").replace(/\/+$/, "");
-  if (!base || !settings.api_key || !settings.instance_name) {
-    throw new Error("Configure o endereço, a chave e a instância do WhatsApp antes de enviar.");
-  }
-  const res = await fetch(`${base}/message/sendText/${settings.instance_name}`, {
+  const { evolutionConfig } = await import("./evolution.server");
+  const owner = userId ?? settings.user_id;
+  if (!owner) throw new Error("Conta sem WhatsApp conectado.");
+  const { base, key, instance } = evolutionConfig(owner);
+  const res = await fetch(`${base}/message/sendText/${instance}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", apikey: settings.api_key },
+    headers: { "Content-Type": "application/json", apikey: key },
     body: JSON.stringify({ number: normalizeNumber(phone), text, textMessage: { text } }),
   });
   const raw = await res.text();
@@ -122,8 +123,7 @@ export async function runBillingForUser(supabase: SupabaseClient<any>, userId: s
       .replace(/\{dias\}/g, String(Math.abs(diffDays)));
 
     try {
-      if (!settings) throw new Error("WhatsApp não configurado.");
-      await sendViaEvolution(settings, client.phone, body);
+      await sendViaEvolution(settings ?? {}, client.phone, body, userId);
       sent += 1;
       await supabase.from("message_logs").insert({
         user_id: userId,
