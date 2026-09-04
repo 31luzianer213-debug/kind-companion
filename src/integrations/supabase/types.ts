@@ -14,7 +14,277 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          created_at: string
+          due_day: number
+          email: string | null
+          id: string
+          list_id: string | null
+          monthly_fee: number
+          name: string
+          next_due_date: string | null
+          notes: string | null
+          phone: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          due_day?: number
+          email?: string | null
+          id?: string
+          list_id?: string | null
+          monthly_fee?: number
+          name: string
+          next_due_date?: string | null
+          notes?: string | null
+          phone: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          due_day?: number
+          email?: string | null
+          id?: string
+          list_id?: string | null
+          monthly_fee?: number
+          name?: string
+          next_due_date?: string | null
+          notes?: string | null
+          phone?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "iptv_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount: number
+          client_id: string
+          created_at: string
+          due_date: string
+          id: string
+          last_reminder_at: string | null
+          paid_at: string | null
+          reminders_sent: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          client_id: string
+          created_at?: string
+          due_date: string
+          id?: string
+          last_reminder_at?: string | null
+          paid_at?: string | null
+          reminders_sent?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          client_id?: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          last_reminder_at?: string | null
+          paid_at?: string | null
+          reminders_sent?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iptv_lists: {
+        Row: {
+          capacity: number
+          channel_count: number
+          content: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          password: string | null
+          server_url: string | null
+          sort_order: number
+          status: string
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          capacity?: number
+          channel_count?: number
+          content?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          password?: string | null
+          server_url?: string | null
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          capacity?: number
+          channel_count?: number
+          content?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          password?: string | null
+          server_url?: string | null
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      message_logs: {
+        Row: {
+          body: string
+          client_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          invoice_id: string | null
+          phone: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          client_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          invoice_id?: string | null
+          phone: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          client_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          invoice_id?: string | null
+          phone?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_logs_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_settings: {
+        Row: {
+          api_key: string | null
+          api_url: string | null
+          auto_send_enabled: boolean
+          created_at: string
+          instance_name: string | null
+          message_template: string
+          overdue_reminder: boolean
+          reminder_days_before: number
+          send_on_due_day: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_key?: string | null
+          api_url?: string | null
+          auto_send_enabled?: boolean
+          created_at?: string
+          instance_name?: string | null
+          message_template?: string
+          overdue_reminder?: boolean
+          reminder_days_before?: number
+          send_on_due_day?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_key?: string | null
+          api_url?: string | null
+          auto_send_enabled?: boolean
+          created_at?: string
+          instance_name?: string | null
+          message_template?: string
+          overdue_reminder?: boolean
+          reminder_days_before?: number
+          send_on_due_day?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
