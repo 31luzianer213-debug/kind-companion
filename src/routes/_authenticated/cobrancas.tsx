@@ -119,7 +119,7 @@ function Cobrancas() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Cobranças</h1>
+          <h1 className="text-gradient text-3xl font-bold tracking-tight">Cobranças</h1>
           <p className="text-sm text-muted-foreground">Mensalidades e lembretes enviados.</p>
         </div>
         <Button onClick={run} disabled={running} className="gap-2">
@@ -136,7 +136,7 @@ function Cobrancas() {
         </TabsList>
       </Tabs>
 
-      <Card>
+      <Card className="surface-card">
         <CardContent className="p-0">
           <Table>
             <TableHeader>

@@ -161,7 +161,7 @@ function Clientes() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Clientes</h1>
+          <h1 className="text-gradient text-3xl font-bold tracking-tight">Clientes</h1>
           <p className="text-sm text-muted-foreground">Quem paga, quanto e quando vence.</p>
         </div>
         <Dialog
@@ -248,7 +248,7 @@ function Clientes() {
         </Dialog>
       </div>
 
-      <Card>
+      <Card className="surface-card">
         <CardContent className="p-0">
           <Table>
             <TableHeader>

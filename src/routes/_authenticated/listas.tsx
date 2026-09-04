@@ -157,7 +157,7 @@ function Listas() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Listas IPTV</h1>
+          <h1 className="text-gradient text-3xl font-bold tracking-tight">Listas IPTV</h1>
           <p className="text-sm text-muted-foreground">Importe, ative e organize suas listas.</p>
         </div>
         <Dialog
@@ -242,7 +242,7 @@ function Listas() {
           <p className="text-sm text-muted-foreground">Nenhuma lista cadastrada ainda.</p>
         )}
         {(lists ?? []).map((list, index) => (
-          <Card key={list.id}>
+          <Card key={list.id} className="surface-card hover-lift">
             <CardHeader className="flex-row items-start justify-between gap-2 space-y-0">
               <div>
                 <CardTitle className="text-base">{list.name}</CardTitle>

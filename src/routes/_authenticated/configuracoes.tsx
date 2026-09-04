@@ -115,7 +115,7 @@ function Configuracoes() {
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Cobrança no WhatsApp</h1>
+        <h1 className="text-gradient text-3xl font-bold tracking-tight">Cobrança no WhatsApp</h1>
         <p className="text-sm text-muted-foreground">
           Conecte sua Evolution API e escolha como as mensagens são enviadas.
         </p>
@@ -128,7 +128,7 @@ function Configuracoes() {
           save.mutate(form);
         }}
       >
-        <Card>
+        <Card className="surface-card">
           <CardHeader>
             <CardTitle className="text-base">Conexão</CardTitle>
             <CardDescription>Dados da sua instância da Evolution API.</CardDescription>
@@ -178,7 +178,7 @@ function Configuracoes() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="surface-card">
           <CardHeader>
             <CardTitle className="text-base">Mensagem e regras</CardTitle>
             <CardDescription>
