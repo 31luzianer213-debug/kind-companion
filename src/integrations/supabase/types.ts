@@ -16,46 +16,58 @@ export type Database = {
     Tables: {
       clients: {
         Row: {
+          activated_at: string | null
           created_at: string
           due_day: number
           email: string | null
           id: string
+          iptv_password: string | null
+          iptv_username: string | null
           list_id: string | null
           monthly_fee: number
           name: string
           next_due_date: string | null
           notes: string | null
           phone: string
+          screens: number
           status: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          activated_at?: string | null
           created_at?: string
           due_day?: number
           email?: string | null
           id?: string
+          iptv_password?: string | null
+          iptv_username?: string | null
           list_id?: string | null
           monthly_fee?: number
           name: string
           next_due_date?: string | null
           notes?: string | null
           phone: string
+          screens?: number
           status?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          activated_at?: string | null
           created_at?: string
           due_day?: number
           email?: string | null
           id?: string
+          iptv_password?: string | null
+          iptv_username?: string | null
           list_id?: string | null
           monthly_fee?: number
           name?: string
           next_due_date?: string | null
           notes?: string | null
           phone?: string
+          screens?: number
           status?: string
           updated_at?: string
           user_id?: string
@@ -247,41 +259,74 @@ export type Database = {
         Row: {
           api_key: string | null
           api_url: string | null
+          asaas_env: string
+          asaas_token: string | null
           auto_send_enabled: boolean
+          business_name: string | null
           created_at: string
           instance_name: string | null
+          mercadopago_token: string | null
           message_template: string
           overdue_reminder: boolean
+          overdue_template: string
+          payment_link: string | null
+          payment_provider: string
+          pix_holder: string | null
+          pix_key: string | null
+          pix_key_type: string
           reminder_days_before: number
           send_on_due_day: boolean
           updated_at: string
           user_id: string
+          welcome_template: string
         }
         Insert: {
           api_key?: string | null
           api_url?: string | null
+          asaas_env?: string
+          asaas_token?: string | null
           auto_send_enabled?: boolean
+          business_name?: string | null
           created_at?: string
           instance_name?: string | null
+          mercadopago_token?: string | null
           message_template?: string
           overdue_reminder?: boolean
+          overdue_template?: string
+          payment_link?: string | null
+          payment_provider?: string
+          pix_holder?: string | null
+          pix_key?: string | null
+          pix_key_type?: string
           reminder_days_before?: number
           send_on_due_day?: boolean
           updated_at?: string
           user_id: string
+          welcome_template?: string
         }
         Update: {
           api_key?: string | null
           api_url?: string | null
+          asaas_env?: string
+          asaas_token?: string | null
           auto_send_enabled?: boolean
+          business_name?: string | null
           created_at?: string
           instance_name?: string | null
+          mercadopago_token?: string | null
           message_template?: string
           overdue_reminder?: boolean
+          overdue_template?: string
+          payment_link?: string | null
+          payment_provider?: string
+          pix_holder?: string | null
+          pix_key?: string | null
+          pix_key_type?: string
           reminder_days_before?: number
           send_on_due_day?: boolean
           updated_at?: string
           user_id?: string
+          welcome_template?: string
         }
         Relationships: []
       }
