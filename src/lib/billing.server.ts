@@ -91,7 +91,7 @@ export async function runBillingForUser(supabase: SupabaseClient<any>, userId: s
 
   const { data: invoices } = await supabase
     .from("invoices")
-    .select("*, clients(name, phone)")
+    .select("*, clients(*, iptv_lists(name, server_url, username, password))")
     .eq("user_id", userId)
     .in("status", ["pending", "overdue"]);
 
@@ -101,7 +101,9 @@ export async function runBillingForUser(supabase: SupabaseClient<any>, userId: s
     "Olá {nome}! Sua mensalidade de {valor} vence em {vencimento}.";
 
   for (const invoice of invoices ?? []) {
-    const client = invoice.clients as { name: string; phone: string } | null;
+    const client = invoice.clients as
+      | (Record<string, any> & { name: string; phone: string; iptv_lists?: any })
+      | null;
     if (!client) continue;
 
     const due = new Date(`${invoice.due_date}T12:00:00`);
