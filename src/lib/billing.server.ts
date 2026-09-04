@@ -123,8 +123,7 @@ export async function runBillingForUser(supabase: SupabaseClient<any>, userId: s
       .replace(/\{dias\}/g, String(Math.abs(diffDays)));
 
     try {
-      if (!settings) throw new Error("WhatsApp não configurado.");
-      await sendViaEvolution(settings, client.phone, body);
+      await sendViaEvolution(settings ?? {}, client.phone, body, userId);
       sent += 1;
       await supabase.from("message_logs").insert({
         user_id: userId,
