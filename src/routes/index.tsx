@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { Tv, Users, MessageCircle, BarChart3, Clock } from "lucide-react";
+import logo from "@/assets/logo.png";
+import { Users, MessageCircle, BarChart3, Clock, MonitorPlay } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,7 +32,7 @@ const features = [
     text: "Controle total da sua base: valor, vencimento, status e a lista que cada pessoa usa.",
   },
   {
-    icon: Tv,
+    icon: MonitorPlay,
     title: "Controle de listas",
     text: "Importe arquivos M3U, ative, desative e acompanhe a lotação de cada lista.",
   },
@@ -52,7 +53,7 @@ function Index() {
     <main className="min-h-screen bg-background text-foreground">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <span className="flex items-center gap-2 text-lg font-semibold">
-          <Tv className="h-5 w-5 text-primary" />
+          <img src={logo} alt="IPTV Manager" width={36} height={36} className="h-9 w-9" />
           IPTV Manager
         </span>
         <Button asChild variant="secondary">

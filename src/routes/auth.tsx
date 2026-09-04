@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tv } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -53,11 +53,11 @@ function AuthPage() {
   async function signUp(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/painel`,
+        emailRedirectTo: `${window.location.origin}/auth`,
         data: { display_name: name },
       },
     });
@@ -66,13 +66,17 @@ function AuthPage() {
       toast.error(error.message);
       return;
     }
-    toast.success("Conta criada! Você já pode entrar.");
+    if (!data.session) {
+      toast.success("Conta criada! Confirme o e-mail que enviamos para entrar.");
+      return;
+    }
+    toast.success("Conta criada com sucesso!");
     navigate({ to: "/painel" });
   }
 
   async function google() {
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: `${window.location.origin}/auth`,
     });
     if (result.error) {
       toast.error("Não foi possível entrar com o Google.");
@@ -83,12 +87,12 @@ function AuthPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+    <main className="app-aurora flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md">
         <Link to="/" className="mb-6 flex items-center justify-center gap-2 text-lg font-semibold">
-          <Tv className="h-5 w-5 text-primary" /> IPTV Manager
+          <img src={logo} alt="IPTV Manager" width={36} height={36} className="h-9 w-9" /> IPTV Manager
         </Link>
-        <Card>
+        <Card className="surface-card">
           <CardHeader>
             <CardTitle>Acesse seu painel</CardTitle>
           </CardHeader>
