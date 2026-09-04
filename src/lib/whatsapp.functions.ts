@@ -41,31 +41,58 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
     }
   });
 
-export const testWhatsAppConnection = createServerFn({ method: "POST" })
+/** Estado atual da sessão de WhatsApp da conta. */
+export const getWhatsAppStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data: settings } = await supabase
-      .from("whatsapp_settings")
-      .select("api_url, api_key, instance_name")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    const base = (settings?.api_url ?? "").replace(/\/+$/, "");
-    if (!base || !settings?.api_key || !settings?.instance_name) {
-      return { ok: false as const, error: "Preencha endereço, chave e instância." };
-    }
+    const { fetchState } = await import("./evolution.server");
     try {
-      const res = await fetch(`${base}/instance/connectionState/${settings.instance_name}`, {
-        headers: { apikey: settings.api_key },
-      });
-      const raw = await res.text();
-      if (!res.ok) return { ok: false as const, error: `Erro ${res.status}: ${raw.slice(0, 200)}` };
+      const state = await fetchState(context.userId);
+      return { ok: true as const, state, error: null };
+    } catch (error) {
+      return {
+        ok: false as const,
+        state: "none" as const,
+        error: error instanceof Error ? error.message : "Não foi possível consultar.",
+      };
+    }
+  });
+
+/** Cria/abre a sessão e devolve o QR Code. */
+export const connectWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { connectInstance } = await import("./evolution.server");
+    try {
+      const result = await connectInstance(context.userId);
+      return {
+        ok: true as const,
+        state: result.state,
+        qr: result.qr?.base64 ?? null,
+        error: null,
+      };
+    } catch (error) {
+      return {
+        ok: false as const,
+        state: "close" as const,
+        qr: null,
+        error: error instanceof Error ? error.message : "Não foi possível gerar o QR Code.",
+      };
+    }
+  });
+
+/** Desconecta o número conectado. */
+export const disconnectWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { logoutInstance } = await import("./evolution.server");
+    try {
+      await logoutInstance(context.userId);
       return { ok: true as const, error: null };
     } catch (error) {
       return {
         ok: false as const,
-        error: error instanceof Error ? error.message : "Não foi possível conectar.",
+        error: error instanceof Error ? error.message : "Não foi possível desconectar.",
       };
     }
   });
