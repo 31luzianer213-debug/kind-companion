@@ -5,7 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { sendWhatsAppMessage } from "@/lib/whatsapp.functions";
+import { sendAccessDetails, sendWhatsAppMessage } from "@/lib/whatsapp.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatBRL, formatDate } from "@/lib/format";
-import { MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
+import { KeyRound, MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/clientes")({
   head: () => ({
@@ -56,6 +56,10 @@ type ClientForm = {
   status: string;
   list_id: string;
   notes: string;
+  iptv_username: string;
+  iptv_password: string;
+  screens: string;
+  activated_at: string;
 };
 
 const empty: ClientForm = {
@@ -68,11 +72,16 @@ const empty: ClientForm = {
   status: "active",
   list_id: "none",
   notes: "",
+  iptv_username: "",
+  iptv_password: "",
+  screens: "1",
+  activated_at: "",
 };
 
 function Clientes() {
   const queryClient = useQueryClient();
   const send = useServerFn(sendWhatsAppMessage);
+  const sendAccess = useServerFn(sendAccessDetails);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<ClientForm>(empty);
 
@@ -101,6 +110,10 @@ function Clientes() {
         status: values.status,
         list_id: values.list_id === "none" ? null : values.list_id,
         notes: values.notes || null,
+        iptv_username: values.iptv_username || null,
+        iptv_password: values.iptv_password || null,
+        screens: Number(values.screens || 1),
+        activated_at: values.activated_at || null,
       };
       const query = values.id
         ? supabase.from("clients").update(payload).eq("id", values.id)
@@ -139,6 +152,13 @@ function Clientes() {
     queryClient.invalidateQueries();
   }
 
+  async function enviarAcesso(clientId: string) {
+    const result = await sendAccess({ data: { clientId } });
+    if (result.ok) toast.success("Dados de acesso enviados.");
+    else toast.error(result.error ?? "Falha no envio.");
+    queryClient.invalidateQueries();
+  }
+
   function edit(client: Tables<"clients">) {
     setForm({
       id: client["id"],
@@ -151,6 +171,10 @@ function Clientes() {
       status: client["status"] ?? "active",
       list_id: client["list_id"] ?? "none",
       notes: client["notes"] ?? "",
+      iptv_username: client["iptv_username"] ?? "",
+      iptv_password: client["iptv_password"] ?? "",
+      screens: String(client["screens"] ?? 1),
+      activated_at: client["activated_at"] ?? "",
     });
     setOpen(true);
   }
@@ -236,6 +260,24 @@ function Clientes() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Usuário do acesso IPTV</Label>
+                  <Input value={form.iptv_username} onChange={(e) => setForm({ ...form, iptv_username: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Senha do acesso IPTV</Label>
+                  <Input value={form.iptv_password} onChange={(e) => setForm({ ...form, iptv_password: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telas contratadas</Label>
+                  <Input type="number" min={1} max={10} value={form.screens} onChange={(e) => setForm({ ...form, screens: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Ativado em</Label>
+                  <Input type="date" value={form.activated_at} onChange={(e) => setForm({ ...form, activated_at: e.target.value })} />
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label>Observações</Label>
                 <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
@@ -286,6 +328,9 @@ function Clientes() {
                     <div className="flex justify-end gap-1">
                       <Button size="icon" variant="ghost" title="Cobrar no WhatsApp" onClick={() => cobrar(client)}>
                         <MessageCircle className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" title="Enviar dados de acesso" onClick={() => enviarAcesso(client.id)}>
+                        <KeyRound className="h-4 w-4" />
                       </Button>
                       <Button size="icon" variant="ghost" title="Editar" onClick={() => edit(client)}>
                         <Pencil className="h-4 w-4" />

@@ -138,3 +138,63 @@ export const markInvoicePaid = createServerFn({ method: "POST" })
 
     return { ok: true as const, nextDueDate: nextIso };
   });
+
+/** Envia a mensagem de boas-vindas com os dados de acesso do cliente. */
+export const sendAccessDetails = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { clientId: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { sendViaEvolution } = await import("./billing.server");
+    const { buildTemplateVars, renderTemplate } = await import("./format");
+    const { supabase, userId } = context;
+
+    const [{ data: client }, { data: settings }] = await Promise.all([
+      supabase
+        .from("clients")
+        .select("*, iptv_lists(name, server_url, username, password)")
+        .eq("id", data.clientId)
+        .eq("user_id", userId)
+        .maybeSingle(),
+      supabase.from("whatsapp_settings").select("*").eq("user_id", userId).maybeSingle(),
+    ]);
+
+    if (!client) return { ok: false as const, error: "Cliente não encontrado." };
+
+    const template =
+      settings?.welcome_template ??
+      "Bem-vindo(a), {nome}! Lista: {lista} • Servidor: {servidor} • Usuário: {usuario} • Senha: {senha}";
+
+    const body = renderTemplate(
+      template,
+      buildTemplateVars({
+        client,
+        list: (client as any).iptv_lists ?? null,
+        settings,
+        amount: client.monthly_fee,
+        dueDate: client.next_due_date,
+      }),
+    );
+
+    try {
+      await sendViaEvolution({}, client.phone, body, userId);
+      await supabase.from("message_logs").insert({
+        user_id: userId,
+        client_id: client.id,
+        phone: client.phone,
+        body,
+        status: "sent",
+      });
+      return { ok: true as const, error: null };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro desconhecido";
+      await supabase.from("message_logs").insert({
+        user_id: userId,
+        client_id: client.id,
+        phone: client.phone,
+        body,
+        status: "failed",
+        error: message,
+      });
+      return { ok: false as const, error: message };
+    }
+  });

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, QrCode, RefreshCw, Smartphone, Unplug } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { TEMPLATE_VARS } from "@/lib/format";
 import {
   connectWhatsApp,
   disconnectWhatsApp,
@@ -36,7 +37,18 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
 });
 
 type Settings = {
+  business_name: string;
   message_template: string;
+  overdue_template: string;
+  welcome_template: string;
+  pix_key: string;
+  pix_key_type: string;
+  pix_holder: string;
+  payment_link: string;
+  payment_provider: string;
+  mercadopago_token: string;
+  asaas_token: string;
+  asaas_env: string;
   reminder_days_before: number;
   send_on_due_day: boolean;
   overdue_reminder: boolean;
@@ -44,6 +56,19 @@ type Settings = {
 };
 
 const defaults: Settings = {
+  business_name: "",
+  overdue_template:
+    "Oi {nome}, sua mensalidade de {valor} venceu em {vencimento} ({dias} dias atrás). Para não perder o acesso à lista {lista}, pague pelo PIX {pix}. 🙏",
+  welcome_template:
+    "Seja bem-vindo(a), {nome}! 🎉\n\nLista: {lista}\nServidor: {servidor}\nUsuário: {usuario}\nSenha: {senha}\nTelas: {telas}\n\nVencimento: {vencimento}. Qualquer dúvida é só chamar!",
+  pix_key: "",
+  pix_key_type: "aleatoria",
+  pix_holder: "",
+  payment_link: "",
+  payment_provider: "pix",
+  mercadopago_token: "",
+  asaas_token: "",
+  asaas_env: "production",
   message_template:
     "Olá {nome}! Sua mensalidade de {valor} vence em {vencimento}. Qualquer dúvida é só chamar aqui. 😊",
   reminder_days_before: 3,
@@ -95,6 +120,17 @@ function Configuracoes() {
   useEffect(() => {
     if (data) {
       setForm({
+        business_name: data.business_name ?? "",
+        overdue_template: data.overdue_template ?? defaults.overdue_template,
+        welcome_template: data.welcome_template ?? defaults.welcome_template,
+        pix_key: data.pix_key ?? "",
+        pix_key_type: data.pix_key_type ?? "aleatoria",
+        pix_holder: data.pix_holder ?? "",
+        payment_link: data.payment_link ?? "",
+        payment_provider: data.payment_provider ?? "pix",
+        mercadopago_token: data.mercadopago_token ?? "",
+        asaas_token: data.asaas_token ?? "",
+        asaas_env: data.asaas_env ?? "production",
         message_template: data.message_template,
         reminder_days_before: data.reminder_days_before,
         send_on_due_day: data.send_on_due_day,
@@ -278,18 +314,143 @@ function Configuracoes() {
       >
         <Card className="surface-card">
           <CardHeader>
-            <CardTitle className="text-base">Mensagem e regras</CardTitle>
+            <CardTitle className="text-base">Pagamentos</CardTitle>
             <CardDescription>
-              Use {"{nome}"}, {"{valor}"}, {"{vencimento}"} e {"{dias}"} no texto.
+              Esses dados entram automaticamente nas mensagens de cobrança.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Nome do seu negócio</Label>
+                <Input
+                  placeholder="Minha TV Play"
+                  value={form.business_name}
+                  onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Forma de cobrança preferida</Label>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  value={form.payment_provider}
+                  onChange={(e) => setForm({ ...form, payment_provider: e.target.value })}
+                >
+                  <option value="pix">PIX manual</option>
+                  <option value="link">Link de pagamento</option>
+                  <option value="mercadopago">Mercado Pago</option>
+                  <option value="asaas">Asaas</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Tipo da chave PIX</Label>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  value={form.pix_key_type}
+                  onChange={(e) => setForm({ ...form, pix_key_type: e.target.value })}
+                >
+                  <option value="aleatoria">Aleatória</option>
+                  <option value="cpf">CPF/CNPJ</option>
+                  <option value="email">E-mail</option>
+                  <option value="telefone">Telefone</option>
+                </select>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Chave PIX</Label>
+                <Input
+                  value={form.pix_key}
+                  onChange={(e) => setForm({ ...form, pix_key: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Titular da chave</Label>
+                <Input
+                  value={form.pix_holder}
+                  onChange={(e) => setForm({ ...form, pix_holder: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Link de pagamento (opcional)</Label>
+                <Input
+                  placeholder="https://..."
+                  value={form.payment_link}
+                  onChange={(e) => setForm({ ...form, payment_link: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Token do Mercado Pago</Label>
+                <Input
+                  type="password"
+                  placeholder="APP_USR-..."
+                  value={form.mercadopago_token}
+                  onChange={(e) => setForm({ ...form, mercadopago_token: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Token do Asaas</Label>
+                <Input
+                  type="password"
+                  placeholder="$aact_..."
+                  value={form.asaas_token}
+                  onChange={(e) => setForm({ ...form, asaas_token: e.target.value })}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Os tokens ficam guardados só na sua conta e são usados para gerar cobranças
+              automáticas. Você pode deixar em branco e cobrar apenas pelo PIX.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="surface-card">
+          <CardHeader>
+            <CardTitle className="text-base">Mensagens</CardTitle>
+            <CardDescription>Clique em uma etiqueta para ver o que ela preenche.</CardDescription>
+            <div className="flex flex-wrap gap-1.5 pt-2">
+              {TEMPLATE_VARS.map((v) => (
+                <span
+                  key={v.key}
+                  title={v.label}
+                  className="rounded-full border border-border bg-background/60 px-2 py-0.5 font-mono text-[11px] text-muted-foreground"
+                >
+                  {"{" + v.key + "}"}
+                </span>
+              ))}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Modelo da mensagem</Label>
+              <Label>Aviso antes do vencimento</Label>
               <Textarea
                 rows={4}
                 value={form.message_template}
                 onChange={(e) => setForm({ ...form, message_template: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Mensagem para quem está atrasado</Label>
+              <Textarea
+                rows={4}
+                value={form.overdue_template}
+                onChange={(e) => setForm({ ...form, overdue_template: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Boas-vindas com os dados de acesso</Label>
+              <Textarea
+                rows={7}
+                value={form.welcome_template}
+                onChange={(e) => setForm({ ...form, welcome_template: e.target.value })}
               />
             </div>
             <div className="space-y-2">

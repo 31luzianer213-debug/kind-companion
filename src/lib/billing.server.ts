@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { buildTemplateVars, renderTemplate } from "./format";
 
 export type WhatsAppSettings = {
   api_url?: string | null;
@@ -8,6 +9,12 @@ export type WhatsAppSettings = {
   reminder_days_before?: number;
   send_on_due_day?: boolean;
   overdue_reminder?: boolean;
+  overdue_template?: string | null;
+  welcome_template?: string | null;
+  business_name?: string | null;
+  pix_key?: string | null;
+  pix_holder?: string | null;
+  payment_link?: string | null;
 };
 
 function normalizeNumber(phone: string) {
@@ -37,10 +44,6 @@ export async function sendViaEvolution(
 
 function iso(date: Date) {
   return date.toISOString().slice(0, 10);
-}
-
-function brl(value: number) {
-  return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -91,7 +94,7 @@ export async function runBillingForUser(supabase: SupabaseClient<any>, userId: s
 
   const { data: invoices } = await supabase
     .from("invoices")
-    .select("*, clients(name, phone)")
+    .select("*, clients(*, iptv_lists(name, server_url, username, password))")
     .eq("user_id", userId)
     .in("status", ["pending", "overdue"]);
 
@@ -101,7 +104,9 @@ export async function runBillingForUser(supabase: SupabaseClient<any>, userId: s
     "Olá {nome}! Sua mensalidade de {valor} vence em {vencimento}.";
 
   for (const invoice of invoices ?? []) {
-    const client = invoice.clients as { name: string; phone: string } | null;
+    const client = invoice.clients as
+      | (Record<string, any> & { name: string; phone: string; iptv_lists?: any })
+      | null;
     if (!client) continue;
 
     const due = new Date(`${invoice.due_date}T12:00:00`);
@@ -116,11 +121,19 @@ export async function runBillingForUser(supabase: SupabaseClient<any>, userId: s
     const lastSent = invoice.last_reminder_at ? new Date(invoice.last_reminder_at) : null;
     if (lastSent && iso(lastSent) === todayIso) continue;
 
-    const body = template
-      .replace(/\{nome\}/g, client.name)
-      .replace(/\{valor\}/g, brl(invoice.amount))
-      .replace(/\{vencimento\}/g, String(invoice.due_date).split("-").reverse().join("/"))
-      .replace(/\{dias\}/g, String(Math.abs(diffDays)));
+    const chosen =
+      diffDays < 0 && settings?.overdue_template ? settings.overdue_template : template;
+    const body = renderTemplate(
+      chosen,
+      buildTemplateVars({
+        client,
+        list: client.iptv_lists ?? null,
+        settings,
+        amount: invoice.amount,
+        dueDate: invoice.due_date,
+        days: diffDays,
+      }),
+    );
 
     try {
       await sendViaEvolution(settings ?? {}, client.phone, body, userId);
