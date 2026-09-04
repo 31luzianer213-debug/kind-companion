@@ -1,9 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type WhatsAppSettings = {
-  api_url: string | null;
-  api_key: string | null;
-  instance_name: string | null;
+  api_url?: string | null;
+  api_key?: string | null;
+  instance_name?: string | null;
   message_template?: string;
   reminder_days_before?: number;
   send_on_due_day?: boolean;
