@@ -9,6 +9,12 @@ export type WhatsAppSettings = {
   reminder_days_before?: number;
   send_on_due_day?: boolean;
   overdue_reminder?: boolean;
+  overdue_template?: string | null;
+  welcome_template?: string | null;
+  business_name?: string | null;
+  pix_key?: string | null;
+  pix_holder?: string | null;
+  payment_link?: string | null;
 };
 
 function normalizeNumber(phone: string) {
