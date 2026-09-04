@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { sendWhatsAppMessage } from "@/lib/whatsapp.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -138,18 +139,18 @@ function Clientes() {
     queryClient.invalidateQueries();
   }
 
-  function edit(client: Record<string, unknown>) {
+  function edit(client: Tables<"clients">) {
     setForm({
-      id: client.id as string,
-      name: (client.name as string) ?? "",
-      phone: (client.phone as string) ?? "",
-      email: (client.email as string) ?? "",
-      monthly_fee: String(client.monthly_fee ?? ""),
-      due_day: String(client.due_day ?? 10),
-      next_due_date: (client.next_due_date as string) ?? "",
-      status: (client.status as string) ?? "active",
-      list_id: (client.list_id as string) ?? "none",
-      notes: (client.notes as string) ?? "",
+      id: client["id"],
+      name: client["name"] ?? "",
+      phone: client["phone"] ?? "",
+      email: client["email"] ?? "",
+      monthly_fee: String(client["monthly_fee"] ?? ""),
+      due_day: String(client["due_day"] ?? 10),
+      next_due_date: client["next_due_date"] ?? "",
+      status: client["status"] ?? "active",
+      list_id: client["list_id"] ?? "none",
+      notes: client["notes"] ?? "",
     });
     setOpen(true);
   }

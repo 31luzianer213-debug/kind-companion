@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { markInvoicePaid, runAutoBilling, sendWhatsAppMessage } from "@/lib/whatsapp.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,8 @@ export const Route = createFileRoute("/_authenticated/cobrancas")({
   }),
   component: Cobrancas,
 });
+
+type InvoiceRow = Tables<"invoices"> & { clients: { name: string; phone: string } | null };
 
 const labels: Record<string, string> = {
   pending: "Pendente",
@@ -70,24 +73,27 @@ function Cobrancas() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  async function lembrar(invoice: Record<string, unknown>) {
-    const client = invoice.clients as { name: string; phone: string } | null;
-    if (!client) return toast.error("Cliente não encontrado.");
+  async function lembrar(invoice: InvoiceRow) {
+    const client = invoice.clients;
+    if (!client) {
+      toast.error("Cliente não encontrado.");
+      return;
+    }
     const template =
       data?.template ||
       "Olá {nome}! Sua mensalidade de {valor} vence em {vencimento}.";
     const body = renderTemplate(template, {
       nome: client.name,
-      valor: formatBRL(invoice.amount as number),
-      vencimento: formatDate(invoice.due_date as string),
+      valor: formatBRL(invoice.amount),
+      vencimento: formatDate(invoice.due_date),
       dias: "",
     });
     const result = await send({
       data: {
         phone: client.phone,
         body,
-        clientId: invoice.client_id as string,
-        invoiceId: invoice.id as string,
+        clientId: invoice.client_id,
+        invoiceId: invoice.id,
       },
     });
     if (result.ok) toast.success("Lembrete enviado.");
@@ -174,7 +180,7 @@ function Cobrancas() {
                   <TableCell>{invoice.reminders_sent}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button size="icon" variant="ghost" title="Enviar lembrete" onClick={() => lembrar(invoice)}>
+                      <Button size="icon" variant="ghost" title="Enviar lembrete" onClick={() => lembrar(invoice as InvoiceRow)}>
                         <MessageCircle className="h-4 w-4" />
                       </Button>
                       {invoice.status !== "paid" && (

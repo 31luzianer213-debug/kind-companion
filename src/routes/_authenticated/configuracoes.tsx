@@ -101,7 +101,10 @@ function Configuracoes() {
   }
 
   async function enviarTeste() {
-    if (!testPhone) return toast.error("Informe um número para o teste.");
+    if (!testPhone) {
+      toast.error("Informe um número para o teste.");
+      return;
+    }
     const result = await send({
       data: { phone: testPhone, body: "Mensagem de teste do seu painel IPTV. ✅" },
     });
