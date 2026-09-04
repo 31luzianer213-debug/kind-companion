@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/logo.png";
 import {
-  Tv,
   Users,
   ListVideo,
   Receipt,
@@ -45,9 +45,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const brand = (
     <div className="flex items-center gap-2.5">
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/15 ring-1 ring-primary/30">
-        <Tv className="h-4.5 w-4.5 text-primary" />
-      </span>
+      <img src={logo} alt="IPTV Manager" width={36} height={36} className="h-9 w-9" />
       <span className="text-[15px] font-semibold tracking-tight">IPTV Manager</span>
     </div>
   );
