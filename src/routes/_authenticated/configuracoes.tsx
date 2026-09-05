@@ -79,8 +79,8 @@ const defaults: Settings = {
 
 const stateLabels: Record<string, { label: string; tone: string }> = {
   open: { label: "Conectado", tone: "bg-primary/10 text-primary border-primary/30" },
-  connecting: { label: "Aguardando leitura", tone: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-  close: { label: "Desconectado", tone: "bg-rose-500/15 text-rose-400 border-rose-500/30" },
+  connecting: { label: "Aguardando leitura", tone: "bg-amber-100 text-amber-700 border-amber-300" },
+  close: { label: "Desconectado", tone: "bg-rose-100 text-rose-700 border-rose-300" },
   none: { label: "Sem sessão", tone: "bg-muted text-muted-foreground border-border" },
 };
 
