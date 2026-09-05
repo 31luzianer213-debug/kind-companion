@@ -463,10 +463,12 @@ function Configuracoes() {
 
           </CardContent>
         </Card>
+        </TabsContent>
 
+        <TabsContent value="mensagens" className="space-y-6">
         <Card className="surface-card">
           <CardHeader>
-            <CardTitle className="text-base">Mensagens</CardTitle>
+            <CardTitle className="text-base">Modelos de mensagem</CardTitle>
             <CardDescription>Clique em uma etiqueta para ver o que ela preenche.</CardDescription>
             <div className="flex flex-wrap gap-1.5 pt-2">
               {TEMPLATE_VARS.map((v) => (
@@ -505,6 +507,31 @@ function Configuracoes() {
                 onChange={(e) => setForm({ ...form, welcome_template: e.target.value })}
               />
             </div>
+          </CardContent>
+        </Card>
+        </TabsContent>
+
+        <TabsContent value="automacao" className="space-y-6">
+        <Card className="surface-card">
+          <CardHeader>
+            <CardTitle className="text-base">Envio automático</CardTitle>
+            <CardDescription>
+              Quando ligado, o sistema envia as cobranças sozinho todo dia às 9h.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
+              <div>
+                <p className="text-sm font-medium">Cobrança automática ligada</p>
+                <p className="text-xs text-muted-foreground">
+                  Desligue para enviar tudo manualmente.
+                </p>
+              </div>
+              <Switch
+                checked={form.auto_send_enabled}
+                onCheckedChange={(checked) => setForm({ ...form, auto_send_enabled: checked })}
+              />
+            </div>
             <div className="space-y-2">
               <Label>Avisar quantos dias antes do vencimento</Label>
               <Input
@@ -530,20 +557,19 @@ function Configuracoes() {
                 onCheckedChange={(checked) => setForm({ ...form, overdue_reminder: checked })}
               />
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-border p-3">
-              <span className="text-sm">Cobrança automática ligada</span>
-              <Switch
-                checked={form.auto_send_enabled}
-                onCheckedChange={(checked) => setForm({ ...form, auto_send_enabled: checked })}
-              />
-            </div>
           </CardContent>
         </Card>
+        </TabsContent>
 
-        <Button type="submit" disabled={save.isPending}>
-          Salvar configuração
-        </Button>
+        <div className="sticky bottom-4 flex justify-end">
+          <Button type="submit" disabled={save.isPending} className="shadow-lg">
+            {save.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+            Salvar configuração
+          </Button>
+        </div>
       </form>
+      </Tabs>
     </div>
   );
 }
+
