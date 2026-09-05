@@ -254,10 +254,14 @@ function AuthPage() {
                 </div>
 
                 <form onSubmit={verifyOTP} className="space-y-6">
-                  <div className="flex justify-center sm:justify-start">
-                    <InputOTP maxLength={6} value={otp} onChange={setOtp} disabled={verifying}>
-                      <InputOTPGroup>
-                        <InputOTPSlot index={0} />
+                  <div className="flex flex-col space-y-3">
+                    <Label className="font-medium text-center sm:text-left text-foreground">
+                      Digite o código de 6 dígitos
+                    </Label>
+                    <div className="flex justify-center sm:justify-start">
+                      <InputOTP maxLength={6} value={otp} onChange={handleOtpChange} disabled={verifying}>
+                        <InputOTPGroup>
+                          <InputOTPSlot index={0} />
                         <InputOTPSlot index={1} />
                         <InputOTPSlot index={2} />
                       </InputOTPGroup>
