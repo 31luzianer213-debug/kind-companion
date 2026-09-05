@@ -83,6 +83,8 @@ function Clientes() {
   const queryClient = useQueryClient();
   const send = useServerFn(sendWhatsAppMessage);
   const sendAccess = useServerFn(sendAccessDetails);
+  const [syncing, setSyncing] = useState(false);
+  const syncSigma = useServerFn(syncSigmaClients);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<ClientForm>(empty);
 
@@ -181,6 +183,18 @@ function Clientes() {
   }
 
   const lists = data?.lists ?? [];
+
+  async function sincronizar() {
+    setSyncing(true);
+    const result = await syncSigma({});
+    setSyncing(false);
+    if (result.ok) {
+      toast.success(`${result.created} novos e ${result.updated} atualizados pelo painel.`);
+      queryClient.invalidateQueries();
+    } else {
+      toast.error(result.error ?? "Falha ao sincronizar com o painel.");
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -294,6 +308,7 @@ function Clientes() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card className="surface-card">
