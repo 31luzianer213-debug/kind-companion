@@ -78,9 +78,9 @@ const defaults: Settings = {
 };
 
 const stateLabels: Record<string, { label: string; tone: string }> = {
-  open: { label: "Conectado", tone: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
-  connecting: { label: "Aguardando leitura", tone: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-  close: { label: "Desconectado", tone: "bg-rose-500/15 text-rose-400 border-rose-500/30" },
+  open: { label: "Conectado", tone: "bg-primary/10 text-primary border-primary/30" },
+  connecting: { label: "Aguardando leitura", tone: "bg-amber-100 text-amber-700 border-amber-300" },
+  close: { label: "Desconectado", tone: "bg-rose-100 text-rose-700 border-rose-300" },
   none: { label: "Sem sessão", tone: "bg-muted text-muted-foreground border-border" },
 };
 
@@ -219,7 +219,7 @@ function Configuracoes() {
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Smartphone className="size-4 text-emerald-400" />
+              <Smartphone className="size-4 text-primary" />
               Sessão do WhatsApp
             </CardTitle>
             <CardDescription>
@@ -234,7 +234,7 @@ function Configuracoes() {
           <div className="flex flex-col items-center gap-4 rounded-xl border border-border/70 bg-background/40 p-6 sm:flex-row sm:items-start">
             <div className="flex size-56 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background">
               {state === "open" ? (
-                <div className="px-6 text-center text-sm text-emerald-400">
+                <div className="px-6 text-center text-sm text-primary">
                   <Smartphone className="mx-auto mb-2 size-8" />
                   Número conectado e pronto para cobrar.
                 </div>
