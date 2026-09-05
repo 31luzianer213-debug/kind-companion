@@ -8,7 +8,9 @@ export interface SigmaConfig {
   id: string;
   user_id: string;
   sigma_url: string;
-  sigma_token: string;
+  sigma_token?: string | null;
+  sigma_username?: string | null;
+  sigma_password?: string | null;
   auto_sync: boolean;
   auto_renew_on_payment: boolean;
   sync_interval_hours: number;
@@ -18,7 +20,9 @@ export interface SigmaConfig {
 
 export interface SigmaCredentials {
   sigma_url: string;
-  sigma_token: string;
+  sigma_token?: string | null;
+  sigma_username?: string | null;
+  sigma_password?: string | null;
 }
 
 // Salvar configuração do Sigma
@@ -41,7 +45,9 @@ export async function saveSigmaConfig(credentials: SigmaCredentials, options?: {
       .upsert({
         user_id: auth.user.id,
         sigma_url: credentials.sigma_url.replace(/\/$/, ""), // remove trailing slash
-        sigma_token: credentials.sigma_token,
+        sigma_token: credentials.sigma_token ?? null,
+        sigma_username: credentials.sigma_username ?? null,
+        sigma_password: credentials.sigma_password ?? null,
         auto_sync: options?.auto_sync ?? false,
         auto_renew_on_payment: options?.auto_renew_on_payment ?? true,
         sync_interval_hours: options?.sync_interval_hours ?? 24,
@@ -80,7 +86,7 @@ export async function getSigmaConfig(): Promise<SigmaConfig | null> {
   }
 }
 
-// Testar conexão com o Sigma
+// Testar conexão com o Sigma (login com usuário + senha; token segue como legado)
 export async function testSigmaConnection(credentials: SigmaCredentials): Promise<{
   success: boolean;
   message: string;
@@ -92,36 +98,72 @@ export async function testSigmaConnection(credentials: SigmaCredentials): Promis
 }> {
   try {
     const baseUrl = credentials.sigma_url.replace(/\/$/, "");
-    
-    const response = await fetch(`${baseUrl}/api/user`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${credentials.sigma_token}`,
-        "Content-Type": "application/json",
-      },
-    });
+    const username = credentials.sigma_username?.trim() ?? "";
+    const password = credentials.sigma_password?.trim() ?? "";
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        return { success: false, message: "Token inválido ou expirado" };
+    if (!username || !password) {
+      if (!credentials.sigma_token?.trim()) {
+        return { success: false, message: "Informe o usuário e a senha do painel." };
       }
-      if (response.status === 404) {
-        return { success: false, message: "Endpoint não encontrado. Verifique a URL do painel." };
+      const response = await fetch(`${baseUrl}/api/user`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${credentials.sigma_token.trim()}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          return { success: false, message: "Token inválido ou expirado" };
+        }
+        if (response.status === 404) {
+          return { success: false, message: "Endpoint não encontrado. Verifique a URL do painel." };
+        }
+        return { success: false, message: `Erro do servidor: ${response.status}` };
       }
-      return { success: false, message: `Erro do servidor: ${response.status}` };
+
+      const data = await response.json();
+
+      return {
+        success: true,
+        message: "Conexão estabelecida com sucesso!",
+        resellerInfo: {
+          id: data.id || data.user?.id || 0,
+          name: data.name || data.user?.name || "Revendedor",
+          email: data.email || data.user?.email || "",
+        },
+      };
     }
 
-    const data = await response.json();
-    
-    return {
-      success: true,
-      message: "Conexão estabelecida com sucesso!",
-      resellerInfo: {
-        id: data.id || data.user?.id || 0,
-        name: data.name || data.user?.name || "Revendedor",
-        email: data.email || data.user?.email || "",
-      },
-    };
+    const loginEndpoints = ["/api/login", "/api/auth/login", "/api/sign-in", "/api/token"];
+    let lastError = "Não foi possível fazer login no painel. Confira URL, usuário e senha.";
+    for (const endpoint of loginEndpoints) {
+      for (const body of [
+        { username, password },
+        { email: username, password },
+        { login: username, password },
+      ]) {
+        try {
+          const response = await fetch(`${baseUrl}${endpoint}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (response.ok) {
+            return { success: true, message: "Conexão estabelecida com sucesso!" };
+          }
+          if (response.status === 401 || response.status === 403 || response.status === 422) {
+            lastError = "Usuário ou senha do painel incorretos.";
+          } else if (response.status !== 404 && response.status !== 405) {
+            lastError = `Painel respondeu ${response.status} no login.`;
+          }
+        } catch {
+          lastError = "Não foi possível conectar ao painel Sigma";
+        }
+      }
+    }
+    return { success: false, message: lastError };
   } catch (error) {
     console.error("[Sigma] Erro ao testar conexão:", error);
     return {

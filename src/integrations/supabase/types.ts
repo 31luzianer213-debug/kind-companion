@@ -290,6 +290,8 @@ export type Database = {
           sigma_last_sync_at: string | null
           sigma_token: string | null
           sigma_url: string | null
+          sigma_username: string | null
+          sigma_password: string | null
           updated_at: string
           user_id: string
           welcome_template: string
@@ -319,6 +321,8 @@ export type Database = {
           sigma_last_sync_at?: string | null
           sigma_token?: string | null
           sigma_url?: string | null
+          sigma_username?: string | null
+          sigma_password?: string | null
           updated_at?: string
           user_id: string
           welcome_template?: string
@@ -348,6 +352,8 @@ export type Database = {
           sigma_last_sync_at?: string | null
           sigma_token?: string | null
           sigma_url?: string | null
+          sigma_username?: string | null
+          sigma_password?: string | null
           updated_at?: string
           user_id?: string
           welcome_template?: string

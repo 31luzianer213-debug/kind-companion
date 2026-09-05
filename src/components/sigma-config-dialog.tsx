@@ -50,7 +50,8 @@ export function SigmaConfigDialog({ onConfigSaved, trigger }: SigmaConfigDialogP
   
   // Form state
   const [sigmaUrl, setSigmaUrl] = useState("");
-  const [sigmaToken, setSigmaToken] = useState("");
+  const [sigmaUsername, setSigmaUsername] = useState("");
+  const [sigmaPassword, setSigmaPassword] = useState("");
   const [autoSync, setAutoSync] = useState(false);
   const [autoRenew, setAutoRenew] = useState(true);
   const [syncInterval, setSyncInterval] = useState("24");
@@ -69,7 +70,8 @@ export function SigmaConfigDialog({ onConfigSaved, trigger }: SigmaConfigDialogP
       const config = await getSigmaConfig();
       if (config) {
         setSigmaUrl(config.sigma_url);
-        setSigmaToken(config.sigma_token);
+        setSigmaUsername(config.sigma_username ?? "");
+        setSigmaPassword(config.sigma_password ?? "");
         setAutoSync(config.auto_sync);
         setAutoRenew(config.auto_renew_on_payment);
         setSyncInterval(String(config.sync_interval_hours));
@@ -80,8 +82,8 @@ export function SigmaConfigDialog({ onConfigSaved, trigger }: SigmaConfigDialogP
 
   // Test connection
   const handleTest = async () => {
-    if (!sigmaUrl || !sigmaToken) {
-      toast.error("Preencha a URL e o Token");
+    if (!sigmaUrl || !sigmaUsername || !sigmaPassword) {
+      toast.error("Preencha a URL, o usuário e a senha");
       return;
     }
 
@@ -90,7 +92,8 @@ export function SigmaConfigDialog({ onConfigSaved, trigger }: SigmaConfigDialogP
 
     const result = await testSigmaConnection({
       sigma_url: sigmaUrl,
-      sigma_token: sigmaToken,
+      sigma_username: sigmaUsername,
+      sigma_password: sigmaPassword,
     });
 
     setTestResult(result);
@@ -105,15 +108,15 @@ export function SigmaConfigDialog({ onConfigSaved, trigger }: SigmaConfigDialogP
 
   // Save config
   const handleSave = async () => {
-    if (!sigmaUrl || !sigmaToken) {
-      toast.error("Preencha a URL e o Token");
+    if (!sigmaUrl || !sigmaUsername || !sigmaPassword) {
+      toast.error("Preencha a URL, o usuário e a senha");
       return;
     }
 
     setLoading(true);
 
     const result = await saveSigmaConfig(
-      { sigma_url: sigmaUrl, sigma_token: sigmaToken },
+      { sigma_url: sigmaUrl, sigma_username: sigmaUsername, sigma_password: sigmaPassword },
       {
         auto_sync: autoSync,
         auto_renew_on_payment: autoRenew,
@@ -147,7 +150,8 @@ export function SigmaConfigDialog({ onConfigSaved, trigger }: SigmaConfigDialogP
     if (result.success) {
       toast.success("Integração removida");
       setSigmaUrl("");
-      setSigmaToken("");
+      setSigmaUsername("");
+      setSigmaPassword("");
       setTestResult(null);
       onConfigSaved?.();
     } else {
@@ -192,18 +196,31 @@ export function SigmaConfigDialog({ onConfigSaved, trigger }: SigmaConfigDialogP
             </p>
           </div>
 
-          {/* Token API */}
+          {/* Usuário do painel */}
           <div className="space-y-2">
-            <Label htmlFor="sigma-token">Token / Chave de API</Label>
+            <Label htmlFor="sigma-username">Usuário do painel</Label>
             <Input
-              id="sigma-token"
+              id="sigma-username"
+              placeholder="Seu usuário de revenda"
+              autoComplete="username"
+              value={sigmaUsername}
+              onChange={(e) => setSigmaUsername(e.target.value)}
+            />
+          </div>
+
+          {/* Senha do painel */}
+          <div className="space-y-2">
+            <Label htmlFor="sigma-password">Senha do painel</Label>
+            <Input
+              id="sigma-password"
               type="password"
-              placeholder="Cole seu token aqui"
-              value={sigmaToken}
-              onChange={(e) => setSigmaToken(e.target.value)}
+              placeholder="Sua senha do painel"
+              autoComplete="current-password"
+              value={sigmaPassword}
+              onChange={(e) => setSigmaPassword(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Encontre em: Configurações → API do seu painel Sigma
+              Usamos usuário e senha para entrar no painel e renovar sozinho. Sem token.
             </p>
           </div>
 
@@ -300,7 +317,7 @@ export function SigmaConfigDialog({ onConfigSaved, trigger }: SigmaConfigDialogP
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          {sigmaUrl && sigmaToken && (
+          {sigmaUrl && sigmaUsername && sigmaPassword && (
             <Button
               variant="outline"
               onClick={handleTest}

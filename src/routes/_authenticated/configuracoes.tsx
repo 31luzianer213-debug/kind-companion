@@ -53,7 +53,8 @@ type Settings = {
   asaas_token: string;
   asaas_env: string;
   sigma_url: string;
-  sigma_token: string;
+  sigma_username: string;
+  sigma_password: string;
   sigma_enabled: boolean;
   sigma_auto_renew: boolean;
   reminder_days_before: number;
@@ -79,7 +80,8 @@ const defaults: Settings = {
   message_template:
     "Olá {nome}! Sua mensalidade de {valor} vence em {vencimento}. Qualquer dúvida é só chamar aqui. 😊",
   sigma_url: "",
-  sigma_token: "",
+  sigma_username: "",
+  sigma_password: "",
   sigma_enabled: false,
   sigma_auto_renew: false,
   reminder_days_before: 3,
@@ -167,7 +169,8 @@ function Configuracoes() {
         asaas_env: data.asaas_env ?? "production",
         message_template: data.message_template,
         sigma_url: data.sigma_url ?? "",
-        sigma_token: data.sigma_token ?? "",
+        sigma_username: (data as any).sigma_username ?? "",
+        sigma_password: (data as any).sigma_password ?? "",
         sigma_enabled: data.sigma_enabled ?? false,
         sigma_auto_renew: data.sigma_auto_renew ?? false,
         reminder_days_before: data.reminder_days_before,
@@ -297,12 +300,22 @@ function Configuracoes() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Token de acesso</Label>
+                    <Label>Usuário do painel</Label>
+                    <Input
+                      placeholder="Seu usuário de revenda no painel"
+                      autoComplete="username"
+                      value={form.sigma_username}
+                      onChange={(e) => setForm({ ...form, sigma_username: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Senha do painel</Label>
                     <Input
                       type="password"
-                      placeholder="Token gerado na área de API do painel"
-                      value={form.sigma_token}
-                      onChange={(e) => setForm({ ...form, sigma_token: e.target.value })}
+                      placeholder="Sua senha do painel"
+                      autoComplete="current-password"
+                      value={form.sigma_password}
+                      onChange={(e) => setForm({ ...form, sigma_password: e.target.value })}
                     />
                   </div>
                   <div className="flex items-center justify-between rounded-lg border border-border p-3">
