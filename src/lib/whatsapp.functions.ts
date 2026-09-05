@@ -141,11 +141,16 @@ export const markInvoicePaid = createServerFn({ method: "POST" })
     let sigmaError: string | null = null;
     const { data: settings } = await supabase
       .from("whatsapp_settings")
-      .select("sigma_url, sigma_token, sigma_enabled, sigma_auto_renew")
+      .select("*")
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (settings?.sigma_enabled && settings.sigma_auto_renew && settings.sigma_url && settings.sigma_token) {
+    const hasSigmaAccess =
+      settings?.sigma_enabled &&
+      settings.sigma_auto_renew &&
+      settings.sigma_url?.trim() &&
+      (settings.sigma_token?.trim() || (settings.sigma_username?.trim() && settings.sigma_password?.trim()));
+    if (hasSigmaAccess) {
       const { data: client } = await supabase
         .from("clients")
         .select("sigma_customer_id")
