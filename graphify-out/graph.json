@@ -1976,7 +1976,7 @@
       "file_type": "code",
       "norm_label": "authpage()",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L42"
+      "source_location": "L41"
     },
     {
       "id": "src_routes_auth_authpage_dismisspending",
@@ -1987,7 +1987,7 @@
       "file_type": "code",
       "norm_label": "dismisspending()",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L80"
+      "source_location": "L75"
     },
     {
       "id": "src_routes_auth_authpage_google",
@@ -1998,7 +1998,7 @@
       "file_type": "code",
       "norm_label": "google()",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L151"
+      "source_location": "L146"
     },
     {
       "id": "src_routes_auth_authpage_gototab",
@@ -2009,7 +2009,7 @@
       "file_type": "code",
       "norm_label": "gototab()",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L76"
+      "source_location": "L71"
     },
     {
       "id": "src_routes_auth_authpage_resendconfirmation",
@@ -2020,7 +2020,7 @@
       "file_type": "code",
       "norm_label": "resendconfirmation()",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L107"
+      "source_location": "L102"
     },
     {
       "id": "src_routes_auth_authpage_signin",
@@ -2031,7 +2031,7 @@
       "file_type": "code",
       "norm_label": "signin()",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L85"
+      "source_location": "L80"
     },
     {
       "id": "src_routes_auth_authpage_signup",
@@ -2042,7 +2042,7 @@
       "file_type": "code",
       "norm_label": "signup()",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L126"
+      "source_location": "L121"
     },
     {
       "id": "src_integrations_supabase_cron_auth_authenticatecronrequest",
@@ -4555,7 +4555,7 @@
       "file_type": "code",
       "norm_label": "route",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L27"
+      "source_location": "L26"
     },
     {
       "id": "src_routes_authenticated_clientes_route",
@@ -11484,7 +11484,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L97",
+      "source_location": "L92",
       "weight": 1.0
     },
     {
@@ -11760,19 +11760,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L107",
-      "weight": 1.0
-    },
-    {
-      "source": "src_routes_auth_authpage",
-      "target": "src_routes_auth_authpage_gototab",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/routes/auth.tsx",
-      "source_location": "L76",
+      "source_location": "L102",
       "weight": 1.0
     },
     {
@@ -14561,7 +14549,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L25",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -14573,7 +14561,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L25",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -14585,7 +14573,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L25",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -17218,7 +17206,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L25",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -23503,7 +23491,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L27",
+      "source_location": "L26",
       "weight": 1.0
     },
     {
@@ -23514,7 +23502,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L126",
+      "source_location": "L121",
       "weight": 1.0
     },
     {
@@ -23525,7 +23513,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L151",
+      "source_location": "L146",
+      "weight": 1.0
+    },
+    {
+      "source": "src_routes_auth_authpage",
+      "target": "src_routes_auth_authpage_gototab",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/routes/auth.tsx",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -23536,7 +23535,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L80",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -23547,7 +23546,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L85",
+      "source_location": "L80",
       "weight": 1.0
     },
     {
@@ -24566,7 +24565,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L39",
+      "source_location": "L38",
       "weight": 1.0
     },
     {
@@ -24691,5 +24690,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "8c378c4b36a16bf4cacccd5840d9838a4cdd7018"
+  "built_at_commit": "0e60d98284a66b853b02555aebd2683e09aaf6d7"
 }
