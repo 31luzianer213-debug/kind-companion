@@ -18,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   head: () => ({
@@ -209,13 +211,23 @@ function Configuracoes() {
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <h1 className="text-gradient text-3xl font-bold tracking-tight">WhatsApp</h1>
+        <h1 className="text-gradient text-3xl font-bold tracking-tight">Configurações</h1>
         <p className="text-sm text-muted-foreground">
-          Conecte seu número pelo QR Code e escolha como as cobranças são enviadas.
+          Conexão do WhatsApp, formas de pagamento, mensagens e automação — separados por abas.
         </p>
       </div>
 
+      <Tabs defaultValue="conexao" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+          <TabsTrigger value="conexao">Conexão</TabsTrigger>
+          <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
+          <TabsTrigger value="mensagens">Mensagens</TabsTrigger>
+          <TabsTrigger value="automacao">Automação</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="conexao" className="space-y-6">
       <Card className="surface-card overflow-hidden">
+
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -304,6 +316,7 @@ function Configuracoes() {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
 
       <form
         className="space-y-6"
@@ -312,7 +325,9 @@ function Configuracoes() {
           save.mutate(form);
         }}
       >
+        <TabsContent value="pagamentos" className="space-y-6">
         <Card className="surface-card">
+
           <CardHeader>
             <CardTitle className="text-base">Pagamentos</CardTitle>
             <CardDescription>
@@ -450,10 +465,12 @@ function Configuracoes() {
 
           </CardContent>
         </Card>
+        </TabsContent>
 
+        <TabsContent value="mensagens" className="space-y-6">
         <Card className="surface-card">
           <CardHeader>
-            <CardTitle className="text-base">Mensagens</CardTitle>
+            <CardTitle className="text-base">Modelos de mensagem</CardTitle>
             <CardDescription>Clique em uma etiqueta para ver o que ela preenche.</CardDescription>
             <div className="flex flex-wrap gap-1.5 pt-2">
               {TEMPLATE_VARS.map((v) => (
@@ -492,6 +509,31 @@ function Configuracoes() {
                 onChange={(e) => setForm({ ...form, welcome_template: e.target.value })}
               />
             </div>
+          </CardContent>
+        </Card>
+        </TabsContent>
+
+        <TabsContent value="automacao" className="space-y-6">
+        <Card className="surface-card">
+          <CardHeader>
+            <CardTitle className="text-base">Envio automático</CardTitle>
+            <CardDescription>
+              Quando ligado, o sistema envia as cobranças sozinho todo dia às 9h.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
+              <div>
+                <p className="text-sm font-medium">Cobrança automática ligada</p>
+                <p className="text-xs text-muted-foreground">
+                  Desligue para enviar tudo manualmente.
+                </p>
+              </div>
+              <Switch
+                checked={form.auto_send_enabled}
+                onCheckedChange={(checked) => setForm({ ...form, auto_send_enabled: checked })}
+              />
+            </div>
             <div className="space-y-2">
               <Label>Avisar quantos dias antes do vencimento</Label>
               <Input
@@ -517,20 +559,19 @@ function Configuracoes() {
                 onCheckedChange={(checked) => setForm({ ...form, overdue_reminder: checked })}
               />
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-border p-3">
-              <span className="text-sm">Cobrança automática ligada</span>
-              <Switch
-                checked={form.auto_send_enabled}
-                onCheckedChange={(checked) => setForm({ ...form, auto_send_enabled: checked })}
-              />
-            </div>
           </CardContent>
         </Card>
+        </TabsContent>
 
-        <Button type="submit" disabled={save.isPending}>
-          Salvar configuração
-        </Button>
+        <div className="sticky bottom-4 flex justify-end">
+          <Button type="submit" disabled={save.isPending} className="shadow-lg">
+            {save.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+            Salvar configuração
+          </Button>
+        </div>
       </form>
+      </Tabs>
     </div>
   );
 }
+
