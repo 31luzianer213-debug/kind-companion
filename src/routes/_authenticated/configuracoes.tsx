@@ -314,6 +314,7 @@ function Configuracoes() {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
 
       <form
         className="space-y-6"
@@ -322,7 +323,9 @@ function Configuracoes() {
           save.mutate(form);
         }}
       >
+        <TabsContent value="pagamentos" className="space-y-6">
         <Card className="surface-card">
+
           <CardHeader>
             <CardTitle className="text-base">Pagamentos</CardTitle>
             <CardDescription>
