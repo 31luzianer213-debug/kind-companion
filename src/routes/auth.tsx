@@ -10,6 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import logo from "@/assets/logo.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import {
   ArrowLeft,
   CheckCircle2,
   Eye,
@@ -48,6 +54,8 @@ function AuthPage() {
   const [tab, setTab] = useState("login");
   const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -77,6 +85,37 @@ function AuthPage() {
     setTab("login");
   }
 
+  async function verifyOTP(e: React.FormEvent) {
+    e.preventDefault();
+    if (otp.length !== 6 || !pendingConfirmEmail) return;
+
+    setVerifying(true);
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: pendingConfirmEmail,
+      token: otp,
+      type: "signup" as any,
+    });
+    setVerifying(false);
+
+    if (error) {
+      if (error.message.includes("Token has expired") || error.message.includes("Invalid")) {
+        toast.error("Código inválido ou expirado. Tente novamente.");
+      } else {
+        toast.error(error.message);
+      }
+      return;
+    }
+
+    if (data.session) {
+      toast.success("E-mail confirmado com sucesso!");
+      navigate({ to: "/painel" });
+    } else {
+      toast.success("E-mail confirmado! Agora você pode acessar sua conta.");
+      setPendingConfirmEmail(null);
+      setTab("login");
+    }
+  }
+
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -88,7 +127,7 @@ function AuthPage() {
         code === "email_not_confirmed" || /confirm|verif/i.test(error.message);
       if (needsConfirm) {
         setPendingConfirmEmail(email);
-        toast.error("Confirme seu e-mail antes de entrar. Enviamos um novo link agora.");
+        toast.error("Confirme seu e-mail antes de entrar. Se necessário, digite o código recém-enviado.");
         void resendConfirmation(email);
         return;
       }
@@ -115,7 +154,7 @@ function AuthPage() {
       toast.error(error.message);
       return;
     }
-    toast.success(`Link de confirmação reenviado para ${targetEmail}.`);
+    toast.success(`Novo código de confirmação enviado para ${targetEmail}.`);
   }
 
   async function signUp(e: React.FormEvent) {
@@ -136,7 +175,7 @@ function AuthPage() {
     }
     if (!data.session) {
       setPendingConfirmEmail(email);
-      toast.success(`Conta criada! Confirme o e-mail que enviamos para ${email}.`);
+      toast.success(`Conta criada! Enviamos um código para ${email}.`);
       return;
     }
     toast.success("Conta criada com sucesso!");
@@ -189,7 +228,7 @@ function AuthPage() {
         </div>
       </div>
 
-      {/* Painel Direito (Login/Signup) */}
+      {/* Painel Direito (Login/Signup/OTP) */}
       <div className="flex w-full flex-col lg:w-1/2 p-6 sm:p-10">
         <header className="flex items-center justify-between mb-auto">
           <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
@@ -205,42 +244,57 @@ function AuthPage() {
         <div className="flex w-full flex-1 flex-col items-center justify-center pt-8 pb-12">
           <div className="w-full max-w-[400px]">
             {pendingConfirmEmail ? (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100 shadow-sm">
-                  <MailCheck className="h-4 w-4" />
-                  <AlertTitle className="flex items-center gap-1.5 text-sm font-bold">
-                     E-mail não confirmado
-                  </AlertTitle>
-                  <AlertDescription className="mt-2 space-y-4 text-sm leading-relaxed">
-                    <p>
-                      Enviamos um link de confirmação para <strong className="font-semibold">{pendingConfirmEmail}</strong>. 
-                      Acesse sua caixa de entrada e clique no link para ativar seu acesso.
-                    </p>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-10 w-full sm:w-auto bg-transparent border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50"
-                        disabled={resending}
-                        onClick={() => resendConfirmation(pendingConfirmEmail)}
-                      >
-                        {resending ? (
-                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Reenviando...</>
-                        ) : (
-                          <><Mail className="mr-2 h-4 w-4" /> Reenviar e-mail</>
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="h-10 w-full sm:w-auto text-amber-900 hover:bg-amber-100 dark:text-amber-100 dark:hover:bg-amber-900/50 font-semibold"
-                        onClick={dismissPending}
-                      >
-                        Já confirmei
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
+                <div className="mb-6 flex flex-col space-y-2 text-center sm:text-left">
+                  <h1 className="text-3xl font-extrabold tracking-tight">Confirme seu e-mail</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Enviamos um código de 6 dígitos para o e-mail <br className="hidden sm:block" />
+                    <strong className="font-semibold text-foreground">{pendingConfirmEmail}</strong>.
+                  </p>
+                </div>
+
+                <form onSubmit={verifyOTP} className="space-y-6">
+                  <div className="flex justify-center sm:justify-start">
+                    <InputOTP maxLength={6} value={otp} onChange={setOtp} disabled={verifying}>
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                      </InputOTPGroup>
+                      <InputOTPSeparator />
+                      <InputOTPGroup>
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <Button type="submit" className="h-12 flex-1 rounded-xl font-bold shadow-md" disabled={verifying || otp.length < 6}>
+                      {verifying ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verificando...</>
+                      ) : (
+                        <><MailCheck className="mr-2 h-4 w-4" /> Verificar código</>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-12 flex-1 sm:flex-none px-6 rounded-xl border-border bg-background hover:bg-muted"
+                      disabled={resending}
+                      onClick={() => resendConfirmation(pendingConfirmEmail)}
+                    >
+                      {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reenviar"}
+                    </Button>
+                  </div>
+
+                  <div className="text-center sm:text-left mt-2">
+                    <button type="button" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline" onClick={dismissPending}>
+                      Voltar para o login
+                    </button>
+                  </div>
+                </form>
               </div>
             ) : (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
