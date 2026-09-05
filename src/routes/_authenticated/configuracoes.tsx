@@ -182,15 +182,45 @@ function Configuracoes() {
   }, [data]);
 
   const save = useMutation({
-    mutationFn: async (values: Settings) => {
+    mutationFn: async (values: Settings): Promise<{ skipped: string[] }> => {
       const { data: auth } = await supabase.auth.getUser();
-      const { error } = await supabase
-        .from("whatsapp_settings")
-        .upsert({ user_id: auth.user!.id, ...values }, { onConflict: "user_id" });
-      if (error) throw new Error(error.message);
+      const payload: Record<string, unknown> = { user_id: auth.user!.id, ...values };
+
+      const missingColumnFromMessage = (msg: string): string | null => {
+        const m = msg.match(/Could not find the '([^']+)' column/i);
+        return m?.[1] ?? null;
+      };
+
+      // 1ª tentativa: salva tudo (inclui sigma_username/sigma_password).
+      // Se o banco de produção ainda não tem a coluna nova, o PostgREST
+      // rejeita o upsert inteiro (PGRST204). Nesse caso removemos só a
+      // coluna ausente e tentamos de novo para não perder o restante.
+      const attempt: Record<string, unknown> = { ...payload };
+      for (let i = 0; i < 5; i++) {
+        const { error } = await supabase
+          .from("whatsapp_settings")
+          .upsert(attempt as any, { onConflict: "user_id" });
+        if (!error) {
+          return { skipped: Object.keys(payload).filter((k) => !(k in attempt)) };
+        }
+        const column = missingColumnFromMessage(error.message ?? "");
+        const isSchemaCache =
+          /schema cache|PGRST204|Could not find.*column/i.test(error.message ?? "");
+        if (!isSchemaCache || !column || !(column in attempt)) {
+          throw new Error(error.message);
+        }
+        delete attempt[column];
+      }
+      throw new Error("Não foi possível salvar. Tente novamente.");
     },
-    onSuccess: () => {
-      toast.success("Configuração salva.");
+    onSuccess: (result) => {
+      if (result.skipped.length > 0) {
+        toast.warning(
+          `Salvei o restante, mas não gravei (${result.skipped.join(", ")}): o banco ainda não tem essa coluna. Rode a migration 20260906000000_sigma_user_pass.sql no Supabase e salve de novo.`,
+        );
+      } else {
+        toast.success("Configuração salva.");
+      }
       queryClient.invalidateQueries({ queryKey: ["whatsapp-settings"] });
     },
     onError: (error: Error) => toast.error(error.message),
