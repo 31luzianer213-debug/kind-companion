@@ -106,7 +106,11 @@ function AuthPage() {
       return;
     }
 
-    if (data.session) {
+    // Recarrega a sessão do usuário e atualiza o estado do app após confirmação
+    await supabase.auth.refreshSession();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (data.session || session) {
       toast.success("E-mail confirmado com sucesso!");
       navigate({ to: "/painel" });
     } else {
