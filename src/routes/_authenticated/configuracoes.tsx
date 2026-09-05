@@ -218,12 +218,88 @@ function Configuracoes() {
       </div>
 
       <Tabs defaultValue="conexao" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
           <TabsTrigger value="conexao">Conexão</TabsTrigger>
+          <TabsTrigger value="painel">Painel IPTV</TabsTrigger>
           <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
           <TabsTrigger value="mensagens">Mensagens</TabsTrigger>
           <TabsTrigger value="automacao">Automação</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="painel" className="space-y-6">
+          <Card className="surface-card">
+            <CardHeader>
+              <CardTitle className="text-base">Painel Sigma</CardTitle>
+              <CardDescription>
+                Conecte seu painel para importar os clientes e renovar sozinho quando alguém pagar.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                <div>
+                  <p className="text-sm font-medium">Usar o painel Sigma</p>
+                  <p className="text-xs text-muted-foreground">
+                    {form.sigma_last_sync_at
+                      ? `Última sincronização: ${new Date(form.sigma_last_sync_at).toLocaleString("pt-BR")}`
+                      : "Ainda não sincronizado."}
+                  </p>
+                </div>
+                <Switch
+                  checked={form.sigma_enabled}
+                  onCheckedChange={(checked) => setForm({ ...form, sigma_enabled: checked })}
+                />
+              </div>
+
+              {form.sigma_enabled ? (
+                <>
+                  <div className="space-y-2">
+                    <Label>Endereço do painel</Label>
+                    <Input
+                      placeholder="https://seupainel.sigma.st"
+                      value={form.sigma_url}
+                      onChange={(e) => setForm({ ...form, sigma_url: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Token de acesso</Label>
+                    <Input
+                      type="password"
+                      placeholder="Token gerado na área de API do painel"
+                      value={form.sigma_token}
+                      onChange={(e) => setForm({ ...form, sigma_token: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                    <div>
+                      <p className="text-sm font-medium">Renovar sozinho quando o cliente pagar</p>
+                      <p className="text-xs text-muted-foreground">
+                        Ao marcar a cobrança como paga, o acesso é renovado por 1 mês no painel.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={form.sigma_auto_renew}
+                      onCheckedChange={(checked) => setForm({ ...form, sigma_auto_renew: checked })}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" disabled={sigmaBusy} onClick={testarPainel}>
+                      {sigmaBusy ? <Loader2 className="size-4 animate-spin" /> : <Plug className="size-4" />}
+                      Testar conexão
+                    </Button>
+                    <Button type="button" disabled={sigmaBusy} onClick={sincronizarPainel}>
+                      {sigmaBusy ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                      Sincronizar clientes agora
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Salve as configurações antes de testar ou sincronizar.
+                  </p>
+                </>
+              ) : null}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
 
         <TabsContent value="conexao" className="space-y-6">
       <Card className="surface-card overflow-hidden">
