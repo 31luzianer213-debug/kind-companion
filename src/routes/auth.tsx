@@ -10,15 +10,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import logo from "@/assets/logo.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
+  AlertCircle,
   ArrowLeft,
+  CheckCircle2,
   Eye,
   EyeOff,
   Loader2,
   Lock,
   Mail,
+  MailCheck,
   ShieldCheck,
   User,
 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -43,12 +47,40 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [tab, setTab] = useState("login");
+  const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    (async () => {
+      // Quando o usuário clica no link de confirmação do e-mail, o Supabase
+      // devolve para /auth com ?code=... — troca pelo session de verdade.
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("code")) {
+        const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+        // Limpa o ?code= da URL para não tentar trocar de novo no refresh.
+        url.searchParams.delete("code");
+        url.searchParams.delete("state");
+        window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+        if (!error) {
+          toast.success("E-mail confirmado! Bem-vindo ao painel.");
+          navigate({ to: "/painel" });
+          return;
+        }
+        // Se a troca falhar (link expirado etc.), cai para o fluxo normal abaixo.
+      }
+      const { data } = await supabase.auth.getSession();
       if (data.session) navigate({ to: "/painel" });
-    });
+    })();
   }, [navigate]);
+
+  function goToTab(tabName: string) {
+    setTab(tabName);
+  }
+
+  function dismissPending() {
+    setPendingConfirmEmail(null);
+    setTab("login");
+  }
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -56,11 +88,39 @@ function AuthPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
+      const code = (error as { code?: string }).code ?? "";
+      const needsConfirm =
+        code === "email_not_confirmed" || /confirm|verif/i.test(error.message);
+      if (needsConfirm) {
+        setPendingConfirmEmail(email);
+        toast.error("Confirme seu e-mail antes de entrar. Enviamos um novo link agora.");
+        void resendConfirmation(email);
+        return;
+      }
       toast.error(error.message);
       return;
     }
     toast.success("Bem-vindo de volta!");
     navigate({ to: "/painel" });
+  }
+
+  async function resendConfirmation(targetEmail = email) {
+    if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
+      toast.error("Digite um e-mail válido para reenviar a confirmação.");
+      return;
+    }
+    setResending(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: targetEmail,
+      options: { emailRedirectTo: `${window.location.origin}/auth` },
+    });
+    setResending(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Link de confirmação reenviado para ${targetEmail}.`);
   }
 
   async function signUp(e: React.FormEvent) {
@@ -80,7 +140,8 @@ function AuthPage() {
       return;
     }
     if (!data.session) {
-      toast.success("Conta criada! Confirme o e-mail que enviamos para entrar.");
+      setPendingConfirmEmail(email);
+      toast.success(`Conta criada! Confirme o e-mail que enviamos para ${email}.`);
       return;
     }
     toast.success("Conta criada com sucesso!");
@@ -113,11 +174,55 @@ function AuthPage() {
             <h2 className="mt-4 text-2xl font-extrabold tracking-tight">{tab === "login" ? "Bem-vindo de volta" : "Crie sua conta"}</h2>
             <p className="mt-1.5 text-sm text-muted-foreground">{tab === "login" ? "Entre para acessar o painel." : "Comece em menos de 1 minuto."}</p>
           </div>
-            <Tabs value={tab} onValueChange={setTab} className="w-full">
+            <Tabs value={tab} onValueChange={goToTab} className="w-full">
               <TabsList className="grid h-11 w-full grid-cols-2 rounded-xl bg-muted p-1">
                 <TabsTrigger value="login" className="rounded-lg text-sm font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm">Entrar</TabsTrigger>
                 <TabsTrigger value="signup" className="rounded-lg text-sm font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm">Criar conta</TabsTrigger>
               </TabsList>
+
+              {pendingConfirmEmail && (
+                <Alert className="mt-4 border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
+                  <MailCheck className="h-4 w-4" />
+                  <AlertTitle className="flex items-center gap-1.5 text-sm font-bold">
+                    <AlertCircle className="h-4 w-4" /> E-mail não confirmado
+                  </AlertTitle>
+                  <AlertDescription className="mt-1 space-y-3 text-[13px] leading-relaxed">
+                    <p>
+                      Enviamos um link de confirmação para <strong>{pendingConfirmEmail}</strong>. Abra seu e-mail e clique
+                      no link para liberar o acesso, depois volte aqui e entre normalmente.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-9 rounded-xl bg-card text-xs font-bold"
+                        disabled={resending}
+                        onClick={() => resendConfirmation(pendingConfirmEmail)}
+                      >
+                        {resending ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Reenviando...
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="h-3.5 w-3.5" /> Reenviar e-mail
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-9 rounded-xl text-xs font-semibold"
+                        onClick={dismissPending}
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Já confirmei, ir para login
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <TabsContent value="login" className="mt-6">
                 <form onSubmit={signIn} className="space-y-4">
@@ -179,7 +284,7 @@ function AuthPage() {
               Continuar com o Google
             </Button>
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              {tab === "login" ? <>Ainda não tem conta? <button onClick={() => setTab("signup")} className="font-semibold text-primary hover:underline">Criar conta</button></> : <>Já tem conta? <button onClick={() => setTab("login")} className="font-semibold text-primary hover:underline">Entrar</button></>}
+              {tab === "login" ? <>Ainda não tem conta? <button type="button" onClick={() => goToTab("signup")} className="font-semibold text-primary hover:underline">Criar conta</button></> : <>Já tem conta? <button type="button" onClick={() => goToTab("login")} className="font-semibold text-primary hover:underline">Entrar</button></>}
             </p>
         </div>
       </div>
