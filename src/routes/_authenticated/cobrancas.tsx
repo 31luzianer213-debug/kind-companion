@@ -117,26 +117,27 @@ function Cobrancas() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="page-header">
         <div>
-          <h1 className="text-gradient text-3xl font-bold tracking-tight">Cobranças</h1>
-          <p className="text-sm text-muted-foreground">Mensalidades e lembretes enviados.</p>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">Financeiro</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-[30px]">Cobranças</h1>
+          <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-muted-foreground">Mensalidades, atrasos e lembretes — acompanhe o fluxo de caixa sem sair do WhatsApp.</p>
         </div>
-        <Button onClick={run} disabled={running} className="gap-2">
-          <RefreshCw className="h-4 w-4" /> {running ? "Processando..." : "Gerar e enviar"}
+        <Button onClick={run} disabled={running} size="lg" className="gap-2 rounded-xl shadow-md shadow-primary/20">
+          <RefreshCw className={`h-4 w-4 ${running ? "animate-spin" : ""}`} /> {running ? "Processando..." : "Gerar e enviar"}
         </Button>
       </div>
 
       <Tabs value={filter} onValueChange={setFilter}>
-        <TabsList>
-          <TabsTrigger value="open">Em aberto</TabsTrigger>
-          <TabsTrigger value="overdue">Atrasadas</TabsTrigger>
-          <TabsTrigger value="paid">Pagas</TabsTrigger>
-          <TabsTrigger value="all">Todas</TabsTrigger>
+        <TabsList className="h-11 rounded-xl bg-muted p-1">
+          <TabsTrigger value="open" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Em aberto</TabsTrigger>
+          <TabsTrigger value="overdue" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Atrasadas</TabsTrigger>
+          <TabsTrigger value="paid" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Pagas</TabsTrigger>
+          <TabsTrigger value="all" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Todas</TabsTrigger>
         </TabsList>
       </Tabs>
 
-      <Card className="surface-card">
+      <Card className="surface-elevated overflow-hidden">
         <CardContent className="p-0">
           <Table>
             <TableHeader>

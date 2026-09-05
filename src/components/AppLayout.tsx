@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Menu,
   X,
+  Sparkles,
 } from "lucide-react";
 
 const nav = [
@@ -45,35 +46,36 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }
 
   const brand = (
-    <div className="flex items-center gap-2.5">
-      <img src={logo} alt="IPTV Manager" width={36} height={36} className="h-9 w-9" />
-      <span className="text-[15px] font-semibold tracking-tight">IPTV Manager</span>
+    <div className="flex items-center gap-3">
+      <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/20 ring-1 ring-primary/15">
+        <img src={logo} alt="IPTV Manager" width={22} height={22} className="h-[22px] w-[22px] object-contain brightness-0 invert" />
+      </span>
+      <span className="leading-none">
+        <span className="block text-[15px] font-bold tracking-tight">IPTV Manager</span>
+        <span className="block text-[11px] font-medium tracking-widest text-muted-foreground">GESTÃO PREMIUM</span>
+      </span>
     </div>
   );
 
   const links = (
-    <nav className="flex flex-col gap-1">
+    <nav className="flex flex-col gap-1.5">
+      <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">Menu</p>
       {nav.map(({ to, label, icon: Icon }) => {
-        const active = pathname === to;
+        const active = pathname === to || pathname.startsWith(to + "/");
         return (
           <Link
             key={to}
             to={to}
             className={cn(
-              "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all",
+              "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
               active
-                ? "bg-primary/12 font-medium text-foreground ring-1 ring-primary/25"
-                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground",
             )}
           >
-            <span
-              className={cn(
-                "absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-primary transition-opacity",
-                active ? "opacity-100" : "opacity-0",
-              )}
-            />
-            <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
+            <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} />
             {label}
+            {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary-foreground/90" />}
           </Link>
         );
       })}
@@ -82,50 +84,65 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const footer = (
     <div className="mt-auto space-y-3 pt-6">
-      <div className="rounded-xl border border-border/70 bg-muted/40 p-3">
-        <p className="text-xs text-muted-foreground">Conectado como</p>
-        <p className="truncate text-sm font-medium">{email ?? "..."}</p>
+      <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Conectado como</p>
+        <div className="mt-2 flex items-center gap-2.5">
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary ring-1 ring-primary/15">
+            {(email?.[0] ?? "?").toUpperCase()}
+          </span>
+          <p className="min-w-0 flex-1 truncate text-sm font-medium leading-none">{email ?? "..."}</p>
+        </div>
+        <p className="mt-1 truncate text-xs text-muted-foreground">{email ?? ""}</p>
+      </div>
+      <div className="rounded-2xl border border-primary/10 bg-primary/[0.06] p-3">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <Sparkles className="h-4 w-4 text-primary" /> Cobrança automática
+        </div>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">WhatsApp enviando sozinho todo dia às 9h.</p>
       </div>
       <ThemeToggle withLabel />
       <Button
         variant="ghost"
-        className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive"
+        className="w-full justify-start gap-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
         onClick={signOut}
       >
         <LogOut className="h-4 w-4" /> Sair
       </Button>
+      <p className="px-1 text-[11px] text-muted-foreground/60">© {new Date().getFullYear()} IPTV Manager</p>
     </div>
   );
 
   return (
     <div className="app-aurora min-h-screen bg-background md:flex">
-      {/* Mobile top bar */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur md:hidden">
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border/60 bg-background/80 px-4 py-3 backdrop-blur-xl md:hidden">
         {brand}
         <div className="flex items-center gap-1">
           <ThemeToggle />
-          <Button variant="ghost" size="icon" onClick={() => setOpen((v) => !v)} aria-label="Menu">
+          <Button variant="ghost" size="icon" onClick={() => setOpen((v) => !v)} aria-label="Menu" className="rounded-full">
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
       </header>
 
       {open && (
-        <div className="border-b border-border/70 bg-sidebar/95 px-4 py-4 backdrop-blur md:hidden">
+        <div className="border-b border-border/60 bg-sidebar/95 px-4 py-4 backdrop-blur-xl md:hidden">
           {links}
-          {footer}
+          <div className="mt-4">{footer}</div>
         </div>
       )}
 
-      {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border/70 bg-sidebar/70 p-5 backdrop-blur md:flex">
+      <aside className="sticky top-0 hidden h-[100dvh] w-[276px] shrink-0 flex-col border-r border-border/60 bg-sidebar/80 p-5 backdrop-blur-xl md:flex">
         {brand}
         <div className="mt-8">{links}</div>
         {footer}
       </aside>
 
-      <main className="min-w-0 flex-1 px-4 py-6 md:px-10 md:py-10">
-        <div className="mx-auto w-full max-w-6xl">{children}</div>
+      <main className="min-w-0 flex-1">
+        <div className="pointer-events-none absolute inset-0 hidden app-grid opacity-[0.32] dark:opacity-[0.10] md:block" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/15 to-transparent" />
+        <div className="relative px-4 py-6 md:px-8 md:py-8 lg:px-10">
+          <div className="mx-auto w-full max-w-7xl">{children}</div>
+        </div>
       </main>
     </div>
   );

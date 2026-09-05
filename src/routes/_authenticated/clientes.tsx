@@ -198,10 +198,11 @@ function Clientes() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="page-header">
         <div>
-          <h1 className="text-gradient text-3xl font-bold tracking-tight">Clientes</h1>
-          <p className="text-sm text-muted-foreground">Quem paga, quanto e quando vence.</p>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">Base de clientes</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-[30px]">Clientes</h1>
+          <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-muted-foreground">Quem paga, quanto e quando vence — tudo organizado por lista e vencimento.</p>
         </div>
         <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" className="gap-2" disabled={syncing} onClick={sincronizar}>
@@ -311,18 +312,18 @@ function Clientes() {
         </div>
       </div>
 
-      <Card className="surface-card">
+      <Card className="surface-elevated overflow-hidden">
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Cliente</TableHead>
-                <TableHead>WhatsApp</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Vencimento</TableHead>
-                <TableHead>Lista</TableHead>
-                <TableHead>Situação</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+            <TableHeader className="bg-muted/40">
+              <TableRow className="hover:bg-muted/40">
+                <TableHead className="px-4 text-xs font-semibold uppercase tracking-wide">Cliente</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide">WhatsApp</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide">Valor</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide">Vencimento</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide">Lista</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide">Situação</TableHead>
+                <TableHead className="px-4 text-right text-xs font-semibold uppercase tracking-wide">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
