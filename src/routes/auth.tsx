@@ -11,18 +11,13 @@ import logo from "@/assets/logo.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   ArrowLeft,
-  Check,
   Eye,
   EyeOff,
   Loader2,
   Lock,
   Mail,
   ShieldCheck,
-  Sparkles,
   User,
-  Users,
-  Wallet,
-  Zap,
 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
@@ -105,51 +100,19 @@ function AuthPage() {
   }
 
   return (
-    <main className="min-h-screen min-h-dvh bg-background lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:h-screen lg:h-dvh lg:overflow-hidden">
-      <div className="relative hidden overflow-hidden lg:flex lg:flex-col lg:h-screen lg:h-dvh lg:overflow-y-auto subtle-scrollbar">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-[#1e3a8a]" />
-        <div className="absolute inset-0 opacity-[0.15]" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`, backgroundSize: "28px 28px" }} />
-        <div className="absolute -top-32 -right-32 h-[520px] w-[520px] rounded-full bg-white/10 blur-[80px]" />
-        <div className="relative flex min-h-0 flex-1 flex-col p-8 xl:p-10 2xl:p-12">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2.5 text-white">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white shadow-lg"><img src={logo} alt="IPTV Manager" width={28} height={28} className="h-7 w-7 object-contain" /></span>
-              <span className="text-[17px] font-bold tracking-tight">IPTV Manager</span>
-            </Link>
-            <Link to="/" className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-medium text-white backdrop-blur hover:bg-white/15"><ArrowLeft className="h-3.5 w-3.5" /> Voltar</Link>
+    <main className="relative flex min-h-screen min-h-dvh flex-col bg-background">
+      <div className="pointer-events-none absolute inset-0 app-aurora opacity-60" />
+      <header className="relative flex shrink-0 items-center justify-between px-4 py-4 sm:px-6">
+        <Link to="/" className="flex items-center gap-2 text-sm font-bold"><img src={logo} alt="IPTV Manager" width={32} height={32} className="h-8 w-8" /> IPTV Manager</Link>
+        <div className="flex items-center gap-2"><Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Início</Link><ThemeToggle /></div>
+      </header>
+      <div className="relative flex flex-1 items-center justify-center px-4 py-8 sm:px-6">
+        <div className="w-full max-w-[420px] min-w-0 rounded-2xl border bg-card p-6 shadow-lg sm:p-8">
+          <div className="mb-6 flex flex-col items-center text-center">
+            <img src={logo} alt="IPTV Manager" width={48} height={48} className="h-12 w-12" />
+            <h2 className="mt-4 text-2xl font-extrabold tracking-tight">{tab === "login" ? "Bem-vindo de volta" : "Crie sua conta"}</h2>
+            <p className="mt-1.5 text-sm text-muted-foreground">{tab === "login" ? "Entre para acessar o painel." : "Comece em menos de 1 minuto."}</p>
           </div>
-          <div className="mt-8 max-w-[520px] xl:mt-12 2xl:mt-16 min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur"><Sparkles className="h-3.5 w-3.5" /> Para revendedores IPTV</div>
-            <h1 className="mt-6 text-[30px] font-extrabold leading-[0.95] tracking-tight text-white sm:text-[34px] lg:text-[32px] xl:text-[38px] 2xl:text-[44px] break-words">O controle total<br />do seu IPTV<br /><span className="text-white/70">em um só lugar.</span></h1>
-            <p className="mt-4 text-[15px] leading-relaxed text-white/75">Gerencie clientes, organize listas e envie cobranças automáticas no WhatsApp.</p>
-            <ul className="mt-8 space-y-3">
-              {["Clientes e vencimentos em tempo real","Cobrança automática no WhatsApp","Integração com painel Sigma"].map((item) => (
-                <li key={item} className="flex items-center gap-3 text-sm font-medium text-white/90"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-primary"><Check className="h-3.5 w-3.5" /></span>{item}</li>
-              ))}
-            </ul>
-          </div>
-          <div className="mt-8 lg:mt-auto">
-            <div className="rounded-[24px] border border-white/15 bg-white/10 p-4 backdrop-blur-xl sm:p-6">
-              <div className="mb-3 flex items-center justify-between sm:mb-4"><p className="text-xs font-semibold uppercase tracking-widest text-white/60">Prévia</p><span className="rounded-full bg-emerald-400 px-2.5 py-1 text-[11px] font-bold text-emerald-950">Ao vivo</span></div>
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                <div className="rounded-2xl bg-white p-3 sm:p-4"><div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary"><Users className="h-4 w-4" /></div><p className="text-[11px] text-muted-foreground">Clientes</p><p className="text-lg font-extrabold sm:text-xl">128</p></div>
-                <div className="rounded-2xl bg-white p-3 sm:p-4"><div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600"><Wallet className="h-4 w-4" /></div><p className="text-[11px] text-muted-foreground">Recebido</p><p className="text-lg font-extrabold sm:text-xl">R$ 3.840</p></div>
-                <div className="rounded-2xl bg-white p-3 sm:p-4"><div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600"><Zap className="h-4 w-4" /></div><p className="text-[11px] text-muted-foreground">Cobranças</p><p className="text-lg font-extrabold sm:text-xl">12 envios</p></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="relative flex min-h-screen min-h-dvh lg:min-h-0 lg:h-screen lg:h-dvh flex-col bg-background lg:overflow-y-auto lg:overflow-x-hidden subtle-scrollbar">
-        <div className="pointer-events-none absolute inset-0 hidden lg:block app-aurora opacity-60" />
-        <div className="relative flex shrink-0 items-center justify-between px-4 py-4 sm:px-6 lg:px-8 xl:px-10">
-          <Link to="/" className="flex items-center gap-2 text-sm font-bold lg:hidden"><img src={logo} alt="IPTV Manager" width={32} height={32} className="h-8 w-8" /> IPTV Manager</Link>
-          <div className="hidden lg:block" />
-          <div className="flex items-center gap-2"><Link to="/" className="hidden lg:inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Início</Link><ThemeToggle /></div>
-        </div>
-        <div className="relative flex flex-1 items-center justify-center px-4 py-6 sm:px-6 lg:px-8 lg:py-8 xl:px-10">
-          <div className="w-full max-w-[420px] min-w-0">
-            <div className="mb-6 sm:mb-8"><h2 className="text-2xl font-extrabold tracking-tight sm:text-[28px] leading-tight break-words">{tab === "login" ? "Bem-vindo de volta" : "Crie sua conta"}</h2><p className="mt-2 text-sm text-muted-foreground">{tab === "login" ? "Entre para acessar o painel." : "Comece em menos de 1 minuto."}</p></div>
             <Tabs value={tab} onValueChange={setTab} className="w-full">
               <TabsList className="grid h-11 w-full grid-cols-2 rounded-xl bg-muted p-1">
                 <TabsTrigger value="login" className="rounded-lg text-sm font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm">Entrar</TabsTrigger>
@@ -218,10 +181,9 @@ function AuthPage() {
             <p className="mt-6 text-center text-sm text-muted-foreground">
               {tab === "login" ? <>Ainda não tem conta? <button onClick={() => setTab("signup")} className="font-semibold text-primary hover:underline">Criar conta</button></> : <>Já tem conta? <button onClick={() => setTab("login")} className="font-semibold text-primary hover:underline">Entrar</button></>}
             </p>
-          </div>
         </div>
-        <p className="shrink-0 px-4 pb-6 text-center text-xs text-muted-foreground sm:px-6 lg:px-8 xl:px-10">© {new Date().getFullYear()} IPTV Manager</p>
       </div>
+      <p className="shrink-0 px-4 pb-6 text-center text-xs text-muted-foreground sm:px-6">© {new Date().getFullYear()} IPTV Manager</p>
     </main>
   );
 }
