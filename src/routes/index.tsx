@@ -51,22 +51,22 @@ const features = [
 
 function Index() {
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <span className="flex items-center gap-2 text-lg font-semibold">
-          <img src={logo} alt="IPTV Manager" width={36} height={36} className="h-9 w-9" />
+    <main className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-6">
+        <span className="flex items-center gap-2 text-base font-semibold sm:text-lg">
+          <img src={logo} alt="IPTV Manager" width={36} height={36} className="h-8 w-8 sm:h-9 sm:w-9" />
           IPTV Manager
         </span>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button asChild variant="secondary">
+          <Button asChild variant="secondary" size="sm" className="sm:h-10 sm:px-4 sm:text-sm">
             <Link to="/auth">Entrar</Link>
           </Button>
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-6xl flex-col gap-24 px-6 pb-24 pt-10 lg:gap-32">
-        <section className="grid items-center gap-16 lg:grid-cols-2">
+      <div className="mx-auto flex max-w-6xl flex-col gap-16 px-4 pb-16 pt-6 sm:gap-24 sm:px-6 sm:pb-24 sm:pt-10 lg:gap-32">
+        <section className="grid items-center gap-10 sm:gap-16 lg:grid-cols-2">
           <div className="space-y-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
               <span className="relative flex h-2 w-2">
@@ -76,7 +76,7 @@ function Index() {
               Feito para revendedores de IPTV
             </div>
 
-            <h1 className="text-5xl font-extrabold leading-[1.1] tracking-tight lg:text-7xl">
+            <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-7xl break-words">
               O controle total do seu{" "}
               <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                 IPTV

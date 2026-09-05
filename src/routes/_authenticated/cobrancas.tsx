@@ -129,11 +129,11 @@ function Cobrancas() {
       </div>
 
       <Tabs value={filter} onValueChange={setFilter}>
-        <TabsList className="h-11 rounded-xl bg-muted p-1">
-          <TabsTrigger value="open" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Em aberto</TabsTrigger>
-          <TabsTrigger value="overdue" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Atrasadas</TabsTrigger>
-          <TabsTrigger value="paid" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Pagas</TabsTrigger>
-          <TabsTrigger value="all" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Todas</TabsTrigger>
+        <TabsList className="flex h-auto min-h-11 w-full gap-1 overflow-x-auto whitespace-nowrap rounded-xl bg-muted p-1 subtle-scrollbar sm:inline-flex sm:w-auto">
+          <TabsTrigger value="open" className="shrink-0 rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Em aberto</TabsTrigger>
+          <TabsTrigger value="overdue" className="shrink-0 rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Atrasadas</TabsTrigger>
+          <TabsTrigger value="paid" className="shrink-0 rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Pagas</TabsTrigger>
+          <TabsTrigger value="all" className="shrink-0 rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Todas</TabsTrigger>
         </TabsList>
       </Tabs>
 

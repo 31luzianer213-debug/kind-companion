@@ -254,12 +254,12 @@ function Configuracoes() {
       </div>
 
       <Tabs defaultValue="conexao" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
-          <TabsTrigger value="conexao">Conexão</TabsTrigger>
-          <TabsTrigger value="painel">Painel IPTV</TabsTrigger>
-          <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
-          <TabsTrigger value="mensagens">Mensagens</TabsTrigger>
-          <TabsTrigger value="automacao">Automação</TabsTrigger>
+        <TabsList className="flex w-full gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap p-1 sm:grid sm:grid-cols-5 sm:overflow-visible subtle-scrollbar h-auto min-h-11">
+          <TabsTrigger value="conexao" className="shrink-0 sm:shrink">Conexão</TabsTrigger>
+          <TabsTrigger value="painel" className="shrink-0 sm:shrink">Painel IPTV</TabsTrigger>
+          <TabsTrigger value="pagamentos" className="shrink-0 sm:shrink">Pagamentos</TabsTrigger>
+          <TabsTrigger value="mensagens" className="shrink-0 sm:shrink">Mensagens</TabsTrigger>
+          <TabsTrigger value="automacao" className="shrink-0 sm:shrink">Automação</TabsTrigger>
         </TabsList>
 
         <TabsContent value="painel" className="space-y-6">
@@ -355,7 +355,7 @@ function Configuracoes() {
           </span>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="flex flex-col items-center gap-4 rounded-xl border border-border/70 bg-background/40 p-6 sm:flex-row sm:items-start">
+          <div className="flex flex-col items-center gap-4 rounded-xl border border-border/70 bg-background/40 p-4 sm:p-6 sm:flex-row sm:items-start overflow-hidden">
             <div className="flex size-56 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background">
               {state === "open" ? (
                 <div className="px-6 text-center text-sm text-primary">
