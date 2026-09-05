@@ -4,20 +4,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * Design system definition.
- *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
- */
-
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -142,9 +128,23 @@
   }
 
   body {
-    transition: background-color 200ms ease, color 200ms ease;
+    min-width: 320px;
+    overflow-x: hidden;
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 24%, transparent);
+    color: var(--foreground);
+  }
+
+  :focus-visible {
+    outline: 2px solid color-mix(in oklch, var(--primary) 70%, transparent);
+    outline-offset: 2px;
   }
 }
 
@@ -167,19 +167,14 @@
   background: linear-gradient(160deg, color-mix(in oklch, var(--card) 96%, var(--primary) 4%), var(--card));
   border: 1px solid color-mix(in oklch, var(--border) 85%, transparent);
   border-radius: var(--radius-2xl);
-  box-shadow:
-    0 1px 0 0 color-mix(in oklch, var(--foreground) 3%, transparent) inset,
-    0 18px 44px -32px color-mix(in oklch, var(--primary) 42%, transparent),
-    0 8px 20px -16px color-mix(in oklch, var(--foreground) 7%, transparent);
+  box-shadow: 0 1px 0 0 color-mix(in oklch, var(--foreground) 3%, transparent) inset, 0 18px 44px -32px color-mix(in oklch, var(--primary) 42%, transparent), 0 8px 20px -16px color-mix(in oklch, var(--foreground) 7%, transparent);
 }
 
 @utility surface-elevated {
-  background: var(--card);
+  background: color-mix(in oklch, var(--card) 97%, var(--primary) 3%);
   border: 1px solid var(--border);
   border-radius: var(--radius-2xl);
-  box-shadow:
-    0 1px 2px 0 color-mix(in oklch, var(--foreground) 6%, transparent),
-    0 12px 28px -18px color-mix(in oklch, var(--foreground) 12%, transparent);
+  box-shadow: 0 1px 2px 0 color-mix(in oklch, var(--foreground) 6%, transparent), 0 12px 28px -18px color-mix(in oklch, var(--foreground) 12%, transparent);
 }
 
 @utility text-gradient {
@@ -237,4 +232,24 @@
   scrollbar-color: color-mix(in oklch, var(--border) 90%, transparent) transparent;
   &::-webkit-scrollbar { width: 6px; height: 6px; }
   &::-webkit-scrollbar-thumb { background: color-mix(in oklch, var(--border) 90%, transparent); border-radius: 9999px; }
+}
+
+@media (max-width: 639px) {
+  .page-header {
+    align-items: stretch;
+  }
+
+  .page-header > button,
+  .page-header > div:last-child {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
