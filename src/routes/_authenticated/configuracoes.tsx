@@ -344,49 +344,67 @@ function Configuracoes() {
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label>Tipo da chave PIX</Label>
-                <select
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={form.pix_key_type}
-                  onChange={(e) => setForm({ ...form, pix_key_type: e.target.value })}
-                >
-                  <option value="aleatoria">Aleatória</option>
-                  <option value="cpf">CPF/CNPJ</option>
-                  <option value="email">E-mail</option>
-                  <option value="telefone">Telefone</option>
-                </select>
+            {form.payment_provider === "pix" && (
+              <div className="space-y-4 rounded-xl border border-border bg-background/40 p-4">
+                <p className="text-sm font-medium">Dados do PIX</p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Tipo da chave PIX</Label>
+                    <select
+                      className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                      value={form.pix_key_type}
+                      onChange={(e) => setForm({ ...form, pix_key_type: e.target.value })}
+                    >
+                      <option value="aleatoria">Aleatória</option>
+                      <option value="cpf">CPF/CNPJ</option>
+                      <option value="email">E-mail</option>
+                      <option value="telefone">Telefone</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Chave PIX</Label>
+                    <Input
+                      placeholder={
+                        form.pix_key_type === "telefone"
+                          ? "(85) 99999-9999"
+                          : form.pix_key_type === "email"
+                            ? "voce@email.com"
+                            : form.pix_key_type === "cpf"
+                              ? "000.000.000-00"
+                              : "chave aleatória"
+                      }
+                      value={form.pix_key}
+                      onChange={(e) => setForm({ ...form, pix_key: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Titular da chave</Label>
+                  <Input
+                    placeholder="Nome que aparece no comprovante"
+                    value={form.pix_holder}
+                    onChange={(e) => setForm({ ...form, pix_holder: e.target.value })}
+                  />
+                </div>
               </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Chave PIX</Label>
-                <Input
-                  value={form.pix_key}
-                  onChange={(e) => setForm({ ...form, pix_key: e.target.value })}
-                />
-              </div>
-            </div>
+            )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Titular da chave</Label>
-                <Input
-                  value={form.pix_holder}
-                  onChange={(e) => setForm({ ...form, pix_holder: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Link de pagamento (opcional)</Label>
+            {form.payment_provider === "link" && (
+              <div className="space-y-2 rounded-xl border border-border bg-background/40 p-4">
+                <Label>Link de pagamento</Label>
                 <Input
                   placeholder="https://..."
                   value={form.payment_link}
                   onChange={(e) => setForm({ ...form, payment_link: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Esse link entra nas mensagens no lugar da chave PIX.
+                </p>
               </div>
-            </div>
+            )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
+            {form.payment_provider === "mercadopago" && (
+              <div className="space-y-2 rounded-xl border border-border bg-background/40 p-4">
                 <Label>Token do Mercado Pago</Label>
                 <Input
                   type="password"
@@ -394,21 +412,42 @@ function Configuracoes() {
                   value={form.mercadopago_token}
                   onChange={(e) => setForm({ ...form, mercadopago_token: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Pegue em Mercado Pago → Suas integrações → Credenciais de produção.
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label>Token do Asaas</Label>
-                <Input
-                  type="password"
-                  placeholder="$aact_..."
-                  value={form.asaas_token}
-                  onChange={(e) => setForm({ ...form, asaas_token: e.target.value })}
-                />
+            )}
+
+            {form.payment_provider === "asaas" && (
+              <div className="space-y-4 rounded-xl border border-border bg-background/40 p-4">
+                <div className="space-y-2">
+                  <Label>Token do Asaas</Label>
+                  <Input
+                    type="password"
+                    placeholder="$aact_..."
+                    value={form.asaas_token}
+                    onChange={(e) => setForm({ ...form, asaas_token: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Ambiente</Label>
+                  <select
+                    className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                    value={form.asaas_env}
+                    onChange={(e) => setForm({ ...form, asaas_env: e.target.value })}
+                  >
+                    <option value="production">Produção</option>
+                    <option value="sandbox">Testes (sandbox)</option>
+                  </select>
+                </div>
               </div>
-            </div>
+            )}
+
             <p className="text-xs text-muted-foreground">
-              Os tokens ficam guardados só na sua conta e são usados para gerar cobranças
-              automáticas. Você pode deixar em branco e cobrar apenas pelo PIX.
+              Só aparecem os campos da forma de cobrança escolhida. Seus dados ficam guardados
+              apenas na sua conta.
             </p>
+
           </CardContent>
         </Card>
 
