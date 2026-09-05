@@ -29,7 +29,8 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatBRL, formatDate } from "@/lib/format";
-import { KeyRound, MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
+import { KeyRound, Loader2, MessageCircle, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { syncSigmaClients } from "@/lib/sigma.functions";
 
 export const Route = createFileRoute("/_authenticated/clientes")({
   head: () => ({
@@ -188,6 +189,11 @@ function Clientes() {
           <h1 className="text-gradient text-3xl font-bold tracking-tight">Clientes</h1>
           <p className="text-sm text-muted-foreground">Quem paga, quanto e quando vence.</p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" className="gap-2" disabled={syncing} onClick={sincronizar}>
+          {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          Sincronizar painel
+        </Button>
         <Dialog
           open={open}
           onOpenChange={(value) => {
