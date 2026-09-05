@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Users,
   ListVideo,
@@ -62,7 +63,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all",
               active
                 ? "bg-primary/12 font-medium text-foreground ring-1 ring-primary/25"
-                : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
             )}
           >
             <span
@@ -81,13 +82,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const footer = (
     <div className="mt-auto space-y-3 pt-6">
-      <div className="rounded-xl border border-border/70 bg-white/[0.03] p-3">
+      <div className="rounded-xl border border-border/70 bg-muted/40 p-3">
         <p className="text-xs text-muted-foreground">Conectado como</p>
         <p className="truncate text-sm font-medium">{email ?? "..."}</p>
       </div>
+      <ThemeToggle withLabel />
       <Button
         variant="ghost"
-        className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+        className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive"
         onClick={signOut}
       >
         <LogOut className="h-4 w-4" /> Sair
@@ -100,9 +102,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {/* Mobile top bar */}
       <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur md:hidden">
         {brand}
-        <Button variant="ghost" size="icon" onClick={() => setOpen((v) => !v)} aria-label="Menu">
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <Button variant="ghost" size="icon" onClick={() => setOpen((v) => !v)} aria-label="Menu">
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </header>
 
       {open && (
