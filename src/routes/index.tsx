@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.png";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Users, MessageCircle, BarChart3, Clock, MonitorPlay } from "lucide-react";
 
 export const Route = createFileRoute("/")({
