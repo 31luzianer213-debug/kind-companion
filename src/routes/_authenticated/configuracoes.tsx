@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, QrCode, RefreshCw, Smartphone, Unplug } from "lucide-react";
+import { Loader2, Plug, QrCode, RefreshCw, Smartphone, Unplug } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TEMPLATE_VARS } from "@/lib/format";
 import {
@@ -12,6 +12,7 @@ import {
   getWhatsAppStatus,
   sendWhatsAppMessage,
 } from "@/lib/whatsapp.functions";
+import { syncSigmaClients, testSigmaConnection } from "@/lib/sigma.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +52,10 @@ type Settings = {
   mercadopago_token: string;
   asaas_token: string;
   asaas_env: string;
+  sigma_url: string;
+  sigma_token: string;
+  sigma_enabled: boolean;
+  sigma_auto_renew: boolean;
   reminder_days_before: number;
   send_on_due_day: boolean;
   overdue_reminder: boolean;
@@ -73,6 +78,10 @@ const defaults: Settings = {
   asaas_env: "production",
   message_template:
     "Olá {nome}! Sua mensalidade de {valor} vence em {vencimento}. Qualquer dúvida é só chamar aqui. 😊",
+  sigma_url: "",
+  sigma_token: "",
+  sigma_enabled: false,
+  sigma_auto_renew: false,
   reminder_days_before: 3,
   send_on_due_day: true,
   overdue_reminder: true,
@@ -97,6 +106,29 @@ function Configuracoes() {
   const [testPhone, setTestPhone] = useState("");
   const [qr, setQr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [sigmaBusy, setSigmaBusy] = useState(false);
+  const testSigma = useServerFn(testSigmaConnection);
+  const syncSigma = useServerFn(syncSigmaClients);
+
+  async function testarPainel() {
+    setSigmaBusy(true);
+    const result = await testSigma({});
+    setSigmaBusy(false);
+    if (result.ok) toast.success(`Conectado! ${result.total} clientes encontrados no painel.`);
+    else toast.error(result.error ?? "Não foi possível conectar.");
+  }
+
+  async function sincronizarPainel() {
+    setSigmaBusy(true);
+    const result = await syncSigma({});
+    setSigmaBusy(false);
+    if (result.ok) {
+      toast.success(`${result.created} novos e ${result.updated} atualizados.`);
+      queryClient.invalidateQueries();
+    } else {
+      toast.error(result.error ?? "Falha ao sincronizar.");
+    }
+  }
 
   const { data } = useQuery({
     queryKey: ["whatsapp-settings"],
@@ -134,6 +166,10 @@ function Configuracoes() {
         asaas_token: data.asaas_token ?? "",
         asaas_env: data.asaas_env ?? "production",
         message_template: data.message_template,
+        sigma_url: data.sigma_url ?? "",
+        sigma_token: data.sigma_token ?? "",
+        sigma_enabled: data.sigma_enabled ?? false,
+        sigma_auto_renew: data.sigma_auto_renew ?? false,
         reminder_days_before: data.reminder_days_before,
         send_on_due_day: data.send_on_due_day,
         overdue_reminder: data.overdue_reminder,
@@ -239,8 +275,8 @@ function Configuracoes() {
                 <div>
                   <p className="text-sm font-medium">Usar o painel Sigma</p>
                   <p className="text-xs text-muted-foreground">
-                    {form.sigma_last_sync_at
-                      ? `Última sincronização: ${new Date(form.sigma_last_sync_at).toLocaleString("pt-BR")}`
+                    {data?.sigma_last_sync_at
+                      ? `Última sincronização: ${new Date(data.sigma_last_sync_at).toLocaleString("pt-BR")}`
                       : "Ainda não sincronizado."}
                   </p>
                 </div>
