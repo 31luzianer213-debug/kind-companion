@@ -57,9 +57,12 @@ function Index() {
           <img src={logo} alt="IPTV Manager" width={36} height={36} className="h-9 w-9" />
           IPTV Manager
         </span>
-        <Button asChild variant="secondary">
-          <Link to="/auth">Entrar</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Button asChild variant="secondary">
+            <Link to="/auth">Entrar</Link>
+          </Button>
+        </div>
       </header>
 
       <div className="mx-auto flex max-w-6xl flex-col gap-24 px-6 pb-24 pt-10 lg:gap-32">

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import logo from "@/assets/logo.png";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -89,6 +90,9 @@ function AuthPage() {
   return (
     <main className="app-aurora flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md">
+        <div className="mb-2 flex justify-end">
+          <ThemeToggle />
+        </div>
         <Link to="/" className="mb-6 flex items-center justify-center gap-2 text-lg font-semibold">
           <img src={logo} alt="IPTV Manager" width={36} height={36} className="h-9 w-9" /> IPTV Manager
         </Link>
