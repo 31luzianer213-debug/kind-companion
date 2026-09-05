@@ -209,13 +209,23 @@ function Configuracoes() {
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <h1 className="text-gradient text-3xl font-bold tracking-tight">WhatsApp</h1>
+        <h1 className="text-gradient text-3xl font-bold tracking-tight">Configurações</h1>
         <p className="text-sm text-muted-foreground">
-          Conecte seu número pelo QR Code e escolha como as cobranças são enviadas.
+          Conexão do WhatsApp, formas de pagamento, mensagens e automação — separados por abas.
         </p>
       </div>
 
+      <Tabs defaultValue="conexao" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+          <TabsTrigger value="conexao">Conexão</TabsTrigger>
+          <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
+          <TabsTrigger value="mensagens">Mensagens</TabsTrigger>
+          <TabsTrigger value="automacao">Automação</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="conexao" className="space-y-6">
       <Card className="surface-card overflow-hidden">
+
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
