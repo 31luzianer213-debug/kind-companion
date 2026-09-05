@@ -136,7 +136,38 @@ export const markInvoicePaid = createServerFn({ method: "POST" })
       .eq("id", invoice.client_id)
       .eq("user_id", userId);
 
-    return { ok: true as const, nextDueDate: nextIso };
+    // Renovação automática no painel Sigma, quando ligada nas configurações.
+    let sigmaRenewed = false;
+    let sigmaError: string | null = null;
+    const { data: settings } = await supabase
+      .from("whatsapp_settings")
+      .select("sigma_url, sigma_token, sigma_enabled, sigma_auto_renew")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (settings?.sigma_enabled && settings.sigma_auto_renew && settings.sigma_url && settings.sigma_token) {
+      const { data: client } = await supabase
+        .from("clients")
+        .select("sigma_customer_id")
+        .eq("id", invoice.client_id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (client?.sigma_customer_id) {
+        try {
+          const { renewSigmaCustomer } = await import("./sigma.server");
+          await renewSigmaCustomer(
+            { url: settings.sigma_url, token: settings.sigma_token },
+            String(client.sigma_customer_id),
+            1,
+          );
+          sigmaRenewed = true;
+        } catch (error) {
+          sigmaError = error instanceof Error ? error.message : "Falha ao renovar no painel.";
+        }
+      }
+    }
+
+    return { ok: true as const, nextDueDate: nextIso, sigmaRenewed, sigmaError };
   });
 
 /** Envia a mensagem de boas-vindas com os dados de acesso do cliente. */

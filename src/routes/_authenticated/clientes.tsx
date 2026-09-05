@@ -29,7 +29,8 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatBRL, formatDate } from "@/lib/format";
-import { KeyRound, MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
+import { KeyRound, Loader2, MessageCircle, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { syncSigmaClients } from "@/lib/sigma.functions";
 
 export const Route = createFileRoute("/_authenticated/clientes")({
   head: () => ({
@@ -82,6 +83,8 @@ function Clientes() {
   const queryClient = useQueryClient();
   const send = useServerFn(sendWhatsAppMessage);
   const sendAccess = useServerFn(sendAccessDetails);
+  const [syncing, setSyncing] = useState(false);
+  const syncSigma = useServerFn(syncSigmaClients);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<ClientForm>(empty);
 
@@ -181,6 +184,18 @@ function Clientes() {
 
   const lists = data?.lists ?? [];
 
+  async function sincronizar() {
+    setSyncing(true);
+    const result = await syncSigma({});
+    setSyncing(false);
+    if (result.ok) {
+      toast.success(`${result.created} novos e ${result.updated} atualizados pelo painel.`);
+      queryClient.invalidateQueries();
+    } else {
+      toast.error(result.error ?? "Falha ao sincronizar com o painel.");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -188,6 +203,11 @@ function Clientes() {
           <h1 className="text-gradient text-3xl font-bold tracking-tight">Clientes</h1>
           <p className="text-sm text-muted-foreground">Quem paga, quanto e quando vence.</p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" className="gap-2" disabled={syncing} onClick={sincronizar}>
+          {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          Sincronizar painel
+        </Button>
         <Dialog
           open={open}
           onOpenChange={(value) => {
@@ -288,6 +308,7 @@ function Clientes() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card className="surface-card">

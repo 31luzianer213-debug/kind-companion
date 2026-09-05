@@ -30,6 +30,9 @@ export type Database = {
           notes: string | null
           phone: string
           screens: number
+          sigma_customer_id: string | null
+          sigma_synced_at: string | null
+          sigma_username: string | null
           status: string
           updated_at: string
           user_id: string
@@ -49,6 +52,9 @@ export type Database = {
           notes?: string | null
           phone: string
           screens?: number
+          sigma_customer_id?: string | null
+          sigma_synced_at?: string | null
+          sigma_username?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -68,6 +74,9 @@ export type Database = {
           notes?: string | null
           phone?: string
           screens?: number
+          sigma_customer_id?: string | null
+          sigma_synced_at?: string | null
+          sigma_username?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -276,6 +285,11 @@ export type Database = {
           pix_key_type: string
           reminder_days_before: number
           send_on_due_day: boolean
+          sigma_auto_renew: boolean
+          sigma_enabled: boolean
+          sigma_last_sync_at: string | null
+          sigma_token: string | null
+          sigma_url: string | null
           updated_at: string
           user_id: string
           welcome_template: string
@@ -300,6 +314,11 @@ export type Database = {
           pix_key_type?: string
           reminder_days_before?: number
           send_on_due_day?: boolean
+          sigma_auto_renew?: boolean
+          sigma_enabled?: boolean
+          sigma_last_sync_at?: string | null
+          sigma_token?: string | null
+          sigma_url?: string | null
           updated_at?: string
           user_id: string
           welcome_template?: string
@@ -324,6 +343,11 @@ export type Database = {
           pix_key_type?: string
           reminder_days_before?: number
           send_on_due_day?: boolean
+          sigma_auto_renew?: boolean
+          sigma_enabled?: boolean
+          sigma_last_sync_at?: string | null
+          sigma_token?: string | null
+          sigma_url?: string | null
           updated_at?: string
           user_id?: string
           welcome_template?: string
