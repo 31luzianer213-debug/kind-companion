@@ -45,13 +45,18 @@ function resolvePanelConfig(
     url,
     username,
     password,
-    token: saved?.sigma_token ?? undefined,
+    token: saved?.sigma_token ?? null,
   };
 }
 
 /** Guarda o token obtido via login para não precisar logar toda vez. */
-async function persistSigmaToken(supabase: any, userId: string, config: { sigma_token: string | null }, token: string) {
-  if (token && token !== config.sigma_token) {
+async function persistSigmaToken(
+  supabase: any,
+  userId: string,
+  config: { sigma_token: string | null } | null,
+  token: string,
+) {
+  if (token && token !== config?.sigma_token) {
     await supabase.from("whatsapp_settings").update({ sigma_token: token }).eq("user_id", userId);
   }
 }
