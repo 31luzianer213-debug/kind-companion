@@ -776,7 +776,7 @@
       "file_type": "code",
       "norm_label": "index()",
       "source_file": "src/routes/index.tsx",
-      "source_location": "L66"
+      "source_location": "L33"
     },
     {
       "id": "src_routes_root_errorcomponent",
@@ -2877,7 +2877,7 @@
       "file_type": "code",
       "norm_label": "benefits",
       "source_file": "src/routes/index.tsx",
-      "source_location": "L60"
+      "source_location": "L27"
     },
     {
       "id": "src_routes_index_features",
@@ -2887,7 +2887,7 @@
       "file_type": "code",
       "norm_label": "features",
       "source_file": "src/routes/index.tsx",
-      "source_location": "L29"
+      "source_location": "L20"
     },
     {
       "id": "src_routes_index_route",
@@ -2897,7 +2897,7 @@
       "file_type": "code",
       "norm_label": "route",
       "source_file": "src/routes/index.tsx",
-      "source_location": "L7"
+      "source_location": "L6"
     },
     {
       "id": "src_routes_root",
@@ -14188,7 +14188,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/routes/index.tsx",
-      "source_location": "L4",
+      "source_location": "L3",
       "weight": 1.0
     },
     {
@@ -18049,7 +18049,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/routes/index.tsx",
-      "source_location": "L4",
+      "source_location": "L3",
       "weight": 1.0
     },
     {
@@ -18061,7 +18061,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/routes/index.tsx",
-      "source_location": "L5",
+      "source_location": "L4",
       "weight": 1.0
     },
     {
@@ -23463,7 +23463,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/routes/index.tsx",
-      "source_location": "L29",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -23474,7 +23474,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/routes/index.tsx",
-      "source_location": "L60",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -23485,7 +23485,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/routes/index.tsx",
-      "source_location": "L7",
+      "source_location": "L6",
       "weight": 1.0
     },
     {
@@ -24266,7 +24266,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/routes/index.tsx",
-      "source_location": "L26",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -24319,5 +24319,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "6f93e6a266b27c3f40e3176aa3cfdfd0e8ba6911"
+  "built_at_commit": "09cb19cc582f356a5f7c8e0a748147c0fd05bae5"
 }
