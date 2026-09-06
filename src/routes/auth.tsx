@@ -186,6 +186,12 @@ function AuthPage() {
       toast.success(`Conta criada! Enviamos um código para ${email}.`);
       return;
     }
+    
+    await supabase.from("profiles").upsert({
+      id: data.session.user.id,
+      display_name: name,
+    });
+    
     toast.success("Conta criada com sucesso!");
     navigate({ to: "/painel" });
   }
