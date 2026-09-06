@@ -1887,7 +1887,7 @@
       "file_type": "code",
       "norm_label": "google()",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L193"
+      "source_location": "L199"
     },
     {
       "id": "src_routes_auth_authpage_gototab",
@@ -23343,7 +23343,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L193",
+      "source_location": "L199",
       "weight": 1.0
     },
     {
@@ -24507,5 +24507,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "41f357747428d1dbb09f829462f8aa1500ba28e2"
+  "built_at_commit": "d5a4ae253f5b95e55d879c57d0f23000fc6589a0"
 }
