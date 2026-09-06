@@ -102,7 +102,7 @@ export function ModernCardFooter({
 export function StatBadge({ 
   value, 
   label, 
-  trend?: 'up' | 'down' | 'neutral' 
+  trend,
 }: { 
   value: string; 
   label: string; 
