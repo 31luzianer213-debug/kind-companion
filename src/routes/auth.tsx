@@ -94,10 +94,10 @@ function AuthPage() {
     if (otp.length !== 6 || !pendingConfirmEmail) return;
 
     setVerifying(true);
-    const { error } = await supabase.auth.verifyOtp({
+    const { data: verifyData, error } = await supabase.auth.verifyOtp({
       email: pendingConfirmEmail,
       token: otp,
-      type: "email",
+      type: "signup",
     });
     setVerifying(false);
 
@@ -110,25 +110,34 @@ function AuthPage() {
       return;
     }
 
-    // Recarrega a sessão do usuário e atualiza o estado do app após confirmação
-    await supabase.auth.refreshSession();
-    const { data: { session } } = await supabase.auth.getSession();
+    let activeSession = verifyData?.session;
 
-    if (session) {
-      const displayName = name || session.user.user_metadata?.display_name;
-      if (displayName) {
-        await supabase.from("profiles").upsert({
-          id: session.user.id,
-          display_name: displayName,
-        });
-      }
-      toast.success("E-mail confirmado com sucesso!");
-      navigate({ to: "/painel" });
-    } else {
-      toast.success("E-mail confirmado! Agora você pode acessar sua conta.");
+    // Caso o Supabase não inicie a sessão automaticamente mas possuímos a senha em memória
+    if (!activeSession && password) {
+      const { data: loginData } = await supabase.auth.signInWithPassword({
+        email: pendingConfirmEmail,
+        password,
+      });
+      activeSession = loginData?.session;
+    }
+
+    if (!activeSession) {
+      toast.success("E-mail confirmado! Por favor, acesse com suas credenciais.");
       setPendingConfirmEmail(null);
       setTab("login");
+      return;
     }
+
+    const displayName = name || activeSession.user.user_metadata?.display_name;
+    if (displayName) {
+      await supabase.from("profiles").upsert({
+        id: activeSession.user.id,
+        display_name: displayName,
+      });
+    }
+
+    toast.success("E-mail confirmado com sucesso! Bem-vindo.");
+    navigate({ to: "/painel" });
   }
 
   async function signIn(e: React.FormEvent) {
