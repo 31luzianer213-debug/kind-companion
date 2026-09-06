@@ -162,12 +162,12 @@ export const markInvoicePaid = createServerFn({ method: "POST" })
           const { renewSigmaCustomer } = await import("./sigma.server");
           await renewSigmaCustomer(
             {
-              url: settings.sigma_url,
+              url: settings.sigma_url ?? "",
               token: settings.sigma_token,
               username: settings.sigma_username,
               password: settings.sigma_password,
             },
-            String(client.sigma_customer_id),
+            { id: String(client.sigma_customer_id) },
             1,
           );
           sigmaRenewed = true;

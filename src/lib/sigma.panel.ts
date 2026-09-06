@@ -258,7 +258,7 @@ function parseDate(value: any): string | null {
   }
   const text = String(value).trim();
   const br = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(text);
-  if (br) return `${br[3]}-${br[2].padStart(2, "0")}-${br[1].padStart(2, "0")}`;
+  if (br) return `${br[3]}-${(br[2] ?? "").padStart(2, "0")}-${(br[1] ?? "").padStart(2, "0")}`;
   const normalized = /^\d{4}-\d{2}-\d{2}$/.test(text) ? `${text}T12:00:00` : text;
   const date = new Date(normalized);
   if (Number.isNaN(date.getTime())) return null;
