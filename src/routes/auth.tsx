@@ -9,30 +9,18 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import logo from "@/assets/logo.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  Loader2,
-  Lock,
-  Mail,
-  ShieldCheck,
-  User,
-} from "lucide-react";
+import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck, User } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  head: () => ({
-    meta: [
-      { title: "Entrar — IPTV Manager" },
-      { name: "description", content: "Acesse o painel de clientes, listas IPTV e cobranças." },
-      { property: "og:title", content: "Entrar — IPTV Manager" },
-      { property: "og:description", content: "Acesse seu painel de gestão de IPTV." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => ({ meta: [
+    { title: "Entrar — IPTV Manager" },
+    { name: "description", content: "Acesse o painel de clientes, listas IPTV e cobranças." },
+    { property: "og:title", content: "Entrar — IPTV Manager" },
+    { property: "og:description", content: "Acesse seu painel de gestão de IPTV." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+  ] }),
   component: AuthPage,
 });
 
@@ -41,270 +29,93 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [tab, setTab] = useState("login");
+  const [verificationStep, setVerificationStep] = useState(false);
 
   useEffect(() => {
     (async () => {
       const url = new URL(window.location.href);
       if (url.searchParams.has("code")) {
         const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
-        url.searchParams.delete("code");
-        url.searchParams.delete("state");
+        url.searchParams.delete("code"); url.searchParams.delete("state");
         window.history.replaceState({}, "", url.pathname + url.search + url.hash);
-        if (!error) {
-          toast.success("E-mail confirmado! Bem-vindo ao painel.");
-          navigate({ to: "/painel" });
-          return;
-        }
+        if (!error) { toast.success("E-mail confirmado! Bem-vindo ao painel."); navigate({ to: "/painel" }); return; }
       }
       const { data } = await supabase.auth.getSession();
       if (data.session) navigate({ to: "/painel" });
     })();
   }, [navigate]);
 
-  function goToTab(tabName: string) {
-    setTab(tabName);
+  function goToTab(value: string) {
+    setTab(value); setVerificationStep(false); setVerificationCode("");
   }
 
   async function signIn(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault(); setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success("Bem-vindo de volta!");
-    navigate({ to: "/painel" });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Bem-vindo de volta!"); navigate({ to: "/painel" });
   }
 
   async function signUp(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault(); setLoading(true);
     const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth`,
-        data: { display_name: name },
-      },
+      email, password,
+      options: { emailRedirectTo: `${window.location.origin}/auth`, data: { display_name: name } },
     });
     setLoading(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    
-    // Se o Supabase retornar uma sessão ativa (confirmação de e-mail desabilitada), cria o perfil e redireciona
+    if (error) { toast.error(error.message); return; }
     if (data.session) {
-      await supabase.from("profiles").upsert({
-        id: data.session.user.id,
-        display_name: name,
-      });
-      toast.success("Conta criada com sucesso! Bem-vindo ao painel.");
-      navigate({ to: "/painel" });
-      return;
+      await supabase.from("profiles").upsert({ id: data.session.user.id, display_name: name });
+      toast.success("Conta criada com sucesso! Bem-vindo ao painel."); navigate({ to: "/painel" }); return;
     }
-    
-    // Se não houver sessão (confirmação de e-mail ainda ativa no Supabase), pede para fazer login
-    toast.info("Conta criada! Confirme seu e-mail e faça login.");
-    setTab("login");
+    setVerificationStep(true);
+    toast.success("Código de verificação enviado para seu e-mail.");
   }
 
-  async function google() {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}/auth`,
-    });
-    if (result.error) {
-      toast.error("Não foi possível entrar com o Google.");
-      return;
+  async function verifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    const token = verificationCode.replace(/\D/g, "");
+    if (token.length !== 6) { toast.error("Digite o código de 6 dígitos recebido por e-mail."); return; }
+    setLoading(true);
+    const { data, error } = await supabase.auth.verifyOtp({ email, token, type: "signup" });
+    if (!error && data.user) {
+      await supabase.from("profiles").upsert({ id: data.user.id, display_name: name });
     }
-    if (result.redirected) return;
+    setLoading(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("E-mail confirmado! Bem-vindo ao painel.");
     navigate({ to: "/painel" });
   }
 
-  return (
-    <main className="relative flex min-h-screen bg-background text-foreground">
-      {/* Banner Esquerdo (Desktop) */}
-      <div className="hidden lg:flex w-1/2 relative flex-col justify-between overflow-hidden bg-zinc-950 p-12 text-white">
-        <div className="absolute inset-0 bg-primary/20 pointer-events-none" />
-        <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-primary/30 blur-[140px]" />
-        <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-primary/30 blur-[140px]" />
+  async function resendCode() {
+    if (!email) { toast.error("Informe seu e-mail para reenviar o código."); return; }
+    setLoading(true);
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+    setLoading(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Um novo código foi enviado para seu e-mail.");
+  }
 
-        <div className="relative z-10 flex items-center gap-3 text-xl font-bold">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 p-2 backdrop-blur-sm border border-white/20">
-            <img src={logo} alt="IPTV Manager" className="h-full w-full object-contain" />
-          </div>
-          IPTV Manager
-        </div>
+  async function google() {
+    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/auth` });
+    if (result.error) { toast.error("Não foi possível entrar com o Google."); return; }
+    if (!result.redirected) navigate({ to: "/painel" });
+  }
 
-        <div className="relative z-10 max-w-lg space-y-6">
-          <h2 className="text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">
-            Sua operação de IPTV <br /> mais inteligente.
-          </h2>
-          <p className="text-lg text-zinc-300">
-            Gerencie clientes, configure listas e automatize cobranças pelo WhatsApp 
-            para focar no que importa: crescer de forma escalável.
-          </p>
-          <div className="flex items-center gap-4 text-sm font-medium text-zinc-400">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4" /> Ambiente Seguro
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4" /> Cobrança Automatizada
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Painel Direito (Login/Signup) */}
-      <div className="flex w-full flex-col lg:w-1/2 p-6 sm:p-10">
-        <header className="flex items-center justify-between mb-auto">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="h-4 w-4" /> 
-            <span className="hidden sm:inline">Voltar ao Início</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <img src={logo} alt="IPTV Manager" className="h-8 w-8 lg:hidden" />
-            <ThemeToggle />
-          </div>
-        </header>
-
-        <div className="flex w-full flex-1 flex-col items-center justify-center pt-8 pb-12">
-          <div className="w-full max-w-[400px]">
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
-              <div className="mb-8 flex flex-col space-y-2 text-center sm:text-left">
-                <h1 className="text-3xl font-extrabold tracking-tight">
-                  {tab === "login" ? "Acessar Plataforma" : "Criar sua conta"}
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  {tab === "login" 
-                    ? "Insira seus dados para entrar no painel e gerenciar seu negócio." 
-                    : "Preencha os dados abaixo e comece a escalar suas vendas em instantes."}
-                </p>
-              </div>
-
-              <Tabs value={tab} onValueChange={goToTab} className="w-full">
-                <TabsList className="grid h-12 w-full grid-cols-2 rounded-xl bg-muted p-1 mb-6">
-                  <TabsTrigger value="login" className="rounded-lg font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                    Acesso
-                  </TabsTrigger>
-                  <TabsTrigger value="signup" className="rounded-lg font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                    Cadastro
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="login" className="space-y-5">
-                  <form onSubmit={signIn} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="font-medium">E-mail de acesso</Label>
-                      <div className="relative">
-                        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input 
-                          id="email" type="email" required autoComplete="email" placeholder="seu@email.com" 
-                          value={email} onChange={(e) => setEmail(e.target.value)} 
-                          className="h-12 rounded-xl pl-10" 
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="password" className="font-medium">Senha</Label>
-                        <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => toast.info("Entre em contato com o suporte para redefinir sua senha.")}>
-                          Esqueceu a senha?
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input 
-                          id="password" type={showPass ? "text" : "password"} required autoComplete="current-password" placeholder="••••••••" 
-                          value={password} onChange={(e) => setPassword(e.target.value)} 
-                          className="h-12 rounded-xl pl-10 pr-10" 
-                        />
-                        <button type="button" onClick={() => setShowPass((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                          {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
-                    <Button type="submit" className="h-12 w-full rounded-xl text-base font-bold shadow-md" disabled={loading}>
-                      {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando...</> : "Entrar no sistema"}
-                    </Button>
-                  </form>
-                </TabsContent>
-
-                <TabsContent value="signup" className="space-y-5">
-                  <form onSubmit={signUp} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="font-medium">Nome completo</Label>
-                      <div className="relative">
-                        <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input 
-                          id="name" required autoComplete="name" placeholder="Ex: João da Silva" 
-                          value={name} onChange={(e) => setName(e.target.value)} 
-                          className="h-12 rounded-xl pl-10" 
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email2" className="font-medium">E-mail</Label>
-                      <div className="relative">
-                        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input 
-                          id="email2" type="email" required autoComplete="email" placeholder="seu@email.com" 
-                          value={email} onChange={(e) => setEmail(e.target.value)} 
-                          className="h-12 rounded-xl pl-10" 
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password2" className="font-medium">Crie uma senha</Label>
-                      <div className="relative">
-                        <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input 
-                          id="password2" type={showPass ? "text" : "password"} required minLength={6} autoComplete="new-password" placeholder="Mínimo 6 caracteres" 
-                          value={password} onChange={(e) => setPassword(e.target.value)} 
-                          className="h-12 rounded-xl pl-10 pr-10" 
-                        />
-                        <button type="button" onClick={() => setShowPass((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                          {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
-                    <Button type="submit" className="h-12 w-full rounded-xl text-base font-bold shadow-md" disabled={loading}>
-                      {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Criando conta...</> : "Criar minha conta"}
-                    </Button>
-                  </form>
-                </TabsContent>
-              </Tabs>
-
-              <div className="my-8 flex items-center gap-3">
-                <span className="h-px flex-1 bg-border" />
-                <span className="text-xs font-medium uppercase text-muted-foreground">Ou continuar com</span>
-                <span className="h-px flex-1 bg-border" />
-              </div>
-
-              <Button variant="outline" className="h-12 w-full rounded-xl border-border bg-background text-sm font-semibold hover:bg-muted" onClick={google}>
-                <svg viewBox="0 0 24 24" className="mr-2 h-[18px] w-[18px]">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                Google
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <p className="mt-auto pt-6 text-center text-xs text-muted-foreground">
-          Ao continuar, você concorda com nossos{" "}
-          <Link to="/" className="underline hover:text-foreground">Termos de Serviço</Link> e{" "}
-          <Link to="/" className="underline hover:text-foreground">Política de Privacidade</Link>.
-        </p>
-      </div>
-    </main>
+  const field = (id: string, type: string, value: string, setValue: (v: string) => void, placeholder: string, icon: React.ReactNode, extra = {}) => (
+    <div className="relative"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{icon}</span><Input id={id} type={type} required value={value} onChange={e => setValue(e.target.value)} placeholder={placeholder} className="h-12 rounded-xl pl-10" {...extra} /></div>
   );
+
+  return <main className="relative flex min-h-screen bg-background text-foreground">
+    <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-zinc-950 p-12 text-white lg:flex"><div className="absolute inset-0 bg-primary/20" /><div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-primary/30 blur-[140px]" /><div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-primary/30 blur-[140px]" /><div className="relative z-10 flex items-center gap-3 text-xl font-bold"><div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 p-2"><img src={logo} alt="IPTV Manager" className="h-full w-full object-contain" /></div>IPTV Manager</div><div className="relative z-10 max-w-lg space-y-6"><h2 className="text-4xl font-extrabold leading-[1.1] sm:text-5xl">Sua operação de IPTV <br />mais inteligente.</h2><p className="text-lg text-zinc-300">Gerencie clientes, configure listas e automatize cobranças pelo WhatsApp para focar no que importa: crescer de forma escalável.</p><div className="flex gap-4 text-sm text-zinc-400"><span><ShieldCheck className="mr-1 inline h-4 w-4" />Ambiente Seguro</span><span><CheckCircle2 className="mr-1 inline h-4 w-4" />Cobrança Automatizada</span></div></div></div>
+    <div className="flex w-full flex-col p-6 sm:p-10 lg:w-1/2"><header className="mb-auto flex items-center justify-between"><Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /><span className="hidden sm:inline">Voltar ao Início</span></Link><div className="flex items-center gap-4"><img src={logo} alt="IPTV Manager" className="h-8 w-8 lg:hidden" /><ThemeToggle /></div></header><div className="flex w-full flex-1 flex-col items-center justify-center pb-12 pt-8"><div className="w-full max-w-[400px]"><div className="mb-8 space-y-2 text-center sm:text-left"><h1 className="text-3xl font-extrabold">{verificationStep ? "Verifique seu e-mail" : tab === "login" ? "Acessar Plataforma" : "Criar sua conta"}</h1><p className="text-sm text-muted-foreground">{verificationStep ? `Digite o código de 6 dígitos enviado para ${email}.` : tab === "login" ? "Insira seus dados para entrar no painel e gerenciar seu negócio." : "Preencha os dados abaixo e comece a escalar suas vendas em instantes."}</p></div>
+      {verificationStep ? <div className="space-y-5"><form onSubmit={verifyCode} className="space-y-4"><div className="space-y-2"><Label htmlFor="verification-code">Código de verificação</Label><Input id="verification-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required placeholder="000000" value={verificationCode} onChange={e => setVerificationCode(e.target.value.replace(/\D/g, ""))} className="h-14 rounded-xl text-center text-2xl font-bold tracking-[0.5em]" /></div><Button type="submit" className="h-12 w-full rounded-xl font-bold" disabled={loading}>{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Confirmar e-mail</Button></form><div className="space-y-3 text-center text-sm text-muted-foreground"><p>Não recebeu o código?</p><Button type="button" variant="outline" className="h-11 w-full rounded-xl" onClick={resendCode} disabled={loading}>Reenviar código</Button><button type="button" className="text-primary hover:underline" onClick={() => setVerificationStep(false)}>Alterar e-mail ou dados</button></div></div> : <Tabs value={tab} onValueChange={goToTab}><TabsList className="mb-6 grid h-12 w-full grid-cols-2 rounded-xl bg-muted p-1"><TabsTrigger value="login">Acesso</TabsTrigger><TabsTrigger value="signup">Cadastro</TabsTrigger></TabsList><TabsContent value="login"><form onSubmit={signIn} className="space-y-4"><div className="space-y-2"><Label>E-mail de acesso</Label>{field("email", "email", email, setEmail, "seu@email.com", <Mail className="h-4 w-4" />, { autoComplete: "email" })}</div><div className="space-y-2"><Label>Senha</Label><div className="relative">{field("password", showPass ? "text" : "password", password, setPassword, "••••••••", <Lock className="h-4 w-4" />, { autoComplete: "current-password" })}<button type="button" onClick={() => setShowPass(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">{showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div><Button type="submit" className="h-12 w-full rounded-xl font-bold" disabled={loading}>{loading ? "Entrando..." : "Entrar no sistema"}</Button></form></TabsContent><TabsContent value="signup"><form onSubmit={signUp} className="space-y-4"><div className="space-y-2"><Label>Nome completo</Label>{field("name", "text", name, setName, "Ex: João da Silva", <User className="h-4 w-4" />, { autoComplete: "name" })}</div><div className="space-y-2"><Label>E-mail</Label>{field("email2", "email", email, setEmail, "seu@email.com", <Mail className="h-4 w-4" />, { autoComplete: "email" })}</div><div className="space-y-2"><Label>Crie uma senha</Label><div className="relative">{field("password2", showPass ? "text" : "password", password, setPassword, "Mínimo 6 caracteres", <Lock className="h-4 w-4" />, { minLength: 6, autoComplete: "new-password" })}<button type="button" onClick={() => setShowPass(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">{showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div><Button type="submit" className="h-12 w-full rounded-xl font-bold" disabled={loading}>{loading ? "Criando conta..." : "Criar minha conta"}</Button></form></TabsContent></Tabs>}
+      {!verificationStep && <><div className="my-8 flex items-center gap-3"><span className="h-px flex-1 bg-border" /><span className="text-xs uppercase text-muted-foreground">Ou continuar com</span><span className="h-px flex-1 bg-border" /></div><Button variant="outline" className="h-12 w-full rounded-xl" onClick={google}>Google</Button></>}
+    </div></div><p className="mt-auto pt-6 text-center text-xs text-muted-foreground">Ao continuar, você concorda com nossos <Link to="/" className="underline">Termos de Serviço</Link> e <Link to="/" className="underline">Política de Privacidade</Link>.</p></div>
+  </main>;
 }
