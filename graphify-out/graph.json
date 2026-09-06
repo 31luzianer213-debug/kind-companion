@@ -1887,7 +1887,7 @@
       "file_type": "code",
       "norm_label": "google()",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L210"
+      "source_location": "L219"
     },
     {
       "id": "src_routes_auth_authpage_gototab",
@@ -1920,7 +1920,7 @@
       "file_type": "code",
       "norm_label": "resendconfirmation()",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L156"
+      "source_location": "L165"
     },
     {
       "id": "src_routes_auth_authpage_signin",
@@ -1931,7 +1931,7 @@
       "file_type": "code",
       "norm_label": "signin()",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L134"
+      "source_location": "L143"
     },
     {
       "id": "src_routes_auth_authpage_signup",
@@ -1942,7 +1942,7 @@
       "file_type": "code",
       "norm_label": "signup()",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L179"
+      "source_location": "L188"
     },
     {
       "id": "src_routes_auth_authpage_verifyotp",
@@ -10452,7 +10452,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L146",
+      "source_location": "L155",
       "weight": 1.0
     },
     {
@@ -10728,7 +10728,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L156",
+      "source_location": "L165",
       "weight": 1.0
     },
     {
@@ -23321,7 +23321,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L134",
+      "source_location": "L143",
       "weight": 1.0
     },
     {
@@ -23332,7 +23332,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L179",
+      "source_location": "L188",
       "weight": 1.0
     },
     {
@@ -23343,7 +23343,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/routes/auth.tsx",
-      "source_location": "L210",
+      "source_location": "L219",
       "weight": 1.0
     },
     {
@@ -24507,5 +24507,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "6fbce2dad063833f5e2052554d7dbcb73d17df14"
+  "built_at_commit": "dec02a1b34ab9edc0f08da7eaa3b047b6e4c93e7"
 }
