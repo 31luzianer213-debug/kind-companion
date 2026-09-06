@@ -186,7 +186,7 @@ function Clientes() {
 
   async function sincronizar() {
     setSyncing(true);
-    const result = await syncSigma({});
+    const result = await syncSigma({ data: {} });
     setSyncing(false);
     if (result.ok) {
       toast.success(`${result.created} novos e ${result.updated} atualizados pelo painel.`);

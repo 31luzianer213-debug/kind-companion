@@ -114,7 +114,7 @@ function AuthPage() {
     await supabase.auth.refreshSession();
     const { data: { session } } = await supabase.auth.getSession();
 
-    if (data.session || session) {
+    if (session) {
       toast.success("E-mail confirmado com sucesso!");
       navigate({ to: "/painel" });
     } else {

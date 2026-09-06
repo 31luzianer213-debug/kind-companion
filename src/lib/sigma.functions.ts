@@ -45,13 +45,18 @@ function resolvePanelConfig(
     url,
     username,
     password,
-    token: saved?.sigma_token ?? undefined,
+    token: saved?.sigma_token ?? null,
   };
 }
 
 /** Guarda o token obtido via login para não precisar logar toda vez. */
-async function persistSigmaToken(supabase: any, userId: string, config: { sigma_token: string | null }, token: string) {
-  if (token && token !== config.sigma_token) {
+async function persistSigmaToken(
+  supabase: any,
+  userId: string,
+  config: { sigma_token: string | null } | null,
+  token: string,
+) {
+  if (token && token !== config?.sigma_token) {
     await supabase.from("whatsapp_settings").update({ sigma_token: token }).eq("user_id", userId);
   }
 }
@@ -206,14 +211,15 @@ export const renewSigmaClient = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
 
     const config = await loadConfig(supabase, userId);
+    const sigmaConfig = resolvePanelConfig(config);
     const { data: client } = await supabase
       .from("clients")
-      .select("sigma_customer_id")
+      .select("sigma_customer_id, sigma_username")
       .eq("id", data.clientId)
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (!hasSigmaAccess(config!)) {
+    if (!hasSigmaAccess(sigmaConfig)) {
       return { ok: false as const, error: "Painel Sigma não configurado." };
     }
     if (!client?.sigma_customer_id) {
@@ -221,14 +227,13 @@ export const renewSigmaClient = createServerFn({ method: "POST" })
     }
 
     try {
-      const sigmaConfig = toSigmaConfig(config!);
       await renewSigmaCustomer(
         sigmaConfig,
-        String(client.sigma_customer_id),
+        { id: String(client.sigma_customer_id), username: client.sigma_username ?? null },
         data.months ?? 1,
       );
       try {
-        await persistSigmaToken(supabase, userId, config!, await ensureSigmaToken(sigmaConfig));
+        await persistSigmaToken(supabase, userId, config, await ensureSigmaToken(sigmaConfig));
       } catch {
         // segue sem persistir; o login é refeito na próxima chamada
       }

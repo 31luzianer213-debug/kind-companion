@@ -114,15 +114,15 @@ function Configuracoes() {
 
   async function testarPainel() {
     setSigmaBusy(true);
-    const result = await testSigma({});
+    const result = await testSigma({ data: {} });
     setSigmaBusy(false);
-    if (result.ok) toast.success(`Conectado! ${result.total} clientes encontrados no painel.`);
+    if (result.ok) toast.success(`Conectado com o painel!`);
     else toast.error(result.error ?? "Não foi possível conectar.");
   }
 
   async function sincronizarPainel() {
     setSigmaBusy(true);
-    const result = await syncSigma({});
+    const result = await syncSigma({ data: {} });
     setSigmaBusy(false);
     if (result.ok) {
       toast.success(`${result.created} novos e ${result.updated} atualizados.`);
