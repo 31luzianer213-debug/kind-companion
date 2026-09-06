@@ -94,7 +94,7 @@ function AuthPage() {
     if (otp.length !== 6 || !pendingConfirmEmail) return;
 
     setVerifying(true);
-    const { data, error } = await supabase.auth.verifyOtp({
+    const { error } = await supabase.auth.verifyOtp({
       email: pendingConfirmEmail,
       token: otp,
       type: "signup" as any,

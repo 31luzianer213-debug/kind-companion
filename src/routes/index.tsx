@@ -54,7 +54,7 @@ function Index() {
     <main className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-6">
         <span className="flex items-center gap-2 text-base font-semibold sm:text-lg">
-          <img src={logo} alt="IPTV Manager" width={36} height={36} className="h-8 w-8 sm:h-9 sm:w-9" />
+          <MonitorPlay className="h-8 w-8 sm:h-9 sm:w-9 text-primary" />
           IPTV Manager
         </span>
         <div className="flex items-center gap-2">

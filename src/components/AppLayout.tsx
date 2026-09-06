@@ -48,7 +48,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const brand = (
     <div className="flex items-center gap-3">
       <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/20 ring-1 ring-primary/15">
-        <img src={logo} alt="IPTV Manager" width={22} height={22} className="h-[22px] w-[22px] object-contain brightness-0 invert" />
+        <MonitorPlay className="h-[22px] w-[22px]" />
       </span>
       <span className="leading-none">
         <span className="block text-[15px] font-bold tracking-tight">IPTV Manager</span>
