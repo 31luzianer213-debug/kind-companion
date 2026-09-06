@@ -217,14 +217,14 @@
   gap: 1.25rem;
   padding: 0.25rem 0 1.5rem;
   border-bottom: 1px solid color-mix(in oklch, var(--border) 68%, transparent);
-}
 
-@utility page-header h1 {
-  letter-spacing: -0.035em;
-}
+  & h1 {
+    letter-spacing: -0.035em;
+  }
 
-@utility page-header p {
-  line-height: 1.6;
+  & p {
+    line-height: 1.6;
+  }
 }
 
 @utility kpi-value {
