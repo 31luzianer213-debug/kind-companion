@@ -97,12 +97,12 @@ function AuthPage() {
     const { error } = await supabase.auth.verifyOtp({
       email: pendingConfirmEmail,
       token: otp,
-      type: "signup" as any,
+      type: "email",
     });
     setVerifying(false);
 
     if (error) {
-      if (error.message.includes("Token has expired") || error.message.includes("Invalid")) {
+      if (error.message.includes("Token has expired") || error.message.includes("Invalid") || error.message.includes("invalid")) {
         toast.error("Código inválido ou expirado. Tente novamente.");
       } else {
         toast.error(error.message);
@@ -115,6 +115,13 @@ function AuthPage() {
     const { data: { session } } = await supabase.auth.getSession();
 
     if (session) {
+      const displayName = name || session.user.user_metadata?.display_name;
+      if (displayName) {
+        await supabase.from("profiles").upsert({
+          id: session.user.id,
+          display_name: displayName,
+        });
+      }
       toast.success("E-mail confirmado com sucesso!");
       navigate({ to: "/painel" });
     } else {
@@ -132,10 +139,10 @@ function AuthPage() {
     if (error) {
       const code = (error as { code?: string }).code ?? "";
       const needsConfirm =
-        code === "email_not_confirmed" || /confirm|verif/i.test(error.message);
+        code === "email_not_confirmed" || /confirm|verif/i.test(error.message) || error.message.includes("Email not confirmed");
       if (needsConfirm) {
         setPendingConfirmEmail(email);
-        toast.error("Confirme seu e-mail antes de entrar. Se necessário, digite o código recém-enviado.");
+        toast.error("Confirme seu e-mail antes de entrar. Novo código enviado.");
         void resendConfirmation(email);
         return;
       }
@@ -159,7 +166,11 @@ function AuthPage() {
     });
     setResending(false);
     if (error) {
-      toast.error(error.message);
+      if (error.message.includes("rate limit") || (error as any).status === 429) {
+        toast.error("Aguarde um momento antes de pedir um novo código.");
+      } else {
+        toast.error(error.message);
+      }
       return;
     }
     toast.success(`Novo código de confirmação enviado para ${targetEmail}.`);
