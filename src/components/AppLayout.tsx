@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   Sparkles,
+  MonitorPlay,
 } from "lucide-react";
 
 const nav = [
