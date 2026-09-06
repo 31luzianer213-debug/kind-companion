@@ -80,6 +80,10 @@ function AuthPage() {
     setTab(tabName);
   }
 
+  function handleOtpChange(value: string) {
+    setOtp(value.replace(/\D/g, "").slice(0, 6));
+  }
+
   function dismissPending() {
     setPendingConfirmEmail(null);
     setTab("login");

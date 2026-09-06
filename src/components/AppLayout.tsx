@@ -137,10 +137,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
         {footer}
       </aside>
 
-      <main className="min-w-0 flex-1">
+      <main className="relative min-w-0 flex-1 overflow-hidden">
         <div className="pointer-events-none absolute inset-0 hidden app-grid opacity-[0.32] dark:opacity-[0.10] md:block" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/15 to-transparent" />
-        <div className="relative px-4 py-6 md:px-8 md:py-8 lg:px-10">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent" />
+        <div className="relative px-4 py-6 sm:px-6 md:px-8 md:py-9 lg:px-10">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </div>
       </main>
