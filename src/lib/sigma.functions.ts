@@ -250,15 +250,21 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
 
     try {
       const token = await sigmaLogin(url, username, password);
+      const { fetchSigmaPanelDns } = await import("./sigma.server");
+      const detectedDns = await fetchSigmaPanelDns({ url, token, username, password });
 
-      // Persiste o token atualizado para futuras chamadas
+      // Persiste o token atualizado e o DNS detectado se não houver um manual
       try {
-        await supabase.from("whatsapp_settings").update({ sigma_token: token }).eq("user_id", userId);
+        const updatePayload: Record<string, any> = { sigma_token: token };
+        if (detectedDns && !saved.streaming_dns) {
+          updatePayload.sigma_streaming_dns = detectedDns;
+        }
+        await supabase.from("whatsapp_settings").update(updatePayload).eq("user_id", userId);
       } catch {
         // ignora se coluna não existir
       }
 
-      return { ok: true as const, error: null };
+      return { ok: true as const, error: null, detectedDns };
     } catch (error) {
       return {
         ok: false as const,
@@ -299,6 +305,30 @@ export async function runSigmaSyncForUser(
   try {
     const token = await ensureSigmaToken(panelConfig);
     customers = await listSigmaCustomers({ ...panelConfig, token });
+
+    // Tenta detectar se o painel ou alguma linha entregou o DNS de streaming oficial
+    let detectedDns: string | null = null;
+    for (const c of customers) {
+      if (c.dns) {
+        detectedDns = c.dns;
+        break;
+      }
+    }
+    if (!detectedDns) {
+      try {
+        const { fetchSigmaPanelDns } = await import("./sigma.server");
+        detectedDns = await fetchSigmaPanelDns({ ...panelConfig, token });
+      } catch {}
+    }
+
+    if (detectedDns && !panelConfig.streaming_dns) {
+      try {
+        await supabase
+          .from("whatsapp_settings")
+          .update({ sigma_streaming_dns: detectedDns })
+          .eq("user_id", userId);
+      } catch {}
+    }
   } catch (error) {
     return {
       ok: false as const,

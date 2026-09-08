@@ -24,6 +24,8 @@ export type SigmaCustomer = {
   /** Status normalizado: 'active' | 'inactive' | 'expired' | 'suspended' */
   status: string | null;
   packageId?: string | number | null;
+  dns?: string | null;
+  m3uUrl?: string | null;
 };
 
 export type CreateSigmaCustomerInput = {
@@ -619,6 +621,8 @@ function mapCustomer(raw: any): SigmaCustomer | null {
     ),
     status: normalizeStatus(pickField(raw, ["status", "state", "is_active", "isActive"])),
     packageId: pickField(raw, ["package_id", "packageId", "plan_id", "plan"]),
+    dns: pickField(raw, ["dns", "server_dns", "server_url", "server", "stream_url", "streaming_url", "host", "domain"]),
+    m3uUrl: pickField(raw, ["m3u_url", "m3u", "line_url", "url"]),
   };
 }
 
@@ -709,6 +713,106 @@ export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCust
   throw new Error(
     `Não consegui listar os clientes do painel. Respostas: ${attempts.slice(0, 4).join(" • ") || "nenhuma"}.`,
   );
+}
+
+function normalizeIptvDns(urlStr: string): string {
+  let cleaned = urlStr.trim().split("#")[0].split("?")[0].replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(cleaned)) {
+    cleaned = `http://${cleaned}`;
+  }
+  return cleaned;
+}
+
+/**
+ * Tenta descobrir o DNS/URL oficial de transmissão diretamente de dentro do painel Sigma.
+ * Consulta endpoints de informações de servidor (/api/server-info, /api/dns, /panel_api.php, etc.).
+ */
+export async function fetchSigmaPanelDns(config: SigmaConfig): Promise<string | null> {
+  const base = normalizeBaseUrl(config.url);
+  const user = config.username?.trim();
+  const pass = config.password ?? "";
+
+  // 1. Tenta endpoints de Xtream/Player API se tiver credenciais
+  if (user && pass) {
+    for (const xtreamPath of [
+      `/panel_api.php?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`,
+      `/player_api.php?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`,
+    ]) {
+      try {
+        const res = await requestJson(base, xtreamPath, { method: "GET" }, 5000);
+        if (res.ok && res.payload?.server_info) {
+          const s = res.payload.server_info;
+          const urlCandidate = s.url || s.server_dns || s.dns;
+          if (urlCandidate && typeof urlCandidate === "string" && !urlCandidate.includes("/sign-in")) {
+            return normalizeIptvDns(urlCandidate);
+          }
+          if (s.server_ip) {
+            const port = s.port ? `:${s.port}` : "";
+            return `http://${s.server_ip}${port}`;
+          }
+        }
+      } catch {
+        // tenta o próximo
+      }
+    }
+  }
+
+  // 2. Tenta endpoints REST de informações do servidor
+  const candidateEndpoints = [
+    "/api/server-info",
+    "/api/server/info",
+    "/api/servers",
+    "/api/dns",
+    "/api/profile",
+    "/api/user/info",
+    "/api/resellers/me",
+    "/api/me",
+    "/api/config",
+  ];
+
+  for (const endpoint of candidateEndpoints) {
+    try {
+      const res = await authorizedRequest(config, endpoint, { method: "GET" }, 4000);
+      if (!res.ok || !res.payload) continue;
+
+      const p = res.payload;
+      const dnsCandidate = pickField(p, [
+        "dns",
+        "server_dns",
+        "streaming_dns",
+        "stream_url",
+        "server_url",
+        "server",
+        "host",
+        "domain",
+        "server_info.url",
+        "server_info.dns",
+        "data.dns",
+        "data.server_url",
+        "data.streaming_dns",
+        "data.server_dns",
+        "data.server_info.url",
+      ]);
+
+      if (dnsCandidate && typeof dnsCandidate === "string" && !dnsCandidate.includes("/sign-in")) {
+        return normalizeIptvDns(dnsCandidate);
+      }
+
+      // Se for array de servidores
+      const rows = extractRows(p);
+      if (rows.length > 0) {
+        const first = rows[0];
+        const rowDns = pickField(first, ["dns", "server_url", "url", "host", "domain"]);
+        if (rowDns && typeof rowDns === "string" && !rowDns.includes("/sign-in")) {
+          return normalizeIptvDns(rowDns);
+        }
+      }
+    } catch {
+      // continua tentando
+    }
+  }
+
+  return null;
 }
 
 /** Cria um novo cliente / linha no painel Sigma. */
