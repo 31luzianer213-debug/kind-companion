@@ -40,18 +40,33 @@ export const getPaymentSettings = createServerFn({ method: "POST" })
       metaPayment = null;
     }
 
+    let localPayment: any = null;
+    try {
+      const { readLocalPaymentSettings } = await import("./bot.server");
+      localPayment = readLocalPaymentSettings(userId);
+    } catch {}
+
+    const resolvedSettings = {
+      pix_key: dbData?.pix_key || metaPayment?.pix_key || localPayment?.pix_key || "",
+      pix_key_type: dbData?.pix_key_type || metaPayment?.pix_key_type || localPayment?.pix_key_type || "aleatoria",
+      pix_holder: dbData?.pix_holder || metaPayment?.pix_holder || localPayment?.pix_holder || "",
+      payment_link: dbData?.payment_link || metaPayment?.payment_link || localPayment?.payment_link || "",
+      payment_provider: dbData?.payment_provider || metaPayment?.payment_provider || localPayment?.payment_provider || "pix",
+      mercadopago_token: dbData?.mercadopago_token || metaPayment?.mercadopago_token || localPayment?.mercadopago_token || "",
+      asaas_token: dbData?.asaas_token || metaPayment?.asaas_token || localPayment?.asaas_token || "",
+      asaas_env: dbData?.asaas_env || metaPayment?.asaas_env || localPayment?.asaas_env || "production",
+    };
+
+    if (resolvedSettings.mercadopago_token || resolvedSettings.pix_key) {
+      try {
+        const { writeLocalPaymentSettings } = await import("./bot.server");
+        writeLocalPaymentSettings(userId, resolvedSettings);
+      } catch {}
+    }
+
     return {
       ok: true as const,
-      settings: {
-        pix_key: dbData?.pix_key ?? metaPayment?.pix_key ?? "",
-        pix_key_type: dbData?.pix_key_type ?? metaPayment?.pix_key_type ?? "aleatoria",
-        pix_holder: dbData?.pix_holder ?? metaPayment?.pix_holder ?? "",
-        payment_link: dbData?.payment_link ?? metaPayment?.payment_link ?? "",
-        payment_provider: dbData?.payment_provider ?? metaPayment?.payment_provider ?? "pix",
-        mercadopago_token: dbData?.mercadopago_token ?? metaPayment?.mercadopago_token ?? "",
-        asaas_token: dbData?.asaas_token ?? metaPayment?.asaas_token ?? "",
-        asaas_env: dbData?.asaas_env ?? metaPayment?.asaas_env ?? "production",
-      },
+      settings: resolvedSettings,
     };
   });
 
@@ -75,6 +90,20 @@ export const savePaymentSettings = createServerFn({ method: "POST" })
       asaas_token: (data.asaas_token ?? "").trim(),
       asaas_env: data.asaas_env ?? "production",
     };
+
+    // 0. Salva no disco imediatamente para o Bot acessar na hora
+    try {
+      const { writeLocalPaymentSettings, saveBotConfigServer } = await import("./bot.server");
+      writeLocalPaymentSettings(userId, payload);
+      await saveBotConfigServer(supabase, userId, {
+        mercadopago_token: payload.mercadopago_token,
+        payment_provider: payload.payment_provider,
+        pixKey: payload.pix_key,
+        pixHolder: payload.pix_holder,
+      });
+    } catch (localErr) {
+      console.warn("Aviso ao sincronizar payment local:", localErr);
+    }
 
     let dbSaved = false;
     // 1. Tenta salvar na tabela whatsapp_settings com todas as colunas

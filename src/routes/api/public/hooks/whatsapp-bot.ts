@@ -50,6 +50,31 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
 
         const instance = String(payload?.instance ?? item?.instance ?? rawData?.instance ?? "").trim();
 
+        // Se targetUserId foi passado como prefixo curto (ex: 16 hex chars da instância), resolve para o UUID completo
+        if (targetUserId && targetUserId.length < 32) {
+          try {
+            const { data: accounts } = await supabaseAdmin.from("whatsapp_settings").select("user_id");
+            for (const acc of accounts ?? []) {
+              if (acc.user_id.replace(/[^a-zA-Z0-9]/g, "").startsWith(targetUserId)) {
+                targetUserId = acc.user_id;
+                break;
+              }
+            }
+          } catch {}
+
+          if (targetUserId.length < 32) {
+            try {
+              const { data: profs } = await supabaseAdmin.from("profiles").select("id");
+              for (const p of profs ?? []) {
+                if (p.id.replace(/[^a-zA-Z0-9]/g, "").startsWith(targetUserId)) {
+                  targetUserId = p.id;
+                  break;
+                }
+              }
+            } catch {}
+          }
+        }
+
         // Se não passou userId na query string, tenta localizar pela instância ou buscar usuário ativo
         if (!targetUserId && instance) {
           try {

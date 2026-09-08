@@ -29,13 +29,20 @@ export type OrderItem = {
 
 function getOrdersFilePath(userId?: string): string {
   const safeId = (userId || "default").replace(/[^a-zA-Z0-9_-]/g, "_");
+  const canonicalId = (userId || "default").replace(/^iptv_/i, "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 16) || "default";
   const dir = path.resolve(process.cwd(), "data");
   if (!fs.existsSync(dir)) {
     try {
       fs.mkdirSync(dir, { recursive: true });
     } catch {}
   }
-  return path.join(dir, `orders_${safeId}.json`);
+  const canonicalPath = path.join(dir, `orders_${canonicalId}.json`);
+  if (fs.existsSync(canonicalPath)) return canonicalPath;
+
+  const safePath = path.join(dir, `orders_${safeId}.json`);
+  if (fs.existsSync(safePath)) return safePath;
+
+  return canonicalPath;
 }
 
 function readLocalOrders(userId?: string): OrderItem[] {

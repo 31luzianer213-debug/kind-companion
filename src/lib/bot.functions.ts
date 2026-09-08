@@ -54,3 +54,22 @@ export const generateTrialQuick = createServerFn({ method: "POST" })
     return res;
   });
 
+/** Gera o texto formatado dos planos com os valores preenchidos */
+export const generatePlansMessageText = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (input: {
+      planMonthlyPrice?: number;
+      planQuarterlyPrice?: number;
+      planSemiannualPrice?: number;
+      planAnnualPrice?: number;
+      serverName?: string;
+    }) => input,
+  )
+  .handler(async ({ data }) => {
+    const { generateDefaultPlansText } = await import("./bot.server");
+    const text = generateDefaultPlansText(data);
+    return { ok: true as const, text };
+  });
+
+

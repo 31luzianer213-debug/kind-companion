@@ -32,6 +32,8 @@ export type BotProcessResult = {
 export type BotConfigData = {
   enabled: boolean;
   businessName: string;
+  serverName?: string;
+  streamingDns?: string;
   testEnabled: boolean;
   testDurationHours: number;
   testPackageName: string;
@@ -41,11 +43,20 @@ export type BotConfigData = {
   supportMessage: string;
   pixKey?: string;
   pixHolder?: string;
+  planMonthlyPrice: number;
+  planQuarterlyPrice: number;
+  planSemiannualPrice: number;
+  planAnnualPrice: number;
+  renewalPrice: number;
+  mercadopago_token?: string;
+  payment_provider?: string;
 };
 
 export const DEFAULT_BOT_CONFIG: BotConfigData = {
   enabled: true,
   businessName: "Alpha IPTV",
+  serverName: "Alpha server IPTV",
+  streamingDns: "http://karen256.top",
   testEnabled: true,
   testDurationHours: 4,
   testPackageName: "TESTE LISTA IPTV ALPHA COM TODOS CONTEUDOS COM ADULTOS 🔞",
@@ -63,9 +74,9 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
   plansText:
     "🛒 *PLANOS E ASSINATURAS DISPONÍVEIS* 🍿\n\n" +
     "📺 *1 Mês (1 Tela):* R$ 35,00\n" +
-    "📺 *1 Mês (2 Telas):* R$ 55,00\n" +
     "📺 *3 Meses (Trimestral):* R$ 90,00 (Mais econômico!)\n" +
-    "📺 *6 Meses (Semestral):* R$ 160,00\n\n" +
+    "📺 *6 Meses (Semestral):* R$ 160,00\n" +
+    "📺 *12 Meses (Anual):* R$ 290,00 (Melhor custo-benefício!)\n\n" +
     "⭐ *Todos os planos incluem:*\n" +
     "• Mais de 80.000 conteúdos (Canais 4K/FHD, Filmes e Séries atualizados)\n" +
     "• Guia de Canais completo (EPG)\n" +
@@ -74,20 +85,96 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
     "👨‍💼 *ATENDIMENTO HUMANO*\n\n" +
     "Sua solicitação foi recebida! Um de nossos atendentes irá te responder diretamente aqui em instantes.\n" +
     "Por favor, deixe sua dúvida ou mensagem abaixo para agilizar seu atendimento. 👇",
+  planMonthlyPrice: 35.0,
+  planQuarterlyPrice: 90.0,
+  planSemiannualPrice: 160.0,
+  planAnnualPrice: 290.0,
+  renewalPrice: 35.0,
 };
+
+export function generateDefaultPlansText(params: {
+  planMonthlyPrice?: number;
+  planQuarterlyPrice?: number;
+  planSemiannualPrice?: number;
+  planAnnualPrice?: number;
+  serverName?: string;
+}): string {
+  const m = Number(params.planMonthlyPrice || 35).toFixed(2).replace(".", ",");
+  const q = Number(params.planQuarterlyPrice || 90).toFixed(2).replace(".", ",");
+  const s = Number(params.planSemiannualPrice || 160).toFixed(2).replace(".", ",");
+  const a = Number(params.planAnnualPrice || 290).toFixed(2).replace(".", ",");
+  const srv = params.serverName || "Alpha IPTV";
+
+  return (
+    `🛒 *PLANOS E ASSINATURAS ${srv.toUpperCase()}* 🍿\n\n` +
+    `📺 *1 Mês (Mensal):* R$ ${m}\n` +
+    `📺 *3 Meses (Trimestral):* R$ ${q} (Econômico!)\n` +
+    `📺 *6 Meses (Semestral):* R$ ${s} (Mais Vendido! 🔥)\n` +
+    `📺 *12 Meses (Anual):* R$ ${a} (Super Desconto ⭐)\n\n` +
+    `⭐ *Todos os planos incluem:*\n` +
+    `• Mais de 80.000 conteúdos (Canais 4K/FHD, Filmes e Séries atualizados)\n` +
+    `• Guia de Canais completo (EPG)\n` +
+    `• Compatível com TV Box, Smart TV, Celular, Computador e Tablet\n` +
+    `• Ativação Imediata via PIX Automático!`
+  );
+}
 
 // Cache em memória para leitura ultrarrápida (0ms) sem bloqueio de RLS
 const botConfigCache = new Map<string, BotConfigData>();
 
-function getLocalConfigPath(userId?: string): string {
-  const safeId = (userId || "default").replace(/[^a-zA-Z0-9_-]/g, "_");
+export function getCanonicalUserId(userId?: string): string {
+  if (!userId || userId === "default") return "default";
+  const clean = userId.replace(/^iptv_/i, "").replace(/[^a-zA-Z0-9]/g, "");
+  return clean.slice(0, 16) || "default";
+}
+
+export function getLocalPaymentPath(userId?: string): string {
+  const canonicalId = getCanonicalUserId(userId);
   const dir = path.resolve(process.cwd(), "data");
   if (!fs.existsSync(dir)) {
     try {
       fs.mkdirSync(dir, { recursive: true });
     } catch {}
   }
-  return path.join(dir, `bot_config_${safeId}.json`);
+  return path.join(dir, `payment_settings_${canonicalId}.json`);
+}
+
+export function readLocalPaymentSettings(userId?: string): any {
+  try {
+    const file = getLocalPaymentPath(userId);
+    if (fs.existsSync(file)) {
+      return JSON.parse(fs.readFileSync(file, "utf-8"));
+    }
+  } catch {}
+  return null;
+}
+
+export function writeLocalPaymentSettings(userId: string | undefined, data: any): void {
+  try {
+    const file = getLocalPaymentPath(userId);
+    fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+  } catch (err) {
+    console.warn("Aviso ao gravar payment settings local:", err);
+  }
+}
+
+function getLocalConfigPath(userId?: string): string {
+  const safeId = (userId || "default").replace(/[^a-zA-Z0-9_-]/g, "_");
+  const canonicalId = getCanonicalUserId(userId);
+  const dir = path.resolve(process.cwd(), "data");
+  if (!fs.existsSync(dir)) {
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch {}
+  }
+  // Se o arquivo canonical já existir, usa ele para consistência
+  const canonicalPath = path.join(dir, `bot_config_${canonicalId}.json`);
+  if (fs.existsSync(canonicalPath)) return canonicalPath;
+
+  const safePath = path.join(dir, `bot_config_${safeId}.json`);
+  if (fs.existsSync(safePath)) return safePath;
+
+  return canonicalPath;
 }
 
 function readLocalConfig(userId?: string): Partial<BotConfigData> | null {
@@ -105,6 +192,13 @@ function writeLocalConfig(userId: string | undefined, data: BotConfigData): void
   try {
     const file = getLocalConfigPath(userId);
     fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+
+    // Grava também no nome canonical se for diferente para sincronização total
+    const canonicalId = getCanonicalUserId(userId);
+    const canonicalPath = path.join(path.resolve(process.cwd(), "data"), `bot_config_${canonicalId}.json`);
+    if (file !== canonicalPath) {
+      fs.writeFileSync(canonicalPath, JSON.stringify(data, null, 2), "utf-8");
+    }
   } catch (err) {
     console.warn("Aviso ao gravar config local do bot:", err);
   }
@@ -116,8 +210,41 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
 
   // 1. Arquivo persistente no disco (garante atualização instantânea entre processos)
   const diskData = readLocalConfig(uid);
+  const localPayment = readLocalPaymentSettings(uid);
   if (diskData && typeof diskData.enabled === "boolean") {
-    const merged: BotConfigData = { ...DEFAULT_BOT_CONFIG, ...diskData };
+    let mpToken = diskData.mercadopago_token || localPayment?.mercadopago_token;
+    let paymentProvider = diskData.payment_provider || localPayment?.payment_provider || (mpToken ? "mercadopago" : "pix");
+
+    // Se o token ainda não estava no disco e recebemos cliente supabase, tenta puxar do banco/metadata
+    if (!mpToken && supabase) {
+      try {
+        const { data } = await supabase
+          .from("whatsapp_settings")
+          .select("mercadopago_token, payment_provider, pix_key, pix_holder, sigma_server_name, sigma_streaming_dns")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (data?.mercadopago_token) {
+          mpToken = data.mercadopago_token.trim();
+          paymentProvider = data.payment_provider || "mercadopago";
+          // Grava no disco para as próximas chamadas não precisarem de query
+          writeLocalPaymentSettings(uid, {
+            mercadopago_token: mpToken,
+            payment_provider: paymentProvider,
+            pix_key: data.pix_key || diskData.pixKey,
+            pix_holder: data.pix_holder || diskData.pixHolder,
+          });
+        }
+      } catch {}
+    }
+
+    const merged: BotConfigData = {
+      ...DEFAULT_BOT_CONFIG,
+      ...diskData,
+      mercadopago_token: mpToken,
+      payment_provider: paymentProvider,
+      pixKey: diskData.pixKey || localPayment?.pix_key || DEFAULT_BOT_CONFIG.pixKey,
+      pixHolder: diskData.pixHolder || localPayment?.pix_holder || DEFAULT_BOT_CONFIG.pixHolder,
+    };
     botConfigCache.set(uid, merged);
     return merged;
   }
@@ -166,6 +293,14 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
     const config: BotConfigData = {
       enabled,
       businessName,
+      serverName:
+        wsRow?.sigma_server_name?.trim() ||
+        metaBot?.serverName?.trim() ||
+        DEFAULT_BOT_CONFIG.serverName,
+      streamingDns:
+        wsRow?.sigma_streaming_dns?.trim() ||
+        metaBot?.streamingDns?.trim() ||
+        DEFAULT_BOT_CONFIG.streamingDns,
       testEnabled: metaBot?.testEnabled ?? DEFAULT_BOT_CONFIG.testEnabled,
       testDurationHours: metaBot?.testDurationHours ?? DEFAULT_BOT_CONFIG.testDurationHours,
       testPackageName:
@@ -175,8 +310,15 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
       menuGreeting: metaBot?.menuGreeting?.trim() || DEFAULT_BOT_CONFIG.menuGreeting,
       plansText: metaBot?.plansText?.trim() || DEFAULT_BOT_CONFIG.plansText,
       supportMessage: metaBot?.supportMessage?.trim() || DEFAULT_BOT_CONFIG.supportMessage,
-      pixKey: wsRow?.pix_key || metaBot?.pixKey,
-      pixHolder: wsRow?.pix_holder || metaBot?.pixHolder,
+      pixKey: wsRow?.pix_key || metaBot?.pixKey || localPayment?.pix_key,
+      pixHolder: wsRow?.pix_holder || metaBot?.pixHolder || localPayment?.pix_holder,
+      planMonthlyPrice: metaBot?.planMonthlyPrice ?? DEFAULT_BOT_CONFIG.planMonthlyPrice,
+      planQuarterlyPrice: metaBot?.planQuarterlyPrice ?? DEFAULT_BOT_CONFIG.planQuarterlyPrice,
+      planSemiannualPrice: metaBot?.planSemiannualPrice ?? DEFAULT_BOT_CONFIG.planSemiannualPrice,
+      planAnnualPrice: metaBot?.planAnnualPrice ?? DEFAULT_BOT_CONFIG.planAnnualPrice,
+      renewalPrice: metaBot?.renewalPrice ?? DEFAULT_BOT_CONFIG.renewalPrice,
+      mercadopago_token: wsRow?.mercadopago_token || metaBot?.mercadopago_token || localPayment?.mercadopago_token,
+      payment_provider: wsRow?.payment_provider || metaBot?.payment_provider || localPayment?.payment_provider,
     };
 
     botConfigCache.set(uid, config);
@@ -202,6 +344,21 @@ export async function saveBotConfigServer(
   botConfigCache.set(uid, updated);
   writeLocalConfig(uid, updated);
 
+  // Sincroniza também no arquivo local de pagamento para o bot ter 100% de acesso
+  if (updated.mercadopago_token || updated.pixKey || updated.pixHolder) {
+    try {
+      const existingP = readLocalPaymentSettings(uid) || {};
+      writeLocalPaymentSettings(uid, {
+        ...existingP,
+        user_id: userId,
+        mercadopago_token: updated.mercadopago_token ?? existingP.mercadopago_token ?? "",
+        payment_provider: updated.payment_provider ?? existingP.payment_provider ?? "mercadopago",
+        pix_key: updated.pixKey ?? existingP.pix_key ?? "",
+        pix_holder: updated.pixHolder ?? existingP.pix_holder ?? "",
+      });
+    } catch {}
+  }
+
   // 2. Atualiza na tabela whatsapp_settings
   try {
     await supabase
@@ -209,6 +366,9 @@ export async function saveBotConfigServer(
       .update({
         business_name: updated.businessName,
         auto_send_enabled: updated.enabled,
+        ...(updated.serverName ? { sigma_server_name: updated.serverName } : {}),
+        ...(updated.streamingDns ? { sigma_streaming_dns: updated.streamingDns } : {}),
+        ...(updated.mercadopago_token ? { mercadopago_token: updated.mercadopago_token } : {}),
         ...(updated.pixKey ? { pix_key: updated.pixKey } : {}),
         ...(updated.pixHolder ? { pix_holder: updated.pixHolder } : {}),
       })
@@ -299,12 +459,14 @@ export async function createTrialForBot(
   const panelPass = wsRow?.sigma_password || userMetaSigma?.password;
 
   const serverName =
+    botConfig.serverName ||
     wsRow?.sigma_server_name?.trim() ||
     userMetaSigma?.server_name?.trim() ||
     botConfig.businessName ||
     "Alpha server IPTV";
 
   const streamingDns =
+    botConfig.streamingDns ||
     wsRow?.sigma_streaming_dns?.trim() ||
     userMetaSigma?.streaming_dns?.trim() ||
     "http://karen256.top";
@@ -392,7 +554,7 @@ type ConversationSession = {
 const conversationSessions = new Map<string, ConversationSession>();
 
 /**
- * Cria pedido para o plano escolhido e formata a resposta 100% em texto puro
+ * Cria pedido para o plano escolhido e formata a resposta com PIX Copia e Cola (Mercado Pago) ou Chave Manual
  */
 async function handlePlanOrderCreation({
   userId,
@@ -400,26 +562,27 @@ async function handlePlanOrderCreation({
   pushName,
   durationMonths,
   wsRow,
-  pixKey,
-  pixHolder,
+  config,
 }: {
   userId: string;
   cleanPhone: string;
   pushName?: string;
   durationMonths: number;
   wsRow: any;
-  pixKey: string;
-  pixHolder: string;
+  config: BotConfigData;
 }): Promise<BotProcessResult> {
   let planName = "Plano Mensal (1 Mês - 1 Tela)";
-  let amount = 35.0;
+  let amount = config.planMonthlyPrice || 35.0;
 
   if (durationMonths === 3) {
     planName = "Plano Trimestral (3 Meses - Econômico)";
-    amount = 90.0;
+    amount = config.planQuarterlyPrice || 90.0;
   } else if (durationMonths === 6) {
     planName = "Plano Semestral (6 Meses - Super Desconto)";
-    amount = 160.0;
+    amount = config.planSemiannualPrice || 160.0;
+  } else if (durationMonths === 12) {
+    planName = "Plano Anual (12 Meses - Melhor Custo-Benefício)";
+    amount = config.planAnnualPrice || 290.0;
   }
 
   const order = await createOrderServer(userId, {
@@ -432,7 +595,11 @@ async function handlePlanOrderCreation({
     type: "new_access",
   });
 
-  const mpToken = wsRow?.mercadopago_token?.trim();
+  const mpToken =
+    config.mercadopago_token ||
+    wsRow?.mercadopago_token?.trim() ||
+    readLocalPaymentSettings(userId)?.mercadopago_token?.trim();
+
   let mpPixResult: any = null;
 
   if (mpToken) {
@@ -453,7 +620,7 @@ async function handlePlanOrderCreation({
   }
 
   if (mpPixResult?.ok && mpPixResult?.qrCode) {
-    // MODO AUTOMÁTICO MERCADO PAGO
+    // MODO AUTOMÁTICO MERCADO PAGO COM PIX COPIA E COLA
     const reply =
       `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
       `📦 *Plano:* ${planName}\n` +
@@ -463,7 +630,7 @@ async function handlePlanOrderCreation({
       `\`${mpPixResult.qrCode}\`\n\n` +
       (mpPixResult.ticketUrl ? `🔗 *Link para pagar pelo navegador:*\n${mpPixResult.ticketUrl}\n\n` : "") +
       `✅ *Liberação 100% Automática!*\n` +
-      `Assim que você pagar no aplicativo do seu banco, o sistema reconhece em poucos segundos e já envia seu Login, Senha e Lista M3U aqui mesmo nesta conversa! 🚀\n\n` +
+      `Assim que você realizar o pagamento no aplicativo do seu banco, o sistema reconhece em poucos segundos e já envia seu Login, Senha e Lista M3U aqui mesmo nesta conversa! 🚀\n\n` +
       `_Dica: Se já concluiu o PIX e quer checar agora, basta digitar *verificar*._`;
 
     return {
@@ -473,14 +640,16 @@ async function handlePlanOrderCreation({
   }
 
   // MODO MANUAL (Sem Mercado Pago cadastrado ou falha de token)
-  const effectivePixKey = pixKey || "Consulte nossa chave PIX com nosso suporte";
+  const effectivePixKey = config.pixKey || wsRow?.pix_key || readLocalPaymentSettings(userId)?.pix_key || "Consulte nossa chave PIX com nosso suporte";
+  const effectivePixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
+
   const reply =
     `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
     `📦 *Plano:* ${planName}\n` +
     `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-    `💳 *Forma de Pagamento:* Transferência PIX (Liberação no Painel)\n\n` +
+    `💳 *Forma de Pagamento:* Transferência PIX (Liberação Manual)\n\n` +
     `🔑 *Chave PIX:* \`${effectivePixKey}\`\n` +
-    `👤 *Titular:* ${pixHolder}\n\n` +
+    `👤 *Titular:* ${effectivePixHolder}\n\n` +
     `📌 *Como Ativar Seu Acesso:*\n` +
     `1️⃣ Faça o PIX no valor de *R$ ${amount.toFixed(2).replace(".", ",")}* para a chave acima.\n` +
     `2️⃣ *Envie o comprovante do PIX aqui nesta conversa*.\n` +
@@ -489,6 +658,114 @@ async function handlePlanOrderCreation({
   return {
     reply,
     action: "order_created_manual",
+  };
+}
+
+/**
+ * Cria pedido de RENOVAÇÃO e formata a resposta com PIX Copia e Cola (Mercado Pago) ou Chave Manual
+ */
+async function handleRenewOrderCreation({
+  userId,
+  cleanPhone,
+  pushName,
+  targetUsername,
+  clientMatch,
+  wsRow,
+  config,
+  serverName,
+}: {
+  userId: string;
+  cleanPhone: string;
+  pushName?: string;
+  targetUsername: string;
+  clientMatch?: any;
+  wsRow?: any;
+  config: BotConfigData;
+  serverName: string;
+}): Promise<BotProcessResult> {
+  const amount = clientMatch?.monthly_fee
+    ? Number(clientMatch.monthly_fee)
+    : (config.renewalPrice || config.planMonthlyPrice || 35.0);
+
+  const order = await createOrderServer(userId, {
+    customer_name: clientMatch?.name || pushName || "Cliente WhatsApp",
+    customer_phone: cleanPhone,
+    plan_name: `Renovação Mensal - ${targetUsername}`,
+    amount,
+    duration_months: 1,
+    screens: clientMatch?.screens || 1,
+    type: "renewal",
+    target_username: targetUsername,
+  });
+
+  const mpToken =
+    config.mercadopago_token ||
+    wsRow?.mercadopago_token?.trim() ||
+    readLocalPaymentSettings(userId)?.mercadopago_token?.trim();
+
+  let mpPixResult: any = null;
+
+  if (mpToken) {
+    mpPixResult = await createMercadoPagoPixPayment({
+      token: mpToken,
+      amount,
+      description: `Renovação IPTV ${targetUsername} (#${order.order_number})`,
+      orderId: order.id,
+      customerName: clientMatch?.name || pushName || "Cliente",
+      customerPhone: cleanPhone,
+    });
+
+    if (mpPixResult.ok && mpPixResult.qrCode) {
+      order.pix_code = mpPixResult.qrCode;
+      order.gateway_payment_id = mpPixResult.paymentId;
+      order.payment_method = "mercadopago_pix";
+    }
+  }
+
+  if (mpPixResult?.ok && mpPixResult?.qrCode) {
+    // MODO AUTOMÁTICO MERCADO PAGO COM PIX COPIA E COLA
+    const reply =
+      `💳 *DADOS PARA PAGAMENTO PIX (RENOVAÇÃO)* 📺\n\n` +
+      `✅ *Usuário a Renovar:* *${targetUsername}*\n` +
+      (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
+      `📺 *Servidor:* ${serverName}\n` +
+      `💰 *Valor da Mensalidade:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
+      `⚡ *Forma de Pagamento:* PIX Automático (Mercado Pago)\n\n` +
+      `👇 *PIX COPIA E COLA (Toque no código abaixo para copiar):*\n` +
+      `\`${mpPixResult.qrCode}\`\n\n` +
+      (mpPixResult.ticketUrl ? `🔗 *Link para pagar pelo navegador:*\n${mpPixResult.ticketUrl}\n\n` : "") +
+      `✅ *Liberação 100% Automática!*\n` +
+      `Assim que você realizar o pagamento no aplicativo do seu banco, o sistema reconhece em poucos segundos e renova seu acesso imediatamente no servidor! 🚀\n\n` +
+      `_Dica: Se já concluiu o PIX e quer checar agora, basta digitar *verificar*._`;
+
+    return {
+      reply,
+      action: "renew_pix_mp_sent",
+    };
+  }
+
+  // MODO MANUAL (Sem Mercado Pago cadastrado ou falha no token)
+  const effectivePixKey = config.pixKey || wsRow?.pix_key || readLocalPaymentSettings(userId)?.pix_key || "Consulte nossa chave PIX com nosso suporte";
+  const effectivePixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
+
+  const reply =
+    `💳 *DADOS PARA PAGAMENTO PIX (RENOVAÇÃO)* 📺\n\n` +
+    `✅ *Usuário a Renovar:* *${targetUsername}*\n` +
+    (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
+    `📺 *Servidor:* ${serverName}\n` +
+    `💰 *Valor da Mensalidade:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
+    `💳 *Forma de Pagamento:* Transferência PIX (Liberação Manual)\n\n` +
+    `🔑 *Chave PIX:* \`${effectivePixKey}\`\n` +
+    `👤 *Titular:* ${effectivePixHolder}\n\n` +
+    `📌 *Como Confirmar Sua Renovação:*\n` +
+    `1️⃣ Faça o PIX no valor de *R$ ${amount.toFixed(2).replace(".", ",")}* para a chave acima.\n` +
+    `2️⃣ *Envie o comprovante do PIX aqui nesta conversa*.\n` +
+    `3️⃣ Nosso administrador confirmará pelo painel e seu acesso será renovado imediatamente! 🚀\n\n` +
+    `Se precisar de suporte, digite *5*.`;
+
+  return {
+    reply,
+    action: "renew_pix_manual_sent",
   };
 }
 
@@ -526,10 +803,10 @@ export async function processBotMessage(
     wsRow = data;
   } catch {}
 
-  const serverName = wsRow?.sigma_server_name?.trim() || config.businessName || "Alpha server IPTV";
-  const streamingDns = wsRow?.sigma_streaming_dns?.trim() || "http://karen256.top";
-  const pixKey = config.pixKey || wsRow?.pix_key || "Consulte nossa chave PIX";
-  const pixHolder = config.pixHolder || wsRow?.pix_holder || config.businessName;
+  const serverName = config.serverName || wsRow?.sigma_server_name?.trim() || config.businessName || "Alpha server IPTV";
+  const streamingDns = config.streamingDns || wsRow?.sigma_streaming_dns?.trim() || "http://karen256.top";
+  const pixKey = config.pixKey || wsRow?.pix_key || readLocalPaymentSettings(userId)?.pix_key || "Consulte nossa chave PIX";
+  const pixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
 
   // =========================================================================
   // CONSULTA DE STATUS DE PEDIDO ("verificar", "status", "paguei", etc.)
@@ -639,6 +916,15 @@ export async function processBotMessage(
     text === "semestral" ||
     text === "plano semestral";
 
+  const isPlan12m =
+    text === "plano 4" ||
+    text === "plano 4." ||
+    text === "plano 12m" ||
+    text === "plano_12m" ||
+    text === "12m" ||
+    text === "anual" ||
+    text === "plano anual";
+
   if (isPlan1m) {
     return await handlePlanOrderCreation({
       userId,
@@ -646,8 +932,7 @@ export async function processBotMessage(
       pushName: params.pushName,
       durationMonths: 1,
       wsRow,
-      pixKey,
-      pixHolder,
+      config,
     });
   }
   if (isPlan3m) {
@@ -657,8 +942,7 @@ export async function processBotMessage(
       pushName: params.pushName,
       durationMonths: 3,
       wsRow,
-      pixKey,
-      pixHolder,
+      config,
     });
   }
   if (isPlan6m) {
@@ -668,8 +952,17 @@ export async function processBotMessage(
       pushName: params.pushName,
       durationMonths: 6,
       wsRow,
-      pixKey,
-      pixHolder,
+      config,
+    });
+  }
+  if (isPlan12m) {
+    return await handlePlanOrderCreation({
+      userId,
+      cleanPhone,
+      pushName: params.pushName,
+      durationMonths: 12,
+      wsRow,
+      config,
     });
   }
 
@@ -700,6 +993,7 @@ export async function processBotMessage(
       if (text === "1" || text === "1m" || text === "mensal" || text.includes("mensal")) chosenMonths = 1;
       else if (text === "2" || text === "3m" || text === "trimestral" || text.includes("trimestral")) chosenMonths = 3;
       else if (text === "3" || text === "6m" || text === "semestral" || text.includes("semestral")) chosenMonths = 6;
+      else if (text === "4" || text === "12m" || text === "anual" || text.includes("anual")) chosenMonths = 12;
 
       if (chosenMonths > 0) {
         conversationSessions.delete(cleanPhone);
@@ -709,8 +1003,7 @@ export async function processBotMessage(
           pushName: params.pushName,
           durationMonths: chosenMonths,
           wsRow,
-          pixKey,
-          pixHolder,
+          config,
         });
       }
     }
@@ -745,22 +1038,16 @@ export async function processBotMessage(
         clientMatch = data;
       } catch {}
 
-      const fee = clientMatch?.monthly_fee
-        ? `R$ ${Number(clientMatch.monthly_fee).toFixed(2).replace(".", ",")}`
-        : (session.data?.fee || "R$ 35,00");
-
-      const reply =
-        `💳 *DADOS PARA PAGAMENTO PIX* 📺\n\n` +
-        `✅ *Usuário a Renovar:* *${targetUsername}*\n` +
-        (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
-        `📺 *Servidor:* ${serverName}\n` +
-        `💰 *Valor:* ${fee}\n\n` +
-        `🔑 *Chave PIX:* \`${pixKey}\`\n` +
-        `👤 *Titular:* ${pixHolder}\n\n` +
-        `Após realizar o PIX, *envie o comprovante aqui* nesta conversa para ativarmos imediatamente! 🚀\n` +
-        `Dúvidas? Digite *5* para falar com um atendente.`;
-
-      return { reply, action: "renew_pix_sent" };
+      return await handleRenewOrderCreation({
+        userId,
+        cleanPhone,
+        pushName: params.pushName,
+        targetUsername,
+        clientMatch,
+        wsRow,
+        config,
+        serverName,
+      });
     }
 
     // -----------------------------------------------------------------------
@@ -782,22 +1069,16 @@ export async function processBotMessage(
         clientMatch = data;
       } catch {}
 
-      const fee = clientMatch?.monthly_fee
-        ? `R$ ${Number(clientMatch.monthly_fee).toFixed(2).replace(".", ",")}`
-        : "R$ 35,00";
-
-      const reply =
-        `💳 *DADOS PARA PAGAMENTO PIX* 📺\n\n` +
-        `✅ *Usuário a Renovar:* *${targetUsername}*\n` +
-        (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
-        `📺 *Servidor:* ${serverName}\n` +
-        `💰 *Valor da Mensalidade:* ${fee}\n\n` +
-        `🔑 *Chave PIX:* \`${pixKey}\`\n` +
-        `👤 *Titular:* ${pixHolder}\n\n` +
-        `Após realizar o PIX, por favor *envie o comprovante aqui* nesta conversa para renovarmos seu acesso imediatamente! 🚀\n` +
-        `Se precisar de suporte, digite *5*.`;
-
-      return { reply, action: "renew_pix_sent" };
+      return await handleRenewOrderCreation({
+        userId,
+        cleanPhone,
+        pushName: params.pushName,
+        targetUsername,
+        clientMatch,
+        wsRow,
+        config,
+        serverName,
+      });
     }
   }
 
@@ -881,21 +1162,16 @@ export async function processBotMessage(
         clientMatch = data;
       } catch {}
 
-      const fee = clientMatch?.monthly_fee
-        ? `R$ ${Number(clientMatch.monthly_fee).toFixed(2).replace(".", ",")}`
-        : "R$ 35,00";
-
-      const reply =
-        `💳 *DADOS PARA PAGAMENTO PIX* 📺\n\n` +
-        `✅ *Usuário a Renovar:* *${inlineUser}*\n` +
-        (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
-        `📺 *Servidor:* ${serverName}\n` +
-        `💰 *Valor da Mensalidade:* ${fee}\n\n` +
-        `🔑 *Chave PIX:* \`${pixKey}\`\n` +
-        `👤 *Titular:* ${pixHolder}\n\n` +
-        `Após realizar o PIX, por favor *envie o comprovante aqui* nesta conversa para renovação imediata! 🚀`;
-
-      return { reply, action: "renew_pix_sent" };
+      return await handleRenewOrderCreation({
+        userId,
+        cleanPhone,
+        pushName: params.pushName,
+        targetUsername: inlineUser,
+        clientMatch,
+        wsRow,
+        config,
+        serverName,
+      });
     }
 
     // 2. Busca linhas existentes cadastradas para esse número de WhatsApp
@@ -996,12 +1272,18 @@ export async function processBotMessage(
     const pixKey = config.pixKey || wsRow?.pix_key || "";
     const pixBlock = pixKey ? `\n\n🔑 *Chave PIX:* \`${pixKey}\`` : "";
 
+    const p1 = `R$ ${Number(config.planMonthlyPrice || 35).toFixed(2).replace(".", ",")}`;
+    const p2 = `R$ ${Number(config.planQuarterlyPrice || 90).toFixed(2).replace(".", ",")}`;
+    const p3 = `R$ ${Number(config.planSemiannualPrice || 160).toFixed(2).replace(".", ",")}`;
+    const p4 = `R$ ${Number(config.planAnnualPrice || 290).toFixed(2).replace(".", ",")}`;
+
     const reply =
       `${config.plansText}${pixBlock}\n\n` +
       `👇 *Para assinar agora, responda com o número do plano desejado:*\n\n` +
-      `👉 Digite *1* para *Plano Mensal (R$ 35,00)*\n` +
-      `👉 Digite *2* para *Plano Trimestral (R$ 90,00)*\n` +
-      `👉 Digite *3* para *Plano Semestral (R$ 160,00)*\n\n` +
+      `👉 Digite *1* para *Plano Mensal (${p1})*\n` +
+      `👉 Digite *2* para *Plano Trimestral (${p2})*\n` +
+      `👉 Digite *3* para *Plano Semestral (${p3})*\n` +
+      `👉 Digite *4* para *Plano Anual (${p4})*\n\n` +
       `_Ou digite *0* para voltar ao menu principal._`;
 
     return {
