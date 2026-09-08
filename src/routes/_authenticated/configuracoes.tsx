@@ -54,6 +54,7 @@ type Settings = {
   sigma_url: string;
   sigma_username: string;
   sigma_password: string;
+  sigma_token: string;
   sigma_enabled: boolean;
   sigma_auto_renew: boolean;
   reminder_days_before: number;
@@ -81,6 +82,7 @@ const defaults: Settings = {
   sigma_url: "",
   sigma_username: "",
   sigma_password: "",
+  sigma_token: "",
   sigma_enabled: false,
   sigma_auto_renew: false,
   reminder_days_before: 3,
@@ -185,8 +187,14 @@ function Configuracoes() {
   }
 
   async function testarPainel() {
-    if (!form.sigma_url || !form.sigma_username || !form.sigma_password) {
-      toast.warning("Preencha o endereço, usuário e senha do painel para testar.");
+    const hasCredentials = Boolean(form.sigma_username?.trim() && form.sigma_password?.trim());
+    const hasToken = Boolean(form.sigma_token?.trim());
+    if (!form.sigma_url?.trim()) {
+      toast.warning("Preencha o endereço do painel IPTV para testar.");
+      return;
+    }
+    if (!hasCredentials && !hasToken) {
+      toast.warning("Preencha seu usuário e senha (ou o token da API) do painel para testar.");
       return;
     }
     setSigmaBusy(true);
@@ -195,6 +203,7 @@ function Configuracoes() {
         url: form.sigma_url,
         username: form.sigma_username,
         password: form.sigma_password,
+        token: form.sigma_token,
       },
     });
     setSigmaBusy(false);
@@ -212,6 +221,7 @@ function Configuracoes() {
         url: form.sigma_url,
         username: form.sigma_username,
         password: form.sigma_password,
+        token: form.sigma_token,
       },
     });
     setSigmaBusy(false);
@@ -231,6 +241,7 @@ function Configuracoes() {
           sigma_url: form.sigma_url,
           sigma_username: form.sigma_username,
           sigma_password: form.sigma_password,
+          sigma_token: form.sigma_token,
           sigma_enabled: form.sigma_enabled,
           sigma_auto_renew: form.sigma_auto_renew,
         },
@@ -294,6 +305,7 @@ function Configuracoes() {
         sigma_url: sigmaQuery.data?.sigma_url || data?.sigma_url || prev.sigma_url,
         sigma_username: sigmaQuery.data?.sigma_username || (data as any)?.sigma_username || prev.sigma_username,
         sigma_password: sigmaQuery.data?.sigma_password || (data as any)?.sigma_password || prev.sigma_password,
+        sigma_token: sigmaQuery.data?.sigma_token || (data as any)?.sigma_token || prev.sigma_token,
         sigma_enabled: sigmaQuery.data?.sigma_enabled ?? data?.sigma_enabled ?? prev.sigma_enabled,
         sigma_auto_renew: sigmaQuery.data?.sigma_auto_renew ?? data?.sigma_auto_renew ?? prev.sigma_auto_renew,
         reminder_days_before: data?.reminder_days_before ?? prev.reminder_days_before,
@@ -460,29 +472,52 @@ function Configuracoes() {
                   <div className="space-y-2">
                     <Label>Endereço do painel</Label>
                     <Input
-                      placeholder="https://seupainel.sigma.st"
+                      placeholder="https://aplicativoz342.click ou https://painel.sigma.st"
                       value={form.sigma_url}
-                      onChange={(e) => setForm({ ...form, sigma_url: e.target.value })}
+                      onChange={(e) => {
+                        let val = e.target.value;
+                        setForm({ ...form, sigma_url: val });
+                      }}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Pode colar o link completo que usa no navegador (ex.: com <code>/#/sign-in</code>). O sistema normaliza automaticamente.
+                    </p>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Usuário do painel</Label>
-                    <Input
-                      placeholder="Seu usuário de revenda no painel"
-                      autoComplete="username"
-                      value={form.sigma_username}
-                      onChange={(e) => setForm({ ...form, sigma_username: e.target.value })}
-                    />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Usuário do painel</Label>
+                      <Input
+                        placeholder="Seu usuário de revenda"
+                        autoComplete="username"
+                        value={form.sigma_username}
+                        onChange={(e) => setForm({ ...form, sigma_username: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Senha do painel</Label>
+                      <Input
+                        type="password"
+                        placeholder="Sua senha do painel"
+                        autoComplete="current-password"
+                        value={form.sigma_password}
+                        onChange={(e) => setForm({ ...form, sigma_password: e.target.value })}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Senha do painel</Label>
+                  <div className="space-y-2 rounded-xl border border-border/70 bg-background/40 p-3.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold">Token da API (Opcional / Alternativo)</Label>
+                      <span className="text-[10px] text-muted-foreground uppercase font-mono">Reseller API</span>
+                    </div>
                     <Input
                       type="password"
-                      placeholder="Sua senha do painel"
-                      autoComplete="current-password"
-                      value={form.sigma_password}
-                      onChange={(e) => setForm({ ...form, sigma_password: e.target.value })}
+                      placeholder="Token gerado em Integrações → Reseller API (se tiver)"
+                      value={form.sigma_token}
+                      onChange={(e) => setForm({ ...form, sigma_token: e.target.value })}
                     />
+                    <p className="text-[11px] text-muted-foreground">
+                      Se preferir autenticar sem salvar sua senha ou se o painel bloquear por tentativas, você pode colar o token da Reseller API gerado no painel Sigma.
+                    </p>
                   </div>
                   <div className="flex items-center justify-between rounded-lg border border-border p-3">
                     <div>

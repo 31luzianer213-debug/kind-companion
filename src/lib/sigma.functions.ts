@@ -6,6 +6,7 @@ export type SigmaSettingsPayload = {
   sigma_url: string;
   sigma_username: string;
   sigma_password?: string;
+  sigma_token?: string | null;
   sigma_enabled: boolean;
   sigma_auto_renew: boolean;
 };
@@ -78,6 +79,7 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
     const url = (data.sigma_url ?? "").trim();
     const username = (data.sigma_username ?? "").trim();
     const password = data.sigma_password ?? "";
+    const token = data.sigma_token?.trim() || null;
     const enabled = Boolean(data.sigma_enabled);
     const auto_renew = Boolean(data.sigma_auto_renew);
 
@@ -89,6 +91,7 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
       sigma_url: url,
       sigma_username: username,
       sigma_password: password,
+      sigma_token: token,
       sigma_enabled: enabled,
       sigma_auto_renew: auto_renew,
     };
@@ -103,12 +106,13 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
     // Se falhou por ausência de colunas específicas, tenta salvar as colunas básicas
     if (!dbSaved) {
       try {
-        const basicPayload = {
+        const basicPayload: Record<string, any> = {
           user_id: userId,
           sigma_url: url,
           sigma_enabled: enabled,
           sigma_auto_renew: auto_renew,
         };
+        if (token) basicPayload.sigma_token = token;
         await supabase.from("whatsapp_settings").upsert(basicPayload, { onConflict: "user_id" });
       } catch {
         // Prossegue para salvar no user_metadata
@@ -123,6 +127,7 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
             url,
             username,
             password,
+            token,
             enabled,
             auto_renew,
             updated_at: new Date().toISOString(),
@@ -150,6 +155,7 @@ export const getSigmaSettings = createServerFn({ method: "GET" })
         sigma_url: config.url,
         sigma_username: config.username ?? "",
         sigma_password: config.password ?? "",
+        sigma_token: config.token ?? "",
         sigma_enabled: config.enabled,
         sigma_auto_renew: config.auto_renew,
         sigma_last_sync_at: config.last_sync_at,
@@ -164,20 +170,41 @@ export const getSigmaSettings = createServerFn({ method: "GET" })
  */
 export const testSigmaConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { url?: string; username?: string; password?: string }) => input ?? {})
+  .inputValidator((input: { url?: string; username?: string; password?: string; token?: string }) => input ?? {})
   .handler(async ({ data, context }) => {
-    const { sigmaLogin } = await import("./sigma.server");
+    const { sigmaLogin, listSigmaCustomers } = await import("./sigma.server");
     const { supabase, userId } = context;
     const saved = await loadConfig(supabase, userId);
 
     const url = (data?.url ?? "").trim() || saved.url;
     const username = (data?.username ?? "").trim() || (saved.username ?? "");
     const password = data?.password !== undefined && data.password !== "" ? data.password : (saved.password ?? "");
+    const directToken = (data?.token ?? "").trim() || (saved.token ?? "");
 
-    if (!url || !username || !password) {
+    if (!url) {
       return {
         ok: false as const,
-        error: "Informe o endereço, usuário e senha do painel Sigma para testar.",
+        error: "Informe o endereço do painel Sigma para testar.",
+      };
+    }
+
+    // Se forneceu token direto, testa ele consultando os clientes
+    if (directToken && (!username || !password)) {
+      try {
+        await listSigmaCustomers({ url, token: directToken });
+        return { ok: true as const, error: null };
+      } catch (error) {
+        return {
+          ok: false as const,
+          error: error instanceof Error ? error.message : "Token inválido ou painel inacessível.",
+        };
+      }
+    }
+
+    if (!username || !password) {
+      return {
+        ok: false as const,
+        error: "Informe o usuário e a senha (ou o token da API) do painel Sigma para testar.",
       };
     }
 
@@ -205,7 +232,7 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
  */
 export const syncSigmaClients = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { url?: string; username?: string; password?: string }) => input ?? {})
+  .inputValidator((input: { url?: string; username?: string; password?: string; token?: string }) => input ?? {})
   .handler(async ({ data, context }) => {
     const { listSigmaCustomers, ensureSigmaToken } = await import("./sigma.server");
     const { supabase, userId } = context;
@@ -215,7 +242,7 @@ export const syncSigmaClients = createServerFn({ method: "POST" })
       url: (data?.url ?? "").trim() || saved.url,
       username: (data?.username ?? "").trim() || saved.username,
       password: data?.password ?? saved.password,
-      token: saved.token,
+      token: (data?.token ?? "").trim() || saved.token,
     };
 
     if (!hasSigmaAccess(panelConfig)) {

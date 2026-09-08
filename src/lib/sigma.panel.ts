@@ -73,18 +73,103 @@ type HttpResult = {
   headers: Headers;
 };
 
+const BROWSER_USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+
+function prepareHeaders(init?: RequestInit): Headers {
+  const headers = new Headers(init?.headers);
+  if (!headers.has("User-Agent")) {
+    headers.set("User-Agent", BROWSER_USER_AGENT);
+  }
+  if (!headers.has("Accept")) {
+    headers.set("Accept", "application/json, text/plain, */*");
+  }
+  if (init?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return headers;
+}
+
+/** Executa chamada HTTP via curl nativo no Node.js para contornar proteções Cloudflare */
+async function curlRequest(
+  url: string,
+  init: RequestInit = {},
+  timeoutMs = REQUEST_TIMEOUT_MS,
+): Promise<HttpResult | null> {
+  try {
+    const { execFile } = await import("child_process");
+    return await new Promise<HttpResult>((resolve) => {
+      const method = (init.method ?? "GET").toUpperCase();
+      const headers = prepareHeaders(init);
+      const args = [
+        "-s",
+        "-k",
+        "--max-time",
+        String(Math.max(5, Math.round(timeoutMs / 1000))),
+        "-X",
+        method,
+      ];
+      headers.forEach((val, key) => {
+        args.push("-H", `${key}: ${val}`);
+      });
+      if (init.body) {
+        args.push("-d", typeof init.body === "string" ? init.body : JSON.stringify(init.body));
+      }
+      args.push("-w", "\n__HTTP_STATUS__:%{http_code}", url);
+
+      const parseAndResolve = (stdout: string) => {
+        const parts = (stdout ?? "").split("\n__HTTP_STATUS__:");
+        const text = parts[0] ?? "";
+        const status = parseInt(parts[1] || "0", 10);
+        let payload: any = null;
+        try {
+          payload = text ? JSON.parse(text) : null;
+        } catch {
+          payload = null;
+        }
+        resolve({
+          ok: status >= 200 && status < 300,
+          status,
+          payload,
+          text,
+          headers: new Headers({ "content-type": "application/json" }),
+        });
+      };
+
+      execFile("curl.exe", args, (err, stdout) => {
+        if (err && !stdout) {
+          execFile("curl", args, (err2, stdout2) => {
+            if (err2 && !stdout2) {
+              return resolve({ ok: false, status: 0, payload: null, text: "", headers: new Headers() });
+            }
+            parseAndResolve(stdout2);
+          });
+          return;
+        }
+        parseAndResolve(stdout);
+      });
+    });
+  } catch {
+    return null;
+  }
+}
+
 async function requestJson(
   base: string,
   path: string,
   init: RequestInit = {},
   timeoutMs = REQUEST_TIMEOUT_MS,
 ): Promise<HttpResult> {
+  const url = `${base}${path.startsWith("/") ? "" : "/"}${path}`;
+  const headers = prepareHeaders(init);
+  const enrichedInit = { ...init, headers };
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  const url = `${base}${path.startsWith("/") ? "" : "/"}${path}`;
 
+  let fetchError: Error | null = null;
   try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
+    const response = await fetch(url, { ...enrichedInit, signal: controller.signal });
     const text = await response.text();
     let payload: any = null;
     try {
@@ -92,25 +177,43 @@ async function requestJson(
     } catch {
       payload = null;
     }
-    return { ok: response.ok, status: response.status, payload, text, headers: response.headers };
+
+    const isCloudflareBlocked =
+      (response.status === 403 || response.status === 503) &&
+      (text.includes("<!DOCTYPE") ||
+        text.includes("Just a moment") ||
+        text.includes("challenges.cloudflare.com") ||
+        text.includes("cf-mitigated"));
+
+    if (!isCloudflareBlocked) {
+      return { ok: response.ok, status: response.status, payload, text, headers: response.headers };
+    }
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       throw new Error(`O painel demorou mais de ${Math.round(timeoutMs / 1000)}s para responder (${url}).`);
     }
-    throw new Error(`Não foi possível conectar ao painel em ${base}. Verifique a URL.`);
+    fetchError = error instanceof Error ? error : new Error(String(error));
   } finally {
     clearTimeout(timer);
   }
+
+  // Tenta contornar bloqueio de Cloudflare via curl do sistema operacional (Node.js)
+  const curlResult = await curlRequest(url, enrichedInit, timeoutMs);
+  if (curlResult && curlResult.status > 0) {
+    return curlResult;
+  }
+
+  if (fetchError) {
+    throw new Error(`Não foi possível conectar ao painel em ${base}. Verifique a URL.`);
+  }
+
+  throw new Error(`O painel em ${base} está protegido pelo Cloudflare e bloqueou o acesso.`);
 }
 
 function withAuth(token: string, init: RequestInit = {}): RequestInit {
-  const headers = new Headers(init.headers);
+  const headers = prepareHeaders(init);
   if (!headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token.trim()}`);
-  }
-  headers.set("Accept", "application/json");
-  if (init.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
   }
   return { ...init, headers };
 }
@@ -150,14 +253,13 @@ function readToken(payload: any, headers: Headers): string | null {
 }
 
 const LOGIN_ENDPOINTS = [
-  "/api/login",
   "/api/auth/login",
-  "/api/v1/login",
+  "/api/login",
   "/api/v1/auth/login",
+  "/api/v1/login",
   "/api/sign-in",
   "/api/signin",
   "/api/session",
-  "/api/sessions",
   "/api/token",
   "/api/auth",
   "/api/authenticate",
@@ -199,15 +301,26 @@ export async function sigmaLogin(url: string, username: string, password: string
         attempts.push(`${endpoint} respondeu OK mas sem token legível`);
         continue;
       }
+
+      // Se o painel respondeu erro de credenciais (401 ou 422), pare imediatamente
+      // para NÃO queimar tentativas de login (o painel Sigma bane após 10 tentativas erradas!)
+      if (result.status === 401 || result.status === 422) {
+        const serverMsg =
+          result.payload?.message ||
+          result.payload?.errors?.username?.[0] ||
+          result.payload?.errors?.password?.[0] ||
+          result.payload?.error;
+        if (serverMsg) {
+          throw new Error(`Painel Sigma: ${serverMsg}`);
+        }
+        throw new Error("Usuário ou senha do painel Sigma incorretos.");
+      }
+
       attempts.push(`${endpoint} → ${result.status}`);
     }
   }
 
-  const authErrors = attempts.filter((a) => /401|403|422/.test(a)).length;
   const notFound = attempts.filter((a) => /404|405/.test(a)).length;
-  if (attempts.length > 0 && authErrors === attempts.length) {
-    throw new Error("Usuário ou senha do painel Sigma incorretos.");
-  }
   if (attempts.length > 0 && notFound === attempts.length) {
     throw new Error(
       `Não encontrei uma API de login em ${base}. Confira se o endereço é o painel de revenda correto (ex.: https://painel.sigma.st).`,
@@ -335,6 +448,8 @@ function mapCustomer(raw: any): SigmaCustomer | null {
 
 const LIST_ENDPOINTS = [
   "/api/customers",
+  "/api/reseller-api/v1/customers",
+  "/api/resellers/customers",
   "/api/clients",
   "/api/users",
   "/api/user/list",
