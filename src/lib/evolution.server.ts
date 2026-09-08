@@ -7,7 +7,10 @@ export function instanceNameFor(userId: string) {
 export function evolutionConfig(userId: string, customBase?: string, customKey?: string) {
   const envBase = customBase?.trim() || process.env["EVOLUTION_API_URL"]?.trim();
   const base = (envBase && envBase.length > 0 ? envBase : "https://cobrancas-whatsapp.shop").replace(/\/+$/, "");
-  const key = customKey?.trim() || process.env["EVOLUTION_API_KEY"]?.trim() || "";
+  const key =
+    customKey?.trim() ||
+    process.env["EVOLUTION_API_KEY"]?.trim() ||
+    "evolutionApiGlobalTokenSecure2026";
   return { base, key, instance: instanceNameFor(userId) };
 }
 
@@ -139,46 +142,27 @@ export async function logoutInstance(userId: string) {
 export async function setInstanceWebhook(userId: string, webhookUrl: string) {
   const { base, key, instance } = evolutionConfig(userId);
 
-  const bodies = [
-    {
-      webhook: {
-        enabled: true,
-        url: webhookUrl,
-        byEvents: false,
-        base64: false,
-        events: ["MESSAGES_UPSERT", "messages.upsert"],
-      },
-    },
-    {
+  const payload = {
+    webhook: {
       enabled: true,
       url: webhookUrl,
       byEvents: false,
       base64: false,
-      events: ["MESSAGES_UPSERT", "messages.upsert"],
+      events: ["MESSAGES_UPSERT"],
     },
-  ];
+  };
 
-  let lastStatus = 0;
-  let lastRaw = "";
+  const res = await call(`/webhook/set/${instance}`, {
+    method: "POST",
+    base,
+    key,
+    body: JSON.stringify(payload),
+  });
 
-  for (const body of bodies) {
-    const res = await call(`/webhook/set/${instance}`, {
-      method: "POST",
-      base,
-      key,
-      body: JSON.stringify(body),
-    });
-    lastStatus = res.status;
-    lastRaw = res.raw;
-    if (res.status === 200 || res.status === 201) {
-      return { ok: true, instance, message: "Webhook configurado com sucesso na VPS!" };
-    }
+  if (res.status === 200 || res.status === 201) {
+    return { ok: true, instance, message: "Webhook configurado com sucesso na VPS!" };
   }
 
-  if (lastStatus >= 400) {
-    throw new Error(`Evolution API retornou status ${lastStatus}: ${lastRaw.slice(0, 150)}`);
-  }
-
-  return { ok: true, instance };
+  throw new Error(`Evolution API retornou status ${res.status}: ${res.raw.slice(0, 150)}`);
 }
 
