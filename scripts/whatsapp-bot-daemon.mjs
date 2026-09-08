@@ -7,8 +7,10 @@ const LOCAL_API_URL = process.env.LOCAL_API_URL || "http://localhost:8080/api/pu
 
 const processedMsgIds = new Set();
 const configuredInstances = new Set();
+const lidToPhoneMap = new Map();
 let isFirstRun = true;
 let lastHeartbeat = 0;
+let lastLidRefresh = 0;
 
 function pruneProcessedSet() {
   if (processedMsgIds.size > 2000) {
@@ -16,6 +18,41 @@ function pruneProcessedSet() {
     processedMsgIds.clear();
     arr.slice(-1000).forEach((id) => processedMsgIds.add(id));
   }
+}
+
+async function updateLidMapping(instanceName) {
+  const now = Date.now();
+  if (now - lastLidRefresh < 60000 && lidToPhoneMap.size > 0) return;
+  lastLidRefresh = now;
+
+  try {
+    const res = await fetch(`${EVOLUTION_URL}/chat/findContacts/${instanceName}`, {
+      method: "POST",
+      headers: { apikey: EVOLUTION_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const contacts = Array.isArray(data) ? data : data?.records || [];
+
+    const picMap = new Map();
+    for (const c of contacts) {
+      if (c.remoteJid?.endsWith("@s.whatsapp.net") && c.profilePicUrl) {
+        const phone = c.remoteJid.replace(/@.*$/, "").replace(/\D/g, "");
+        picMap.set(c.profilePicUrl, phone);
+      }
+    }
+    for (const c of contacts) {
+      if (c.remoteJid?.endsWith("@lid") && c.profilePicUrl) {
+        const phone = picMap.get(c.profilePicUrl);
+        if (phone) {
+          const lid = c.remoteJid.replace(/@.*$/, "").replace(/\D/g, "");
+          lidToPhoneMap.set(lid, phone);
+          lidToPhoneMap.set(c.remoteJid, phone);
+        }
+      }
+    }
+  } catch {}
 }
 
 async function ensureGroupIgnore(instanceName) {
@@ -98,7 +135,9 @@ async function forwardToLocalWebhook(instanceName, msg) {
 
   if (!text.trim()) return;
 
-  const senderPhone = remoteJid.replace(/@.*$/, "");
+  const cleanId = remoteJid.replace(/@.*$/, "").replace(/\D/g, "");
+  const realPhone = lidToPhoneMap.get(cleanId) || lidToPhoneMap.get(remoteJid) || cleanId;
+
   const pushName = msg.pushName || "Cliente";
 
   // Extrai userId da instância se formato iptv_userId
@@ -119,7 +158,7 @@ async function forwardToLocalWebhook(instanceName, msg) {
 
   const webhookUrl = `${LOCAL_API_URL}${userId ? `?userId=${userId}` : ""}`;
 
-  console.log(`[Daemon] 📩 Nova mensagem de ${senderPhone} (${pushName}): "${text.slice(0, 60)}"`);
+  console.log(`[Daemon] 📩 Nova mensagem de ${realPhone} [${remoteJid}] (${pushName}): "${text.slice(0, 60)}"`);
 
   try {
     const res = await fetch(webhookUrl, {
@@ -131,9 +170,9 @@ async function forwardToLocalWebhook(instanceName, msg) {
     if (res.ok) {
       const resJson = await res.json().catch(() => null);
       if (resJson?.ignored === "bot_disabled" || resJson?.action === "bot_disabled") {
-        console.log(`[Daemon] 🛑 Robô DESLIGADO no painel. Nenhuma mensagem enviada para ${senderPhone}.`);
+        console.log(`[Daemon] 🛑 Robô DESLIGADO no painel. Nenhuma mensagem enviada para ${realPhone}.`);
       } else {
-        console.log(`[Daemon] ✅ Resposta enviada com sucesso para ${senderPhone}! (Ação: ${resJson?.action || "ok"})`);
+        console.log(`[Daemon] ✅ Resposta enviada com sucesso para ${realPhone} [${remoteJid}]! (Ação: ${resJson?.action || "ok"})`);
       }
     } else {
       console.warn(`[Daemon] ⚠️ Webhook local respondeu com status ${res.status}`);
@@ -151,11 +190,12 @@ async function pollOnce() {
     lastHeartbeat = now;
     const timeStr = new Date().toLocaleTimeString();
     const instNames = instances.map((i) => i.name).join(", ") || "Nenhuma";
-    console.log(`[Daemon ${timeStr}] 🟢 Ativo | Instâncias online: ${instances.length} (${instNames}) | Pronto para responder!`);
+    console.log(`[Daemon ${timeStr}] 🟢 Ativo | Instâncias online: ${instances.length} (${instNames}) | LIDs mapeados: ${lidToPhoneMap.size} | Pronto para responder!`);
   }
 
   for (const inst of instances) {
     await ensureGroupIgnore(inst.name);
+    await updateLidMapping(inst.name);
     const msgs = await getRecentMessages(inst.name);
 
     for (const msg of msgs) {
@@ -186,12 +226,12 @@ async function pollOnce() {
   if (isFirstRun) {
     isFirstRun = false;
     lastHeartbeat = Date.now();
-    console.log(`[Daemon] 🚀 Robô WhatsApp Daemon iniciado! Monitorando ${instances.length} instância(s) em tempo real...`);
+    console.log(`[Daemon] 🚀 Robô WhatsApp Daemon iniciado! Monitorando ${instances.length} instância(s) em tempo real (LIDs mapeados: ${lidToPhoneMap.size})...`);
   }
 }
 
 async function start() {
-  console.log("[Daemon] Conectando ao Evolution API na VPS com ordenação em tempo real (DESC)...");
+  console.log("[Daemon] Conectando ao Evolution API na VPS com suporte a LIDs e tempo real (DESC)...");
   await pollOnce();
 
   setInterval(async () => {

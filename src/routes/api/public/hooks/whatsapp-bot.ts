@@ -122,6 +122,24 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
           return Response.json({ ok: true, ignored: "invalid_sender_phone" });
         }
 
+        const isLid = remoteJid.endsWith("@lid") || (senderPhone.length >= 14 && !senderPhone.startsWith("55"));
+        const destinationJid = isLid
+          ? (remoteJid.endsWith("@lid") ? remoteJid : `${senderPhone}@lid`)
+          : senderPhone;
+
+        // Tenta resolver o número de telefone real caso a mensagem tenha vindo via @lid
+        let realPhone = senderPhone;
+        if (isLid) {
+          try {
+            const { resolvePhoneFromLid } = await import("@/lib/lid.server");
+            const resolved = await resolvePhoneFromLid(instance, remoteJid);
+            if (resolved) {
+              realPhone = resolved;
+              console.log(`[WhatsApp Bot Webhook] 🔗 LID ${remoteJid} associado com sucesso ao telefone real: ${realPhone}`);
+            }
+          } catch {}
+        }
+
         const pushName = item?.pushName || rawData?.pushName || payload?.pushName || "Cliente";
 
         // Extrai o conteúdo do texto enviado pelo cliente (todos os formatos conhecidos)
@@ -145,7 +163,7 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
           return Response.json({ ok: true, ignored: "empty_text" });
         }
 
-        console.log(`[WhatsApp Bot Webhook] Mensagem de ${senderPhone} (${pushName}): "${incomingText}"`);
+        console.log(`[WhatsApp Bot Webhook] Mensagem de ${realPhone} [Jid: ${destinationJid}] (${pushName}): "${incomingText}"`);
 
         // Verifica se o bot está ativo para o usuário
         const botConfig = await loadBotConfig(supabaseAdmin, targetUserId);
@@ -156,13 +174,13 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
 
         try {
           const botResult = await processBotMessage(supabaseAdmin, targetUserId, {
-            phone: senderPhone,
+            phone: realPhone,
             text: incomingText,
             pushName,
           });
 
           if (botResult?.reply) {
-            console.log(`[WhatsApp Bot Webhook] Respondendo para ${senderPhone}: "${botResult.reply.slice(0, 80)}..."`);
+            console.log(`[WhatsApp Bot Webhook] Respondendo para ${destinationJid}: "${botResult.reply.slice(0, 80)}..."`);
 
             // Busca configurações da conta para envio
             let settings: any = null;
@@ -177,8 +195,17 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
 
             try {
               const { sendViaEvolution } = await import("@/lib/billing.server");
-              await sendViaEvolution(settings ?? {}, senderPhone, botResult.reply, targetUserId);
-              console.log(`[WhatsApp Bot Webhook] Resposta em texto enviada com sucesso para ${senderPhone}!`);
+              // Envia diretamente para o destino de onde o cliente falou (suporta @lid e número normal)
+              await sendViaEvolution(settings ?? {}, destinationJid, botResult.reply, targetUserId);
+              console.log(`[WhatsApp Bot Webhook] Resposta enviada com sucesso para ${destinationJid}!`);
+
+              // Se for LID e tivermos telefone real mapeado, envia também para o telefone real como garantia
+              if (isLid && realPhone && realPhone !== senderPhone && realPhone.length <= 13) {
+                try {
+                  await sendViaEvolution(settings ?? {}, realPhone, botResult.reply, targetUserId);
+                  console.log(`[WhatsApp Bot Webhook] Cópia entregue no telefone real ${realPhone}!`);
+                } catch {}
+              }
             } catch (sendErr) {
               console.error("[WhatsApp Bot Webhook] Erro ao enviar resposta via Evolution:", sendErr);
             }
@@ -187,7 +214,7 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
             try {
               await supabaseAdmin.from("message_logs").insert({
                 user_id: targetUserId,
-                phone: senderPhone,
+                phone: realPhone,
                 body: botResult.reply,
                 status: "sent",
               });
@@ -197,13 +224,13 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
           return Response.json({
             ok: true,
             action: botResult?.action,
-            phone: senderPhone,
+            phone: realPhone,
           });
         } catch (botErr) {
           console.error("[WhatsApp Bot Webhook] Erro no processamento da mensagem:", botErr);
           return Response.json(
             { ok: false, error: botErr instanceof Error ? botErr.message : "erro desconhecido" },
-            { status: 200 },
+            { status: 500 }
           );
         }
       },

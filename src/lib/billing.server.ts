@@ -17,9 +17,18 @@ export type WhatsAppSettings = {
   payment_link?: string | null;
 };
 
-function normalizeNumber(phone: string) {
-  const d = phone.replace(/\D/g, "");
-  return d.length <= 11 ? `55${d}` : d;
+export function normalizeNumber(phone: string) {
+  if (!phone) return "";
+  const trimmed = phone.trim();
+  if (trimmed.endsWith("@lid") || trimmed.endsWith("@s.whatsapp.net")) {
+    return trimmed;
+  }
+  const digits = trimmed.replace(/\D/g, "");
+  // Se for LID (14 ou 15 dígitos sem código do país 55) ou explicitamente contiver @lid
+  if (trimmed.includes("@lid") || (digits.length >= 14 && !digits.startsWith("55"))) {
+    return `${digits}@lid`;
+  }
+  return digits.length <= 11 ? `55${digits}` : digits;
 }
 
 export async function sendViaEvolution(
