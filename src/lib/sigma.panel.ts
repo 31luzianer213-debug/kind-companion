@@ -52,7 +52,7 @@ export function normalizeBaseUrl(url: string): string {
   if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
   base = base.replace(/\/+$/, "");
   // Remove sufixos de páginas comuns coladas por engano
-  base = base.replace(/\/(#\/)?(sign-in|signin|login|logout|dashboard|painel|admin)(\/.*)?$/i, "");
+  base = base.replace(/\/(#\/)?(sign-in|signin|login|logout|dashboard|home|index\.(php|html))(\/.*)?$/i, "");
   return base.replace(/\/+$/, "");
 }
 
@@ -76,7 +76,7 @@ type HttpResult = {
 const BROWSER_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
 
-function prepareHeaders(init?: RequestInit): Headers {
+function prepareHeaders(init?: RequestInit, base?: string): Headers {
   const headers = new Headers(init?.headers);
   if (!headers.has("User-Agent")) {
     headers.set("User-Agent", BROWSER_USER_AGENT);
@@ -84,8 +84,31 @@ function prepareHeaders(init?: RequestInit): Headers {
   if (!headers.has("Accept")) {
     headers.set("Accept", "application/json, text/plain, */*");
   }
+  if (!headers.has("X-Requested-With")) {
+    headers.set("X-Requested-With", "XMLHttpRequest");
+  }
+  if (base) {
+    try {
+      const parsed = new URL(base);
+      if (!headers.has("Origin")) {
+        headers.set("Origin", parsed.origin);
+      }
+      if (!headers.has("Referer")) {
+        headers.set("Referer", `${parsed.origin}/`);
+      }
+    } catch {
+      // Ignora erro se base for inválida
+    }
+  }
   if (init?.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
+    if (
+      init.body instanceof URLSearchParams ||
+      (typeof init.body === "string" && init.body.includes("=") && !init.body.trim().startsWith("{"))
+    ) {
+      headers.set("Content-Type", "application/x-www-form-urlencoded");
+    } else {
+      headers.set("Content-Type", "application/json");
+    }
   }
   return headers;
 }
@@ -95,15 +118,17 @@ async function curlRequest(
   url: string,
   init: RequestInit = {},
   timeoutMs = REQUEST_TIMEOUT_MS,
+  base?: string,
 ): Promise<HttpResult | null> {
   try {
     const { execFile } = await import("child_process");
     return await new Promise<HttpResult>((resolve) => {
       const method = (init.method ?? "GET").toUpperCase();
-      const headers = prepareHeaders(init);
+      const headers = prepareHeaders(init, base);
       const args = [
         "-s",
         "-k",
+        "-L",
         "--max-time",
         String(Math.max(5, Math.round(timeoutMs / 1000))),
         "-X",
@@ -161,7 +186,7 @@ async function requestJson(
   timeoutMs = REQUEST_TIMEOUT_MS,
 ): Promise<HttpResult> {
   const url = `${base}${path.startsWith("/") ? "" : "/"}${path}`;
-  const headers = prepareHeaders(init);
+  const headers = prepareHeaders(init, base);
   const enrichedInit = { ...init, headers };
 
   const controller = new AbortController();
@@ -198,7 +223,7 @@ async function requestJson(
   }
 
   // Tenta contornar bloqueio de Cloudflare via curl do sistema operacional (Node.js)
-  const curlResult = await curlRequest(url, enrichedInit, timeoutMs);
+  const curlResult = await curlRequest(url, enrichedInit, timeoutMs, base);
   if (curlResult && curlResult.status > 0) {
     return curlResult;
   }
@@ -212,10 +237,40 @@ async function requestJson(
 
 function withAuth(token: string, init: RequestInit = {}): RequestInit {
   const headers = prepareHeaders(init);
-  if (!headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${token.trim()}`);
+  const trimmed = token.trim();
+  if (trimmed.startsWith("cookie:")) {
+    headers.set("Cookie", trimmed.slice(7).trim());
+  } else if (trimmed.includes("=") || /PHPSESSID|session|laravel_/i.test(trimmed)) {
+    headers.set("Cookie", trimmed);
+  } else if (trimmed.startsWith("xtream:")) {
+    const parts = trimmed.slice(7).split(":");
+    const u = parts[0] ?? "";
+    const p = parts.slice(1).join(":");
+    if (u && p) {
+      const basic = Buffer.from(`${u}:${p}`).toString("base64");
+      headers.set("Authorization", `Basic ${basic}`);
+    }
+  } else {
+    if (!headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${trimmed}`);
+    }
   }
   return { ...init, headers };
+}
+
+function extractCookie(headers: Headers): string | null {
+  if (!headers) return null;
+  if (typeof (headers as any).getSetCookie === "function") {
+    const cookies: string[] = (headers as any).getSetCookie();
+    if (cookies && cookies.length > 0) {
+      return cookies.map((c) => c.split(";")[0]).filter(Boolean).join("; ");
+    }
+  }
+  const raw = headers.get("set-cookie");
+  if (raw) {
+    return raw.split(";")[0];
+  }
+  return null;
 }
 
 /** Procura token em headers ou no corpo JSON */
@@ -225,31 +280,76 @@ function readToken(payload: any, headers: Headers): string | null {
     const cleaned = headerValue.replace(/^Bearer\s+/i, "").trim();
     if (cleaned.length > 5) return cleaned;
   }
-  if (!payload) return null;
+  if (payload) {
+    if (typeof payload === "string" && payload.length > 20 && !payload.includes(" ")) {
+      return payload.trim();
+    }
 
-  if (typeof payload === "string" && payload.length > 20 && !payload.includes(" ")) {
-    return payload.trim();
+    const scan = (value: any, depth: number): string | null => {
+      if (!value || typeof value !== "object" || depth > 4) return null;
+      for (const [key, val] of Object.entries(value)) {
+        if (
+          typeof val === "string" &&
+          /^(token|access_token|jwt|bearer_token|auth_token|id_token|session_token|hash|auth_hash|key|api_key)$/i.test(key) &&
+          val.trim().length > 5
+        ) {
+          return val.trim();
+        }
+      }
+      for (const val of Object.values(value)) {
+        const found = scan(val, depth + 1);
+        if (found) return found;
+      }
+      return null;
+    };
+
+    const tokenFound = scan(payload, 0);
+    if (tokenFound) return tokenFound;
   }
 
-  const scan = (value: any, depth: number): string | null => {
-    if (!value || typeof value !== "object" || depth > 4) return null;
-    for (const [key, val] of Object.entries(value)) {
-      if (
-        typeof val === "string" &&
-        /^(token|access_token|jwt|bearer_token|auth_token|id_token)$/i.test(key) &&
-        val.trim().length > 5
-      ) {
-        return val.trim();
-      }
-    }
-    for (const val of Object.values(value)) {
-      const found = scan(val, depth + 1);
-      if (found) return found;
-    }
-    return null;
-  };
+  // Verifica se o painel respondeu com cookie de sessão
+  const cookie = extractCookie(headers);
+  if (cookie) {
+    return `cookie:${cookie}`;
+  }
 
-  return scan(payload, 0);
+  return null;
+}
+
+function extractServerMessage(payload: any, text: string): string | null {
+  if (payload && typeof payload === "object") {
+    const candidate =
+      payload.message ||
+      payload.msg ||
+      payload.error ||
+      payload.detail ||
+      payload.description ||
+      payload.motivo ||
+      payload.errors?.username?.[0] ||
+      payload.errors?.password?.[0] ||
+      payload.errors?.login?.[0] ||
+      payload.errors?.auth?.[0] ||
+      (typeof payload.data === "string" ? payload.data : null);
+
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  if (text && typeof text === "string") {
+    const trimmed = text.trim();
+    if (
+      trimmed &&
+      trimmed.length < 250 &&
+      !trimmed.includes("<html") &&
+      !trimmed.includes("<!DOCTYPE") &&
+      !trimmed.includes("<body")
+    ) {
+      return trimmed;
+    }
+  }
+
+  return null;
 }
 
 const LOGIN_ENDPOINTS = [
@@ -257,12 +357,14 @@ const LOGIN_ENDPOINTS = [
   "/api/login",
   "/api/v1/auth/login",
   "/api/v1/login",
+  "/api/v1/reseller/login",
+  "/api/reseller/login",
   "/api/sign-in",
   "/api/signin",
   "/api/session",
-  "/api/token",
   "/api/auth",
-  "/api/authenticate",
+  "/login",
+  "/api/token",
 ];
 
 /** Realiza login no painel Sigma e devolve o token de acesso. */
@@ -272,15 +374,17 @@ export async function sigmaLogin(url: string, username: string, password: string
   const pass = (password ?? "").trim();
   if (!user || !pass) throw new Error("Informe o usuário e a senha do painel.");
 
+  const isEmail = user.includes("@");
   const bodies: Array<Record<string, string>> = [
     { username: user, password: pass },
-    { email: user, password: pass },
+    ...(isEmail ? [{ email: user, password: pass }] : []),
     { login: user, password: pass },
     { user: user, password: pass },
-    { username: user, pass: pass },
   ];
 
   const attempts: string[] = [];
+  let had403Forbidden = false;
+
   for (const endpoint of LOGIN_ENDPOINTS) {
     for (const body of bodies) {
       let result: HttpResult;
@@ -295,29 +399,94 @@ export async function sigmaLogin(url: string, username: string, password: string
         attempts.push(error instanceof Error ? error.message : "erro de conexão");
         continue;
       }
+
       if (result.ok) {
         const token = readToken(result.payload, result.headers);
         if (token) return token;
-        attempts.push(`${endpoint} respondeu OK mas sem token legível`);
+        attempts.push(`${endpoint} respondeu OK mas sem token`);
         continue;
       }
 
       // Se o painel respondeu erro de credenciais (401 ou 422), pare imediatamente
-      // para NÃO queimar tentativas de login (o painel Sigma bane após 10 tentativas erradas!)
       if (result.status === 401 || result.status === 422) {
-        const serverMsg =
-          result.payload?.message ||
-          result.payload?.errors?.username?.[0] ||
-          result.payload?.errors?.password?.[0] ||
-          result.payload?.error;
+        const serverMsg = extractServerMessage(result.payload, result.text);
         if (serverMsg) {
           throw new Error(`Painel Sigma: ${serverMsg}`);
         }
         throw new Error("Usuário ou senha do painel Sigma incorretos.");
       }
 
+      // Se o painel respondeu 403 (Acesso Proibido)
+      if (result.status === 403) {
+        had403Forbidden = true;
+        const serverMsg = extractServerMessage(result.payload, result.text);
+        if (serverMsg) {
+          throw new Error(`Painel Sigma (403): ${serverMsg}`);
+        }
+
+        // Tenta fallback com application/x-www-form-urlencoded caso o painel espere form post padrão
+        try {
+          const formParams = new URLSearchParams({ username: user, password: pass });
+          if (isEmail) formParams.set("email", user);
+          const formRes = await requestJson(
+            base,
+            endpoint,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: formParams.toString(),
+            },
+            LOGIN_TIMEOUT_MS,
+          );
+
+          if (formRes.ok) {
+            const token = readToken(formRes.payload, formRes.headers);
+            if (token) return token;
+          } else if (formRes.status === 401 || formRes.status === 422) {
+            const formMsg = extractServerMessage(formRes.payload, formRes.text);
+            if (formMsg) throw new Error(`Painel Sigma: ${formMsg}`);
+            throw new Error("Usuário ou senha do painel Sigma incorretos.");
+          } else if (formRes.status === 403) {
+            const formMsg = extractServerMessage(formRes.payload, formRes.text);
+            if (formMsg) throw new Error(`Painel Sigma (403): ${formMsg}`);
+          }
+        } catch (formErr) {
+          if (formErr instanceof Error && formErr.message.includes("Painel Sigma")) {
+            throw formErr;
+          }
+        }
+
+        attempts.push(`${endpoint} → 403 (Acesso Proibido)`);
+        break;
+      }
+
+      // Se for 404 ou 405, passa para o próximo endpoint
+      if (result.status === 404 || result.status === 405) {
+        attempts.push(`${endpoint} → ${result.status}`);
+        break;
+      }
+
       attempts.push(`${endpoint} → ${result.status}`);
     }
+  }
+
+  // Tenta autenticação de revenda estilo Xtream UI via /panel_api.php
+  try {
+    const xtreamRes = await requestJson(
+      base,
+      `/panel_api.php?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`,
+      { method: "GET" },
+      LOGIN_TIMEOUT_MS,
+    );
+    if (xtreamRes.ok && xtreamRes.payload) {
+      const auth = xtreamRes.payload?.user_info?.auth;
+      const status = xtreamRes.payload?.user_info?.status;
+      if (auth === 1 || String(status).toLowerCase() === "active") {
+        return `xtream:${user}:${pass}`;
+      }
+    }
+  } catch {
+    // Segue para os erros abaixo
   }
 
   const notFound = attempts.filter((a) => /404|405/.test(a)).length;
@@ -326,6 +495,17 @@ export async function sigmaLogin(url: string, username: string, password: string
       `Não encontrei uma API de login em ${base}. Confira se o endereço é o painel de revenda correto (ex.: https://painel.sigma.st).`,
     );
   }
+
+  if (had403Forbidden) {
+    throw new Error(
+      `O painel Sigma recusou a autenticação com erro 403 (Acesso Proibido).\n\n` +
+      `Como resolver:\n` +
+      `1. Confira se o Usuário e a Senha foram digitados corretamente.\n` +
+      `2. Verifique se o seu painel possui restrição de IP ou firewall ativo.\n` +
+      `3. Caso o painel forneça uma chave de API ou Token nas configurações de revenda, cole diretamente no campo "Token da API".`
+    );
+  }
+
   const sample = attempts.slice(0, 4).join(" • ");
   throw new Error(`Não foi possível autenticar no painel Sigma (${sample || "sem resposta"}).`);
 }
@@ -475,6 +655,19 @@ export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCust
     }
     const firstPage = extractRows(result.payload);
     if (firstPage.length === 0) {
+      const isValidListPayload =
+        Array.isArray(result.payload) ||
+        (result.payload &&
+          typeof result.payload === "object" &&
+          ("data" in result.payload ||
+            "customers" in result.payload ||
+            "clients" in result.payload ||
+            "users" in result.payload ||
+            "items" in result.payload ||
+            "rows" in result.payload));
+      if (isValidListPayload) {
+        return [];
+      }
       attempts.push(`${endpoint} -> lista vazia`);
       continue;
     }

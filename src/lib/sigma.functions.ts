@@ -216,16 +216,20 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
       };
     }
 
-    // Se forneceu token direto, testa ele consultando os clientes
-    if (directToken && (!username || !password)) {
+    // 1. Se forneceu token direto (no formulário ou já salvo), prioriza testá-lo
+    if (directToken) {
       try {
         await listSigmaCustomers({ url, token: directToken });
         return { ok: true as const, error: null };
-      } catch (error) {
-        return {
-          ok: false as const,
-          error: error instanceof Error ? error.message : "Token inválido ou painel inacessível.",
-        };
+      } catch (tokenError) {
+        // Se NÃO informou usuário e senha, devolve o erro do token
+        if (!username || !password) {
+          return {
+            ok: false as const,
+            error: tokenError instanceof Error ? tokenError.message : "Token inválido ou painel inacessível.",
+          };
+        }
+        // Se informou usuário e senha, tenta autenticação por login abaixo
       }
     }
 
@@ -239,7 +243,7 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
     try {
       const token = await sigmaLogin(url, username, password);
 
-      // Persiste o token atualizado
+      // Persiste o token atualizado para futuras chamadas
       try {
         await supabase.from("whatsapp_settings").update({ sigma_token: token }).eq("user_id", userId);
       } catch {

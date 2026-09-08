@@ -133,10 +133,10 @@ function SigmaPage() {
         toast.success("Conexão estabelecida com sucesso com o Servidor Sigma! ✅");
         queryClient.invalidateQueries({ queryKey: ["sigma-settings"] });
       } else {
-        toast.error(res.error ?? "Não foi possível conectar ao servidor Sigma.");
+        toast.error(res.error ?? "Não foi possível conectar ao servidor Sigma.", { duration: 9000 });
       }
     } catch {
-      toast.error("Erro de rede ao testar conexão com o servidor.");
+      toast.error("Erro de rede ao testar conexão com o servidor.", { duration: 7000 });
     } finally {
       setTesting(false);
     }
@@ -378,6 +378,9 @@ function SigmaPage() {
                 onChange={(e) => setForm({ ...form, sigma_token: e.target.value })}
                 className="rounded-xl text-sm font-mono"
               />
+              <p className="text-[11px] text-muted-foreground">
+                Dica: Se o painel recusar o login com erro 403 (ou se tiver bloqueio de firewall de IP), você pode gerar e colar uma Chave de API direta aqui.
+              </p>
             </div>
 
             {/* Switches de Automação */}
