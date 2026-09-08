@@ -1,18 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  loadBotConfig,
-  saveBotConfigServer,
-  processBotMessage,
-  createTrialForBot,
-  type BotConfigData,
-} from "./bot.server";
+import type { BotConfigData } from "./bot.server";
 
 /** Carrega as configurações do Bot de Auto-Atendimento */
 export const getBotSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+    const { loadBotConfig } = await import("./bot.server");
     const config = await loadBotConfig(supabase, userId);
     return { ok: true as const, config };
   });
@@ -23,6 +18,7 @@ export const saveBotSettings = createServerFn({ method: "POST" })
   .inputValidator((input: Partial<BotConfigData>) => input)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const { saveBotConfigServer } = await import("./bot.server");
     await saveBotConfigServer(supabase, userId, data);
     return { ok: true as const };
   });
@@ -33,6 +29,7 @@ export const simulateBotMessage = createServerFn({ method: "POST" })
   .inputValidator((input: { text: string; phone?: string; pushName?: string }) => input)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const { processBotMessage } = await import("./bot.server");
     const result = await processBotMessage(supabase, userId, {
       phone: data.phone || "5511999999999",
       text: data.text,
@@ -47,6 +44,7 @@ export const generateTrialQuick = createServerFn({ method: "POST" })
   .inputValidator((input: { phone: string; name?: string }) => input)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const { createTrialForBot } = await import("./bot.server");
     const res = await createTrialForBot(supabase, userId, {
       phone: data.phone,
       senderName: data.name,
@@ -71,5 +69,3 @@ export const generatePlansMessageText = createServerFn({ method: "POST" })
     const text = generateDefaultPlansText(data);
     return { ok: true as const, text };
   });
-
-
