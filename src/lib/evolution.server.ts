@@ -4,13 +4,10 @@ export function instanceNameFor(userId: string) {
   return `iptv_${userId.replace(/-/g, "").slice(0, 16)}`;
 }
 
-export function evolutionConfig(userId: string) {
-  const envBase = process.env["EVOLUTION_API_URL"]?.trim();
+export function evolutionConfig(userId: string, customBase?: string, customKey?: string) {
+  const envBase = customBase?.trim() || process.env["EVOLUTION_API_URL"]?.trim();
   const base = (envBase && envBase.length > 0 ? envBase : "https://cobrancas-whatsapp.shop").replace(/\/+$/, "");
-  const key = process.env["EVOLUTION_API_KEY"] ?? "";
-  if (!base || !key) {
-    throw new Error("Servidor do WhatsApp não configurado.");
-  }
+  const key = customKey?.trim() || process.env["EVOLUTION_API_KEY"]?.trim() || "";
   return { base, key, instance: instanceNameFor(userId) };
 }
 

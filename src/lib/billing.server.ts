@@ -31,10 +31,17 @@ export async function sendViaEvolution(
   const { evolutionConfig } = await import("./evolution.server");
   const owner = userId ?? settings.user_id;
   if (!owner) throw new Error("Conta sem WhatsApp conectado.");
-  const { base, key, instance } = evolutionConfig(owner);
+  const { base, key, instance } = evolutionConfig(
+    owner,
+    settings.api_url ?? undefined,
+    settings.api_key ?? undefined,
+  );
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (key) headers["apikey"] = key;
+
   const res = await fetch(`${base}/message/sendText/${instance}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", apikey: key },
+    headers,
     body: JSON.stringify({ number: normalizeNumber(phone), text, textMessage: { text } }),
   });
   const raw = await res.text();
