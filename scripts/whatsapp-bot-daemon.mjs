@@ -104,7 +104,6 @@ async function getRecentMessages(instanceName) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        order: [["messageTimestamp", "DESC"]],
         limit: 50,
       }),
     });
@@ -208,10 +207,13 @@ async function pollOnce() {
         continue;
       }
 
-      // No primeiro ciclo (startup), adiciona as mensagens existentes ao conjunto para não responder passado
+      // No primeiro ciclo (startup), ignora apenas mensagens com mais de 2 minutos para não responder passado antigo
       if (isFirstRun) {
-        processedMsgIds.add(msgId);
-        continue;
+        const msgAgeSec = Math.floor((Date.now() - ((msg.messageTimestamp || 0) * 1000)) / 1000);
+        if (msgAgeSec > 120) {
+          processedMsgIds.add(msgId);
+          continue;
+        }
       }
 
       if (processedMsgIds.has(msgId)) continue;

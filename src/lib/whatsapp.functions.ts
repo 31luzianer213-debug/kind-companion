@@ -64,7 +64,12 @@ export const getWhatsAppStatus = createServerFn({ method: "POST" })
             }
           } catch {}
         }
-        if (publicUrl) {
+        if (
+          publicUrl &&
+          !publicUrl.includes("localhost") &&
+          !publicUrl.includes("preview--") &&
+          !publicUrl.includes("127.0.0.1")
+        ) {
           ensureInstanceWebhook(context.userId, publicUrl).catch(() => {});
         }
       }

@@ -58,6 +58,13 @@ const lastWebhookSync = new Map<string, number>();
 /** Garante que o Webhook do Bot está configurado na Evolution API sem sobrecarregar a VPS */
 export async function ensureInstanceWebhook(userId: string, publicAppUrl: string) {
   if (!publicAppUrl) return;
+  if (
+    publicAppUrl.includes("localhost") ||
+    publicAppUrl.includes("preview--") ||
+    publicAppUrl.includes("127.0.0.1")
+  ) {
+    return;
+  }
   const last = lastWebhookSync.get(userId) ?? 0;
   const now = Date.now();
   // Se configurou há menos de 10 minutos, não precisa reenviar
