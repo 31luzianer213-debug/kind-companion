@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -7,14 +7,7 @@ import {
   getBotSettings,
   saveBotSettings,
   simulateBotMessage,
-  generatePlansMessageText,
 } from "@/lib/bot.functions";
-import {
-  getPaymentSettings,
-  savePaymentSettings,
-  testMercadoPagoConnection,
-} from "@/lib/payment.functions";
-import { getSigmaSettings } from "@/lib/sigma.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,7 +24,6 @@ import {
   Clock,
   Package,
   Layers,
-  Phone,
   MessageSquare,
   Smartphone,
   Server,
@@ -42,24 +34,20 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
-  Check,
-  Copy,
-  RefreshCw,
-  ExternalLink,
   DollarSign,
   Tv,
-  ArrowRight,
+  RefreshCw,
+  ExternalLink,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/bot")({
-  ssr: false,
   head: () => ({
     meta: [
-      { title: "Robô WhatsApp & Pagamentos PIX — Alpha IPTV" },
+      { title: "Robô WhatsApp — Auto-Atendimento & PIX Automático" },
       {
         name: "description",
         content:
-          "Configure o bot do WhatsApp para auto-atendimento 24h, geração de testes no Sigma, preços de planos e PIX Copia e Cola automático do Mercado Pago.",
+          "Configure o bot do WhatsApp para auto-atendimento 24h, geração de testes, renovação automática no PIX do Mercado Pago e entrega de lista M3U.",
       },
     ],
   }),
@@ -73,22 +61,43 @@ type ChatMessage = {
   time: string;
 };
 
+function formatPlansText(prices: {
+  monthly: number;
+  quarterly: number;
+  semiannual: number;
+  annual: number;
+  serverName: string;
+}): string {
+  const m = Number(prices.monthly || 35).toFixed(2).replace(".", ",");
+  const q = Number(prices.quarterly || 90).toFixed(2).replace(".", ",");
+  const s = Number(prices.semiannual || 160).toFixed(2).replace(".", ",");
+  const a = Number(prices.annual || 280).toFixed(2).replace(".", ",");
+  const srv = prices.serverName || "Alpha IPTV";
+
+  return (
+    `🛒 *PLANOS E ASSINATURAS ${srv.toUpperCase()}* 🍿\n\n` +
+    `📺 *1 Mês (Mensal):* R$ ${m}\n` +
+    `📺 *3 Meses (Trimestral):* R$ ${q} (Econômico!)\n` +
+    `📺 *6 Meses (Semestral):* R$ ${s} (Mais Vendido! 🔥)\n` +
+    `📺 *12 Meses (Anual):* R$ ${a} (Melhor Desconto ⭐)\n\n` +
+    `⭐ *Todos os planos incluem:*\n` +
+    `• Mais de 80.000 conteúdos (Canais 4K/FHD, Filmes e Séries atualizados)\n` +
+    `• Guia de Canais completo (EPG)\n` +
+    `• Compatível com TV Box, Smart TV, Celular, Computador e Tablet\n` +
+    `• Liberação Imediata com PIX Automático!`
+  );
+}
+
 function BotPage() {
   const queryClient = useQueryClient();
   const getSettings = useServerFn(getBotSettings);
   const saveSettings = useServerFn(saveBotSettings);
   const simulate = useServerFn(simulateBotMessage);
-  const generatePlansFn = useServerFn(generatePlansMessageText);
-  const testMpFn = useServerFn(testMercadoPagoConnection);
-  const getSigmaFn = useServerFn(getSigmaSettings);
-  const getPaymentFn = useServerFn(getPaymentSettings);
-  const savePaymentFn = useServerFn(savePaymentSettings);
 
   const [saving, setSaving] = useState(false);
-  const [syncingPlans, setSyncingPlans] = useState(false);
-  const [importingSigma, setImportingSigma] = useState(false);
+  const [showMpToken, setShowMpToken] = useState(false);
 
-  // Form State Principal
+  // Form State
   const [form, setForm] = useState({
     enabled: true,
     businessName: "Alpha IPTV",
@@ -112,11 +121,6 @@ function BotPage() {
     payment_provider: "mercadopago",
   });
 
-  // Mercado Pago States
-  const [showMpToken, setShowMpToken] = useState(false);
-  const [testingMp, setTestingMp] = useState(false);
-  const [mpStatus, setMpStatus] = useState<{ ok: boolean; message: string } | null>(null);
-
   // Simulator State
   const [simText, setSimText] = useState("");
   const [simLoading, setSimLoading] = useState(false);
@@ -138,8 +142,7 @@ function BotPage() {
     },
   ]);
 
-  // Carrega configurações do Bot e Pagamento com segurança
-  const { data: botData, isLoading: loadingBot } = useQuery({
+  const { data: botData, isLoading } = useQuery({
     queryKey: ["bot-settings"],
     queryFn: async () => {
       try {
@@ -152,89 +155,53 @@ function BotPage() {
     },
   });
 
-  const { data: paymentData } = useQuery({
-    queryKey: ["payment-settings"],
-    queryFn: async () => {
-      try {
-        const res = await getPaymentFn({});
-        return res;
-      } catch (err) {
-        console.warn("Aviso ao carregar payment settings:", err);
-        return { ok: true as const, settings: null };
-      }
-    },
-  });
-
   useEffect(() => {
     if (botData?.config) {
-      const cfg = botData.config;
-      const mpToken = cfg.mercadopago_token || paymentData?.settings?.mercadopago_token || "";
-      const pProvider = cfg.payment_provider || paymentData?.settings?.payment_provider || (mpToken ? "mercadopago" : "pix");
-
-      setForm((prev) => ({
-        ...prev,
-        enabled: cfg.enabled ?? true,
-        businessName: cfg.businessName || "Alpha IPTV",
-        serverName: cfg.serverName || "Alpha IPTV",
-        streamingDns: cfg.streamingDns || "http://alpha-stream.net",
-        testEnabled: cfg.testEnabled ?? true,
-        testDurationHours: cfg.testDurationHours ?? 4,
+      const c = botData.config;
+      setForm({
+        enabled: c.enabled ?? true,
+        businessName: c.businessName || "Alpha IPTV",
+        serverName: c.serverName || "Alpha IPTV",
+        streamingDns: c.streamingDns || "http://alpha-stream.net",
+        testEnabled: c.testEnabled ?? true,
+        testDurationHours: Number(c.testDurationHours ?? 4),
         testPackageName:
-          cfg.testPackageName || "TESTE LISTA IPTV ALPHA COM TODOS CONTEUDOS COM ADULTOS 🔞",
-        blockRepeatDays: cfg.blockRepeatDays ?? 7,
-        planMonthlyPrice: Number(cfg.planMonthlyPrice ?? 35.0),
-        planQuarterlyPrice: Number(cfg.planQuarterlyPrice ?? 90.0),
-        planSemiannualPrice: Number(cfg.planSemiannualPrice ?? 160.0),
-        planAnnualPrice: Number(cfg.planAnnualPrice ?? 280.0),
-        renewalPrice: Number(cfg.renewalPrice ?? 35.0),
-        menuGreeting: cfg.menuGreeting || "",
-        plansText: cfg.plansText || "",
-        supportMessage: cfg.supportMessage || "",
-        pixKey: cfg.pixKey || paymentData?.settings?.pix_key || "",
-        pixHolder: cfg.pixHolder || paymentData?.settings?.pix_holder || "",
-        mercadopago_token: mpToken,
-        payment_provider: pProvider,
-      }));
+          c.testPackageName || "TESTE LISTA IPTV ALPHA COM TODOS CONTEUDOS COM ADULTOS 🔞",
+        blockRepeatDays: Number(c.blockRepeatDays ?? 7),
+        planMonthlyPrice: Number(c.planMonthlyPrice ?? 35.0),
+        planQuarterlyPrice: Number(c.planQuarterlyPrice ?? 90.0),
+        planSemiannualPrice: Number(c.planSemiannualPrice ?? 160.0),
+        planAnnualPrice: Number(c.planAnnualPrice ?? 280.0),
+        renewalPrice: Number(c.renewalPrice ?? 35.0),
+        menuGreeting: c.menuGreeting || "",
+        plansText: c.plansText || "",
+        supportMessage: c.supportMessage || "",
+        pixKey: c.pixKey || "",
+        pixHolder: c.pixHolder || "",
+        mercadopago_token: c.mercadopago_token || "",
+        payment_provider: c.payment_provider || "mercadopago",
+      });
     }
-  }, [botData, paymentData]);
+  }, [botData]);
 
-  // Salvar tudo com sincronização em cadeia
   async function handleSave(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setSaving(true);
     try {
-      // 1. Salva no Bot Server (que atualiza disco e Supabase)
       const res = await saveSettings({ data: form });
-
-      // 2. Se informou token do MP ou chave PIX, salva também no módulo de pagamentos
-      if (form.mercadopago_token || form.pixKey) {
-        try {
-          await savePaymentFn({
-            data: {
-              mercadopago_token: form.mercadopago_token,
-              payment_provider: form.mercadopago_token ? "mercadopago" : "pix",
-              pix_key: form.pixKey,
-              pix_holder: form.pixHolder,
-            },
-          });
-        } catch {}
-      }
-
       if (res?.ok) {
-        toast.success("Configurações do Robô salvas e sincronizadas com sucesso! 🤖⚡");
+        toast.success("Configurações do Robô salvas com sucesso! 🤖⚡");
         queryClient.invalidateQueries({ queryKey: ["bot-settings"] });
-        queryClient.invalidateQueries({ queryKey: ["payment-settings"] });
       } else {
-        toast.error("Erro ao salvar configurações do robô.");
+        toast.error("Erro ao salvar configurações.");
       }
-    } catch (err) {
-      toast.error("Falha ao salvar configurações.");
+    } catch {
+      toast.error("Falha ao salvar configurações do robô.");
     } finally {
       setSaving(false);
     }
   }
 
-  // Alterna status ligado/desligado do robô
   async function handleToggleEnabled(val: boolean) {
     setForm((prev) => ({ ...prev, enabled: val }));
     try {
@@ -242,7 +209,7 @@ function BotPage() {
       if (res?.ok) {
         queryClient.invalidateQueries({ queryKey: ["bot-settings"] });
         if (val) {
-          toast.success("Robô WhatsApp ATIVADO! 🤖 Respondendo clientes 24h.");
+          toast.success("Robô WhatsApp ATIVADO! 🤖 Respondendo 24h.");
         } else {
           toast.warning("Robô WhatsApp DESLIGADO! 🛑 Respostas pausadas.");
         }
@@ -256,86 +223,18 @@ function BotPage() {
     }
   }
 
-  // Puxar dados de servidor e DNS do Sigma Panel
-  async function handleImportFromSigma() {
-    setImportingSigma(true);
-    try {
-      const res = await getSigmaFn({});
-      if (res && (res.server_name || res.streaming_dns || res.server_display_name)) {
-        const sName = res.server_name || res.server_display_name || form.serverName;
-        const sDns = res.streaming_dns || form.streamingDns;
-
-        setForm((prev) => ({
-          ...prev,
-          serverName: sName,
-          streamingDns: sDns,
-          businessName: prev.businessName || sName,
-        }));
-        toast.success(`Dados importados do Sigma: Servidor "${sName}"! 🔄`);
-      } else {
-        toast.info("Nenhum servidor customizado detectado no Sigma. Preencha manualmente.");
-      }
-    } catch {
-      toast.error("Erro ao consultar dados do Sigma.");
-    } finally {
-      setImportingSigma(false);
-    }
+  function handleRegeneratePlansText() {
+    const formatted = formatPlansText({
+      monthly: form.planMonthlyPrice,
+      quarterly: form.planQuarterlyPrice,
+      semiannual: form.planSemiannualPrice,
+      annual: form.planAnnualPrice,
+      serverName: form.serverName || form.businessName,
+    });
+    setForm((prev) => ({ ...prev, plansText: formatted }));
+    toast.success("Texto dos planos atualizado com os novos preços! ✨");
   }
 
-  // Regenera a mensagem de planos formatada com emojis e os valores atuais
-  async function handleRegeneratePlansText() {
-    setSyncingPlans(true);
-    try {
-      const res = await generatePlansFn({
-        data: {
-          planMonthlyPrice: Number(form.planMonthlyPrice || 35),
-          planQuarterlyPrice: Number(form.planQuarterlyPrice || 90),
-          planSemiannualPrice: Number(form.planSemiannualPrice || 160),
-          planAnnualPrice: Number(form.planAnnualPrice || 280),
-          serverName: form.serverName || form.businessName,
-        },
-      });
-
-      if (res?.text) {
-        setForm((prev) => ({ ...prev, plansText: res.text }));
-        toast.success("Texto dos Planos atualizado com sucesso! 🎉");
-      }
-    } catch {
-      toast.error("Erro ao recalcular texto dos planos.");
-    } finally {
-      setSyncingPlans(false);
-    }
-  }
-
-  // Testa conexão do Mercado Pago diretamente nesta tela
-  async function handleTestMercadoPago() {
-    if (!form.mercadopago_token?.trim()) {
-      toast.error("Informe o Access Token do Mercado Pago antes de testar.");
-      return;
-    }
-    setTestingMp(true);
-    setMpStatus(null);
-    try {
-      const res = await testMpFn({ data: { token: form.mercadopago_token } });
-      if (res.ok) {
-        setMpStatus({
-          ok: true,
-          message: `Conectado com sucesso! Titular: ${res.name} (${res.email || "OK"})`,
-        });
-        toast.success(`Mercado Pago autenticado: ${res.name} 💳`);
-      } else {
-        setMpStatus({ ok: false, message: res.error || "Token do Mercado Pago recusado." });
-        toast.error(res.error || "Token do Mercado Pago recusado.");
-      }
-    } catch {
-      setMpStatus({ ok: false, message: "Erro de conexão ao testar Mercado Pago." });
-      toast.error("Erro ao validar token.");
-    } finally {
-      setTestingMp(false);
-    }
-  }
-
-  // Envio no Simulador Interativo
   async function handleSendSim(textToSend?: string) {
     const text = (textToSend ?? simText).trim();
     if (!text) return;
@@ -400,7 +299,7 @@ function BotPage() {
     ]);
   }
 
-  const isMpConfigured = Boolean(form.mercadopago_token?.trim());
+  const isMpActive = Boolean(form.mercadopago_token?.trim());
 
   return (
     <div className="space-y-6 max-w-7xl animate-in fade-in duration-300">
@@ -408,31 +307,28 @@ function BotPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/60 pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
-              <div className="size-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <Bot className="size-5 text-primary" />
-              </div>
-              Robô de Auto-Atendimento & Pagamentos PIX
+            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              <Bot className="size-6 text-primary" /> Robô WhatsApp & Auto-Atendimento
             </h1>
             <Badge
               variant="outline"
               className={
                 form.enabled
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs py-0.5 px-2.5"
-                  : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30 text-xs py-0.5 px-2.5"
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs py-0.5 px-2"
+                  : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30 text-xs py-0.5 px-2"
               }
             >
               {form.enabled ? "● Robô 24h Ativo" : "○ Robô Pausado"}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            Gerencie o bot do WhatsApp: personalize os preços dos planos, escolha o servidor para testes/renovações e ative o PIX Copia e Cola automático do Mercado Pago.
+            Personalize os preços dos planos, configure o servidor IPTV e ative o PIX Copia e Cola automático do Mercado Pago para renovação e compras.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3 bg-muted/40 px-3 py-2 rounded-xl border border-border/60 shadow-xs">
-            <span className="text-xs font-semibold text-foreground">Status Geral:</span>
+          <div className="flex items-center gap-3 bg-muted/40 p-2.5 rounded-xl border border-border/60">
+            <span className="text-xs font-semibold text-foreground">Status do Robô:</span>
             <div className="flex items-center gap-2">
               <Switch
                 checked={form.enabled}
@@ -440,7 +336,7 @@ function BotPage() {
                 id="bot-toggle"
               />
               <Label htmlFor="bot-toggle" className="text-xs cursor-pointer font-medium">
-                {form.enabled ? "Online" : "Offline"}
+                {form.enabled ? "Ligado" : "Desligado"}
               </Label>
             </div>
           </div>
@@ -449,7 +345,7 @@ function BotPage() {
             type="button"
             onClick={() => handleSave()}
             disabled={saving}
-            className="rounded-xl gap-2 font-bold px-5 bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:scale-[1.02] transition-transform"
+            className="rounded-xl gap-2 font-bold px-6 bg-primary text-primary-foreground shadow-md shadow-primary/20"
           >
             <Sparkles className="size-4" />
             {saving ? "Salvando..." : "Salvar Alterações"}
@@ -457,45 +353,41 @@ function BotPage() {
         </div>
       </div>
 
-      {/* Grid Principal: Configurações + Simulador */}
+      {/* Grid Principal */}
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Coluna Esquerda: Configurações do Robô (7 colunas) */}
-        <div className="lg:col-span-7 space-y-6">
-          <form onSubmit={handleSave} className="space-y-6">
-            {/* ============================================================== */}
-            {/* CARD 1: MERCADO PAGO — PIX COPIA E COLA AUTOMÁTICO               */}
-            {/* ============================================================== */}
-            <Card className="surface-card border-sky-500/30 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/5 rounded-bl-full pointer-events-none" />
+        <div className="lg:col-span-7 space-y-5">
+          <form onSubmit={handleSave} className="space-y-5">
+            {/* CARD 1: MERCADO PAGO (PIX COPIA E COLA) */}
+            <Card className="surface-card border-sky-500/30 shadow-sm">
               <CardHeader className="pb-3 border-b border-border/50">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2 text-foreground font-bold">
-                    <Wallet className="size-5 text-sky-400" /> Mercado Pago (PIX Copia e Cola Automático)
+                    <Wallet className="size-5 text-sky-400" /> Mercado Pago (PIX Automático)
                   </CardTitle>
                   <Badge
                     variant="outline"
                     className={
-                      isMpConfigured
-                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs py-0.5 px-2 font-semibold"
-                        : "bg-amber-500/10 text-amber-400 border-amber-500/30 text-xs py-0.5 px-2"
+                      isMpActive
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs"
+                        : "bg-amber-500/10 text-amber-400 border-amber-500/30 text-xs"
                     }
                   >
-                    {isMpConfigured ? "⚡ PIX Dinâmico Ativo" : "⚠️ Modo Chave Manual"}
+                    {isMpActive ? "⚡ PIX Dinâmico Ativo" : "⚠️ Chave PIX Manual"}
                   </Badge>
                 </div>
                 <CardDescription>
-                  Gera na hora o código <strong>PIX Copia e Cola</strong> para as opções de Renovação (2) e Compra de Planos (3), liberando no Sigma instantaneamente após o pagamento!
+                  Com o Mercado Pago ativado, o robô envia na hora o código <strong>PIX Copia e Cola</strong> e o link de pagamento para renovações e planos!
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
-                {/* Banner de Status */}
-                {isMpConfigured ? (
+                {isMpActive ? (
                   <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-start gap-2.5 text-xs text-emerald-300">
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-semibold text-emerald-200">PIX Automático Ativado!</p>
                       <p className="text-emerald-300/90 text-[11px] mt-0.5">
-                        Quando seus clientes digitarem <strong>2</strong> (Renovar) ou <strong>3</strong> (Planos), o robô responderá com o código PIX Copia e Cola do Mercado Pago pronto para pagar no app do banco.
+                        As opções 2 (Renovar) e 3 (Comprar Planos) geram códigos PIX Copia e Cola dinâmicos do Mercado Pago com baixa automática no Sigma.
                       </p>
                     </div>
                   </div>
@@ -503,19 +395,18 @@ function BotPage() {
                   <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-2.5 text-xs text-amber-300">
                     <AlertCircle className="size-4 text-amber-400 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-amber-200">Mercado Pago não configurado</p>
+                      <p className="font-semibold text-amber-200">Modo Manual Ativo</p>
                       <p className="text-amber-300/90 text-[11px] mt-0.5">
-                        Cole seu <strong>Access Token</strong> abaixo para ativar a geração automática de PIX Copia e Cola. Sem ele, o robô enviará sua chave PIX estática.
+                        Cole seu <strong>Access Token</strong> abaixo para o robô gerar PIX Copia e Cola na hora. Caso não tenha, o robô enviará sua chave PIX estática.
                       </p>
                     </div>
                   </div>
                 )}
 
-                {/* Input do Token */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-semibold flex items-center gap-1.5">
-                      <Lock className="size-3.5 text-sky-400" /> Access Token de Produção do Mercado Pago
+                      <Lock className="size-3.5 text-sky-400" /> Access Token do Mercado Pago
                     </Label>
                     <a
                       href="https://www.mercadopago.com.br/developers/panel/app"
@@ -523,7 +414,7 @@ function BotPage() {
                       rel="noreferrer"
                       className="text-[11px] text-sky-400 hover:underline flex items-center gap-1"
                     >
-                      Pegar token no Mercado Pago <ExternalLink className="size-3" />
+                      Onde pegar meu Token? <ExternalLink className="size-3" />
                     </a>
                   </div>
                   <div className="relative flex items-center">
@@ -531,11 +422,8 @@ function BotPage() {
                       type={showMpToken ? "text" : "password"}
                       placeholder="APP_USR-0000000000000000-000000-..."
                       value={form.mercadopago_token}
-                      onChange={(e) => {
-                        setForm({ ...form, mercadopago_token: e.target.value });
-                        setMpStatus(null);
-                      }}
-                      className="rounded-xl font-mono text-xs pr-20 bg-background/60"
+                      onChange={(e) => setForm({ ...form, mercadopago_token: e.target.value })}
+                      className="rounded-xl font-mono text-xs pr-20"
                     />
                     <div className="absolute right-1 flex items-center gap-1">
                       <Button
@@ -551,53 +439,26 @@ function BotPage() {
                   </div>
                 </div>
 
-                {/* Botão de Teste & Status */}
-                <div className="flex flex-wrap items-center gap-2.5 pt-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleTestMercadoPago}
-                    disabled={testingMp || !form.mercadopago_token}
-                    className="rounded-xl text-xs gap-1.5 border-sky-500/30 hover:bg-sky-500/10 text-sky-400"
-                  >
-                    {testingMp ? <RefreshCw className="size-3 animate-spin" /> : <Zap className="size-3" />}
-                    Testar Conexão do Token
-                  </Button>
-
-                  {mpStatus && (
-                    <span
-                      className={`text-xs font-medium flex items-center gap-1.5 ${
-                        mpStatus.ok ? "text-emerald-400" : "text-rose-400"
-                      }`}
-                    >
-                      {mpStatus.ok ? <CheckCircle2 className="size-3.5" /> : <AlertCircle className="size-3.5" />}
-                      {mpStatus.message}
-                    </span>
-                  )}
-                </div>
-
-                {/* Fallback de Chave PIX Manual */}
-                <div className="border-t border-border/40 pt-3 mt-3">
+                <div className="border-t border-border/40 pt-3">
                   <p className="text-[11px] font-semibold text-muted-foreground mb-2">
-                    🔑 Chave PIX Reserva (usada se o Mercado Pago estiver indisponível):
+                    🔑 Chave PIX Manual (Fallback de contingência):
                   </p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1">
-                      <Label className="text-[11px] font-medium">Chave PIX Manual</Label>
+                      <Label className="text-[11px] font-medium">Chave PIX</Label>
                       <Input
                         type="text"
-                        placeholder="Ex: financeiro@alphaiptv.com ou Celular/CPF"
+                        placeholder="Ex: seu-pix@email.com"
                         value={form.pixKey}
                         onChange={(e) => setForm({ ...form, pixKey: e.target.value })}
                         className="rounded-xl text-xs font-mono"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[11px] font-medium">Nome do Titular da Chave</Label>
+                      <Label className="text-[11px] font-medium">Titular da Chave</Label>
                       <Input
                         type="text"
-                        placeholder="Ex: Alpha IPTV Serviços"
+                        placeholder="Ex: Alpha IPTV"
                         value={form.pixHolder}
                         onChange={(e) => setForm({ ...form, pixHolder: e.target.value })}
                         className="rounded-xl text-xs"
@@ -608,9 +469,7 @@ function BotPage() {
               </CardContent>
             </Card>
 
-            {/* ============================================================== */}
-            {/* CARD 2: PREÇOS DOS PLANOS & VALOR DE RENOVAÇÃO                   */}
-            {/* ============================================================== */}
+            {/* CARD 2: PREÇOS DOS PLANOS & RENOVAÇÃO */}
             <Card className="surface-card border-emerald-500/30 shadow-sm">
               <CardHeader className="pb-3 border-b border-border/50">
                 <div className="flex items-center justify-between">
@@ -622,11 +481,9 @@ function BotPage() {
                     variant="outline"
                     size="sm"
                     onClick={handleRegeneratePlansText}
-                    disabled={syncingPlans}
                     className="rounded-xl text-xs gap-1.5 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
                   >
-                    <Sparkles className="size-3" />
-                    {syncingPlans ? "Atualizando..." : "Sincronizar Mensagem com Preços"}
+                    <Sparkles className="size-3" /> Atualizar Texto com esses Preços
                   </Button>
                 </div>
                 <CardDescription>
@@ -634,7 +491,6 @@ function BotPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
-                {/* Grid dos 5 preços */}
                 <div className="grid gap-3 sm:grid-cols-3">
                   {/* Renovação Mensal */}
                   <div className="space-y-1.5 p-3 rounded-xl bg-muted/30 border border-emerald-500/30 sm:col-span-3">
@@ -643,7 +499,7 @@ function BotPage() {
                         <RefreshCw className="size-3.5" /> Valor da Renovação Mensal (Opção 2)
                       </Label>
                       <Badge className="bg-emerald-500/10 text-emerald-400 text-[10px]">
-                        Cobrado na Renovação
+                        Cobrado na Opção 2
                       </Badge>
                     </div>
                     <div className="relative flex items-center">
@@ -654,17 +510,14 @@ function BotPage() {
                         min="1"
                         value={form.renewalPrice}
                         onChange={(e) => setForm({ ...form, renewalPrice: Number(e.target.value) || 0 })}
-                        className="rounded-xl text-sm font-mono pl-9 font-bold text-foreground"
+                        className="rounded-xl text-sm font-mono pl-9 font-bold"
                       />
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Valor gerado no PIX quando o cliente escolhe renovar a assinatura (Opção 2).
-                    </p>
                   </div>
 
                   {/* 1 Mês */}
                   <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
-                    <Label className="text-xs font-semibold text-foreground">Plano 1 Mês (Mensal)</Label>
+                    <Label className="text-xs font-semibold">1 Mês (Mensal)</Label>
                     <div className="relative flex items-center">
                       <span className="absolute left-3 text-xs font-bold text-muted-foreground">R$</span>
                       <Input
@@ -680,7 +533,7 @@ function BotPage() {
 
                   {/* 3 Meses */}
                   <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
-                    <Label className="text-xs font-semibold text-foreground">Plano 3 Meses (Trimestral)</Label>
+                    <Label className="text-xs font-semibold">3 Meses (Trimestral)</Label>
                     <div className="relative flex items-center">
                       <span className="absolute left-3 text-xs font-bold text-muted-foreground">R$</span>
                       <Input
@@ -696,7 +549,7 @@ function BotPage() {
 
                   {/* 6 Meses */}
                   <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
-                    <Label className="text-xs font-semibold text-foreground">Plano 6 Meses (Semestral)</Label>
+                    <Label className="text-xs font-semibold">6 Meses (Semestral)</Label>
                     <div className="relative flex items-center">
                       <span className="absolute left-3 text-xs font-bold text-muted-foreground">R$</span>
                       <Input
@@ -712,7 +565,7 @@ function BotPage() {
 
                   {/* 12 Meses (Anual) */}
                   <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50 sm:col-span-3">
-                    <Label className="text-xs font-semibold text-foreground">Plano 12 Meses (Anual - Melhor Custo-Benefício)</Label>
+                    <Label className="text-xs font-semibold">12 Meses (Anual - Melhor Custo-Benefício)</Label>
                     <div className="relative flex items-center">
                       <span className="absolute left-3 text-xs font-bold text-muted-foreground">R$</span>
                       <Input
@@ -729,27 +582,12 @@ function BotPage() {
               </CardContent>
             </Card>
 
-            {/* ============================================================== */}
-            {/* CARD 3: SERVIDOR IPTV & TESTE AUTOMÁTICO SIGMA                    */}
-            {/* ============================================================== */}
+            {/* CARD 3: SERVIDOR IPTV & TESTE AUTOMÁTICO SIGMA */}
             <Card className="surface-card border-border/60 shadow-sm">
               <CardHeader className="pb-3 border-b border-border/50">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2 font-bold">
-                    <Tv className="size-4 text-amber-400" /> Servidor IPTV & Testes no Sigma
-                  </CardTitle>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleImportFromSigma}
-                    disabled={importingSigma}
-                    className="rounded-xl text-xs gap-1.5 text-primary hover:bg-primary/10"
-                  >
-                    <RefreshCw className={`size-3 ${importingSigma ? "animate-spin" : ""}`} />
-                    Puxar Dados do Sigma
-                  </Button>
-                </div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Tv className="size-4 text-amber-400" /> Servidor IPTV & Testes no Sigma
+                </CardTitle>
                 <CardDescription>
                   Configure qual servidor e DNS de streaming o bot usará para gerar os testes e as listas M3U.
                 </CardDescription>
@@ -767,25 +605,22 @@ function BotPage() {
                       onChange={(e) => setForm({ ...form, serverName: e.target.value })}
                       className="rounded-xl text-sm"
                     />
-                    <p className="text-[11px] text-muted-foreground">Aparece na mensagem de teste e renovação.</p>
                   </div>
 
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold flex items-center gap-1.5">
-                      <Globe className="size-3.5 text-primary" /> DNS / Host de Streaming
+                      <Zap className="size-3.5 text-primary" /> DNS / Host de Streaming
                     </Label>
                     <Input
                       type="text"
-                      placeholder="Ex: http://alpha-stream.net ou http://seu-dns.com:8080"
+                      placeholder="Ex: http://alpha-stream.net"
                       value={form.streamingDns}
                       onChange={(e) => setForm({ ...form, streamingDns: e.target.value })}
                       className="rounded-xl text-sm font-mono"
                     />
-                    <p className="text-[11px] text-muted-foreground">Usado para montar a Lista M3U e o EPG do cliente.</p>
                   </div>
                 </div>
 
-                {/* Switch de Teste Grátis */}
                 <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50">
                   <div className="space-y-0.5">
                     <p className="text-xs font-semibold text-foreground">Permitir Geração de Teste Grátis (Opção 1)</p>
@@ -844,16 +679,14 @@ function BotPage() {
               </CardContent>
             </Card>
 
-            {/* ============================================================== */}
-            {/* CARD 4: MENSAGENS PERSONALIZADAS & ATENDIMENTO                   */}
-            {/* ============================================================== */}
+            {/* CARD 4: MENSAGENS PERSONALIZADAS */}
             <Card className="surface-card border-border/60 shadow-sm">
               <CardHeader className="pb-3 border-b border-border/50">
-                <CardTitle className="text-base flex items-center gap-2 font-bold">
-                  <MessageSquare className="size-4 text-primary" /> Textos & Mensagens do WhatsApp
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MessageSquare className="size-4 text-primary" /> Textos do Menu & Suporte
                 </CardTitle>
                 <CardDescription>
-                  Personalize os textos enviados automaticamente pelo assistente virtual.
+                  Personalize os textos do menu e atendimento do assistente virtual.
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
@@ -909,10 +742,10 @@ function BotPage() {
               <Button
                 type="submit"
                 disabled={saving}
-                className="rounded-xl gap-2 font-bold px-7 py-6 text-sm bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:scale-[1.01] transition-transform"
+                className="rounded-xl gap-2 font-bold px-7 py-6 text-sm bg-primary text-primary-foreground shadow-lg shadow-primary/25"
               >
                 <Sparkles className="size-4" />
-                {saving ? "Salvando Configurações..." : "Salvar Todas as Configurações do Robô"}
+                {saving ? "Salvando..." : "Salvar Configurações do Robô"}
               </Button>
             </div>
           </form>
@@ -949,7 +782,7 @@ function BotPage() {
                 </p>
               </div>
               <Badge variant="secondary" className="bg-emerald-900/60 text-[10px] text-emerald-200 border-0">
-                {isMpConfigured ? "PIX MP Ativo" : "Robô Ativo"}
+                {isMpActive ? "PIX MP Ativo" : "Robô Ativo"}
               </Badge>
             </div>
 
