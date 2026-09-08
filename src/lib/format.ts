@@ -86,6 +86,21 @@ export function extractHostOnly(rawUrl?: string | null): string {
 }
 
 /**
+ * Extrai o nome do servidor gravado nas observações do cliente (ex: Servidor: Alpha server IPTV).
+ */
+export function extractServerFromNotes(notes?: string | null): string | null {
+  if (!notes) return null;
+  const match = /(?:servidor|server)\s*:\s*([^\r\n]+)/i.exec(notes);
+  if (match) {
+    const s = match[1].trim();
+    if (s && !s.startsWith("http") && !/\.(click|com|net|org|xyz|st|top|io|tv|online|site|app|live)\b/i.test(s)) {
+      return s;
+    }
+  }
+  return null;
+}
+
+/**
  * Extrai a URL completa da lista M3U gravada nas observações do cliente (sincronizada do painel Sigma).
  */
 export function extractM3uFromNotes(notes?: string | null): string | null {
@@ -145,17 +160,24 @@ export function formatIptvAccessMessage(params: {
 }): string {
   const directM3u = params.m3uUrl || extractM3uFromNotes(params.notes);
   const cleanDns =
-    extractCleanIptvDns(params.serverUrl) || (directM3u ? extractCleanIptvDns(directM3u) : "");
+    (directM3u ? extractCleanIptvDns(directM3u) : "") ||
+    extractCleanIptvDns(params.serverUrl);
 
   const isRawDomain = (name?: string | null) =>
     !name ||
     name.trim().startsWith("http") ||
     /\.(click|com|net|org|xyz|st|top|io|tv|online|site|app|live)\b/i.test(name);
 
+  const notesServer = extractServerFromNotes(params.notes);
+  const candidateServerName =
+    (params.serverName?.trim() && !isRawDomain(params.serverName) ? params.serverName.trim() : null) ||
+    notesServer ||
+    (params.businessName?.trim() && !isRawDomain(params.businessName) ? params.businessName.trim() : null);
+
   const serverLabel =
-    params.serverName?.trim() && !isRawDomain(params.serverName)
-      ? params.serverName.trim()
-      : params.businessName?.trim() || "Servidor IPTV";
+    candidateServerName && !isRawDomain(candidateServerName)
+      ? candidateServerName
+      : "Alpha server IPTV";
 
   const u = (params.username ?? "").trim();
   const p = (params.password ?? "").trim();
@@ -200,11 +222,11 @@ export function buildTemplateVars(input: TemplateVarInput): Record<string, strin
   const { client, list, settings } = input;
   const directM3u = extractM3uFromNotes(client?.notes);
 
+  // Streaming DNS: direct M3U host é a autoridade máxima de transmissão
   const rawServerUrl =
-    settings?.sigma_streaming_dns?.trim() ||
     (directM3u ? extractCleanIptvDns(directM3u) : "") ||
+    settings?.sigma_streaming_dns?.trim() ||
     list?.server_url ||
-    settings?.sigma_url ||
     "";
   const cleanDns = extractCleanIptvDns(rawServerUrl);
 
@@ -214,15 +236,17 @@ export function buildTemplateVars(input: TemplateVarInput): Record<string, strin
     /\.(click|com|net|org|xyz|st|top|io|tv|online|site|app|live)\b/i.test(name);
 
   // Nome oficial do servidor (nunca domínio ou URL crua)
+  const notesServer = extractServerFromNotes(client?.notes);
   const candidateServerName =
     settings?.sigma_server_name?.trim() ||
+    notesServer ||
     list?.name?.trim() ||
     settings?.sigma_server_display_name?.trim();
 
   const realServerName =
     candidateServerName && !isRawDomain(candidateServerName)
       ? candidateServerName
-      : settings?.business_name?.trim() || "Servidor IPTV";
+      : settings?.business_name?.trim() || "Alpha server IPTV";
 
   const username = client?.iptv_username || list?.username || "";
   const password = client?.iptv_password || list?.password || "";

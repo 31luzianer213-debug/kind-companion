@@ -79,6 +79,12 @@ export function isSigmaConfigured(config?: SigmaConfig | null): boolean {
   );
 }
 
+let cachedLastLoginPayload: any = null;
+
+export function getLastLoginPayload(): any {
+  return cachedLastLoginPayload;
+}
+
 type HttpResult = {
   ok: boolean;
   status: number;
@@ -108,7 +114,7 @@ function prepareHeaders(init?: RequestInit, base?: string): Headers {
         headers.set("Origin", parsed.origin);
       }
       if (!headers.has("Referer")) {
-        headers.set("Referer", `${parsed.origin}/`);
+        headers.set("Referer", `${parsed.origin}/#/sign-in`);
       }
     } catch {
       // Ignora erro se base for inválida
@@ -389,7 +395,31 @@ export async function sigmaLogin(url: string, username: string, password: string
   if (!user || !pass) throw new Error("Informe o usuário e a senha do painel.");
 
   const isEmail = user.includes("@");
-  const bodies: Array<Record<string, string>> = [
+  const bodies: Array<Record<string, any>> = [
+    // 1. Formato oficial do painel Sigma / XUI Web (Laravel Sanctum com captcha)
+    {
+      username: user,
+      password: pass,
+      captcha: "not-a-robot",
+      captchaChecked: true,
+      twofactor_code: "",
+      twofactor_recovery_code: "",
+      twofactor_trusted_device_id: "",
+    },
+    ...(isEmail
+      ? [
+          {
+            email: user,
+            password: pass,
+            captcha: "not-a-robot",
+            captchaChecked: true,
+            twofactor_code: "",
+            twofactor_recovery_code: "",
+            twofactor_trusted_device_id: "",
+          },
+        ]
+      : []),
+    // 2. Formato padrão sem captcha
     { username: user, password: pass },
     ...(isEmail ? [{ email: user, password: pass }] : []),
     { login: user, password: pass },
@@ -415,13 +445,14 @@ export async function sigmaLogin(url: string, username: string, password: string
       }
 
       if (result.ok) {
+        cachedLastLoginPayload = result.payload;
         const token = readToken(result.payload, result.headers);
         if (token) return token;
         attempts.push(`${endpoint} respondeu OK mas sem token`);
         continue;
       }
 
-      // Se o painel respondeu erro de credenciais (401 ou 422), pare imediatamente
+      // Se o painel respondeu erro de credenciais (401 ou 422), confere mensagem
       if (result.status === 401 || result.status === 422) {
         const serverMsg = extractServerMessage(result.payload, result.text);
         if (serverMsg) {
@@ -430,48 +461,12 @@ export async function sigmaLogin(url: string, username: string, password: string
         throw new Error("Usuário ou senha do painel Sigma incorretos.");
       }
 
-      // Se o painel respondeu 403 (Acesso Proibido)
+      // Se o painel respondeu 403 (Acesso Proibido), continua testando outros formatos de corpo
       if (result.status === 403) {
         had403Forbidden = true;
         const serverMsg = extractServerMessage(result.payload, result.text);
-        if (serverMsg) {
-          throw new Error(`Painel Sigma (403): ${serverMsg}`);
-        }
-
-        // Tenta fallback com application/x-www-form-urlencoded caso o painel espere form post padrão
-        try {
-          const formParams = new URLSearchParams({ username: user, password: pass });
-          if (isEmail) formParams.set("email", user);
-          const formRes = await requestJson(
-            base,
-            endpoint,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/x-www-form-urlencoded" },
-              body: formParams.toString(),
-            },
-            LOGIN_TIMEOUT_MS,
-          );
-
-          if (formRes.ok) {
-            const token = readToken(formRes.payload, formRes.headers);
-            if (token) return token;
-          } else if (formRes.status === 401 || formRes.status === 422) {
-            const formMsg = extractServerMessage(formRes.payload, formRes.text);
-            if (formMsg) throw new Error(`Painel Sigma: ${formMsg}`);
-            throw new Error("Usuário ou senha do painel Sigma incorretos.");
-          } else if (formRes.status === 403) {
-            const formMsg = extractServerMessage(formRes.payload, formRes.text);
-            if (formMsg) throw new Error(`Painel Sigma (403): ${formMsg}`);
-          }
-        } catch (formErr) {
-          if (formErr instanceof Error && formErr.message.includes("Painel Sigma")) {
-            throw formErr;
-          }
-        }
-
-        attempts.push(`${endpoint} → 403 (Acesso Proibido)`);
-        break;
+        attempts.push(`${endpoint} → 403 (${serverMsg || "Acesso Proibido"})`);
+        continue;
       }
 
       // Se for 404 ou 405, passa para o próximo endpoint
@@ -697,6 +692,28 @@ function extractM3uFromRaw(raw: any): string | null {
 
 function extractStreamingDnsFromRaw(raw: any): string | null {
   if (!raw || typeof raw !== "object") return null;
+
+  // 1. Mapeamento servers_dns retornado pelo login e /api/auth/me do painel Sigma
+  if (raw.servers_dns && typeof raw.servers_dns === "object") {
+    for (const val of Object.values(raw.servers_dns)) {
+      if (typeof val === "string" && val.trim()) {
+        const s = val.trim();
+        if (!s.includes("/sign-in") && !s.includes("#/") && !s.includes("/dashboard") && !s.includes("/login")) {
+          const norm = normalizeIptvDns(s);
+          if (norm) return norm;
+        }
+      }
+    }
+  }
+
+  // 2. Campo dns_list retornado por /api/servers
+  if (raw.dns_list && typeof raw.dns_list === "string") {
+    const s = raw.dns_list.split("\n")[0]?.split(",")[0]?.trim();
+    if (s && !s.includes("/sign-in") && !s.includes("#/") && !s.includes("/dashboard") && !s.includes("/login")) {
+      const norm = normalizeIptvDns(s);
+      if (norm) return norm;
+    }
+  }
 
   const directCandidates = [
     "streaming_dns",
@@ -952,6 +969,15 @@ export async function fetchSigmaPanelDetails(config: SigmaConfig): Promise<Sigma
   const discoveredPackages: string[] = [];
   const discoveredServers: Array<{ id?: string | number; name: string; url?: string }> = [];
 
+  // 0. Se acabamos de fazer login, aproveita os dados já retornados (servers_dns, credits)
+  if (cachedLastLoginPayload) {
+    const loginDns = extractStreamingDnsFromRaw(cachedLastLoginPayload);
+    if (loginDns && !discoveredDns) discoveredDns = loginDns;
+    if (cachedLastLoginPayload.credits != null && !Number.isNaN(Number(cachedLastLoginPayload.credits))) {
+      discoveredCredits = Number(cachedLastLoginPayload.credits);
+    }
+  }
+
   // 1. Tenta endpoints de Xtream/Player API se tiver credenciais
   if (user && pass) {
     for (const xtreamPath of [
@@ -991,13 +1017,13 @@ export async function fetchSigmaPanelDetails(config: SigmaConfig): Promise<Sigma
 
   // 2. Tenta endpoints REST de informações do servidor e perfil de revenda
   const candidateEndpoints = [
+    "/api/auth/me",
     "/api/profile",
     "/api/resellers/me",
     "/api/reseller/me",
     "/api/reseller/profile",
     "/api/user/info",
     "/api/user/me",
-    "/api/auth/me",
     "/api/me",
     "/api/server-info",
     "/api/server/info",
@@ -1101,7 +1127,7 @@ export async function fetchSigmaPanelDetails(config: SigmaConfig): Promise<Sigma
         const sName = pickField(row, ["name", "server_name", "title", "label"]);
         const sUrl =
           extractStreamingDnsFromRaw(row) ||
-          pickField(row, ["url", "dns", "server_url", "streaming_dns", "domain"]);
+          pickField(row, ["url", "dns", "server_url", "streaming_dns", "domain", "dns_list"]);
         if (sName && typeof sName === "string") {
           discoveredServers.push({
             id: row.id,
@@ -1113,6 +1139,17 @@ export async function fetchSigmaPanelDetails(config: SigmaConfig): Promise<Sigma
           }
           if (sUrl && !discoveredDns && !String(sUrl).includes("/sign-in")) {
             discoveredDns = normalizeIptvDns(String(sUrl));
+          }
+        }
+        if (Array.isArray(row.packages)) {
+          for (const pkg of row.packages) {
+            const pName = pickField(pkg, ["name", "package_name", "title"]);
+            if (pName && typeof pName === "string") {
+              const cleaned = pName.trim();
+              if (!discoveredPackages.includes(cleaned)) {
+                discoveredPackages.push(cleaned);
+              }
+            }
           }
         }
       }
@@ -1137,8 +1174,8 @@ export async function fetchSigmaPanelDetails(config: SigmaConfig): Promise<Sigma
     } catch {}
   }
 
-  // 5. Se ainda não detectou o DNS de transmissão oficial, inspeciona as linhas dos clientes
-  if (!discoveredDns) {
+  // 5. Inspeciona as linhas dos clientes caso DNS ou Servidor ainda não tenham sido detectados
+  if (!discoveredDns || !discoveredServerName) {
     for (const custEndpoint of [
       "/api/customers",
       "/api/reseller-api/v1/customers",
@@ -1151,46 +1188,25 @@ export async function fetchSigmaPanelDetails(config: SigmaConfig): Promise<Sigma
         if (!res.ok || !res.payload) continue;
         const rows = extractRows(res.payload);
         if (rows.length > 0) {
-          for (const row of rows.slice(0, 10)) {
+          for (const row of rows.slice(0, 15)) {
             const m3u = extractM3uFromRaw(row);
-            if (m3u) {
+            if (m3u && !discoveredDns) {
               discoveredDns = normalizeIptvDns(m3u);
-              break;
             }
             const dns = extractStreamingDnsFromRaw(row);
-            if (dns) {
+            if (dns && !discoveredDns) {
               discoveredDns = dns;
-              break;
             }
-          }
-
-          if (!discoveredDns && rows[0]?.id) {
-            const firstId = rows[0].id;
-            for (const detailPath of [
-              `/api/customers/${firstId}`,
-              `/api/customers/${firstId}/urls`,
-              `/api/customers/${firstId}/links`,
-              `/api/customers/${firstId}/lines`,
-              `/api/reseller/customers/${firstId}`,
-              `/api/resellers/customers/${firstId}`,
-              `/api/lines/${firstId}`,
-              `/api/lines/${firstId}/urls`,
-            ]) {
-              try {
-                const detailRes = await authorizedRequest(config, detailPath, { method: "GET" }, 3000);
-                if (detailRes.ok && detailRes.payload) {
-                  const m3u = extractM3uFromRaw(detailRes.payload);
-                  if (m3u) {
-                    discoveredDns = normalizeIptvDns(m3u);
-                    break;
-                  }
-                  const dns = extractStreamingDnsFromRaw(detailRes.payload);
-                  if (dns) {
-                    discoveredDns = dns;
-                    break;
-                  }
-                }
-              } catch {}
+            const sName = pickField(row, ["server", "server_name", "server.name"]);
+            if (sName && typeof sName === "string" && !isRawDomainOrUrl(sName) && !discoveredServerName) {
+              discoveredServerName = sName.trim();
+            }
+            const pkg = pickField(row, ["package", "package_name", "plan"]);
+            if (pkg && typeof pkg === "string") {
+              const cleaned = pkg.trim();
+              if (!discoveredPackages.includes(cleaned)) {
+                discoveredPackages.push(cleaned);
+              }
             }
           }
           break;

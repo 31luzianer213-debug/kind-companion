@@ -113,14 +113,27 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
     const enabled = Boolean(data.sigma_enabled);
     const auto_renew = Boolean(data.sigma_auto_renew);
 
+    let finalStreamingDns = streamingDns;
+    let finalServerName = serverName;
+
+    // Se o usuário não preencheu o DNS de streaming ou o nome do servidor, descobre automaticamente
+    if ((!finalStreamingDns || !finalServerName) && url && (username || token)) {
+      try {
+        const { fetchSigmaPanelDetails } = await import("./sigma.server");
+        const details = await fetchSigmaPanelDetails({ url, token, username, password });
+        if (!finalStreamingDns && details.dns) finalStreamingDns = details.dns;
+        if (!finalServerName && details.serverName) finalServerName = details.serverName;
+      } catch {}
+    }
+
     let dbSaved = false;
 
     // 1. Tenta salvar na tabela whatsapp_settings com todas as colunas
     const fullPayload: Record<string, any> = {
       user_id: userId,
       sigma_url: url,
-      sigma_server_name: serverName,
-      sigma_streaming_dns: streamingDns,
+      sigma_server_name: finalServerName,
+      sigma_streaming_dns: finalStreamingDns,
       sigma_username: username,
       sigma_password: password,
       sigma_token: token,
@@ -157,8 +170,8 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
         data: {
           sigma_settings: {
             url,
-            server_name: serverName,
-            streaming_dns: streamingDns,
+            server_name: finalServerName,
+            streaming_dns: finalStreamingDns,
             username,
             password,
             token,
@@ -257,15 +270,26 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
       const detectedServerName = details.serverName?.trim() || null;
       const detectedDns = details.dns?.trim() || null;
 
-      // Persiste o token atualizado, server name detectado e DNS detectado se não houver manual
+      // Persiste o token atualizado, server name detectado e DNS detectado
       const updatePayload: Record<string, any> = { sigma_token: token };
       const currentSavedDns = saved.streaming_dns?.trim();
-      const isBadDns = !currentSavedDns || currentSavedDns.includes("/sign-in") || currentSavedDns.includes("#/");
+      const isBadDns =
+        !currentSavedDns ||
+        currentSavedDns.includes("/sign-in") ||
+        currentSavedDns.includes("#/") ||
+        extractServerHost(currentSavedDns) === extractServerHost(url);
 
-      if (detectedDns && isBadDns) {
+      if (detectedDns && (isBadDns || !currentSavedDns)) {
         updatePayload.sigma_streaming_dns = detectedDns;
       }
-      if (detectedServerName && (!saved.server_name || saved.server_name.startsWith("http"))) {
+      const isBadServerName =
+        !saved.server_name ||
+        saved.server_name.startsWith("http") ||
+        saved.server_name.includes(".click") ||
+        saved.server_name.includes(".com") ||
+        extractServerHost(saved.server_name) === extractServerHost(url);
+
+      if (detectedServerName && (isBadServerName || !saved.server_name)) {
         updatePayload.sigma_server_name = detectedServerName;
       }
 
@@ -396,13 +420,24 @@ export async function runSigmaSyncForUser(
 
     // 3. Atualiza automaticamente no banco e no user_metadata
     const currentSavedDns = saved.streaming_dns?.trim();
-    const isBadDns = !currentSavedDns || currentSavedDns.includes("/sign-in") || currentSavedDns.includes("#/");
+    const isBadDns =
+      !currentSavedDns ||
+      currentSavedDns.includes("/sign-in") ||
+      currentSavedDns.includes("#/") ||
+      extractServerHost(currentSavedDns) === extractServerHost(panelConfig.url);
 
     const updateSettings: Record<string, any> = {};
-    if (detectedDns && isBadDns) {
+    if (detectedDns && (isBadDns || !currentSavedDns)) {
       updateSettings.sigma_streaming_dns = detectedDns;
     }
-    if (detectedServerName && (!saved.server_name || saved.server_name.startsWith("http"))) {
+    const isBadServerName =
+      !saved.server_name ||
+      saved.server_name.startsWith("http") ||
+      saved.server_name.includes(".click") ||
+      saved.server_name.includes(".com") ||
+      extractServerHost(saved.server_name) === extractServerHost(panelConfig.url);
+
+    if (detectedServerName && (isBadServerName || !saved.server_name)) {
       updateSettings.sigma_server_name = detectedServerName;
     }
 

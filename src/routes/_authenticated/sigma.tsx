@@ -135,11 +135,24 @@ function SigmaPage() {
         const detectedServer = (res as any).detectedServerName;
         const detectedDns = (res as any).detectedDns;
         if (detectedServer || detectedDns) {
-          setForm((prev) => ({
-            ...prev,
-            ...(detectedServer && !prev.sigma_server_name ? { sigma_server_name: detectedServer } : {}),
-            ...(detectedDns && !prev.sigma_streaming_dns ? { sigma_streaming_dns: detectedDns } : {}),
-          }));
+          setForm((prev) => {
+            const isGenericDns =
+              !prev.sigma_streaming_dns ||
+              prev.sigma_streaming_dns.includes("/sign-in") ||
+              prev.sigma_streaming_dns.includes("#/") ||
+              (prev.sigma_url && prev.sigma_streaming_dns.includes(prev.sigma_url.replace(/^https?:\/\//i, "").split("/")[0]));
+            const isGenericServer =
+              !prev.sigma_server_name ||
+              prev.sigma_server_name.startsWith("http") ||
+              prev.sigma_server_name.includes(".click") ||
+              prev.sigma_server_name.includes(".com");
+
+            return {
+              ...prev,
+              ...(detectedServer && (isGenericServer || !prev.sigma_server_name) ? { sigma_server_name: detectedServer } : {}),
+              ...(detectedDns && (isGenericDns || !prev.sigma_streaming_dns) ? { sigma_streaming_dns: detectedDns } : {}),
+            };
+          });
         }
         const serverInfo = detectedServer ? ` Servidor detectado: "${detectedServer}".` : "";
         const dnsInfo = detectedDns ? ` DNS: ${detectedDns}.` : "";
@@ -182,11 +195,24 @@ function SigmaPage() {
         const detectedServer = (res as any).detectedServerName;
         const detectedDns = (res as any).detectedDns;
         if (detectedServer || detectedDns) {
-          setForm((prev) => ({
-            ...prev,
-            ...(detectedServer && !prev.sigma_server_name ? { sigma_server_name: detectedServer } : {}),
-            ...(detectedDns && !prev.sigma_streaming_dns ? { sigma_streaming_dns: detectedDns } : {}),
-          }));
+          setForm((prev) => {
+            const isGenericDns =
+              !prev.sigma_streaming_dns ||
+              prev.sigma_streaming_dns.includes("/sign-in") ||
+              prev.sigma_streaming_dns.includes("#/") ||
+              (prev.sigma_url && prev.sigma_streaming_dns.includes(prev.sigma_url.replace(/^https?:\/\//i, "").split("/")[0]));
+            const isGenericServer =
+              !prev.sigma_server_name ||
+              prev.sigma_server_name.startsWith("http") ||
+              prev.sigma_server_name.includes(".click") ||
+              prev.sigma_server_name.includes(".com");
+
+            return {
+              ...prev,
+              ...(detectedServer && (isGenericServer || !prev.sigma_server_name) ? { sigma_server_name: detectedServer } : {}),
+              ...(detectedDns && (isGenericDns || !prev.sigma_streaming_dns) ? { sigma_streaming_dns: detectedDns } : {}),
+            };
+          });
         }
 
         if (res.created > 0) {
