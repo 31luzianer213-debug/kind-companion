@@ -270,28 +270,15 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
       const detectedServerName = details.serverName?.trim() || null;
       const detectedDns = details.dns?.trim() || null;
 
-      // Persiste o token atualizado, server name detectado e DNS detectado
-      const updatePayload: Record<string, any> = { sigma_token: token };
-      const currentSavedDns = saved.streaming_dns?.trim();
-      const isBadDns =
-        !currentSavedDns ||
-        currentSavedDns.includes("/sign-in") ||
-        currentSavedDns.includes("#/") ||
-        extractServerHost(currentSavedDns) === extractServerHost(url);
-
-      if (detectedDns && (isBadDns || !currentSavedDns)) {
-        updatePayload.sigma_streaming_dns = detectedDns;
-      }
-      const isBadServerName =
-        !saved.server_name ||
-        saved.server_name.startsWith("http") ||
-        saved.server_name.includes(".click") ||
-        saved.server_name.includes(".com") ||
-        extractServerHost(saved.server_name) === extractServerHost(url);
-
-      if (detectedServerName && (isBadServerName || !saved.server_name)) {
-        updatePayload.sigma_server_name = detectedServerName;
-      }
+      // Persiste os dados testados e validados no banco e no user_metadata
+      const updatePayload: Record<string, any> = {
+        sigma_url: url,
+        sigma_token: token,
+      };
+      if (username) updatePayload.sigma_username = username;
+      if (password) updatePayload.sigma_password = password;
+      if (detectedDns) updatePayload.sigma_streaming_dns = detectedDns;
+      if (detectedServerName) updatePayload.sigma_server_name = detectedServerName;
 
       try {
         const { data: wsRow } = await supabase
@@ -306,9 +293,18 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
       } catch {}
 
       try {
-        await supabase.from("whatsapp_settings").update(updatePayload).eq("user_id", userId);
+        const { error } = await supabase.from("whatsapp_settings").upsert({
+          user_id: userId,
+          ...updatePayload,
+          sigma_enabled: true,
+        }, { onConflict: "user_id" });
+        if (error) {
+          await supabase.from("whatsapp_settings").update(updatePayload).eq("user_id", userId);
+        }
       } catch {
-        // ignora se coluna não existir
+        try {
+          await supabase.from("whatsapp_settings").update(updatePayload).eq("user_id", userId);
+        } catch {}
       }
 
       try {
@@ -316,9 +312,14 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
           data: {
             sigma_settings: {
               ...saved,
+              url,
+              username: username || saved.username,
+              password: password || saved.password,
               token,
-              ...(detectedDns && !saved.streaming_dns ? { streaming_dns: detectedDns } : {}),
-              ...(detectedServerName && !saved.server_name ? { server_name: detectedServerName } : {}),
+              streaming_dns: detectedDns || saved.streaming_dns,
+              server_name: detectedServerName || saved.server_name,
+              enabled: true,
+              updated_at: new Date().toISOString(),
             },
           },
         });

@@ -3,18 +3,45 @@ const require = createRequire(import.meta.url);
 
 const EVOLUTION_URL = process.env.EVOLUTION_API_URL || "https://cobrancas-whatsapp.shop";
 const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY || "evolutionApiGlobalTokenSecure2026";
-const LOCAL_API_URL = "http://localhost:8080/api/public/hooks/whatsapp-bot";
+const LOCAL_API_URL = process.env.LOCAL_API_URL || "http://localhost:8080/api/public/hooks/whatsapp-bot";
 
 const processedMsgIds = new Set();
+const configuredInstances = new Set();
 let isFirstRun = true;
+let lastHeartbeat = 0;
 
-function normalizeNumber(num) {
-  if (!num) return "";
-  let clean = num.replace(/\D/g, "");
-  if (clean.length === 10 || clean.length === 11) {
-    clean = "55" + clean;
+function pruneProcessedSet() {
+  if (processedMsgIds.size > 2000) {
+    const arr = Array.from(processedMsgIds);
+    processedMsgIds.clear();
+    arr.slice(-1000).forEach((id) => processedMsgIds.add(id));
   }
-  return clean;
+}
+
+async function ensureGroupIgnore(instanceName) {
+  if (configuredInstances.has(instanceName)) return;
+  try {
+    const res = await fetch(`${EVOLUTION_URL}/settings/set/${instanceName}`, {
+      method: "POST",
+      headers: {
+        apikey: EVOLUTION_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        rejectCall: false,
+        msgCall: "",
+        groupsIgnore: true,
+        alwaysOnline: true,
+        readMessages: true,
+        readStatus: false,
+        syncFullHistory: false,
+      }),
+    });
+    if (res.ok) {
+      configuredInstances.add(instanceName);
+      console.log(`[Daemon] 🛡️ Ignorar grupos ativado na instância ${instanceName}`);
+    }
+  } catch {}
 }
 
 async function getConnectedInstances() {
@@ -41,7 +68,7 @@ async function getRecentMessages(instanceName) {
       },
       body: JSON.stringify({
         order: [["messageTimestamp", "DESC"]],
-        limit: 25,
+        limit: 50,
       }),
     });
     if (!res.ok) return [];
@@ -56,7 +83,7 @@ async function getRecentMessages(instanceName) {
 
 async function forwardToLocalWebhook(instanceName, msg) {
   const remoteJid = msg.key?.remoteJid || "";
-  if (!remoteJid || remoteJid.endsWith("@g.us")) return; // ignora grupos
+  if (!remoteJid || remoteJid.endsWith("@g.us") || remoteJid.includes("@broadcast")) return;
 
   const text =
     msg.message?.conversation ||
@@ -77,12 +104,7 @@ async function forwardToLocalWebhook(instanceName, msg) {
   // Extrai userId da instância se formato iptv_userId
   let userId = "";
   if (instanceName.startsWith("iptv_")) {
-    const raw = instanceName.slice(5);
-    if (raw.length === 32) {
-      userId = `${raw.slice(0, 8)}-${raw.slice(8, 12)}-${raw.slice(12, 16)}-${raw.slice(16, 20)}-${raw.slice(20)}`;
-    } else {
-      userId = raw;
-    }
+    userId = instanceName.slice(5);
   }
 
   const payload = {
@@ -97,6 +119,8 @@ async function forwardToLocalWebhook(instanceName, msg) {
 
   const webhookUrl = `${LOCAL_API_URL}${userId ? `?userId=${userId}` : ""}`;
 
+  console.log(`[Daemon] 📩 Nova mensagem de ${senderPhone} (${pushName}): "${text.slice(0, 60)}"`);
+
   try {
     const res = await fetch(webhookUrl, {
       method: "POST",
@@ -109,7 +133,7 @@ async function forwardToLocalWebhook(instanceName, msg) {
       if (resJson?.ignored === "bot_disabled" || resJson?.action === "bot_disabled") {
         console.log(`[Daemon] 🛑 Robô DESLIGADO no painel. Nenhuma mensagem enviada para ${senderPhone}.`);
       } else {
-        console.log(`[Daemon] ✅ Mensagem de ${senderPhone} processada: "${text}" (Ação: ${resJson?.action || "ok"})`);
+        console.log(`[Daemon] ✅ Resposta enviada com sucesso para ${senderPhone}! (Ação: ${resJson?.action || "ok"})`);
       }
     } else {
       console.warn(`[Daemon] ⚠️ Webhook local respondeu com status ${res.status}`);
@@ -121,7 +145,17 @@ async function forwardToLocalWebhook(instanceName, msg) {
 
 async function pollOnce() {
   const instances = await getConnectedInstances();
+
+  const now = Date.now();
+  if (now - lastHeartbeat > 30000 && !isFirstRun) {
+    lastHeartbeat = now;
+    const timeStr = new Date().toLocaleTimeString();
+    const instNames = instances.map((i) => i.name).join(", ") || "Nenhuma";
+    console.log(`[Daemon ${timeStr}] 🟢 Ativo | Instâncias online: ${instances.length} (${instNames}) | Pronto para responder!`);
+  }
+
   for (const inst of instances) {
+    await ensureGroupIgnore(inst.name);
     const msgs = await getRecentMessages(inst.name);
 
     for (const msg of msgs) {
@@ -144,19 +178,21 @@ async function pollOnce() {
 
       // Nova mensagem recebida de cliente em tempo real!
       processedMsgIds.add(msgId);
+      pruneProcessedSet();
       await forwardToLocalWebhook(inst.name, msg);
     }
   }
 
   if (isFirstRun) {
     isFirstRun = false;
+    lastHeartbeat = Date.now();
     console.log(`[Daemon] 🚀 Robô WhatsApp Daemon iniciado! Monitorando ${instances.length} instância(s) em tempo real...`);
   }
 }
 
 async function start() {
   console.log("[Daemon] Conectando ao Evolution API na VPS com ordenação em tempo real (DESC)...");
-  await pollOnce(); // Popula mensagens existentes
+  await pollOnce();
 
   setInterval(async () => {
     try {

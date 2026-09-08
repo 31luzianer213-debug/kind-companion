@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import {
   getSigmaSettings,
@@ -58,6 +58,24 @@ function SigmaPage() {
   const [syncing, setSyncing] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const isInitialLoadRef = useRef(false);
+
+  const [testResult, setTestResult] = useState<{
+    ok: boolean;
+    detectedServerName?: string | null;
+    detectedDns?: string | null;
+    credits?: number | null;
+    packagesCount?: number;
+    testedAt?: string;
+  } | null>(() => {
+    try {
+      const cached = typeof window !== "undefined" ? sessionStorage.getItem("sigma_last_test_result") : null;
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [form, setForm] = useState({
     sigma_url: "",
     sigma_server_name: "",
@@ -91,7 +109,8 @@ function SigmaPage() {
   });
 
   useEffect(() => {
-    if (sigmaData) {
+    if (sigmaData && !isInitialLoadRef.current) {
+      isInitialLoadRef.current = true;
       setForm({
         sigma_url: sigmaData.sigma_url || "",
         sigma_server_name: sigmaData.sigma_server_name || "",
@@ -108,6 +127,7 @@ function SigmaPage() {
   const isConfigured = Boolean(sigmaData?.isConfigured || (form.sigma_url && (form.sigma_username || form.sigma_token)));
   const serverDisplayName =
     form.sigma_server_name.trim() ||
+    testResult?.detectedServerName ||
     sigmaData?.sigma_server_display_name ||
     (form.sigma_url ? form.sigma_url.replace(/^https?:\/\//i, "").split("/")[0] : "Servidor Sigma");
 
@@ -134,31 +154,38 @@ function SigmaPage() {
       if (res.ok) {
         const detectedServer = (res as any).detectedServerName;
         const detectedDns = (res as any).detectedDns;
-        if (detectedServer || detectedDns) {
-          setForm((prev) => {
-            const isGenericDns =
-              !prev.sigma_streaming_dns ||
-              prev.sigma_streaming_dns.includes("/sign-in") ||
-              prev.sigma_streaming_dns.includes("#/") ||
-              (prev.sigma_url && prev.sigma_streaming_dns.includes(prev.sigma_url.replace(/^https?:\/\//i, "").split("/")[0]));
-            const isGenericServer =
-              !prev.sigma_server_name ||
-              prev.sigma_server_name.startsWith("http") ||
-              prev.sigma_server_name.includes(".click") ||
-              prev.sigma_server_name.includes(".com");
+        const credits = (res as any).credits;
+        const packagesCount = (res as any).packagesCount;
 
-            return {
-              ...prev,
-              ...(detectedServer && (isGenericServer || !prev.sigma_server_name) ? { sigma_server_name: detectedServer } : {}),
-              ...(detectedDns && (isGenericDns || !prev.sigma_streaming_dns) ? { sigma_streaming_dns: detectedDns } : {}),
-            };
-          });
-        }
+        const resultObj = {
+          ok: true,
+          detectedServerName: detectedServer,
+          detectedDns: detectedDns,
+          credits,
+          packagesCount,
+          testedAt: new Date().toLocaleTimeString(),
+        };
+
+        setTestResult(resultObj);
+        try {
+          sessionStorage.setItem("sigma_last_test_result", JSON.stringify(resultObj));
+        } catch {}
+
+        setForm((prev) => ({
+          ...prev,
+          ...(detectedServer ? { sigma_server_name: detectedServer } : {}),
+          ...(detectedDns ? { sigma_streaming_dns: detectedDns } : {}),
+        }));
+
         const serverInfo = detectedServer ? ` Servidor detectado: "${detectedServer}".` : "";
         const dnsInfo = detectedDns ? ` DNS: ${detectedDns}.` : "";
         toast.success(`Conexão estabelecida com sucesso! ✅${serverInfo}${dnsInfo}`);
         queryClient.invalidateQueries({ queryKey: ["sigma-settings"] });
       } else {
+        setTestResult(null);
+        try {
+          sessionStorage.removeItem("sigma_last_test_result");
+        } catch {}
         toast.error(res.error ?? "Não foi possível conectar ao servidor Sigma.", { duration: 9000 });
       }
     } catch {
@@ -337,6 +364,67 @@ function SigmaPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Resultado do Teste de Conexão - Fica SEMPRE visível e nunca some */}
+      {testResult && testResult.ok && (
+        <Card className="surface-card border-emerald-500/40 bg-emerald-500/5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-500/20 pb-3 mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400">
+                  <CheckCircle2 className="size-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-foreground">Conexão com o Servidor Sigma Estabelecida</p>
+                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] py-0 px-2">
+                      Online & Validado
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Todos os dados de revenda foram verificados e sincronizados com sucesso no sistema.
+                  </p>
+                </div>
+              </div>
+              {testResult.testedAt && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono bg-background/60 px-2.5 py-1 rounded-md border border-border/50 self-start sm:self-center">
+                  <Clock className="size-3.5 text-emerald-400" /> Testado às {testResult.testedAt}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+              <div className="p-2.5 rounded-lg bg-background/60 border border-border/50">
+                <span className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Servidor Detectado</span>
+                <span className="text-xs sm:text-sm font-bold text-foreground truncate block mt-0.5" title={testResult.detectedServerName || serverDisplayName}>
+                  {testResult.detectedServerName || serverDisplayName}
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-background/60 border border-border/50">
+                <span className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">DNS de Streaming</span>
+                <span className="text-xs sm:text-sm font-bold font-mono text-foreground truncate block mt-0.5" title={testResult.detectedDns || "Detectado pelo Painel"}>
+                  {testResult.detectedDns || "Mesmo do Painel"}
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-background/60 border border-border/50">
+                <span className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Créditos de Revenda</span>
+                <span className="text-xs sm:text-sm font-bold font-mono text-emerald-400 block mt-0.5">
+                  {testResult.credits != null ? `${testResult.credits} créditos` : "Ativo / Ilimitado"}
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-background/60 border border-border/50">
+                <span className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Pacotes Detectados</span>
+                <span className="text-xs sm:text-sm font-bold font-mono text-sky-400 block mt-0.5">
+                  {testResult.packagesCount != null ? `${testResult.packagesCount} disponíveis` : "Verificados"}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Card de Configuração do Servidor Sigma */}
       <Card className="surface-card border-border/60 shadow-sm">
