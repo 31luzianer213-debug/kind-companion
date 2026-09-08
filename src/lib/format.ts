@@ -45,6 +45,7 @@ export type TemplateVarInput = {
     pix_holder?: string | null;
     payment_link?: string | null;
     sigma_url?: string | null;
+    sigma_streaming_dns?: string | null;
     sigma_server_name?: string | null;
     sigma_server_display_name?: string | null;
   } | null;
@@ -172,7 +173,11 @@ export function formatIptvAccessMessage(params: {
 /** Variáveis disponíveis nos modelos de mensagem. */
 export function buildTemplateVars(input: TemplateVarInput): Record<string, string> {
   const { client, list, settings } = input;
-  const rawServerUrl = list?.server_url || settings?.sigma_url || "";
+  const rawServerUrl =
+    settings?.sigma_streaming_dns?.trim() ||
+    list?.server_url ||
+    settings?.sigma_url ||
+    "";
   const cleanDns = extractCleanIptvDns(rawServerUrl);
   const sigmaServerName =
     settings?.sigma_server_name?.trim() ||

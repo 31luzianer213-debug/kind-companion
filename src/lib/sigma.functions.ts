@@ -5,6 +5,7 @@ import type { CreateSigmaCustomerInput, SigmaConfig } from "./sigma.panel";
 export type SigmaSettingsPayload = {
   sigma_url: string;
   sigma_server_name?: string;
+  sigma_streaming_dns?: string;
   sigma_username: string;
   sigma_password?: string;
   sigma_token?: string | null;
@@ -32,6 +33,7 @@ async function loadConfig(supabase: any, userId: string): Promise<
   SigmaConfig & {
     server_name: string;
     server_display_name: string;
+    streaming_dns: string;
     enabled: boolean;
     auto_renew: boolean;
     last_sync_at: string | null;
@@ -60,7 +62,8 @@ async function loadConfig(supabase: any, userId: string): Promise<
 
   const url = (dbData?.sigma_url ?? userMetaSigma?.url ?? "").trim();
   const server_name = (dbData?.sigma_server_name ?? userMetaSigma?.server_name ?? "").trim();
-  const server_display_name = server_name || extractServerHost(url) || "Servidor Sigma";
+  const streaming_dns = (dbData?.sigma_streaming_dns ?? userMetaSigma?.streaming_dns ?? "").trim();
+  const server_display_name = server_name || extractServerHost(streaming_dns || url) || "Servidor Sigma";
   const username = (dbData?.sigma_username ?? userMetaSigma?.username ?? "").trim();
   const password = dbData?.sigma_password ?? userMetaSigma?.password ?? "";
   const token = dbData?.sigma_token ?? userMetaSigma?.token ?? null;
@@ -72,6 +75,7 @@ async function loadConfig(supabase: any, userId: string): Promise<
     url,
     server_name,
     server_display_name,
+    streaming_dns,
     username,
     password,
     token,
@@ -101,6 +105,7 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const url = (data.sigma_url ?? "").trim();
     const serverName = (data.sigma_server_name ?? "").trim();
+    const streamingDns = (data.sigma_streaming_dns ?? "").trim();
     const username = (data.sigma_username ?? "").trim();
     const password = data.sigma_password ?? "";
     const token = data.sigma_token?.trim() || null;
@@ -114,6 +119,7 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
       user_id: userId,
       sigma_url: url,
       sigma_server_name: serverName,
+      sigma_streaming_dns: streamingDns,
       sigma_username: username,
       sigma_password: password,
       sigma_token: token,
@@ -151,6 +157,7 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
           sigma_settings: {
             url,
             server_name: serverName,
+            streaming_dns: streamingDns,
             username,
             password,
             token,
@@ -181,6 +188,7 @@ export const getSigmaSettings = createServerFn({ method: "GET" })
         sigma_url: config.url,
         sigma_server_name: config.server_name,
         sigma_server_display_name: config.server_display_name,
+        sigma_streaming_dns: config.streaming_dns ?? "",
         sigma_username: config.username ?? "",
         sigma_password: config.password ?? "",
         sigma_token: config.token ?? "",

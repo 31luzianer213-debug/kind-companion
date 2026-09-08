@@ -61,6 +61,7 @@ function SigmaPage() {
   const [form, setForm] = useState({
     sigma_url: "",
     sigma_server_name: "",
+    sigma_streaming_dns: "",
     sigma_username: "",
     sigma_password: "",
     sigma_token: "",
@@ -94,6 +95,7 @@ function SigmaPage() {
       setForm({
         sigma_url: sigmaData.sigma_url || "",
         sigma_server_name: sigmaData.sigma_server_name || "",
+        sigma_streaming_dns: (sigmaData as any).sigma_streaming_dns || "",
         sigma_username: sigmaData.sigma_username || "",
         sigma_password: sigmaData.sigma_password || "",
         sigma_token: sigmaData.sigma_token || "",
@@ -301,19 +303,33 @@ function SigmaPage() {
         </CardHeader>
         <CardContent className="pt-4">
           <form onSubmit={handleSave} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Endereço do Painel (URL Completa) *</Label>
+                <Label className="text-xs font-semibold">Endereço do Painel (URL do Revendedor) *</Label>
                 <Input
                   type="url"
-                  placeholder="https://painel.seuservidor.com ou http://123.45.67.89:8080"
+                  placeholder="https://painel.seuservidor.com ou aplicativoz342.click"
                   value={form.sigma_url}
                   onChange={(e) => setForm({ ...form, sigma_url: e.target.value })}
                   className="rounded-xl text-sm font-mono"
                   required
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  O link exato que você usa para entrar no painel de revenda.
+                  O link onde você faz login no painel de revenda.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">DNS de Transmissão dos Clientes (Opcional)</Label>
+                <Input
+                  type="text"
+                  placeholder="Ex: http://dns.meuiptv.com:8080"
+                  value={form.sigma_streaming_dns}
+                  onChange={(e) => setForm({ ...form, sigma_streaming_dns: e.target.value })}
+                  className="rounded-xl text-sm font-mono"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Se vazio, usa o mesmo domínio do painel para gerar M3U e EPG.
                 </p>
               </div>
 

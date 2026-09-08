@@ -285,7 +285,10 @@ function Clientes() {
     sigmaConfigQuery.data?.sigma_server_name?.trim() ||
     sigmaConfigQuery.data?.sigma_server_display_name ||
     "Servidor Sigma";
-  const sigmaServerUrl = sigmaConfigQuery.data?.sigma_url || "";
+  const sigmaServerUrl =
+    sigmaConfigQuery.data?.sigma_streaming_dns?.trim() ||
+    sigmaConfigQuery.data?.sigma_url ||
+    "";
 
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0] ?? "", []);
 
