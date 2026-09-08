@@ -202,8 +202,8 @@ export const sendAccessDetails = createServerFn({ method: "POST" })
     if (!client) return { ok: false as const, error: "Cliente não encontrado." };
 
     const template =
-      settings?.welcome_template ??
-      "Bem-vindo(a), {nome}! Lista: {lista} • Servidor: {servidor} • Usuário: {usuario} • Senha: {senha}";
+      settings?.welcome_template?.trim() ||
+      "📡 *DADOS DE ACESSO IPTV* 📡\n\n👤 *Cliente:* {nome}\n📺 *Servidor:* {servidor}\n🔑 *Usuário:* {usuario}\n🔒 *Senha:* {senha}\n🖥️ *Telas:* {telas}\n📅 *Vencimento:* {vencimento}\n\n🔗 *Lista M3U Plus:*\n{m3u}\n\n📺 *Guia de Canais (EPG):*\n{epg}\n\n📱 *Como Conectar:*\n• No IPTV Smarters Pro, XCIPTV ou TiviMate: use a opção *Xtream Codes API* com o Servidor, Usuário e Senha acima.\n• Em Smart TVs ou SS IPTV: adicione a *Lista M3U Plus* completa acima.\n\nBom divertimento! 🍿 Qualquer dúvida, estamos à disposição.";
 
     const body = renderTemplate(
       template,

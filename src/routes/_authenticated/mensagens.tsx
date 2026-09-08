@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { TEMPLATE_VARS, renderTemplate } from "@/lib/format";
+import { TEMPLATE_VARS, renderTemplate, extractCleanIptvDns, generateM3uUrl, generateEpgUrl } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,7 +45,7 @@ const defaults: MessageTemplates = {
   overdue_template:
     "Oi {nome}, sua mensalidade de {valor} venceu em {vencimento} ({dias} dias atrás). Para não perder o acesso à sua conta no {servidor}, pague pelo PIX {pix}. 🙏",
   welcome_template:
-    "Seja bem-vindo(a), {nome}! 🎉\n\n📺 Servidor: {servidor}\n🔑 Usuário: {usuario}\n🔒 Senha: {senha}\n🖥️ Telas: {telas}\n📅 Vencimento: {vencimento}\n\nBom divertimento! 🍿 Qualquer dúvida é só chamar!",
+    "📡 *DADOS DE ACESSO IPTV* 📡\n\n👤 *Cliente:* {nome}\n📺 *Servidor / DNS:* {servidor}\n🔑 *Usuário:* {usuario}\n🔒 *Senha:* {senha}\n🖥️ *Telas:* {telas}\n📅 *Vencimento:* {vencimento}\n\n🔗 *Lista M3U Plus:*\n{m3u}\n\n📺 *Guia de Canais (EPG):*\n{epg}\n\n📱 *Como Conectar:*\n• No IPTV Smarters Pro, XCIPTV ou TiviMate: use a opção *Xtream Codes API* com Servidor, Usuário e Senha acima.\n• Em Smart TVs ou SS IPTV: use a *Lista M3U Plus* completa acima.\n\nBom divertimento! 🍿 Qualquer dúvida, estamos à disposição.",
 };
 
 function WhatsAppSimulator({
@@ -61,16 +61,25 @@ function WhatsAppSimulator({
   serverUrl: string;
   pixKey: string;
 }) {
+  const cleanDns = extractCleanIptvDns(serverUrl) || "http://aplicativoz342.click";
+  const m3u = generateM3uUrl(cleanDns, "carlos_silva", "px876543", "ts");
+  const m3uHls = generateM3uUrl(cleanDns, "carlos_silva", "px876543", "m3u8");
+  const epg = generateEpgUrl(cleanDns, "carlos_silva", "px876543");
+
   const rendered = renderTemplate(template, {
     nome: "Carlos Silva",
     telefone: "(11) 98765-4321",
     valor: "R$ 35,00",
     vencimento: "15/10/2026",
     dias: "2",
-    lista: serverName || "Servidor Ouro 4K",
-    servidor: serverUrl || "http://painel.sigmatv.net:8080",
+    lista: serverName || "Servidor Sigma Pro",
+    servidor: cleanDns,
+    dns: cleanDns,
     usuario: "carlos_silva",
     senha: "px876543",
+    m3u: m3u,
+    m3u_hls: m3uHls,
+    epg: epg,
     telas: "2",
     empresa: businessName || "IPTV Manager Pro",
     pix: pixKey || "12345678900",
@@ -300,13 +309,16 @@ function MensagensPage() {
 
             <div className="mt-4 p-4 rounded-2xl border border-border/60 bg-muted/20 text-xs space-y-2 text-muted-foreground">
               <p className="font-semibold text-foreground flex items-center gap-1.5">
-                <Server className="size-3.5 text-primary" /> Dados do Servidor Sigma:
+                <Server className="size-3.5 text-primary" /> Integração IPTV & Listas:
               </p>
               <p>
-                A tag <strong>&#123;servidor&#125;</strong> exibirá automaticamente o endereço do seu painel Sigma (<code>{data?.sigma_url || "Não configurado"}</code>).
+                A tag <strong>&#123;servidor&#125;</strong> ou <strong>&#123;dns&#125;</strong> exibirá automaticamente o DNS limpo de transmissão (<code>{extractCleanIptvDns(data?.sigma_url) || "Não configurado"}</code>), removendo qualquer rota administrativa.
               </p>
               <p>
-                A tag <strong>&#123;usuario&#125;</strong> e <strong>&#123;senha&#125;</strong> puxarão as credenciais da linha gerada no Sigma.
+                As tags <strong>&#123;m3u&#125;</strong> e <strong>&#123;epg&#125;</strong> constroem os links diretos para reprodução M3U Plus e guia de canais XMLTV.
+              </p>
+              <p className="text-[11px] text-muted-foreground/80">
+                🔒 Links de renovação do painel externo não são incluídos nas mensagens para preservar o controle financeiro na sua própria plataforma.
               </p>
             </div>
           </div>

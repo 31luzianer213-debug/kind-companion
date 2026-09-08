@@ -64,7 +64,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatBRL, formatDate } from "@/lib/format";
+import {
+  formatBRL,
+  formatDate,
+  formatIptvAccessMessage,
+  extractCleanIptvDns,
+  generateM3uUrl,
+  generateEpgUrl,
+} from "@/lib/format";
 import {
   KeyRound,
   Loader2,
@@ -92,6 +99,10 @@ import {
   Calendar,
   Smartphone,
   Send,
+  Eye,
+  EyeOff,
+  Globe,
+  ExternalLink,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/clientes")({
@@ -222,6 +233,19 @@ function Clientes() {
   // Modais de confirmação
   const [confirmRenewClient, setConfirmRenewClient] = useState<ClientRow | null>(null);
   const [confirmRemindClient, setConfirmRemindClient] = useState<ClientRow | null>(null);
+
+  // Modal de Detalhes de Acesso IPTV & M3U
+  const [viewAccessClient, setViewAccessClient] = useState<ClientRow | null>(null);
+  const [showModalPass, setShowModalPass] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  function copyText(text?: string | null, fieldName: string = "Item") {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(null), 2200);
+    toast.success(`${fieldName} copiado!`);
+  }
 
   // Filtros
   const [search, setSearch] = useState("");
@@ -560,20 +584,20 @@ function Clientes() {
   }
 
   function copiarDadosAcesso(client: ClientRow) {
-    const texto = `📡 *DADOS DE ACESSO IPTV* 📡\n\n` +
-      `👤 *Cliente:* ${client.name}\n` +
-      `📺 *Servidor:* ${sigmaServerName}\n` +
-      (sigmaServerUrl ? `🌐 *Endereço/URL:* ${sigmaServerUrl}\n` : "") +
-      (client.iptv_username ? `🔑 *Usuário:* ${client.iptv_username}\n` : "") +
-      (client.iptv_password ? `🔒 *Senha:* ${client.iptv_password}\n` : "") +
-      `🖥️ *Telas:* ${client.screens ?? 1}\n` +
-      `📅 *Vencimento:* ${client.next_due_date ? formatDate(client.next_due_date) : "A combinar"}\n\n` +
-      `Bom divertimento! 🍿 Qualquer dúvida, estamos à disposição.`;
+    const texto = formatIptvAccessMessage({
+      name: client.name,
+      serverName: sigmaServerName,
+      serverUrl: sigmaServerUrl,
+      username: client.iptv_username,
+      password: client.iptv_password,
+      screens: client.screens,
+      dueDate: client.next_due_date,
+    });
 
     navigator.clipboard.writeText(texto);
     setCopiedId(client.id);
     setTimeout(() => setCopiedId(null), 2500);
-    toast.success("Dados de acesso copiados!");
+    toast.success("Dados de acesso IPTV copiados!");
   }
 
   async function cobrar(client: ClientRow) {
@@ -1039,6 +1063,10 @@ function Clientes() {
                                 <Pencil className="size-4" />
                                 Editar dados
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setViewAccessClient(client)} className="gap-2 text-cyan-400 font-medium">
+                                <Tv className="size-4" />
+                                Ver Acesso & Listas M3U
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => enviarAcesso(client.id)} className="gap-2">
                                 <Smartphone className="size-4" />
                                 Enviar dados de acesso
@@ -1146,10 +1174,17 @@ function Clientes() {
                   </div>
 
                   {client.iptv_username ? (
-                    <div className="flex items-center gap-2 pt-1 text-xs font-mono text-muted-foreground">
-                      <span className="flex items-center gap-1 bg-muted/40 px-2 py-0.5 rounded-md">
-                        <KeyRound className="size-3 text-primary" /> {client.iptv_username}
-                      </span>
+                    <div className="flex items-center justify-between pt-1 text-xs font-mono text-muted-foreground">
+                      <button
+                        type="button"
+                        onClick={() => setViewAccessClient(client)}
+                        className="flex items-center gap-1 bg-muted/40 hover:bg-cyan-500/10 hover:text-cyan-400 px-2 py-0.5 rounded-md transition-colors text-left"
+                        title="Ver credenciais IPTV e links M3U"
+                      >
+                        <KeyRound className="size-3 text-primary" />
+                        <span>{client.iptv_username}</span>
+                        <Tv className="size-2.5 ml-0.5 text-cyan-400" />
+                      </button>
                       {client.sigma_customer_id ? (
                         <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md text-[11px]">
                           Sigma ID: {String(client.sigma_customer_id).slice(0, 8)}
@@ -1554,6 +1589,236 @@ function Clientes() {
             >
               <Send className="size-3.5" />
               Disparar Cobrança Agora
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Detalhes de Acesso IPTV & Listas M3U */}
+      <Dialog
+        open={Boolean(viewAccessClient)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewAccessClient(null);
+            setShowModalPass(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base text-foreground">
+              <Tv className="size-5 text-cyan-400" />
+              Dados de Acesso IPTV & Listas M3U
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Credenciais de transmissão e links de streaming para o cliente{" "}
+              <strong className="text-foreground">{viewAccessClient?.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          {viewAccessClient && (() => {
+            const cleanDns = extractCleanIptvDns(sigmaServerUrl);
+            const user = viewAccessClient.iptv_username || "";
+            const pass = viewAccessClient.iptv_password || "";
+            const m3uTs = generateM3uUrl(cleanDns, user, pass, "ts");
+            const m3uHls = generateM3uUrl(cleanDns, user, pass, "m3u8");
+            const epg = generateEpgUrl(cleanDns, user, pass);
+
+            return (
+              <div className="space-y-4 py-1 text-xs">
+                {/* Dica de Segurança e Controle */}
+                <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/10 p-3 text-[11px] text-cyan-200">
+                  <p className="font-semibold text-cyan-100 flex items-center gap-1.5 mb-0.5">
+                    <ShieldCheck className="size-3.5 text-cyan-400" /> Transmissão Direta & Sem Links Externos
+                  </p>
+                  O link do painel administrativo não é exposto. Nenhum link de renovação do painel externo é enviado ao cliente — o controle financeiro e as renovações são gerenciadas 100% pelo seu sistema.
+                </div>
+
+                {/* Bloco 1: Conexão Xtream Codes API (IPTV Smarters, XCIPTV, TiviMate) */}
+                <div className="rounded-xl border border-border/70 bg-muted/30 p-3 space-y-2.5">
+                  <p className="font-bold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <Server className="size-3.5 text-primary" /> Conexão Xtream Codes (Apps IPTV)
+                  </p>
+
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-semibold">URL / Servidor (DNS):</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <code className="flex-1 rounded-lg bg-background border px-2.5 py-1.5 font-mono text-xs text-foreground truncate">
+                          {cleanDns || "Servidor não configurado"}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2.5 text-xs gap-1"
+                          onClick={() => copyText(cleanDns, "Servidor/DNS")}
+                        >
+                          {copiedField === "Servidor/DNS" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          Copiar
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-semibold">Usuário:</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <code className="flex-1 rounded-lg bg-background border px-2.5 py-1.5 font-mono text-xs text-foreground truncate">
+                          {user || "—"}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2.5 text-xs gap-1"
+                          onClick={() => copyText(user, "Usuário")}
+                        >
+                          {copiedField === "Usuário" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          Copiar
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-semibold">Senha:</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <code className="flex-1 rounded-lg bg-background border px-2.5 py-1.5 font-mono text-xs text-foreground truncate">
+                          {showModalPass ? pass || "—" : "••••••••"}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => setShowModalPass(!showModalPass)}
+                          title={showModalPass ? "Ocultar senha" : "Ver senha"}
+                        >
+                          {showModalPass ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2.5 text-xs gap-1"
+                          onClick={() => copyText(pass, "Senha")}
+                        >
+                          {copiedField === "Senha" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          Copiar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bloco 2: Listas M3U & EPG */}
+                <div className="rounded-xl border border-border/70 bg-muted/30 p-3 space-y-2.5">
+                  <p className="font-bold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <Globe className="size-3.5 text-cyan-400" /> Links de Streaming (M3U & EPG)
+                  </p>
+
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-semibold">Lista M3U Plus (TS - Padrão):</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <code className="flex-1 rounded-lg bg-background border px-2.5 py-1.5 font-mono text-[11px] text-foreground truncate">
+                          {m3uTs || "Requer servidor e usuário preenchidos"}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={!m3uTs}
+                          className="h-8 px-2.5 text-xs gap-1"
+                          onClick={() => copyText(m3uTs, "Lista M3U TS")}
+                        >
+                          {copiedField === "Lista M3U TS" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          Copiar
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-semibold">Lista M3U Plus (HLS / m3u8):</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <code className="flex-1 rounded-lg bg-background border px-2.5 py-1.5 font-mono text-[11px] text-foreground truncate">
+                          {m3uHls || "Requer servidor e usuário preenchidos"}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={!m3uHls}
+                          className="h-8 px-2.5 text-xs gap-1"
+                          onClick={() => copyText(m3uHls, "Lista M3U HLS")}
+                        >
+                          {copiedField === "Lista M3U HLS" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          Copiar
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-semibold">Guia de Canais (EPG / XMLTV):</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <code className="flex-1 rounded-lg bg-background border px-2.5 py-1.5 font-mono text-[11px] text-foreground truncate">
+                          {epg || "Requer servidor e usuário preenchidos"}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={!epg}
+                          className="h-8 px-2.5 text-xs gap-1"
+                          onClick={() => copyText(epg, "Link EPG")}
+                        >
+                          {copiedField === "Link EPG" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          Copiar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Detalhes da Conta */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-xl bg-muted/40 border p-2.5">
+                    <span className="text-[10px] text-muted-foreground block">Telas Simultâneas:</span>
+                    <strong className="text-foreground">{viewAccessClient.screens ?? 1} Tela(s)</strong>
+                  </div>
+                  <div className="rounded-xl bg-muted/40 border p-2.5">
+                    <span className="text-[10px] text-muted-foreground block">Vencimento:</span>
+                    <strong className="text-foreground">{formatDate(viewAccessClient.next_due_date)}</strong>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (viewAccessClient) copiarDadosAcesso(viewAccessClient);
+              }}
+              className="gap-1.5 text-xs font-semibold"
+            >
+              <Copy className="size-3.5" />
+              Copiar Mensagem WhatsApp Completa
+            </Button>
+            <Button
+              type="button"
+              disabled={Boolean(actionBusyId)}
+              onClick={() => {
+                if (viewAccessClient) {
+                  enviarAcesso(viewAccessClient.id);
+                  setViewAccessClient(null);
+                }
+              }}
+              className="gap-1.5 text-xs font-semibold bg-primary text-primary-foreground"
+            >
+              {actionBusyId ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+              Enviar no WhatsApp do Cliente
             </Button>
           </DialogFooter>
         </DialogContent>
