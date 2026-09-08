@@ -778,3 +778,104 @@ export async function toggleSigmaCustomerStatus(
 
   throw new Error(`Não foi possível alterar o status no painel. Respostas: ${attempts.slice(0, 3).join(" • ")}`);
 }
+
+export type UpdateSigmaCustomerInput = {
+  name?: string | null;
+  username?: string | null;
+  password?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  screens?: number | null;
+  dueDate?: string | null;
+  status?: string | null;
+  notes?: string | null;
+};
+
+/** Atualiza dados de uma linha/cliente no painel Sigma. */
+export async function updateSigmaCustomer(
+  config: SigmaConfig,
+  ref: { id?: string | null; username?: string | null },
+  input: UpdateSigmaCustomerInput,
+): Promise<void> {
+  const id = ref?.id ? String(ref.id).trim() : "";
+  const username = (input.username || ref?.username || "").trim();
+  if (!id && !username) {
+    throw new Error("Identificador do cliente não fornecido para atualização no Sigma.");
+  }
+
+  const payload: Record<string, any> = {};
+  if (input.name) payload.name = input.name;
+  if (input.username) {
+    payload.username = input.username;
+    payload.user = input.username;
+  }
+  if (input.password) {
+    payload.password = input.password;
+    payload.pass = input.password;
+  }
+  if (input.phone) {
+    payload.phone = input.phone.replace(/\D/g, "");
+    payload.contact = input.phone.replace(/\D/g, "");
+  }
+  if (input.email) payload.email = input.email;
+  if (input.screens) {
+    payload.screens = input.screens;
+    payload.connections = input.screens;
+    payload.max_connections = input.screens;
+  }
+  if (input.dueDate) {
+    payload.due_date = input.dueDate;
+    payload.expiration_date = input.dueDate;
+    payload.exp_date = input.dueDate;
+    payload.expires_at = input.dueDate;
+  }
+  if (input.status) {
+    payload.status = input.status;
+    payload.is_active = input.status === "active" ? 1 : 0;
+  }
+  if (input.notes) payload.notes = input.notes;
+
+  const candidateCalls: Array<{ method: string; path: string; body: any }> = [];
+
+  if (id) {
+    candidateCalls.push({ method: "PUT", path: `/api/customers/${id}`, body: payload });
+    candidateCalls.push({ method: "POST", path: `/api/customers/${id}`, body: payload });
+    candidateCalls.push({ method: "POST", path: `/api/customers/${id}/edit`, body: payload });
+    candidateCalls.push({ method: "PUT", path: `/api/clients/${id}`, body: payload });
+    candidateCalls.push({ method: "POST", path: `/api/clients/${id}`, body: payload });
+    candidateCalls.push({ method: "PUT", path: `/api/users/${id}`, body: payload });
+    candidateCalls.push({ method: "POST", path: `/api/users/${id}`, body: payload });
+    candidateCalls.push({ method: "POST", path: `/api/customer/edit`, body: { id, ...payload } });
+    candidateCalls.push({ method: "POST", path: `/api/client/edit`, body: { id, ...payload } });
+    candidateCalls.push({ method: "POST", path: `/api/user/edit`, body: { id, ...payload } });
+  }
+
+  if (username) {
+    candidateCalls.push({ method: "POST", path: `/api/user/edit`, body: { username, ...payload } });
+    candidateCalls.push({ method: "POST", path: `/api/users/edit`, body: { username, ...payload } });
+    candidateCalls.push({ method: "POST", path: `/api/customer/edit`, body: { username, ...payload } });
+  }
+
+  const attempts: string[] = [];
+  for (const { method, path, body } of candidateCalls) {
+    let result: HttpResult;
+    try {
+      result = await authorizedRequest(
+        config,
+        path,
+        {
+          method,
+          body: JSON.stringify(body),
+        },
+        5000,
+      );
+    } catch {
+      continue;
+    }
+    if (result.ok || result.status === 204) return;
+    attempts.push(`${method} ${path} -> ${result.status}`);
+  }
+
+  console.warn("Aviso ao atualizar no Sigma:", attempts.slice(0, 3).join(" • "));
+}
+

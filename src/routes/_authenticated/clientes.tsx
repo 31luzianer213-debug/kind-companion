@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -9,6 +9,7 @@ import { sendAccessDetails, sendWhatsAppMessage } from "@/lib/whatsapp.functions
 import {
   syncSigmaClients,
   createSigmaClient,
+  updateSigmaClient,
   deleteSigmaClient,
   renewSigmaClient,
   toggleSigmaClientBlock,
@@ -214,6 +215,7 @@ function Clientes() {
   const sendAccess = useServerFn(sendAccessDetails);
   const syncSigma = useServerFn(syncSigmaClients);
   const createSigma = useServerFn(createSigmaClient);
+  const updateSigma = useServerFn(updateSigmaClient);
   const deleteSigma = useServerFn(deleteSigmaClient);
   const renewSigma = useServerFn(renewSigmaClient);
   const toggleBlock = useServerFn(toggleSigmaClientBlock);
@@ -265,6 +267,26 @@ function Clientes() {
   const sigmaServerUrl = sigmaConfigQuery.data?.sigma_url || "";
 
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0] ?? "", []);
+
+  // Sincronização em segundo plano silenciosa quando a página carrega e os dados do Sigma estiverem defasados
+  useEffect(() => {
+    if (!isSigmaConfigured) return;
+    const lastSync = sigmaConfigQuery.data?.sigma_last_sync_at;
+    const minutesSinceLast = lastSync
+      ? (Date.now() - new Date(lastSync).getTime()) / 60000
+      : 999;
+
+    if (minutesSinceLast > 10) {
+      syncSigma({ data: {} })
+        .then((res) => {
+          if (res.ok && (res.created > 0 || res.updated > 0)) {
+            queryClient.invalidateQueries({ queryKey: ["clients"] });
+            queryClient.invalidateQueries({ queryKey: ["sigma-settings"] });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isSigmaConfigured, sigmaConfigQuery.data?.sigma_last_sync_at]);
 
   // KPIs
   const stats = useMemo(() => {
@@ -335,54 +357,141 @@ function Clientes() {
         iptv_password: values.iptv_password?.trim() || null,
         screens: Number(values.screens || 1),
         activated_at: values.activated_at || null,
+        sigma_username: values.iptv_username?.trim() || null,
       };
 
-      let savedClientId = values.id;
+      let savedRow: any = null;
 
       if (values.id) {
-        const { error } = await supabase.from("clients").update(payload).eq("id", values.id);
+        const { data: updated, error } = await supabase
+          .from("clients")
+          .update(payload)
+          .eq("id", values.id)
+          .select()
+          .single();
         if (error) throw new Error(error.message);
+        savedRow = updated;
+
+        // Se o cliente ainda não tem linha no Sigma, mas o usuário marcou para provisionar
+        if (values.create_in_sigma && !savedRow?.sigma_customer_id && isSigmaConfigured && values.iptv_username) {
+          try {
+            const sigmaRes = await createSigma({
+              data: {
+                clientId: values.id,
+                name: values.name.trim(),
+                username: values.iptv_username.trim(),
+                password: values.iptv_password?.trim(),
+                phone: cleanPhoneDigits(values.phone),
+                email: values.email?.trim() || undefined,
+                screens: Number(values.screens || 1),
+                dueDate: values.next_due_date || undefined,
+                notes: values.notes?.trim() || undefined,
+              },
+            });
+            if (sigmaRes.ok) {
+              toast.success("Linha criada e sincronizada no Painel Sigma!");
+            } else {
+              toast.warning(`Cliente salvo, mas Sigma retornou: ${sigmaRes.error}`);
+            }
+          } catch (err) {
+            console.error("Erro Sigma ao criar linha:", err);
+          }
+        } else if (isSigmaConfigured && (values.iptv_username || savedRow?.sigma_customer_id)) {
+          // Se o cliente possui vínculo com o Sigma ou usuário IPTV, sincroniza a alteração no painel Sigma
+          try {
+            const updateRes = await updateSigma({
+              data: {
+                clientId: values.id,
+                name: values.name.trim(),
+                username: values.iptv_username?.trim(),
+                password: values.iptv_password?.trim(),
+                phone: cleanPhoneDigits(values.phone),
+                email: values.email?.trim() || undefined,
+                screens: Number(values.screens || 1),
+                dueDate: values.next_due_date || undefined,
+                status: values.status,
+                notes: values.notes?.trim() || undefined,
+              },
+            });
+            if (updateRes.ok) {
+              toast.info("Linha atualizada no Painel Sigma!");
+            }
+          } catch (err) {
+            console.warn("Aviso Sigma ao atualizar:", err);
+          }
+        }
+
+        // Busca a versão mais recente após eventuais atualizações de sync/tokens
+        const { data: finalRow } = await supabase
+          .from("clients")
+          .select("*")
+          .eq("id", values.id)
+          .single();
+        if (finalRow) savedRow = finalRow;
       } else {
         const { data: inserted, error } = await supabase
           .from("clients")
           .insert(payload)
-          .select("id")
+          .select()
           .single();
         if (error) throw new Error(error.message);
-        savedClientId = inserted.id;
-      }
+        savedRow = inserted;
 
-      // Se solicitado criar no painel Sigma
-      if (values.create_in_sigma && isSigmaConfigured && savedClientId && values.iptv_username) {
-        try {
-          const sigmaRes = await createSigma({
-            data: {
-              clientId: savedClientId,
-              name: values.name.trim(),
-              username: values.iptv_username.trim(),
-              password: values.iptv_password.trim(),
-              phone: cleanPhoneDigits(values.phone),
-              email: values.email?.trim() || undefined,
-              screens: Number(values.screens || 1),
-              dueDate: values.next_due_date || undefined,
-              notes: values.notes?.trim() || undefined,
-            },
-          });
-          if (sigmaRes.ok) {
-            toast.success("Linha criada e sincronizada no Painel Sigma!");
-          } else {
-            toast.warning(`Cliente salvo, mas Sigma retornou: ${sigmaRes.error}`);
+        // Se solicitado criar no painel Sigma
+        if (values.create_in_sigma && isSigmaConfigured && savedRow?.id && values.iptv_username) {
+          try {
+            const sigmaRes = await createSigma({
+              data: {
+                clientId: savedRow.id,
+                name: values.name.trim(),
+                username: values.iptv_username.trim(),
+                password: values.iptv_password.trim(),
+                phone: cleanPhoneDigits(values.phone),
+                email: values.email?.trim() || undefined,
+                screens: Number(values.screens || 1),
+                dueDate: values.next_due_date || undefined,
+                notes: values.notes?.trim() || undefined,
+              },
+            });
+            if (sigmaRes.ok) {
+              toast.success("Linha criada e sincronizada no Painel Sigma!");
+            } else {
+              toast.warning(`Cliente salvo, mas Sigma retornou: ${sigmaRes.error}`);
+            }
+          } catch (err) {
+            console.error("Erro Sigma:", err);
           }
-        } catch (err) {
-          console.error("Erro Sigma:", err);
+
+          const { data: finalRow } = await supabase
+            .from("clients")
+            .select("*")
+            .eq("id", savedRow.id)
+            .single();
+          if (finalRow) savedRow = finalRow;
         }
       }
+
+      return savedRow;
     },
-    onSuccess: () => {
+    onSuccess: (savedRow) => {
       toast.success("Cliente salvo com sucesso.");
       setOpen(false);
       setForm(empty);
+
+      // Atualiza o cache local imediatamente para refletir na tela sem necessidade de recarregar
+      if (savedRow) {
+        queryClient.setQueryData(["clients"], (old: any[] | undefined) => {
+          if (!old) return [savedRow];
+          const exists = old.some((c) => c.id === savedRow.id);
+          if (exists) {
+            return old.map((c) => (c.id === savedRow.id ? { ...c, ...savedRow } : c));
+          }
+          return [...old, savedRow].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        });
+      }
+
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["sigma-clients-list"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -591,7 +700,7 @@ function Clientes() {
       iptv_password: client.iptv_password ?? "",
       screens: String(client.screens ?? 1),
       activated_at: client.activated_at ?? "",
-      create_in_sigma: !client.sigma_customer_id && isSigmaConfigured,
+      create_in_sigma: Boolean(client.sigma_customer_id || isSigmaConfigured),
     });
     setOpen(true);
   }
@@ -1321,7 +1430,15 @@ function Clientes() {
                   <Input
                     type="date"
                     value={form.next_due_date}
-                    onChange={(e) => setForm({ ...form, next_due_date: e.target.value })}
+                    onChange={(e) => {
+                      const newDate = e.target.value;
+                      const dayFromDate = newDate ? String(parseInt(newDate.split("-")[2] || "", 10) || "") : "";
+                      setForm({
+                        ...form,
+                        next_due_date: newDate,
+                        ...(dayFromDate ? { due_day: dayFromDate } : {}),
+                      });
+                    }}
                     className="rounded-xl font-mono"
                   />
                 </div>
@@ -1407,7 +1524,9 @@ function Clientes() {
                       {form.id ? "Sincronizar no Painel Sigma" : "Criar linha no Painel Sigma"}
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      Cria e ativa automaticamente a conta do cliente no painel Sigma.
+                      {form.id
+                        ? "Envia as alterações de usuário, senha, telas, vencimento e status diretamente para o painel Sigma."
+                        : "Cria e ativa automaticamente a conta do cliente no painel Sigma."}
                     </p>
                   </div>
                   <Switch

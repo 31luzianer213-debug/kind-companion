@@ -452,6 +452,92 @@ export const createSigmaClient = createServerFn({ method: "POST" })
   });
 
 /**
+ * Atualiza os dados de uma linha/cliente diretamente no painel Sigma.
+ */
+export const updateSigmaClient = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (input: {
+      clientId: string;
+      name?: string;
+      username?: string;
+      password?: string;
+      phone?: string;
+      email?: string;
+      screens?: number;
+      dueDate?: string;
+      status?: string;
+      notes?: string;
+    }) => input,
+  )
+  .handler(async ({ data, context }) => {
+    const { updateSigmaCustomer, ensureSigmaToken } = await import("./sigma.server");
+    const { supabase, userId } = context;
+    const config = await loadConfig(supabase, userId);
+
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id, sigma_customer_id, sigma_username, iptv_username")
+      .eq("id", data.clientId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!client) {
+      return { ok: false as const, error: "Cliente não encontrado." };
+    }
+
+    if (!hasSigmaAccess(config)) {
+      return { ok: true as const, error: null, warning: "Painel Sigma não configurado." };
+    }
+
+    const ref = {
+      id: client.sigma_customer_id,
+      username: client.sigma_username || client.iptv_username || data.username,
+    };
+
+    if (!ref.id && !ref.username) {
+      return { ok: true as const, error: null, warning: "Cliente sem vínculo com o Sigma." };
+    }
+
+    try {
+      const token = await ensureSigmaToken(config);
+      await updateSigmaCustomer(
+        { ...config, token },
+        ref,
+        {
+          name: data.name,
+          username: data.username,
+          password: data.password,
+          phone: data.phone,
+          email: data.email,
+          screens: data.screens,
+          dueDate: data.dueDate,
+          status: data.status,
+          notes: data.notes,
+        },
+      );
+
+      const now = new Date().toISOString();
+      await supabase
+        .from("clients")
+        .update({
+          sigma_synced_at: now,
+          ...(data.username ? { sigma_username: data.username, iptv_username: data.username } : {}),
+          ...(data.password ? { iptv_password: data.password } : {}),
+        })
+        .eq("id", data.clientId)
+        .eq("user_id", userId);
+
+      return { ok: true as const, error: null };
+    } catch (err) {
+      return {
+        ok: false as const,
+        error: err instanceof Error ? err.message : "Falha ao atualizar no painel Sigma.",
+      };
+    }
+  });
+
+/**
  * Remove o cliente do Supabase e opcionalmente remove a linha do painel Sigma.
  */
 export const deleteSigmaClient = createServerFn({ method: "POST" })
