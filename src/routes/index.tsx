@@ -1,15 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SigmaLogo } from "@/components/SigmaLogo";
 import { Users, MessageCircle, BarChart3, Clock, MonitorPlay, Zap, Shield, TrendingUp, Sparkles, ArrowUpRight } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "IPTV Manager — Clientes, listas e cobrança no WhatsApp" },
-      { name: "description", content: "Gerencie clientes de IPTV, organize suas listas e envie cobranças automáticas pelo WhatsApp em um só painel." },
-      { property: "og:title", content: "IPTV Manager — Cobrança automática no WhatsApp" },
-      { property: "og:description", content: "Cadastro de clientes, gestão de listas IPTV e lembretes de pagamento enviados sozinhos pelo WhatsApp." },
+      { title: "Painel Sigma PRO — Gestão e Cobrança Automática IPTV" },
+      { name: "description", content: "Gerencie clientes do Servidor Sigma e envie cobranças automáticas pelo WhatsApp em um só painel." },
+      { property: "og:title", content: "Painel Sigma PRO — Automação de Revenda IPTV" },
+      { property: "og:description", content: "Cadastro de clientes, sincronização com Servidor Sigma e lembretes de pagamento no WhatsApp." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -18,8 +19,8 @@ export const Route = createFileRoute("/")({
 });
 
 const features = [
-  { icon: Users, title: "Gestão de clientes", text: "Controle total da sua base: valor, vencimento, status e a lista que cada pessoa usa.", gradient: "from-blue-500/10 to-cyan-500/10", iconColor: "text-blue-500" },
-  { icon: MonitorPlay, title: "Controle de listas", text: "Importe arquivos M3U, ative, desative e acompanhe a lotação de cada lista.", gradient: "from-purple-500/10 to-pink-500/10", iconColor: "text-purple-500" },
+  { icon: Users, title: "Gestão de clientes", text: "Controle total da sua base: valor, vencimento, status e a linha que cada pessoa usa.", gradient: "from-blue-500/10 to-cyan-500/10", iconColor: "text-blue-500" },
+  { icon: MonitorPlay, title: "Servidor Sigma", text: "Conexão direta por API: crie, sincronize e renove linhas automaticamente.", gradient: "from-purple-500/10 to-pink-500/10", iconColor: "text-purple-500" },
   { icon: MessageCircle, title: "Cobrança no WhatsApp", text: "Faturas e lembretes enviados direto no celular do cliente pela sua conexão Evolution.", gradient: "from-green-500/10 to-emerald-500/10", iconColor: "text-green-500" },
   { icon: BarChart3, title: "Painel financeiro", text: "Veja em aberto, atrasados e recebidos do mês num resumo simples e atualizado.", gradient: "from-orange-500/10 to-red-500/10", iconColor: "text-orange-500" },
 ];
@@ -36,8 +37,13 @@ function Index() {
       <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2.5 text-lg font-bold tracking-tight transition-opacity hover:opacity-80">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/80 p-2 shadow-lg shadow-primary/25"><MonitorPlay className="h-5 w-5 text-primary-foreground" /></div>
-            <span className="hidden sm:inline">IPTV Manager</span>
+            <SigmaLogo size="sm" />
+            <div className="flex items-center gap-1.5">
+              <span className="font-extrabold tracking-tight">Painel Sigma</span>
+              <span className="rounded-md bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-cyan-400 border border-cyan-500/30">
+                PRO
+              </span>
+            </div>
           </Link>
           <div className="flex items-center gap-2"><ThemeToggle /><Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground"><Link to="/auth">Entrar</Link></Button><Button asChild size="sm" className="gap-1.5 rounded-xl shadow-md shadow-primary/20"><Link to="/auth"><Sparkles className="h-3.5 w-3.5" />Começar grátis</Link></Button></div>
         </div>

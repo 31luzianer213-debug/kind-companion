@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import logo from "@/assets/logo.png";
+import { SigmaLogo } from "@/components/SigmaLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   ArrowLeft,
@@ -347,11 +347,14 @@ function AuthPage() {
         {/* Top Header - Logo */}
         <div className="relative z-10 flex items-center justify-between">
           <Link to="/" className="group flex items-center gap-3 text-xl font-bold tracking-tight">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/20 bg-white/10 p-2.5 shadow-lg shadow-black/40 backdrop-blur-md transition-transform duration-300 group-hover:scale-105">
-              <img src={logo} alt="IPTV Manager" className="h-full w-full object-contain" />
-            </div>
+            <SigmaLogo size="lg" className="transition-transform duration-300 group-hover:scale-105" />
             <div className="flex flex-col">
-              <span className="text-lg font-extrabold leading-none text-white">IPTV Manager</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg font-black leading-none text-white">Painel Sigma</span>
+                <span className="rounded-md bg-cyan-500/20 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-cyan-300 border border-cyan-500/30">
+                  PRO
+                </span>
+              </div>
               <span className="text-[11px] font-medium text-zinc-400">Gestão & Cobrança Automática</span>
             </div>
           </Link>
@@ -477,8 +480,8 @@ function AuthPage() {
           </Button>
 
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card p-1.5 lg:hidden">
-              <img src={logo} alt="IPTV Manager" className="h-full w-full object-contain" />
+            <div className="lg:hidden">
+              <SigmaLogo size="sm" />
             </div>
             <ThemeToggle />
           </div>

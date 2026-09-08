@@ -6,7 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import logo from "@/assets/logo.png";
+import { SigmaLogo } from "@/components/SigmaLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
 import { useSigmaAutoSync } from "@/lib/useSigmaAutoSync";
@@ -88,16 +88,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const isWaConnected = waStatus?.state === "open";
 
   const brand = (
-    <Link to="/painel" className="flex items-center gap-3 transition-opacity hover:opacity-90">
-      <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 p-2 text-primary-foreground shadow-md shadow-primary/25 ring-1 ring-primary/20">
-        <img src={logo} alt="IPTV Manager" className="h-full w-full object-contain" />
-      </div>
-      <div className="leading-none">
-        <span className="block text-[15px] font-extrabold tracking-tight text-foreground">
-          IPTV Manager
-        </span>
+    <Link to="/painel" className="group flex items-center gap-3 transition-opacity hover:opacity-95">
+      <SigmaLogo size="md" />
+      <div className="leading-tight">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[15px] font-black tracking-tight text-foreground group-hover:text-primary transition-colors">
+            Painel Sigma
+          </span>
+          <span className="rounded-md bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-cyan-400 border border-cyan-500/30">
+            PRO
+          </span>
+        </div>
         <span className="block text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-          Painel Sigma Pro
+          Gestor & Automação IPTV
         </span>
       </div>
     </Link>
