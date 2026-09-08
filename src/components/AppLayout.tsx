@@ -23,6 +23,7 @@ import {
   MessageCircle,
   CreditCard,
   ChevronRight,
+  Bot,
 } from "lucide-react";
 
 const nav = [
@@ -30,6 +31,7 @@ const nav = [
   { to: "/clientes", label: "Clientes & Linhas", icon: Users, badgeKey: "clients" },
   { to: "/cobrancas", label: "Cobranças", icon: Receipt, badgeKey: "invoices" },
   { to: "/sigma", label: "Servidor Sigma", icon: Server, badgeKey: null },
+  { to: "/bot", label: "Robô & Auto-Atendimento", icon: Bot, badgeKey: null },
   { to: "/whatsapp", label: "WhatsApp", icon: MessageCircle, badgeKey: null },
   { to: "/pagamentos", label: "Pagamentos", icon: CreditCard, badgeKey: null },
   { to: "/mensagens", label: "Mensagens", icon: Sparkles, badgeKey: null },

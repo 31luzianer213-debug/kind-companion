@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedBotRouteImport } from './routes/_authenticated/bot'
 import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticated/clientes'
 import { Route as AuthenticatedCobrancasRouteImport } from './routes/_authenticated/cobrancas'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
@@ -24,6 +25,7 @@ import { Route as AuthenticatedWhatsappRouteImport } from './routes/_authenticat
 import { Route as ApiPublicHooksCobrancaDiariaRouteImport } from './routes/api/public/hooks/cobranca-diaria'
 import { Route as ApiPublicHooksMercadopagoRouteImport } from './routes/api/public/hooks/mercadopago'
 import { Route as ApiPublicHooksSigmaSyncRouteImport } from './routes/api/public/hooks/sigma-sync'
+import { Route as ApiPublicHooksWhatsappBotRouteImport } from './routes/api/public/hooks/whatsapp-bot'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -38,6 +40,11 @@ const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedBotRoute = AuthenticatedBotRouteImport.update({
+  id: '/bot',
+  path: '/bot',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedClientesRoute = AuthenticatedClientesRouteImport.update({
   id: '/clientes',
@@ -102,10 +109,17 @@ const ApiPublicHooksSigmaSyncRoute = ApiPublicHooksSigmaSyncRouteImport.update({
   path: '/api/public/hooks/sigma-sync',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksWhatsappBotRoute =
+  ApiPublicHooksWhatsappBotRouteImport.update({
+    id: '/api/public/hooks/whatsapp-bot',
+    path: '/api/public/hooks/whatsapp-bot',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/bot': typeof AuthenticatedBotRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/cobrancas': typeof AuthenticatedCobrancasRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -118,10 +132,12 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
+  '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/bot': typeof AuthenticatedBotRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/cobrancas': typeof AuthenticatedCobrancasRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -134,12 +150,14 @@ export interface FileRoutesByTo {
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
+  '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/bot': typeof AuthenticatedBotRoute
   '/_authenticated/clientes': typeof AuthenticatedClientesRoute
   '/_authenticated/cobrancas': typeof AuthenticatedCobrancasRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -152,12 +170,14 @@ export interface FileRoutesById {
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
+  '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/auth'
+    | '/bot'
     | '/clientes'
     | '/cobrancas'
     | '/configuracoes'
@@ -170,10 +190,12 @@ export interface FileRouteTypes {
     | '/api/public/hooks/cobranca-diaria'
     | '/api/public/hooks/mercadopago'
     | '/api/public/hooks/sigma-sync'
+    | '/api/public/hooks/whatsapp-bot'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/bot'
     | '/clientes'
     | '/cobrancas'
     | '/configuracoes'
@@ -186,11 +208,13 @@ export interface FileRouteTypes {
     | '/api/public/hooks/cobranca-diaria'
     | '/api/public/hooks/mercadopago'
     | '/api/public/hooks/sigma-sync'
+    | '/api/public/hooks/whatsapp-bot'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/bot'
     | '/_authenticated/clientes'
     | '/_authenticated/cobrancas'
     | '/_authenticated/configuracoes'
@@ -203,6 +227,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/cobranca-diaria'
     | '/api/public/hooks/mercadopago'
     | '/api/public/hooks/sigma-sync'
+    | '/api/public/hooks/whatsapp-bot'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -212,6 +237,7 @@ export interface RootRouteChildren {
   ApiPublicHooksCobrancaDiariaRoute: typeof ApiPublicHooksCobrancaDiariaRoute
   ApiPublicHooksMercadopagoRoute: typeof ApiPublicHooksMercadopagoRoute
   ApiPublicHooksSigmaSyncRoute: typeof ApiPublicHooksSigmaSyncRoute
+  ApiPublicHooksWhatsappBotRoute: typeof ApiPublicHooksWhatsappBotRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -236,6 +262,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/bot': {
+      id: '/_authenticated/bot'
+      path: '/bot'
+      fullPath: '/bot'
+      preLoaderRoute: typeof AuthenticatedBotRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/clientes': {
       id: '/_authenticated/clientes'
@@ -321,10 +354,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSigmaSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/whatsapp-bot': {
+      id: '/api/public/hooks/whatsapp-bot'
+      path: '/api/public/hooks/whatsapp-bot'
+      fullPath: '/api/public/hooks/whatsapp-bot'
+      preLoaderRoute: typeof ApiPublicHooksWhatsappBotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedBotRoute: typeof AuthenticatedBotRoute
   AuthenticatedClientesRoute: typeof AuthenticatedClientesRoute
   AuthenticatedCobrancasRoute: typeof AuthenticatedCobrancasRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
@@ -337,6 +378,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedBotRoute: AuthenticatedBotRoute,
   AuthenticatedClientesRoute: AuthenticatedClientesRoute,
   AuthenticatedCobrancasRoute: AuthenticatedCobrancasRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
@@ -358,6 +400,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksCobrancaDiariaRoute: ApiPublicHooksCobrancaDiariaRoute,
   ApiPublicHooksMercadopagoRoute: ApiPublicHooksMercadopagoRoute,
   ApiPublicHooksSigmaSyncRoute: ApiPublicHooksSigmaSyncRoute,
+  ApiPublicHooksWhatsappBotRoute: ApiPublicHooksWhatsappBotRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
