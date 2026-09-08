@@ -226,6 +226,10 @@ function Clientes() {
   const [form, setForm] = useState<ClientForm>(empty);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Modais de confirmação para ações de clientes
+  const [confirmRenewClient, setConfirmRenewClient] = useState<ClientRow | null>(null);
+  const [confirmRemindClient, setConfirmRemindClient] = useState<ClientRow | null>(null);
+
   // Search and filter state
   const [search, setSearch] = useState("");
   const [filterTab, setFilterTab] = useState("all");
@@ -1097,46 +1101,49 @@ function Clientes() {
 
                       {/* Ações */}
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1.5">
                           {/* Copiar Acesso */}
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8 text-muted-foreground hover:text-foreground"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 px-2.5 text-xs font-medium gap-1 text-muted-foreground hover:text-foreground"
                             title="Copiar dados de acesso"
                             onClick={() => copiarDadosAcesso(client as any)}
                           >
-                            {isCopied ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
+                            {isCopied ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
+                            Copiar
                           </Button>
 
-                          {/* Renovar Rápido (+30d) */}
+                          {/* Renovar Rápido (+30d) - com confirmação */}
                           <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="outline"
+                            size="sm"
                             disabled={isBusy}
-                            className="size-8 text-muted-foreground hover:text-emerald-400"
-                            title="Renovar 30 dias (local e Sigma)"
-                            onClick={() => renovar30Dias(client)}
+                            className="h-8 px-2.5 text-xs font-medium gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border-emerald-500/20"
+                            title="Renovar 30 dias no painel Sigma"
+                            onClick={() => setConfirmRenewClient(client)}
                           >
-                            {isBusy ? <Loader2 className="size-4 animate-spin" /> : <CalendarPlus className="size-4" />}
+                            {isBusy ? <Loader2 className="size-3.5 animate-spin" /> : <CalendarPlus className="size-3.5" />}
+                            +30d
                           </Button>
 
-                          {/* Enviar WhatsApp */}
+                          {/* Enviar WhatsApp - com confirmação */}
                           <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="outline"
+                            size="sm"
                             disabled={isBusy}
-                            className="size-8 text-muted-foreground hover:text-emerald-400"
+                            className="h-8 px-2.5 text-xs font-medium gap-1 text-primary hover:bg-primary/10 border-primary/20"
                             title="Cobrar via WhatsApp"
-                            onClick={() => cobrar(client)}
+                            onClick={() => setConfirmRemindClient(client)}
                           >
-                            <MessageCircle className="size-4" />
+                            <MessageCircle className="size-3.5" />
+                            Cobrar
                           </Button>
 
                           {/* Dropdown com mais opções */}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="size-8">
+                              <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground">
                                 <MoreVertical className="size-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -1282,14 +1289,14 @@ function Clientes() {
                   ) : null}
 
                   {/* Ações Mobile */}
-                  <div className="flex items-center justify-between pt-2 border-t border-border/40 gap-1">
+                  <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-border/40">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs gap-1.5 flex-1"
+                      className="h-8 text-xs gap-1 px-1 text-muted-foreground"
                       onClick={() => copiarDadosAcesso(client as any)}
                     >
-                      {isCopied ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
+                      {isCopied ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
                       Acesso
                     </Button>
 
@@ -1297,29 +1304,31 @@ function Clientes() {
                       variant="outline"
                       size="sm"
                       disabled={isBusy}
-                      className="h-8 text-xs gap-1.5 flex-1 text-emerald-400"
-                      onClick={() => renovar30Dias(client)}
+                      className="h-8 text-xs gap-1 px-1 text-emerald-400 border-emerald-500/30"
+                      onClick={() => setConfirmRenewClient(client)}
                     >
-                      {isBusy ? <Loader2 className="size-3.5 animate-spin" /> : <CalendarPlus className="size-3.5" />}
-                      +30 dias
+                      {isBusy ? <Loader2 className="size-3 animate-spin" /> : <CalendarPlus className="size-3" />}
+                      +30d
                     </Button>
 
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs gap-1.5"
-                      onClick={() => cobrar(client)}
+                      className="h-8 text-xs gap-1 px-1 text-primary border-primary/30"
+                      onClick={() => setConfirmRemindClient(client)}
                     >
-                      <MessageCircle className="size-3.5" />
+                      <MessageCircle className="size-3" />
+                      Cobrar
                     </Button>
 
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs gap-1.5"
+                      className="h-8 text-xs gap-1 px-1"
                       onClick={() => edit(client)}
                     >
-                      <Pencil className="size-3.5" />
+                      <Pencil className="size-3" />
+                      Editar
                     </Button>
                   </div>
                 </Card>
@@ -1604,6 +1613,153 @@ function Clientes() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Confirmação: Renovar 30 Dias no Sigma */}
+      <Dialog open={Boolean(confirmRenewClient)} onOpenChange={(open) => !open && setConfirmRenewClient(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base text-foreground">
+              <CalendarPlus className="size-5 text-emerald-400" />
+              Confirmar Renovação de Assinatura
+            </DialogTitle>
+            <DialogDescription>
+              Deseja renovar a assinatura deste cliente por mais 30 dias?
+            </DialogDescription>
+          </DialogHeader>
+
+          {confirmRenewClient && (
+            <div className="space-y-3 py-2 text-sm">
+              <div className="p-3 rounded-xl bg-muted/40 border border-border/60 space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Cliente:</span>
+                  <strong className="text-foreground">{confirmRenewClient.name}</strong>
+                </div>
+                {confirmRenewClient.iptv_username && (
+                  <div className="flex justify-between">
+                    <span className="text-xs text-muted-foreground">Usuário IPTV / Sigma:</span>
+                    <span className="font-mono text-xs text-primary">{confirmRenewClient.iptv_username}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Mensalidade:</span>
+                  <span className="font-bold text-foreground font-mono">{formatBRL(confirmRenewClient.monthly_fee)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Vencimento Atual:</span>
+                  <span className="font-mono text-xs">{formatDate(confirmRenewClient.next_due_date)}</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 space-y-1">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <ShieldCheck className="size-4 text-emerald-400" /> O que acontecerá:
+                </p>
+                <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-muted-foreground">
+                  <li>O vencimento avançará <strong>+30 dias</strong> no sistema.</li>
+                  <li>Se vinculado, a conta será <strong>renovada diretamente no Painel Sigma</strong>.</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmRenewClient(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5"
+              disabled={!confirmRenewClient}
+              onClick={() => {
+                if (confirmRenewClient) {
+                  const cli = confirmRenewClient;
+                  setConfirmRenewClient(null);
+                  renovar30Dias(cli);
+                }
+              }}
+            >
+              <CalendarPlus className="size-3.5" />
+              Confirmar Renovação (+30d)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação: Cobrança via WhatsApp */}
+      <Dialog open={Boolean(confirmRemindClient)} onOpenChange={(open) => !open && setConfirmRemindClient(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base text-foreground">
+              <MessageCircle className="size-5 text-emerald-400" />
+              Enviar Cobrança via WhatsApp
+            </DialogTitle>
+            <DialogDescription>
+              Deseja disparar agora a mensagem de cobrança para este cliente?
+            </DialogDescription>
+          </DialogHeader>
+
+          {confirmRemindClient && (
+            <div className="space-y-3 py-2 text-sm">
+              <div className="p-3 rounded-xl bg-muted/40 border border-border/60 space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Destinatário:</span>
+                  <strong className="text-foreground">{confirmRemindClient.name}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">WhatsApp:</span>
+                  <span className="font-mono text-xs text-emerald-400">{confirmRemindClient.phone}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Mensalidade:</span>
+                  <span className="font-bold font-mono">{formatBRL(confirmRemindClient.monthly_fee)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Vencimento:</span>
+                  <span className="font-mono text-xs">{formatDate(confirmRemindClient.next_due_date)}</span>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                O cliente receberá o texto formatado no WhatsApp com os dados de vencimento e chave de pagamento.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmRemindClient(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5"
+              disabled={!confirmRemindClient}
+              onClick={() => {
+                if (confirmRemindClient) {
+                  const cli = confirmRemindClient;
+                  setConfirmRemindClient(null);
+                  cobrar(cli);
+                }
+              }}
+            >
+              <Send className="size-3.5" />
+              Disparar Cobrança Agora
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+

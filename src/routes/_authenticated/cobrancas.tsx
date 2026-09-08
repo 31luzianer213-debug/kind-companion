@@ -139,6 +139,10 @@ function Cobrancas() {
   const [pixModalInvoice, setPixModalInvoice] = useState<InvoiceRow | null>(null);
   const [copiedPix, setCopiedPix] = useState(false);
 
+  // Modais de confirmação de ação
+  const [confirmPayInvoice, setConfirmPayInvoice] = useState<InvoiceRow | null>(null);
+  const [confirmRemindInvoice, setConfirmRemindInvoice] = useState<InvoiceRow | null>(null);
+
   // Modal nova fatura avulsa
   const [createOpen, setCreateOpen] = useState(false);
   const [newClientId, setNewClientId] = useState("");
@@ -330,7 +334,7 @@ function Cobrancas() {
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            Acompanhe mensalidades pendentes, gere Pix e automatize a renovação dos clientes no Sigma.
+            Acompanhe mensalidades pendentes, dê baixa em pagamentos PIX e automatize a renovação dos clientes no Sigma.
           </p>
         </div>
 
@@ -428,6 +432,27 @@ function Cobrancas() {
           </Button>
         </div>
       </div>
+
+      {/* Banner Explicativo: Por que o Painel de Cobranças existe? */}
+      <Card className="surface-card border-primary/25 bg-primary/5">
+        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary shrink-0 mt-0.5">
+              <ShieldCheck className="size-5" />
+            </div>
+            <div className="space-y-0.5">
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                Qual o papel deste Painel de Cobranças?
+              </h4>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl">
+                O robô do WhatsApp cuida dos envios automáticos para os clientes. Utilize este painel para <strong>acompanhar suas métricas</strong> (valores pagos, a receber e em atraso), 
+                <strong>dar baixa com 1 clique</strong> quando o cliente enviar o comprovante de PIX manual (renovando a linha dele no Sigma imediatamente) e 
+                <strong>reenviar cobranças avulsas</strong> quando solicitado.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* 3 Cards de Métricas Financeiras */}
       <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
@@ -631,12 +656,12 @@ function Cobrancas() {
                           Pix
                         </Button>
 
-                        {/* Enviar Lembrete WhatsApp */}
+                        {/* Enviar Lembrete WhatsApp - com modal de confirmação */}
                         <Button
                           size="sm"
                           variant="outline"
                           disabled={sendingId === invoice.id || isPaid}
-                          onClick={() => lembrar(invoice)}
+                          onClick={() => setConfirmRemindInvoice(invoice)}
                           className="h-8 px-2.5 text-xs font-medium gap-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
                           title="Cobrar via WhatsApp"
                         >
@@ -648,16 +673,16 @@ function Cobrancas() {
                           Cobrar
                         </Button>
 
-                        {/* Marcar como Pago */}
+                        {/* Marcar como Pago - com modal de confirmação e renovação Sigma */}
                         {!isPaid ? (
                           <Button
                             size="sm"
                             disabled={markPaid.isPending}
-                            onClick={() => markPaid.mutate(invoice.id)}
+                            onClick={() => setConfirmPayInvoice(invoice)}
                             className="h-8 px-2.5 text-xs font-bold gap-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                             title="Confirmar pagamento e renovar no Sigma"
                           >
-                            <Check className="size-3.5" /> Pago
+                            <Check className="size-3.5" /> Dar Baixa
                           </Button>
                         ) : null}
                       </div>
@@ -808,6 +833,149 @@ function Cobrancas() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Confirmação: Dar Baixa e Renovar no Sigma */}
+      <Dialog open={Boolean(confirmPayInvoice)} onOpenChange={(open) => !open && setConfirmPayInvoice(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base text-foreground">
+              <CheckCircle2 className="size-5 text-emerald-400" />
+              Confirmar Pagamento & Renovar no Sigma
+            </DialogTitle>
+            <DialogDescription>
+              Você confirma o recebimento do valor desta fatura?
+            </DialogDescription>
+          </DialogHeader>
+
+          {confirmPayInvoice && (
+            <div className="space-y-3 py-2 text-sm">
+              <div className="p-3 rounded-xl bg-muted/40 border border-border/60 space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Cliente:</span>
+                  <strong className="text-foreground">{confirmPayInvoice.clients?.name}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Valor:</span>
+                  <span className="font-bold text-emerald-400 font-mono">{formatBRL(confirmPayInvoice.amount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Vencimento Atual:</span>
+                  <span className="font-mono text-xs">{formatDate(confirmPayInvoice.due_date)}</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 space-y-1">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <ShieldCheck className="size-4 text-emerald-400" /> O que acontecerá ao confirmar:
+                </p>
+                <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-muted-foreground">
+                  <li>A fatura será marcada como <strong>Paga</strong> com a data de hoje.</li>
+                  <li>O vencimento do cliente avançará <strong>+30 dias</strong> automaticamente.</li>
+                  <li>A assinatura será <strong>renovada diretamente no Painel Sigma</strong>.</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmPayInvoice(null)}
+              disabled={markPaid.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5"
+              disabled={markPaid.isPending || !confirmPayInvoice}
+              onClick={() => {
+                if (confirmPayInvoice) {
+                  markPaid.mutate(confirmPayInvoice.id);
+                  setConfirmPayInvoice(null);
+                }
+              }}
+            >
+              {markPaid.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+              Confirmar e Renovar no Sigma
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação: Cobrança Avulsa WhatsApp */}
+      <Dialog open={Boolean(confirmRemindInvoice)} onOpenChange={(open) => !open && setConfirmRemindInvoice(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base text-foreground">
+              <Send className="size-5 text-emerald-400" />
+              Reenviar Cobrança via WhatsApp
+            </DialogTitle>
+            <DialogDescription>
+              Deseja disparar agora a mensagem de cobrança para este cliente?
+            </DialogDescription>
+          </DialogHeader>
+
+          {confirmRemindInvoice && (
+            <div className="space-y-3 py-2 text-sm">
+              <div className="p-3 rounded-xl bg-muted/40 border border-border/60 space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Destinatário:</span>
+                  <strong className="text-foreground">{confirmRemindInvoice.clients?.name}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">WhatsApp:</span>
+                  <span className="font-mono text-xs text-emerald-400">{confirmRemindInvoice.clients?.phone}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Valor:</span>
+                  <span className="font-bold font-mono">{formatBRL(confirmRemindInvoice.amount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Vencimento:</span>
+                  <span className="font-mono text-xs">{formatDate(confirmRemindInvoice.due_date)}</span>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                A mensagem incluirá o modelo padrão de cobrança, data de vencimento e sua forma de pagamento ativa.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmRemindInvoice(null)}
+              disabled={Boolean(sendingId)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5"
+              disabled={Boolean(sendingId) || !confirmRemindInvoice}
+              onClick={() => {
+                if (confirmRemindInvoice) {
+                  const inv = confirmRemindInvoice;
+                  setConfirmRemindInvoice(null);
+                  lembrar(inv);
+                }
+              }}
+            >
+              {sendingId ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+              Disparar Cobrança Agora
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+

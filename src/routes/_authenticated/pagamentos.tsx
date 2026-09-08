@@ -30,6 +30,11 @@ import {
   ExternalLink,
   ShieldCheck,
   AlertCircle,
+  Eye,
+  EyeOff,
+  Sparkles,
+  ArrowRight,
+  Info,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/pagamentos")({
@@ -38,7 +43,7 @@ export const Route = createFileRoute("/_authenticated/pagamentos")({
       { title: "Formas de Pagamento — PIX & Gateways" },
       {
         name: "description",
-        content: "Configure sua chave PIX, Mercado Pago e Asaas para recebimento e baixa automática com renovação no Sigma.",
+        content: "Configure sua chave PIX, Mercado Pago e Asaas para recebimento e renovação automática no Sigma.",
       },
     ],
   }),
@@ -65,6 +70,9 @@ function PagamentosPage() {
 
   const [form, setForm] = useState<PaymentSettingsPayload>(defaults);
   const [copiedPix, setCopiedPix] = useState(false);
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
+  const [showMpToken, setShowMpToken] = useState(false);
+  const [showAsaasToken, setShowAsaasToken] = useState(false);
 
   // Estados de teste de conexão dos gateways
   const [testingMp, setTestingMp] = useState(false);
@@ -88,7 +96,7 @@ function PagamentosPage() {
         pix_key_type: data.pix_key_type ?? prev.pix_key_type,
         pix_holder: data.pix_holder ?? prev.pix_holder,
         payment_link: data.payment_link ?? prev.payment_link,
-        payment_provider: data.payment_provider ?? prev.payment_provider,
+        payment_provider: data.payment_provider ?? prev.payment_provider ?? "pix",
         mercadopago_token: data.mercadopago_token ?? prev.mercadopago_token,
         asaas_token: data.asaas_token ?? prev.asaas_token,
         asaas_env: data.asaas_env ?? prev.asaas_env,
@@ -105,7 +113,7 @@ function PagamentosPage() {
       return res;
     },
     onSuccess: () => {
-      toast.success("Formas de pagamento salvas com sucesso!");
+      toast.success("Forma de pagamento salva com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["payment-settings"] });
       queryClient.invalidateQueries({ queryKey: ["whatsapp-settings"] });
     },
@@ -124,10 +132,10 @@ function PagamentosPage() {
     try {
       const res = await testMpFn({ data: { token: form.mercadopago_token } });
       if (res.ok) {
-        setMpStatus({ ok: true, message: `Conectado com sucesso! Conta: ${res.name} (${res.email})` });
+        setMpStatus({ ok: true, message: `Conectado com sucesso! Titular: ${res.name} (${res.email})` });
         toast.success(`Mercado Pago autenticado: ${res.name}`);
       } else {
-        setMpStatus({ ok: false, message: res.error || "Falha ao validar token." });
+        setMpStatus({ ok: false, message: res.error || "Token inválido ou sem permissão." });
         toast.error(res.error || "Token do Mercado Pago recusado.");
       }
     } catch {
@@ -168,8 +176,15 @@ function PagamentosPage() {
     if (!form.pix_key) return;
     navigator.clipboard.writeText(form.pix_key);
     setCopiedPix(true);
-    toast.info("Chave PIX copiada para a área de transferência!");
+    toast.info("Chave PIX copiada!");
     setTimeout(() => setCopiedPix(false), 2000);
+  }
+
+  function handleCopyWebhook(url: string) {
+    navigator.clipboard.writeText(url);
+    setCopiedWebhook(true);
+    toast.info("Link do Webhook copiado para a área de transferência!");
+    setTimeout(() => setCopiedWebhook(false), 2000);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -177,21 +192,27 @@ function PagamentosPage() {
     save.mutate(form);
   }
 
+  const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://seusite.com";
+  const mpWebhookUrl = `${currentOrigin}/api/public/hooks/mercadopago`;
+  const asaasWebhookUrl = `${currentOrigin}/api/public/hooks/cobranca-diaria`;
+
+  const activeProvider = form.payment_provider || "pix";
+
   return (
-    <div className="space-y-6 max-w-5xl animate-in fade-in duration-300">
+    <div className="space-y-6 max-w-4xl animate-in fade-in duration-300">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/60 pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <CreditCard className="size-6 text-primary" /> Formas de Pagamento & Gateways
+              <CreditCard className="size-6 text-primary" /> Formas de Pagamento
             </h1>
             <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
-              PIX & Gateways
+              Simples & Direto
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            Configure sua chave PIX e conecte com Mercado Pago ou Asaas para recebimento automatizado e renovação imediata no Sigma.
+            Escolha como seus clientes irão pagar. Clique na opção desejada para preencher somente o que precisa.
           </p>
         </div>
 
@@ -202,327 +223,406 @@ function PagamentosPage() {
           className="gap-1.5 font-semibold bg-primary text-primary-foreground shadow-sm hover-lift"
         >
           {save.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
-          Salvar Alterações
+          Salvar Configurações
         </Button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Seletor do Provedor de Pagamento Ativo */}
-        <Card className="surface-card border-border/60">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Zap className="size-4 text-amber-400" /> Método de Cobrança Principal
-            </CardTitle>
-            <CardDescription>
-              Escolha qual meio de pagamento será enviado nas mensagens automáticas de cobrança via WhatsApp.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {/* Opção 1: PIX Direto */}
-              <div
-                onClick={() => setForm({ ...form, payment_provider: "pix" })}
-                className={`cursor-pointer rounded-xl p-4 border transition-all ${
-                  form.payment_provider === "pix"
-                    ? "border-emerald-500/60 bg-emerald-500/10 shadow-sm ring-1 ring-emerald-500/30"
-                    : "border-border/60 hover:bg-muted/40"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 font-semibold text-sm">
-                    <QrCode className="size-4 text-emerald-400" />
-                    Chave PIX Direta
-                  </div>
-                  {form.payment_provider === "pix" ? (
-                    <CheckCircle2 className="size-4 text-emerald-400" />
-                  ) : null}
+        {/* Seletor do Provedor de Pagamento - 3 opções claras */}
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Escolha seu método de recebimento:
+          </Label>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {/* Opção 1: Chave PIX Direta (Manual) */}
+            <div
+              onClick={() => setForm({ ...form, payment_provider: "pix" })}
+              className={`cursor-pointer rounded-xl p-4 border transition-all relative ${
+                activeProvider === "pix"
+                  ? "border-emerald-500/80 bg-emerald-500/10 shadow-md ring-2 ring-emerald-500/30"
+                  : "border-border/60 bg-card hover:bg-muted/40 opacity-80 hover:opacity-100"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2 font-bold text-sm text-foreground">
+                  <QrCode className="size-4 text-emerald-400" />
+                  Chave PIX Direta
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Envia sua chave PIX com nome do titular para transferência direta. Baixa manual ou comprovante.
-                </p>
+                {activeProvider === "pix" ? (
+                  <CheckCircle2 className="size-5 text-emerald-400" />
+                ) : (
+                  <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                    Sem taxas
+                  </Badge>
+                )}
               </div>
-
-              {/* Opção 2: Mercado Pago */}
-              <div
-                onClick={() => setForm({ ...form, payment_provider: "mercadopago" })}
-                className={`cursor-pointer rounded-xl p-4 border transition-all ${
-                  form.payment_provider === "mercadopago"
-                    ? "border-sky-500/60 bg-sky-500/10 shadow-sm ring-1 ring-sky-500/30"
-                    : "border-border/60 hover:bg-muted/40"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 font-semibold text-sm">
-                    <Wallet className="size-4 text-sky-400" />
-                    Mercado Pago
-                  </div>
-                  {form.payment_provider === "mercadopago" ? (
-                    <CheckCircle2 className="size-4 text-sky-400" />
-                  ) : null}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  QR Code dinâmico do PIX ou checkout online. Baixa automática e renovação instantânea no Sigma.
-                </p>
-              </div>
-
-              {/* Opção 3: Asaas */}
-              <div
-                onClick={() => setForm({ ...form, payment_provider: "asaas" })}
-                className={`cursor-pointer rounded-xl p-4 border transition-all ${
-                  form.payment_provider === "asaas"
-                    ? "border-primary/60 bg-primary/10 shadow-sm ring-1 ring-primary/30"
-                    : "border-border/60 hover:bg-muted/40"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 font-semibold text-sm">
-                    <Building className="size-4 text-primary" />
-                    Asaas
-                  </div>
-                  {form.payment_provider === "asaas" ? (
-                    <CheckCircle2 className="size-4 text-primary" />
-                  ) : null}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Cobranças bancárias completas (PIX, Boleto e Cartão) com confirmação via Webhook e baixa no Sigma.
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Você recebe direto na sua conta bancária. O cliente manda o comprovante e você confirma com 1 clique.
+              </p>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Seção 1: Chave PIX Principal */}
-        <Card className="surface-card border-border/60">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <QrCode className="size-4 text-emerald-400" /> Chave PIX (Envio Direto no WhatsApp)
-              </CardTitle>
-              {form.pix_key ? (
-                <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 text-xs">
-                  Configurada
-                </Badge>
-              ) : null}
+            {/* Opção 2: Mercado Pago (Automático) */}
+            <div
+              onClick={() => setForm({ ...form, payment_provider: "mercadopago" })}
+              className={`cursor-pointer rounded-xl p-4 border transition-all relative ${
+                activeProvider === "mercadopago"
+                  ? "border-sky-500/80 bg-sky-500/10 shadow-md ring-2 ring-sky-500/30"
+                  : "border-border/60 bg-card hover:bg-muted/40 opacity-80 hover:opacity-100"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2 font-bold text-sm text-foreground">
+                  <Wallet className="size-4 text-sky-400" />
+                  Mercado Pago
+                </div>
+                {activeProvider === "mercadopago" ? (
+                  <CheckCircle2 className="size-5 text-sky-400" />
+                ) : (
+                  <Badge variant="outline" className="text-[10px] text-sky-400 border-sky-400/30">
+                    Automático
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Renovação 100% automática no Sigma via Webhook assim que o cliente efetuar o pagamento.
+              </p>
             </div>
-            <CardDescription>
-              Esta chave é inserida automaticamente nas mensagens com a tag <code className="font-mono text-primary">&#123;pix&#125;</code> para os clientes realizarem a transferência.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Tipo de Chave</Label>
-                <Select
-                  value={form.pix_key_type}
-                  onValueChange={(val) => setForm({ ...form, pix_key_type: val })}
-                >
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="aleatoria">Chave Aleatória</SelectItem>
-                    <SelectItem value="cpf">CPF</SelectItem>
-                    <SelectItem value="cnpj">CNPJ</SelectItem>
-                    <SelectItem value="email">E-mail</SelectItem>
-                    <SelectItem value="celular">Telefone / Celular</SelectItem>
-                  </SelectContent>
-                </Select>
+
+            {/* Opção 3: Asaas */}
+            <div
+              onClick={() => setForm({ ...form, payment_provider: "asaas" })}
+              className={`cursor-pointer rounded-xl p-4 border transition-all relative ${
+                activeProvider === "asaas"
+                  ? "border-primary/80 bg-primary/10 shadow-md ring-2 ring-primary/30"
+                  : "border-border/60 bg-card hover:bg-muted/40 opacity-80 hover:opacity-100"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2 font-bold text-sm text-foreground">
+                  <Building className="size-4 text-primary" />
+                  Asaas
+                </div>
+                {activeProvider === "asaas" ? (
+                  <CheckCircle2 className="size-5 text-primary" />
+                ) : (
+                  <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
+                    Boleto/Cartão
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Cobranças bancárias completas (PIX, Boleto e Cartão de Crédito) para empresas.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* -------------------------------------------------------------------------------- */}
+        {/* VISÃO CONDICIONAL 1: SOMENTE PIX DIRETO                                            */}
+        {/* -------------------------------------------------------------------------------- */}
+        {activeProvider === "pix" && (
+          <Card className="surface-card border-emerald-500/30 shadow-sm animate-in fade-in duration-200">
+            <CardHeader className="pb-3 border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
+                    <QrCode className="size-5 text-emerald-400" />
+                    Dados da sua Chave PIX
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Preencha sua chave para que o robô envie diretamente aos clientes pelo WhatsApp.
+                  </CardDescription>
+                </div>
+                {form.pix_key ? (
+                  <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs">
+                    Ativa
+                  </Badge>
+                ) : null}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Tipo de Chave *</Label>
+                  <Select
+                    value={form.pix_key_type}
+                    onValueChange={(val) => setForm({ ...form, pix_key_type: val })}
+                  >
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="aleatoria">Chave Aleatória (EVP)</SelectItem>
+                      <SelectItem value="cpf">CPF</SelectItem>
+                      <SelectItem value="cnpj">CNPJ</SelectItem>
+                      <SelectItem value="email">E-mail</SelectItem>
+                      <SelectItem value="celular">Telefone / Celular</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label className="text-xs font-semibold">Chave PIX *</Label>
+                  <div className="relative flex items-center">
+                    <Input
+                      type="text"
+                      placeholder="Ex: 123e4567-e89b-12d3-a456-426614174000 ou 11999999999"
+                      value={form.pix_key}
+                      onChange={(e) => setForm({ ...form, pix_key: e.target.value })}
+                      className="rounded-xl font-mono text-sm pr-10"
+                      required={activeProvider === "pix"}
+                    />
+                    {form.pix_key ? (
+                      <button
+                        type="button"
+                        onClick={handleCopyPix}
+                        className="absolute right-2.5 text-muted-foreground hover:text-foreground"
+                        title="Copiar Chave PIX"
+                      >
+                        {copiedPix ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label className="text-xs font-semibold">Chave PIX *</Label>
-                <div className="relative flex items-center">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Nome do Titular da Conta</Label>
                   <Input
                     type="text"
-                    placeholder="Cole sua chave PIX aqui"
-                    value={form.pix_key}
-                    onChange={(e) => setForm({ ...form, pix_key: e.target.value })}
-                    className="rounded-xl font-mono text-sm pr-10"
+                    placeholder="Ex: João da Silva ou Minha Revenda IPTV"
+                    value={form.pix_holder}
+                    onChange={(e) => setForm({ ...form, pix_holder: e.target.value })}
+                    className="rounded-xl text-sm"
                   />
-                  {form.pix_key ? (
-                    <button
-                      type="button"
-                      onClick={handleCopyPix}
-                      className="absolute right-2.5 text-muted-foreground hover:text-foreground"
-                      title="Copiar Chave PIX"
-                    >
-                      {copiedPix ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Nome do Titular da Conta</Label>
-                <Input
-                  type="text"
-                  placeholder="Ex: João da Silva ou Minha Revenda Ltda"
-                  value={form.pix_holder}
-                  onChange={(e) => setForm({ ...form, pix_holder: e.target.value })}
-                  className="rounded-xl text-sm"
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Aparece nas mensagens para ajudar o cliente a conferir o destinatário.
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Link de Pagamento Externo (Opcional)</Label>
-                <Input
-                  type="url"
-                  placeholder="https://mpago.la/exemplo ou https://seu-checkout.com"
-                  value={form.payment_link}
-                  onChange={(e) => setForm({ ...form, payment_link: e.target.value })}
-                  className="rounded-xl text-sm font-mono"
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Pode ser incluído nas mensagens com a tag <code className="font-mono text-primary">&#123;link&#125;</code>.
-                </p>
-              </div>
-            </div>
-
-            {/* Preview da Chave PIX */}
-            {form.pix_key ? (
-              <div className="mt-2 p-3 rounded-xl bg-muted/40 border border-border/60 flex items-center justify-between text-xs">
-                <div className="space-y-0.5">
-                  <span className="font-semibold text-foreground flex items-center gap-1.5">
-                    <QrCode className="size-3.5 text-emerald-400" />
-                    Preview no WhatsApp:
-                  </span>
-                  <p className="font-mono text-muted-foreground text-[11px]">
-                    PIX ({form.pix_key_type?.toUpperCase()}): {form.pix_key}
-                    {form.pix_holder ? ` • Titular: ${form.pix_holder}` : ""}
+                  <p className="text-[11px] text-muted-foreground">
+                    Aparece na mensagem para o cliente saber o nome do recebedor antes de transferir.
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopyPix}
-                  className="h-7 text-xs gap-1 shadow-sm"
-                >
-                  {copiedPix ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
-                  {copiedPix ? "Copiado!" : "Testar Chave"}
-                </Button>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
 
-        {/* Seção 2: Gateways Automáticos (Mercado Pago e Asaas) */}
-        <div className="grid gap-6 sm:grid-cols-2">
-          {/* Mercado Pago */}
-          <Card className="surface-card border-border/60 flex flex-col justify-between">
-            <div>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Wallet className="size-4 text-sky-400" /> Mercado Pago
-                  </CardTitle>
-                  <Badge variant="outline" className="text-xs text-sky-400 border-sky-400/30">
-                    Baixa Automática
-                  </Badge>
-                </div>
-                <CardDescription>
-                  Gera cobranças dinâmicas do Mercado Pago com baixa instantânea e renovação direta no Sigma.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold flex items-center gap-1">
-                    <Lock className="size-3 text-muted-foreground" /> Access Token de Produção
-                  </Label>
+                  <Label className="text-xs font-semibold">Link de Pagamento Opcional</Label>
                   <Input
-                    type="password"
-                    placeholder="APP_USR-..."
+                    type="url"
+                    placeholder="https://nubank.com.br/cobrar/... ou link do seu banco"
+                    value={form.payment_link}
+                    onChange={(e) => setForm({ ...form, payment_link: e.target.value })}
+                    className="rounded-xl text-sm font-mono"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Caso queira enviar um link direto do seu banco além da chave PIX.
+                  </p>
+                </div>
+              </div>
+
+              {/* Preview em Tempo Real */}
+              {form.pix_key ? (
+                <div className="mt-3 p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+                  <div className="space-y-0.5">
+                    <span className="font-semibold text-emerald-400 flex items-center gap-1.5">
+                      <QrCode className="size-3.5" />
+                      Como os clientes verão no WhatsApp:
+                    </span>
+                    <p className="font-mono text-muted-foreground text-[11px]">
+                      PIX ({form.pix_key_type?.toUpperCase()}): <strong className="text-foreground">{form.pix_key}</strong>
+                      {form.pix_holder ? ` • Titular: ${form.pix_holder}` : ""}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyPix}
+                    className="h-8 text-xs gap-1.5 shrink-0 self-start sm:self-auto border-emerald-500/30 hover:bg-emerald-500/10"
+                  >
+                    {copiedPix ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                    {copiedPix ? "Chave Copiada!" : "Testar Cópia"}
+                  </Button>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* -------------------------------------------------------------------------------- */}
+        {/* VISÃO CONDICIONAL 2: SOMENTE MERCADO PAGO                                         */}
+        {/* -------------------------------------------------------------------------------- */}
+        {activeProvider === "mercadopago" && (
+          <Card className="surface-card border-sky-500/30 shadow-sm animate-in fade-in duration-200">
+            <CardHeader className="pb-3 border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
+                    <Wallet className="size-5 text-sky-400" />
+                    Mercado Pago (Renovação Automática no Sigma)
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Basta colar seu Access Token. O sistema gera cobranças e renova o acesso no Sigma na hora!
+                  </CardDescription>
+                </div>
+                <Badge className="bg-sky-500/10 text-sky-400 border-sky-500/30 text-xs">
+                  Automático
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5 pt-4">
+              {/* Campo do Token do Mercado Pago */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5">
+                    <Lock className="size-3.5 text-sky-400" />
+                    Access Token de Produção do Mercado Pago *
+                  </Label>
+                  <a
+                    href="https://www.mercadopago.com.br/developers/panel/app"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    Onde pegar meu Token? <ExternalLink className="size-3" />
+                  </a>
+                </div>
+                <div className="relative flex items-center">
+                  <Input
+                    type={showMpToken ? "text" : "password"}
+                    placeholder="APP_USR-0000000000000000-000000-..."
                     value={form.mercadopago_token}
                     onChange={(e) => {
                       setForm({ ...form, mercadopago_token: e.target.value });
                       setMpStatus(null);
                     }}
-                    className="rounded-xl text-sm font-mono"
+                    className="rounded-xl font-mono text-sm pr-20"
+                    required={activeProvider === "mercadopago"}
                   />
-                  <div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground">
-                    <span>Credencial da sua aplicação Mercado Pago.</span>
-                    <a
-                      href="https://www.mercadopago.com.br/developers/panel/app"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-primary hover:underline flex items-center gap-0.5"
+                  <div className="absolute right-1 flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowMpToken(!showMpToken)}
+                      className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                      title={showMpToken ? "Ocultar" : "Mostrar"}
                     >
-                      Obter Token <ExternalLink className="size-3" />
-                    </a>
+                      {showMpToken ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                    </Button>
                   </div>
                 </div>
+              </div>
 
-                {/* Status do Teste do Mercado Pago */}
+              {/* Botão de Teste de Conexão */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestMercadoPago}
+                  disabled={testingMp || !form.mercadopago_token}
+                  className="gap-2 font-medium text-xs border-sky-500/30 hover:bg-sky-500/10 text-sky-400"
+                >
+                  {testingMp ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5" />}
+                  Testar Conexão com Mercado Pago
+                </Button>
+
                 {mpStatus ? (
                   <div
-                    className={`p-2.5 rounded-lg border text-xs flex items-start gap-2 ${
+                    className={`p-2 px-3 rounded-lg border text-xs flex items-center gap-2 flex-1 ${
                       mpStatus.ok
                         ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
                         : "bg-rose-500/10 border-rose-500/30 text-rose-400"
                     }`}
                   >
                     {mpStatus.ok ? (
-                      <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="size-4 shrink-0" />
                     ) : (
-                      <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                      <AlertCircle className="size-4 shrink-0" />
                     )}
                     <span className="leading-snug">{mpStatus.message}</span>
                   </div>
                 ) : null}
-              </CardContent>
-            </div>
+              </div>
 
-            <div className="p-6 pt-0">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleTestMercadoPago}
-                disabled={testingMp || !form.mercadopago_token}
-                className="w-full text-xs gap-1.5"
-              >
-                {testingMp ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5 text-sky-400" />}
-                Testar Conexão Mercado Pago
-              </Button>
-            </div>
-          </Card>
-
-          {/* Asaas */}
-          <Card className="surface-card border-border/60 flex flex-col justify-between">
-            <div>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Building className="size-4 text-emerald-400" /> Asaas
-                  </CardTitle>
-                  <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-400/30">
-                    Cobranças & PIX
-                  </Badge>
+              {/* Passo a Passo: URL do Webhook */}
+              <div className="rounded-xl bg-muted/40 border border-border/60 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-foreground font-semibold text-xs">
+                  <Sparkles className="size-4 text-amber-400" />
+                  Como ativar a renovação automática no Sigma quando o cliente pagar:
                 </div>
-                <CardDescription>
-                  Emita cobranças completas via Asaas com split, boletos e PIX com confirmação automática.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold flex items-center gap-1">
-                    <Lock className="size-3 text-muted-foreground" /> Chave de API (Token Asaas)
-                  </Label>
+                <p className="text-xs text-muted-foreground">
+                  No painel do <strong>Mercado Pago Developers</strong>, vá em <strong>Webhooks</strong> e cole o endereço abaixo marcando o evento <strong>Pagamentos (payments)</strong>:
+                </p>
+
+                <div className="flex items-center gap-2">
                   <Input
-                    type="password"
-                    placeholder="$aact_..."
-                    value={form.asaas_token}
-                    onChange={(e) => {
-                      setForm({ ...form, asaas_token: e.target.value });
-                      setAsaasStatus(null);
-                    }}
-                    className="rounded-xl text-sm font-mono"
+                    readOnly
+                    value={mpWebhookUrl}
+                    className="font-mono text-xs bg-background/80 rounded-xl"
                   />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCopyWebhook(mpWebhookUrl)}
+                    className="shrink-0 text-xs gap-1.5 h-9"
+                  >
+                    {copiedWebhook ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
+                    {copiedWebhook ? "Copiado!" : "Copiar Webhook"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* -------------------------------------------------------------------------------- */}
+        {/* VISÃO CONDICIONAL 3: SOMENTE ASAAS                                               */}
+        {/* -------------------------------------------------------------------------------- */}
+        {activeProvider === "asaas" && (
+          <Card className="surface-card border-primary/30 shadow-sm animate-in fade-in duration-200">
+            <CardHeader className="pb-3 border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
+                    <Building className="size-5 text-primary" />
+                    Configuração do Asaas
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Emita cobranças via Asaas com baixa automática por webhook.
+                  </CardDescription>
+                </div>
+                <Badge className="bg-primary/10 text-primary border-primary/30 text-xs">
+                  Asaas API
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5">
+                    <Lock className="size-3.5 text-primary" /> Chave de API (Token Asaas) *
+                  </Label>
+                  <div className="relative flex items-center">
+                    <Input
+                      type={showAsaasToken ? "text" : "password"}
+                      placeholder="$aact_YTU5YTE0M2M6N2Z..."
+                      value={form.asaas_token}
+                      onChange={(e) => {
+                        setForm({ ...form, asaas_token: e.target.value });
+                        setAsaasStatus(null);
+                      }}
+                      className="rounded-xl font-mono text-sm pr-10"
+                      required={activeProvider === "asaas"}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAsaasToken(!showAsaasToken)}
+                      className="absolute right-1 size-7 text-muted-foreground hover:text-foreground"
+                    >
+                      {showAsaasToken ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
@@ -534,64 +634,65 @@ function PagamentosPage() {
                       setAsaasStatus(null);
                     }}
                   >
-                    <SelectTrigger className="rounded-xl text-xs">
+                    <SelectTrigger className="rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="production">Produção (Ambiente Real)</SelectItem>
+                      <SelectItem value="production">Produção (Real)</SelectItem>
                       <SelectItem value="sandbox">Sandbox (Testes)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
 
-                {/* Status do Teste do Asaas */}
+              {/* Testar Conexão Asaas */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestAsaas}
+                  disabled={testingAsaas || !form.asaas_token}
+                  className="gap-2 font-medium text-xs border-primary/30 hover:bg-primary/10 text-primary"
+                >
+                  {testingAsaas ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5" />}
+                  Testar Conexão com Asaas
+                </Button>
+
                 {asaasStatus ? (
                   <div
-                    className={`p-2.5 rounded-lg border text-xs flex items-start gap-2 ${
+                    className={`p-2 px-3 rounded-lg border text-xs flex items-center gap-2 flex-1 ${
                       asaasStatus.ok
                         ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
                         : "bg-rose-500/10 border-rose-500/30 text-rose-400"
                     }`}
                   >
                     {asaasStatus.ok ? (
-                      <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="size-4 shrink-0" />
                     ) : (
-                      <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                      <AlertCircle className="size-4 shrink-0" />
                     )}
                     <span className="leading-snug">{asaasStatus.message}</span>
                   </div>
                 ) : null}
-              </CardContent>
-            </div>
-
-            <div className="p-6 pt-0">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleTestAsaas}
-                disabled={testingAsaas || !form.asaas_token}
-                className="w-full text-xs gap-1.5"
-              >
-                {testingAsaas ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5 text-emerald-400" />}
-                Testar Conexão Asaas
-              </Button>
-            </div>
+              </div>
+            </CardContent>
           </Card>
-        </div>
+        )}
 
-        {/* Rodapé com botão de salvar */}
-        <div className="flex items-center justify-between pt-3 border-t border-border/50">
-          <p className="text-xs text-muted-foreground">
-            Todas as alterações são salvas com criptografia e sincronizadas com a régua de cobrança.
+        {/* Rodapé com botão principal de Salvar */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-border/60">
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <Info className="size-4 text-primary shrink-0" />
+            As alterações são salvas com criptografia e sincronizadas com a régua de cobrança.
           </p>
           <Button
             type="submit"
             disabled={save.isPending}
-            className="gap-1.5 font-semibold bg-primary text-primary-foreground shadow-md px-6 hover-lift"
+            className="gap-2 font-semibold bg-primary text-primary-foreground shadow-md px-6 hover-lift"
           >
             {save.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
-            Salvar Formas de Pagamento
+            Salvar Forma de Pagamento
           </Button>
         </div>
       </form>
