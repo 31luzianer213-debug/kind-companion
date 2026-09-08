@@ -54,20 +54,3 @@ export const generateTrialQuick = createServerFn({ method: "POST" })
     return res;
   });
 
-/** Configura o webhook automaticamente na Evolution API da VPS com 1 clique */
-export const autoConfigureEvolutionWebhook = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: { webhookUrl: string }) => input)
-  .handler(async ({ data, context }) => {
-    const { setInstanceWebhook } = await import("./evolution.server");
-    try {
-      const result = await setInstanceWebhook(context.userId, data.webhookUrl);
-      return { ok: true as const, message: "Webhook configurado com sucesso na sua Evolution API!", ...result };
-    } catch (err) {
-      return {
-        ok: false as const,
-        error: err instanceof Error ? err.message : "Não foi possível configurar automaticamente.",
-      };
-    }
-  });
-

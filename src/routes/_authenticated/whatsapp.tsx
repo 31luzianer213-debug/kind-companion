@@ -249,7 +249,7 @@ function WhatsAppPage() {
             <div className="flex items-start gap-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-300">
               <Sparkles className="size-4 shrink-0 text-emerald-400 mt-0.5" />
               <div>
-                <strong className="text-emerald-200">Webhook 100% Automático:</strong> Ao ler o QR Code, a integração com sua Evolution API (<code className="font-mono text-[11px] bg-black/30 px-1 py-0.5 rounded">https://cobrancas-whatsapp.shop</code>) e o Robô de Auto-Atendimento são vinculados na hora. Nem você nem seus clientes precisam configurar nada na VPS!
+                <strong className="text-emerald-200">Conexão Inteligente:</strong> Ao escanear o QR Code, sua conta é conectada e o Robô de Atendimento já é ativado de forma 100% automática.
               </div>
             </div>
 

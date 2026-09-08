@@ -21,19 +21,14 @@ import {
   Send,
   Sparkles,
   ShieldCheck,
-  Check,
-  Copy,
   RotateCcw,
-  Zap,
   Clock,
   Package,
   Layers,
   Phone,
-  HelpCircle,
   MessageSquare,
   Smartphone,
   Server,
-  KeyRound,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/bot")({
@@ -63,9 +58,7 @@ function BotPage() {
   const saveSettings = useServerFn(saveBotSettings);
   const simulate = useServerFn(simulateBotMessage);
 
-  const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState("");
 
   // Form State
   const [form, setForm] = useState({
@@ -109,12 +102,6 @@ function BotPage() {
   });
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user?.id) setCurrentUserId(data.user.id);
-    });
-  }, []);
-
-  useEffect(() => {
     if (botData?.config) {
       setForm({
         enabled: botData.config.enabled ?? true,
@@ -132,17 +119,6 @@ function BotPage() {
       });
     }
   }, [botData]);
-
-  const webhookUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/api/public/hooks/whatsapp-bot${currentUserId ? `?userId=${currentUserId}` : ""}`
-    : "/api/public/hooks/whatsapp-bot";
-
-  function handleCopyWebhook() {
-    navigator.clipboard.writeText(webhookUrl);
-    setCopiedWebhook(true);
-    toast.success("URL do Webhook copiada para a área de transferência!");
-    setTimeout(() => setCopiedWebhook(false), 2500);
-  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -224,25 +200,6 @@ function BotPage() {
         time: "Agora",
       },
     ]);
-  }
-
-  const autoConfigWebhook = useServerFn(autoConfigureEvolutionWebhook);
-  const [configuringWebhook, setConfiguringWebhook] = useState(false);
-
-  async function handleAutoConfigureWebhook() {
-    setConfiguringWebhook(true);
-    try {
-      const res = await autoConfigWebhook({ data: { webhookUrl } });
-      if (res.ok) {
-        toast.success(res.message || "Webhook configurado com sucesso na sua Evolution API!");
-      } else {
-        toast.error(res.error || "Não foi possível configurar automaticamente. Configure manualmente pelo passo a passo.");
-      }
-    } catch {
-      toast.error("Erro ao enviar comando de configuração para a VPS.");
-    } finally {
-      setConfiguringWebhook(false);
-    }
   }
 
   return (
@@ -442,77 +399,6 @@ function BotPage() {
               </Button>
             </div>
           </form>
-
-          {/* Card 4: Webhook da Evolution API */}
-          <Card className="surface-card border-emerald-500/30 bg-emerald-500/[0.02] shadow-sm">
-            <CardHeader className="pb-3 border-b border-border/50">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-bold flex items-center gap-2 text-emerald-400">
-                  <KeyRound className="size-4" /> Webhook da Evolution API (VPS)
-                </CardTitle>
-                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]">
-                  ⚡ 100% Automático ao Ler QR Code
-                </Badge>
-              </div>
-              <CardDescription className="text-xs">
-                Sua Evolution API em <code className="font-mono text-emerald-300">https://cobrancas-whatsapp.shop</code> é configurada automaticamente pelo sistema.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-4">
-              <div className="flex items-start gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300">
-                <Sparkles className="size-4 shrink-0 text-emerald-400 mt-0.5" />
-                <div>
-                  <strong className="text-emerald-200">Zero Trabalho Manual:</strong> Ao escanear o QR Code na aba <strong>WhatsApp</strong>, o sistema registra este Webhook na Evolution da sua VPS automaticamente. Seus usuários só precisam ler o QR Code no celular e o Robô já começa a responder!
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 bg-muted/60 p-2.5 rounded-xl border border-border/60">
-                <Input
-                  readOnly
-                  value={webhookUrl}
-                  className="bg-transparent border-0 text-xs font-mono select-all focus-visible:ring-0"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleCopyWebhook}
-                  className="gap-1.5 text-xs font-semibold shrink-0"
-                >
-                  {copiedWebhook ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
-                  {copiedWebhook ? "Copiado!" : "Copiar URL"}
-                </Button>
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-xl bg-muted/30 border border-border/50">
-                <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-foreground">Sincronização Manual / Reenvio</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Caso tenha reiniciado sua VPS ou queira forçar a reativação imediata do Webhook na Evolution.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  onClick={handleAutoConfigureWebhook}
-                  disabled={configuringWebhook}
-                  className="rounded-xl gap-1.5 text-xs font-bold shrink-0 bg-primary hover:bg-primary/90 shadow-sm"
-                >
-                  <Zap className="size-3.5" />
-                  {configuringWebhook ? "Configurando na VPS..." : "Sincronizar Agora com VPS"}
-                </Button>
-              </div>
-
-              {/* Informações da VPS e Manager */}
-              <div className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/80 text-xs space-y-2">
-                <p className="font-bold text-foreground flex items-center gap-1.5">
-                  <HelpCircle className="size-3.5 text-primary" /> Painel Evolution Manager:
-                </p>
-                <p className="text-muted-foreground text-[11px] leading-relaxed">
-                  Sua Evolution API está operando no domínio <a href="https://cobrancas-whatsapp.shop/manager/" target="_blank" rel="noreferrer" className="text-primary hover:underline font-mono">https://cobrancas-whatsapp.shop/manager/</a>. O sistema gerencia as instâncias e webhooks com o evento <code className="text-emerald-400 font-mono">MESSAGES_UPSERT</code> de forma 100% autônoma.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Coluna Direita: Simulador Interativo do WhatsApp (5 colunas) */}
