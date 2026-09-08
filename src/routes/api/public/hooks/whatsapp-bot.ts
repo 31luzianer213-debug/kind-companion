@@ -1,4 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router'
+const processedMessageCache = new Set<string>();
+function isMessageAlreadyHandled(id: string): boolean {
+  if (!id) return false;
+  if (processedMessageCache.has(id)) return true;
+  processedMessageCache.add(id);
+  if (processedMessageCache.size > 2000) {
+    const first = processedMessageCache.values().next().value;
+    if (first) processedMessageCache.delete(first);
+  }
+  return false;
+}
 
 export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
   server: {
@@ -103,6 +114,11 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
           return Response.json({ ok: true, ignored: "from_me" });
         }
 
+        const msgId = String(key?.id || item?.id || "");
+        if (msgId && isMessageAlreadyHandled(msgId)) {
+          return Response.json({ ok: true, ignored: "already_processed" });
+        }
+
         // Filtra mensagens de grupo (@g.us ou @broadcast)
         const remoteJid = String(
           key?.remoteJid ||
@@ -198,14 +214,6 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
               // Envia diretamente para o destino de onde o cliente falou (suporta @lid e número normal)
               await sendViaEvolution(settings ?? {}, destinationJid, botResult.reply, targetUserId);
               console.log(`[WhatsApp Bot Webhook] Resposta enviada com sucesso para ${destinationJid}!`);
-
-              // Se for LID e tivermos telefone real mapeado, envia também para o telefone real como garantia
-              if (isLid && realPhone && realPhone !== senderPhone && realPhone.length <= 13) {
-                try {
-                  await sendViaEvolution(settings ?? {}, realPhone, botResult.reply, targetUserId);
-                  console.log(`[WhatsApp Bot Webhook] Cópia entregue no telefone real ${realPhone}!`);
-                } catch {}
-              }
             } catch (sendErr) {
               console.error("[WhatsApp Bot Webhook] Erro ao enviar resposta via Evolution:", sendErr);
             }
