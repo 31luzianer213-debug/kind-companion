@@ -210,13 +210,6 @@ export async function createTrialForBot(
     userMetaSigma?.streaming_dns?.trim() ||
     "http://karen256.top";
 
-  if (!panelUrl || (!panelToken && (!panelUser || !panelPass))) {
-    return {
-      ok: false,
-      error: "O Painel Sigma ainda não está configurado na sua conta. Acesse o menu 'Servidor Sigma' e conecte sua conta.",
-    };
-  }
-
   // 3. Gera credenciais aleatórias para o teste
   const trialUsername = Math.floor(10000000 + Math.random() * 90000000).toString();
   const trialPassword = Math.floor(100000 + Math.random() * 900000).toString();
@@ -226,27 +219,29 @@ export async function createTrialForBot(
   const expiryDate = new Date(Date.now() + hours * 60 * 60 * 1000);
   const expiryIso = expiryDate.toISOString().slice(0, 10);
 
-  // 4. Cria a linha no painel Sigma
-  try {
-    const { createSigmaCustomer } = await import("./sigma.panel");
-    const sigmaConfig: SigmaConfig = {
-      url: panelUrl,
-      token: panelToken,
-      username: panelUser,
-      password: panelPass,
-    };
+  // 4. Cria a linha no painel Sigma se as credenciais estiverem configuradas
+  if (panelUrl && (panelToken || (panelUser && panelPass))) {
+    try {
+      const { createSigmaCustomer } = await import("./sigma.panel");
+      const sigmaConfig: SigmaConfig = {
+        url: panelUrl,
+        token: panelToken,
+        username: panelUser,
+        password: panelPass,
+      };
 
-    await createSigmaCustomer(sigmaConfig, {
-      name: clientDisplayName,
-      username: trialUsername,
-      password: trialPassword,
-      phone: cleanPhone,
-      screens: 1,
-      dueDate: expiryIso,
-      notes: `Teste automático gerado via Bot WhatsApp (${hours}h)`,
-    });
-  } catch (sigmaErr) {
-    console.warn("Aviso ao criar teste no Sigma (prosseguindo com registro local):", sigmaErr);
+      await createSigmaCustomer(sigmaConfig, {
+        name: clientDisplayName,
+        username: trialUsername,
+        password: trialPassword,
+        phone: cleanPhone,
+        screens: 1,
+        dueDate: expiryIso,
+        notes: `Teste automático gerado via Bot WhatsApp (${hours}h)`,
+      });
+    } catch (sigmaErr) {
+      console.warn("Aviso ao criar teste no Sigma (prosseguindo com entrega da lista e credenciais):", sigmaErr);
+    }
   }
 
   // 5. Gera links de acesso oficiais do IPTV
