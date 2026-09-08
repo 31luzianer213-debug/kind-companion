@@ -3,16 +3,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Plug, QrCode, RefreshCw, Smartphone, Unplug } from "lucide-react";
+import { Loader2, Plug, QrCode, RefreshCw, Smartphone, Unplug, CheckCircle2, MessageCircle, Eye, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { TEMPLATE_VARS } from "@/lib/format";
+import { TEMPLATE_VARS, renderTemplate } from "@/lib/format";
 import {
   connectWhatsApp,
   disconnectWhatsApp,
   getWhatsAppStatus,
   sendWhatsAppMessage,
 } from "@/lib/whatsapp.functions";
-import { syncSigmaClients, testSigmaConnection } from "@/lib/sigma.functions";
+import { getSigmaSettings, saveSigmaSettings, syncSigmaClients, testSigmaConnection } from "@/lib/sigma.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   head: () => ({
@@ -97,6 +96,63 @@ const stateLabels: Record<string, { label: string; tone: string }> = {
   none: { label: "Sem sessão", tone: "bg-muted text-muted-foreground border-border" },
 };
 
+function WhatsAppSimulator({
+  template,
+  businessName,
+  pixKey,
+}: {
+  template: string;
+  businessName: string;
+  pixKey: string;
+}) {
+  const rendered = renderTemplate(template, {
+    nome: "Carlos Silva",
+    telefone: "(11) 98765-4321",
+    valor: "R$ 35,00",
+    vencimento: "15/10/2026",
+    dias: "2",
+    lista: "Servidor Ouro 4K",
+    servidor: "http://iptv-turbo.com:8080",
+    usuario: "carlos_silva",
+    senha: "px876543",
+    telas: "2",
+    empresa: businessName || "IPTV Manager",
+    pix: pixKey || "12345678900",
+    titular: "Revendedor Oficial",
+    link: "https://pagamento.com/fatura/123",
+  });
+
+  return (
+    <div className="rounded-2xl border border-border/80 bg-zinc-950 p-4 text-white shadow-xl">
+      <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="grid h-8 w-8 place-items-center rounded-full bg-emerald-600 text-xs font-bold text-white">
+            {businessName ? businessName[0]?.toUpperCase() : "R"}
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <p className="text-xs font-bold text-white">{businessName || "Minha Revenda"}</p>
+              <CheckCircle2 className="h-3 w-3 text-blue-400 fill-blue-400" />
+            </div>
+            <p className="text-[10px] text-emerald-400 font-mono">online</p>
+          </div>
+        </div>
+        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-zinc-300 font-medium">
+          Prévia WhatsApp
+        </span>
+      </div>
+
+      <div className="rounded-2xl bg-[#005c4b] p-3.5 text-xs text-white shadow-md relative max-w-[95%] ml-auto rounded-tr-none">
+        <p className="whitespace-pre-wrap leading-relaxed font-sans">{rendered}</p>
+        <div className="flex items-center justify-end gap-1 mt-2 text-[10px] text-white/70">
+          <span>12:45</span>
+          <span className="text-blue-300 font-bold">✓✓</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Configuracoes() {
   const queryClient = useQueryClient();
   const send = useServerFn(sendWhatsAppMessage);
@@ -109,26 +165,85 @@ function Configuracoes() {
   const [qr, setQr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sigmaBusy, setSigmaBusy] = useState(false);
+  const [templateTab, setTemplateTab] = useState<"message" | "overdue" | "welcome">("message");
   const testSigma = useServerFn(testSigmaConnection);
   const syncSigma = useServerFn(syncSigmaClients);
+  const saveSigma = useServerFn(saveSigmaSettings);
+  const getSigma = useServerFn(getSigmaSettings);
+  const [savingSigma, setSavingSigma] = useState(false);
+
+  function insertVariable(key: string) {
+    const token = `{${key}}`;
+    if (templateTab === "message") {
+      setForm((f) => ({ ...f, message_template: (f.message_template ? f.message_template + " " : "") + token }));
+    } else if (templateTab === "overdue") {
+      setForm((f) => ({ ...f, overdue_template: (f.overdue_template ? f.overdue_template + " " : "") + token }));
+    } else {
+      setForm((f) => ({ ...f, welcome_template: (f.welcome_template ? f.welcome_template + " " : "") + token }));
+    }
+    toast.info(`Variável {${key}} inserida no modelo.`);
+  }
 
   async function testarPainel() {
+    if (!form.sigma_url || !form.sigma_username || !form.sigma_password) {
+      toast.warning("Preencha o endereço, usuário e senha do painel para testar.");
+      return;
+    }
     setSigmaBusy(true);
-    const result = await testSigma({ data: {} });
+    const result = await testSigma({
+      data: {
+        url: form.sigma_url,
+        username: form.sigma_username,
+        password: form.sigma_password,
+      },
+    });
     setSigmaBusy(false);
-    if (result.ok) toast.success(`Conectado com o painel!`);
-    else toast.error(result.error ?? "Não foi possível conectar.");
+    if (result.ok) {
+      toast.success("Conexão com o painel Sigma realizada com sucesso!");
+    } else {
+      toast.error(result.error ?? "Não foi possível conectar ao painel.");
+    }
   }
 
   async function sincronizarPainel() {
     setSigmaBusy(true);
-    const result = await syncSigma({ data: {} });
+    const result = await syncSigma({
+      data: {
+        url: form.sigma_url,
+        username: form.sigma_username,
+        password: form.sigma_password,
+      },
+    });
     setSigmaBusy(false);
     if (result.ok) {
-      toast.success(`${result.created} novos e ${result.updated} atualizados.`);
+      toast.success(`${result.created} novos e ${result.updated} atualizados pelo painel.`);
       queryClient.invalidateQueries();
     } else {
       toast.error(result.error ?? "Falha ao sincronizar.");
+    }
+  }
+
+  async function salvarPainelSigma() {
+    setSavingSigma(true);
+    try {
+      const res = await saveSigma({
+        data: {
+          sigma_url: form.sigma_url,
+          sigma_username: form.sigma_username,
+          sigma_password: form.sigma_password,
+          sigma_enabled: form.sigma_enabled,
+          sigma_auto_renew: form.sigma_auto_renew,
+        },
+      });
+      if (res.ok) {
+        toast.success("Configurações do Painel Sigma salvas com sucesso!");
+        queryClient.invalidateQueries({ queryKey: ["sigma-settings"] });
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-settings"] });
+      }
+    } catch {
+      toast.error("Erro ao salvar configurações do Sigma.");
+    } finally {
+      setSavingSigma(false);
     }
   }
 
@@ -137,6 +252,14 @@ function Configuracoes() {
     queryFn: async () => {
       const { data } = await supabase.from("whatsapp_settings").select("*").maybeSingle();
       return data;
+    },
+  });
+
+  const sigmaQuery = useQuery({
+    queryKey: ["sigma-settings"],
+    queryFn: async () => {
+      const res = await getSigma({});
+      return res.ok ? res.settings : null;
     },
   });
 
@@ -154,32 +277,32 @@ function Configuracoes() {
   }, [state]);
 
   useEffect(() => {
-    if (data) {
-      setForm({
-        business_name: data.business_name ?? "",
-        overdue_template: data.overdue_template ?? defaults.overdue_template,
-        welcome_template: data.welcome_template ?? defaults.welcome_template,
-        pix_key: data.pix_key ?? "",
-        pix_key_type: data.pix_key_type ?? "aleatoria",
-        pix_holder: data.pix_holder ?? "",
-        payment_link: data.payment_link ?? "",
-        payment_provider: data.payment_provider ?? "pix",
-        mercadopago_token: data.mercadopago_token ?? "",
-        asaas_token: data.asaas_token ?? "",
-        asaas_env: data.asaas_env ?? "production",
-        message_template: data.message_template,
-        sigma_url: data.sigma_url ?? "",
-        sigma_username: (data as any).sigma_username ?? "",
-        sigma_password: (data as any).sigma_password ?? "",
-        sigma_enabled: data.sigma_enabled ?? false,
-        sigma_auto_renew: data.sigma_auto_renew ?? false,
-        reminder_days_before: data.reminder_days_before,
-        send_on_due_day: data.send_on_due_day,
-        overdue_reminder: data.overdue_reminder,
-        auto_send_enabled: data.auto_send_enabled,
-      });
+    if (data || sigmaQuery.data) {
+      setForm((prev) => ({
+        business_name: data?.business_name ?? prev.business_name,
+        overdue_template: data?.overdue_template ?? prev.overdue_template,
+        welcome_template: data?.welcome_template ?? prev.welcome_template,
+        pix_key: data?.pix_key ?? prev.pix_key,
+        pix_key_type: data?.pix_key_type ?? prev.pix_key_type,
+        pix_holder: data?.pix_holder ?? prev.pix_holder,
+        payment_link: data?.payment_link ?? prev.payment_link,
+        payment_provider: data?.payment_provider ?? prev.payment_provider,
+        mercadopago_token: data?.mercadopago_token ?? prev.mercadopago_token,
+        asaas_token: data?.asaas_token ?? prev.asaas_token,
+        asaas_env: data?.asaas_env ?? prev.asaas_env,
+        message_template: data?.message_template ?? prev.message_template,
+        sigma_url: sigmaQuery.data?.sigma_url || data?.sigma_url || prev.sigma_url,
+        sigma_username: sigmaQuery.data?.sigma_username || (data as any)?.sigma_username || prev.sigma_username,
+        sigma_password: sigmaQuery.data?.sigma_password || (data as any)?.sigma_password || prev.sigma_password,
+        sigma_enabled: sigmaQuery.data?.sigma_enabled ?? data?.sigma_enabled ?? prev.sigma_enabled,
+        sigma_auto_renew: sigmaQuery.data?.sigma_auto_renew ?? data?.sigma_auto_renew ?? prev.sigma_auto_renew,
+        reminder_days_before: data?.reminder_days_before ?? prev.reminder_days_before,
+        send_on_due_day: data?.send_on_due_day ?? prev.send_on_due_day,
+        overdue_reminder: data?.overdue_reminder ?? prev.overdue_reminder,
+        auto_send_enabled: data?.auto_send_enabled ?? prev.auto_send_enabled,
+      }));
     }
-  }, [data]);
+  }, [data, sigmaQuery.data]);
 
   const save = useMutation({
     mutationFn: async (values: Settings): Promise<{ skipped: string[] }> => {
@@ -191,10 +314,22 @@ function Configuracoes() {
         return m?.[1] ?? null;
       };
 
-      // 1ª tentativa: salva tudo (inclui sigma_username/sigma_password).
-      // Se o banco de produção ainda não tem a coluna nova, o PostgREST
-      // rejeita o upsert inteiro (PGRST204). Nesse caso removemos só a
-      // coluna ausente e tentamos de novo para não perder o restante.
+      // Salva as credenciais do Sigma de forma blindada (banco + user_metadata)
+      try {
+        await saveSigma({
+          data: {
+            sigma_url: values.sigma_url,
+            sigma_username: values.sigma_username,
+            sigma_password: values.sigma_password,
+            sigma_enabled: values.sigma_enabled,
+            sigma_auto_renew: values.sigma_auto_renew,
+          },
+        });
+      } catch {
+        // segue para salvar o restante
+      }
+
+      // 1ª tentativa: salva tudo (inclui sigma_username/sigma_password se a coluna existir).
       const attempt: Record<string, unknown> = { ...payload };
       for (let i = 0; i < 5; i++) {
         const { error } = await supabase
@@ -214,14 +349,15 @@ function Configuracoes() {
       throw new Error("Não foi possível salvar. Tente novamente.");
     },
     onSuccess: (result) => {
-      if (result.skipped.length > 0) {
-        toast.warning(
-          `Salvei o restante, mas não gravei (${result.skipped.join(", ")}): o banco ainda não tem essa coluna. Rode a migration 20260906000000_sigma_user_pass.sql no Supabase e salve de novo.`,
-        );
+      // Ignora aviso de coluna sigma se foi preservado pelo saveSigma
+      const nonSigmaSkipped = result.skipped.filter((c) => !c.startsWith("sigma_"));
+      if (nonSigmaSkipped.length > 0) {
+        toast.warning(`Salvei o restante, mas não gravei (${nonSigmaSkipped.join(", ")}) no banco.`);
       } else {
-        toast.success("Configuração salva.");
+        toast.success("Configuração salva com sucesso.");
       }
       queryClient.invalidateQueries({ queryKey: ["whatsapp-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["sigma-settings"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -278,7 +414,7 @@ function Configuracoes() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-5xl space-y-6">
       <div>
         <h1 className="text-gradient text-3xl font-bold tracking-tight">Configurações</h1>
         <p className="text-sm text-muted-foreground">
@@ -360,18 +496,28 @@ function Configuracoes() {
                       onCheckedChange={(checked) => setForm({ ...form, sigma_auto_renew: checked })}
                     />
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="outline" disabled={sigmaBusy} onClick={testarPainel}>
-                      {sigmaBusy ? <Loader2 className="size-4 animate-spin" /> : <Plug className="size-4" />}
-                      Testar conexão
+                  <div className="flex flex-wrap items-center gap-2 pt-2">
+                    <Button
+                      type="button"
+                      disabled={savingSigma}
+                      onClick={salvarPainelSigma}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                    >
+                      {savingSigma ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <CheckCircle2 className="size-4 mr-1.5" />}
+                      Salvar configurações do Sigma
                     </Button>
-                    <Button type="button" disabled={sigmaBusy} onClick={sincronizarPainel}>
-                      {sigmaBusy ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-                      Sincronizar clientes agora
+                    <Button type="button" variant="outline" disabled={sigmaBusy} onClick={testarPainel}>
+                      {sigmaBusy ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <Plug className="size-4 mr-1.5" />}
+                      Testar conexão agora
+                    </Button>
+                    <Button type="button" variant="secondary" disabled={sigmaBusy} onClick={sincronizarPainel}>
+                      {sigmaBusy ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <RefreshCw className="size-4 mr-1.5" />}
+                      Sincronizar clientes
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Salve as configurações antes de testar ou sincronizar.
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <span className="inline-block size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Você pode testar a conexão a qualquer momento para verificar o usuário e senha antes ou depois de salvar.
                   </p>
                 </>
               ) : null}
@@ -623,49 +769,140 @@ function Configuracoes() {
         </TabsContent>
 
         <TabsContent value="mensagens" className="space-y-6">
-        <Card className="surface-card">
-          <CardHeader>
-            <CardTitle className="text-base">Modelos de mensagem</CardTitle>
-            <CardDescription>Clique em uma etiqueta para ver o que ela preenche.</CardDescription>
-            <div className="flex flex-wrap gap-1.5 pt-2">
-              {TEMPLATE_VARS.map((v) => (
-                <span
-                  key={v.key}
-                  title={v.label}
-                  className="rounded-full border border-border bg-background/60 px-2 py-0.5 font-mono text-[11px] text-muted-foreground"
-                >
-                  {"{" + v.key + "}"}
-                </span>
-              ))}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Aviso antes do vencimento</Label>
-              <Textarea
-                rows={4}
-                value={form.message_template}
-                onChange={(e) => setForm({ ...form, message_template: e.target.value })}
+          <div className="grid gap-6 lg:grid-cols-5">
+            {/* Editor de Templates (3 colunas) */}
+            <Card className="surface-card lg:col-span-3">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-primary" /> Modelos de Mensagens
+                </CardTitle>
+                <CardDescription>
+                  Personalize as mensagens automáticas. Clique nas tags abaixo para inseri-las no texto.
+                </CardDescription>
+
+                {/* Tags Clicáveis */}
+                <div className="flex flex-wrap gap-1.5 pt-2">
+                  {TEMPLATE_VARS.map((v) => (
+                    <button
+                      key={v.key}
+                      type="button"
+                      title={`Clique para inserir: ${v.label}`}
+                      onClick={() => insertVariable(v.key)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-card px-2 py-1 font-mono text-[11px] font-semibold text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/40 transition-all cursor-pointer shadow-xs active:scale-95"
+                    >
+                      <Sparkles className="h-2.5 w-2.5 text-primary" />
+                      {"{" + v.key + "}"}
+                    </button>
+                  ))}
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4 pt-1">
+                {/* Seletor de Qual Template está Editando */}
+                <div className="flex rounded-xl bg-muted p-1 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setTemplateTab("message")}
+                    className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all ${
+                      templateTab === "message"
+                        ? "bg-card shadow-sm text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Lembrete Pré-Vencimento
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTemplateTab("overdue")}
+                    className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all ${
+                      templateTab === "overdue"
+                        ? "bg-card shadow-sm text-destructive"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Cobrança Atrasada
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTemplateTab("welcome")}
+                    className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all ${
+                      templateTab === "welcome"
+                        ? "bg-card shadow-sm text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Boas-Vindas & Acesso
+                  </button>
+                </div>
+
+                {templateTab === "message" && (
+                  <div className="space-y-2 animate-in fade-in duration-200">
+                    <Label className="text-xs font-semibold">Lembrete Antes do Vencimento</Label>
+                    <Textarea
+                      rows={6}
+                      value={form.message_template}
+                      onChange={(e) => setForm({ ...form, message_template: e.target.value })}
+                      className="rounded-xl resize-none font-sans"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Enviada {form.reminder_days_before} dias antes do vencimento da mensalidade.
+                    </p>
+                  </div>
+                )}
+
+                {templateTab === "overdue" && (
+                  <div className="space-y-2 animate-in fade-in duration-200">
+                    <Label className="text-xs font-semibold text-destructive">Mensagem de Cobrança em Atraso</Label>
+                    <Textarea
+                      rows={6}
+                      value={form.overdue_template}
+                      onChange={(e) => setForm({ ...form, overdue_template: e.target.value })}
+                      className="rounded-xl resize-none font-sans"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Enviada para clientes com pagamento vencido.
+                    </p>
+                  </div>
+                )}
+
+                {templateTab === "welcome" && (
+                  <div className="space-y-2 animate-in fade-in duration-200">
+                    <Label className="text-xs font-semibold text-primary">Boas-Vindas com Dados de Acesso</Label>
+                    <Textarea
+                      rows={8}
+                      value={form.welcome_template}
+                      onChange={(e) => setForm({ ...form, welcome_template: e.target.value })}
+                      className="rounded-xl resize-none font-sans font-mono text-xs"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Enviada ao clicar em "Enviar Acesso" no cadastro do cliente.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Simulador WhatsApp em Tempo Real (2 colunas) */}
+            <div className="lg:col-span-2 space-y-3">
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <Eye className="h-3.5 w-3.5 text-emerald-500" /> WhatsApp Live Simulator
+              </div>
+              <WhatsAppSimulator
+                template={
+                  templateTab === "message"
+                    ? form.message_template
+                    : templateTab === "overdue"
+                      ? form.overdue_template
+                      : form.welcome_template
+                }
+                businessName={form.business_name}
+                pixKey={form.pix_key}
               />
+              <p className="text-[11px] text-muted-foreground text-center">
+                Os dados acima são simulados para ilustrar como o cliente visualizará a mensagem real.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label>Mensagem para quem está atrasado</Label>
-              <Textarea
-                rows={4}
-                value={form.overdue_template}
-                onChange={(e) => setForm({ ...form, overdue_template: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Boas-vindas com os dados de acesso</Label>
-              <Textarea
-                rows={7}
-                value={form.welcome_template}
-                onChange={(e) => setForm({ ...form, welcome_template: e.target.value })}
-              />
-            </div>
-          </CardContent>
-        </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="automacao" className="space-y-6">

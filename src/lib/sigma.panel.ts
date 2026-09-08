@@ -1,10 +1,7 @@
 /**
  * Cliente HTTP do painel IPTV Sigma (somente servidor).
- *
- * O painel varia de instalação para instalação, então este módulo tenta
- * descobrir sozinho os endpoints de login e de listagem, normaliza as
- * respostas para o formato interno do app e devolve erros descritivos
- * em português (para facilitar o suporte quando algo der errado).
+ * Reconstruído do zero com arquitetura adaptativa, suporte a ciclo de vida
+ * completo (criar, listar, renovar, bloquear e remover clientes) e diagnósticos claros.
  */
 
 export type SigmaConfig = {
@@ -22,27 +19,40 @@ export type SigmaCustomer = {
   username: string | null;
   password: string | null;
   screens: number | null;
-  /** Data de vencimento normalizada para YYYY-MM-DD. */
+  /** Data de vencimento normalizada para YYYY-MM-DD */
   dueDate: string | null;
-  /** Status em texto livre vindo do painel (active/inactive/expired/suspended). */
+  /** Status normalizado: 'active' | 'inactive' | 'expired' | 'suspended' */
   status: string | null;
+  packageId?: string | number | null;
+};
+
+export type CreateSigmaCustomerInput = {
+  name: string;
+  username: string;
+  password?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  screens?: number | null;
+  dueDate?: string | null;
+  packageId?: string | number | null;
+  notes?: string | null;
 };
 
 const REQUEST_TIMEOUT_MS = 15_000;
-const LOGIN_TIMEOUT_MS = 7_000;
+const LOGIN_TIMEOUT_MS = 8_000;
 
 export function normalizeBaseUrl(url: string): string {
   let base = (url ?? "").trim();
   if (!base) throw new Error("Informe o endereço do painel IPTV.");
-  // Remove fragmento (#/sign-in?token=...) e query de redirecionamento.
+  // Remove fragmento (#/...) e queries
   const hashIdx = base.indexOf("#");
   if (hashIdx >= 0) base = base.slice(0, hashIdx);
   const qIdx = base.indexOf("?");
   if (qIdx >= 0) base = base.slice(0, qIdx);
   if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
   base = base.replace(/\/+$/, "");
-  // Remove sufixo de tela que o usuário pode ter colado sem querer.
-  base = base.replace(/\/(#\/)?(sign-in|signin|login|logout|dashboard|painel)(\/.*)?$/i, "");
+  // Remove sufixos de páginas comuns coladas por engano
+  base = base.replace(/\/(#\/)?(sign-in|signin|login|logout|dashboard|painel|admin)(\/.*)?$/i, "");
   return base.replace(/\/+$/, "");
 }
 
@@ -71,8 +81,10 @@ async function requestJson(
 ): Promise<HttpResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const url = `${base}${path.startsWith("/") ? "" : "/"}${path}`;
+
   try {
-    const response = await fetch(`${base}${path}`, { ...init, signal: controller.signal });
+    const response = await fetch(url, { ...init, signal: controller.signal });
     const text = await response.text();
     let payload: any = null;
     try {
@@ -83,9 +95,9 @@ async function requestJson(
     return { ok: response.ok, status: response.status, payload, text, headers: response.headers };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(`O painel demorou mais de ${Math.round(timeoutMs / 1000)}s para responder. Verifique a URL.`);
+      throw new Error(`O painel demorou mais de ${Math.round(timeoutMs / 1000)}s para responder (${url}).`);
     }
-    throw new Error("Não foi possível conectar ao painel. Confira a URL e tente de novo.");
+    throw new Error(`Não foi possível conectar ao painel em ${base}. Verifique a URL.`);
   } finally {
     clearTimeout(timer);
   }
@@ -93,23 +105,37 @@ async function requestJson(
 
 function withAuth(token: string, init: RequestInit = {}): RequestInit {
   const headers = new Headers(init.headers);
-  if (!headers.has("Authorization")) headers.set("Authorization", `Bearer ${token.trim()}`);
+  if (!headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token.trim()}`);
+  }
   headers.set("Accept", "application/json");
-  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
   return { ...init, headers };
 }
 
-/** Procura o token em vários formatos de resposta (header, corpo ou aninhado). */
+/** Procura token em headers ou no corpo JSON */
 function readToken(payload: any, headers: Headers): string | null {
-  const headerValue = headers.get("authorization") ?? headers.get("x-auth-token");
+  const headerValue = headers.get("authorization") ?? headers.get("x-auth-token") ?? headers.get("token");
   if (headerValue) {
     const cleaned = headerValue.replace(/^Bearer\s+/i, "").trim();
     if (cleaned.length > 5) return cleaned;
   }
+  if (!payload) return null;
+
+  if (typeof payload === "string" && payload.length > 20 && !payload.includes(" ")) {
+    return payload.trim();
+  }
+
   const scan = (value: any, depth: number): string | null => {
     if (!value || typeof value !== "object" || depth > 4) return null;
     for (const [key, val] of Object.entries(value)) {
-      if (typeof val === "string" && /token|jwt|bearer/i.test(key) && val.trim().length > 5) {
+      if (
+        typeof val === "string" &&
+        /^(token|access_token|jwt|bearer_token|auth_token|id_token)$/i.test(key) &&
+        val.trim().length > 5
+      ) {
         return val.trim();
       }
     }
@@ -119,12 +145,15 @@ function readToken(payload: any, headers: Headers): string | null {
     }
     return null;
   };
+
   return scan(payload, 0);
 }
 
 const LOGIN_ENDPOINTS = [
   "/api/login",
   "/api/auth/login",
+  "/api/v1/login",
+  "/api/v1/auth/login",
   "/api/sign-in",
   "/api/signin",
   "/api/session",
@@ -132,11 +161,9 @@ const LOGIN_ENDPOINTS = [
   "/api/token",
   "/api/auth",
   "/api/authenticate",
-  "/api/v1/login",
-  "/api/v1/auth/login",
 ];
 
-/** Faz login no painel com usuário + senha e devolve o token de acesso. */
+/** Realiza login no painel Sigma e devolve o token de acesso. */
 export async function sigmaLogin(url: string, username: string, password: string): Promise<string> {
   const base = normalizeBaseUrl(url);
   const user = (username ?? "").trim();
@@ -169,7 +196,7 @@ export async function sigmaLogin(url: string, username: string, password: string
       if (result.ok) {
         const token = readToken(result.payload, result.headers);
         if (token) return token;
-        attempts.push(`${endpoint} respondeu OK mas sem token`);
+        attempts.push(`${endpoint} respondeu OK mas sem token legível`);
         continue;
       }
       attempts.push(`${endpoint} → ${result.status}`);
@@ -179,20 +206,18 @@ export async function sigmaLogin(url: string, username: string, password: string
   const authErrors = attempts.filter((a) => /401|403|422/.test(a)).length;
   const notFound = attempts.filter((a) => /404|405/.test(a)).length;
   if (attempts.length > 0 && authErrors === attempts.length) {
-    throw new Error("Usuário ou senha do painel incorretos.");
+    throw new Error("Usuário ou senha do painel Sigma incorretos.");
   }
   if (attempts.length > 0 && notFound === attempts.length) {
     throw new Error(
-      `Não encontrei uma API de login em ${base}. Confira se o endereço digitado é o painel correto (ex.: https://seudominio.com.br).`,
+      `Não encontrei uma API de login em ${base}. Confira se o endereço é o painel de revenda correto (ex.: https://painel.sigma.st).`,
     );
   }
-  const sample = attempts.slice(0, 5).join(" • ");
-  throw new Error(`Não foi possível autenticar no painel (${sample || "sem resposta"}).`);
+  const sample = attempts.slice(0, 4).join(" • ");
+  throw new Error(`Não foi possível autenticar no painel Sigma (${sample || "sem resposta"}).`);
 }
 
-/**
- * Resolve o token de acesso: usa o salvo ou faz login com usuário + senha.
- */
+/** Garante que tenhamos um token válido para as requisições. */
 export async function ensureSigmaToken(config: SigmaConfig): Promise<string> {
   if (config.token?.trim()) return config.token.trim();
   if (config.username?.trim() && config.password?.trim()) {
@@ -201,7 +226,7 @@ export async function ensureSigmaToken(config: SigmaConfig): Promise<string> {
   throw new Error("Informe o usuário e a senha do painel Sigma.");
 }
 
-/** Faz uma chamada autenticada; se o token salvo expirou, tenta relogar uma vez. */
+/** Faz uma chamada autenticada; se receber 401, tenta refazer login uma vez. */
 async function authorizedRequest(
   config: SigmaConfig,
   path: string,
@@ -213,6 +238,7 @@ async function authorizedRequest(
     config.token?.trim() ||
     (await sigmaLogin(config.url, config.username ?? "", config.password ?? ""));
   let result = await requestJson(base, path, withAuth(token, init), timeoutMs);
+
   const canRelogin = Boolean(config.username?.trim() && config.password?.trim());
   if (!result.ok && (result.status === 401 || result.status === 403) && canRelogin) {
     token = await sigmaLogin(config.url, config.username ?? "", config.password ?? "");
@@ -221,12 +247,12 @@ async function authorizedRequest(
   return result;
 }
 
-
 // ============================================================
-// Normalização dos clientes vindos do painel
+// Utilitários de mapeamento e parsing de dados do painel
 // ============================================================
 
 function pickField(obj: any, aliases: string[]): any {
+  if (!obj || typeof obj !== "object") return null;
   for (const alias of aliases) {
     const value = alias.split(".").reduce<any>((acc, part) => (acc == null ? acc : acc[part]), obj);
     if (value !== undefined && value !== null && value !== "") return value;
@@ -252,7 +278,7 @@ function extractRows(payload: any): any[] {
 function parseDate(value: any): string | null {
   if (value === null || value === undefined || value === "") return null;
   if (typeof value === "number") {
-    const fromSeconds = new Date(value * 1000);
+    const fromSeconds = new Date(value > 1_000_000_000_000 ? value : value * 1000);
     if (!Number.isNaN(fromSeconds.getTime())) return fromSeconds.toISOString().slice(0, 10);
     return null;
   }
@@ -299,9 +325,13 @@ function mapCustomer(raw: any): SigmaCustomer | null {
       pickField(raw, ["expiration_date", "expiry_date", "expiration", "exp_date", "due_date", "expires_at", "expires", "valid_until"]),
     ),
     status: normalizeStatus(pickField(raw, ["status", "state", "is_active", "isActive"])),
+    packageId: pickField(raw, ["package_id", "packageId", "plan_id", "plan"]),
   };
 }
 
+// ============================================================
+// Métodos de Gerenciamento do Painel Sigma
+// ============================================================
 
 const LIST_ENDPOINTS = [
   "/api/customers",
@@ -313,7 +343,7 @@ const LIST_ENDPOINTS = [
   "/api/members",
 ];
 
-/** Busca todos os clientes do painel, tentando vários endpoints comuns. */
+/** Lista todos os clientes cadastrados no painel Sigma. */
 export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCustomer[]> {
   const attempts: string[] = [];
   for (const endpoint of LIST_ENDPOINTS) {
@@ -347,7 +377,7 @@ export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCust
     };
     pushRows(firstPage);
 
-    // Se o painel aceitar paginação, busca as próximas páginas.
+    // Próximas páginas se houver paginação
     for (let page = 2; page <= 50; page++) {
       const separator = endpoint.includes("?") ? "&" : "?";
       let next: HttpResult;
@@ -366,15 +396,171 @@ export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCust
   }
 
   if (attempts.every((a) => /401|403/.test(a))) {
-    throw new Error("Usuário/senha do painel incorretos ou sem permissão para listar clientes.");
+    throw new Error("Usuário ou senha do painel Sigma sem permissão para listar clientes.");
   }
   throw new Error(
-    `Não consegui listar os clientes do painel. Respostas obtidas: ${attempts.slice(0, 5).join(" • ") || "nenhuma"}.`,
+    `Não consegui listar os clientes do painel. Respostas: ${attempts.slice(0, 4).join(" • ") || "nenhuma"}.`,
   );
 }
 
+/** Cria um novo cliente / linha no painel Sigma. */
+export async function createSigmaCustomer(
+  config: SigmaConfig,
+  input: CreateSigmaCustomerInput,
+): Promise<{ id: string; username: string; password: string; raw?: any }> {
+  const username = input.username.trim();
+  const password = (input.password ?? "").trim() || Math.random().toString(36).slice(-8);
+  const name = input.name.trim();
+  const phone = input.phone ? input.phone.replace(/\D/g, "") : null;
+  const screens = input.screens && input.screens > 0 ? input.screens : 1;
+  const dueDate = input.dueDate ? parseDate(input.dueDate) : null;
 
-/** Renova (estende) o período de um cliente no painel Sigma. */
+  const candidateEndpoints = [
+    "/api/customers",
+    "/api/clients",
+    "/api/users",
+    "/api/customer/create",
+    "/api/client/create",
+    "/api/user/create",
+    "/api/user/add",
+    "/api/subscribers",
+  ];
+
+  // Variantes de payload aceitas por diferentes builds do Sigma
+  const payloadBodies = [
+    {
+      username,
+      password,
+      name,
+      phone: phone ?? "",
+      email: input.email ?? "",
+      screens,
+      max_connections: screens,
+      connections: screens,
+      due_date: dueDate ?? "",
+      expiration_date: dueDate ?? "",
+      exp_date: dueDate ?? "",
+      status: "active",
+      notes: input.notes ?? "",
+      ...(input.packageId ? { package_id: input.packageId } : {}),
+    },
+    {
+      user: username,
+      pass: password,
+      name,
+      contact: phone ?? "",
+      connections: screens,
+      expires_at: dueDate ?? "",
+      is_active: 1,
+    },
+  ];
+
+  const attempts: string[] = [];
+  for (const endpoint of candidateEndpoints) {
+    for (const body of payloadBodies) {
+      let result: HttpResult;
+      try {
+        result = await authorizedRequest(config, endpoint, {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+      } catch (error) {
+        attempts.push(`${endpoint} -> ${error instanceof Error ? error.message : "erro"}`);
+        continue;
+      }
+
+      if (result.ok) {
+        const payload = result.payload;
+        const createdId =
+          pickField(payload, [
+            "id",
+            "uuid",
+            "customer_id",
+            "client_id",
+            "user_id",
+            "data.id",
+            "data.customer_id",
+            "result.id",
+          ]) ?? username;
+
+        return {
+          id: String(createdId),
+          username,
+          password,
+          raw: payload,
+        };
+      }
+
+      const errorMsg =
+        result.payload?.message ||
+        result.payload?.error ||
+        result.payload?.msg ||
+        result.text?.slice(0, 80);
+      attempts.push(`${endpoint} (${result.status}): ${errorMsg || "falha"}`);
+    }
+  }
+
+  const sample = attempts.slice(0, 3).join(" • ");
+  throw new Error(`Falha ao criar cliente no painel Sigma. Respostas: ${sample}`);
+}
+
+/** Remove (exclui) uma linha/cliente do painel Sigma. */
+export async function deleteSigmaCustomer(
+  config: SigmaConfig,
+  ref: { id?: string | null; username?: string | null },
+): Promise<void> {
+  const id = ref.id ? String(ref.id).trim() : "";
+  const username = ref.username ? String(ref.username).trim() : "";
+  if (!id && !username) {
+    throw new Error("Identificador ou usuário do cliente não fornecido.");
+  }
+
+  const deleteAttempts: Array<{ method: string; path: string; body?: any }> = [];
+
+  // Estratégia DELETE HTTP
+  if (id) {
+    deleteAttempts.push({ method: "DELETE", path: `/api/customers/${id}` });
+    deleteAttempts.push({ method: "DELETE", path: `/api/clients/${id}` });
+    deleteAttempts.push({ method: "DELETE", path: `/api/users/${id}` });
+    deleteAttempts.push({ method: "DELETE", path: `/api/user/${id}` });
+  }
+
+  // Estratégia POST de exclusão
+  if (id) {
+    deleteAttempts.push({ method: "POST", path: `/api/customers/${id}/delete` });
+    deleteAttempts.push({ method: "POST", path: `/api/clients/${id}/delete` });
+    deleteAttempts.push({ method: "POST", path: `/api/users/${id}/delete` });
+    deleteAttempts.push({ method: "POST", path: `/api/customer/delete`, body: { id } });
+    deleteAttempts.push({ method: "POST", path: `/api/client/delete`, body: { id } });
+    deleteAttempts.push({ method: "POST", path: `/api/user/delete`, body: { id } });
+  }
+  if (username) {
+    deleteAttempts.push({ method: "POST", path: `/api/customer/delete`, body: { username } });
+    deleteAttempts.push({ method: "POST", path: `/api/client/delete`, body: { username } });
+    deleteAttempts.push({ method: "POST", path: `/api/user/delete`, body: { username } });
+    deleteAttempts.push({ method: "POST", path: `/api/users/remove`, body: { username } });
+  }
+
+  const attempts: string[] = [];
+  for (const { method, path, body } of deleteAttempts) {
+    let result: HttpResult;
+    try {
+      result = await authorizedRequest(config, path, {
+        method,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (error) {
+      attempts.push(`${method} ${path} -> erro de conexão`);
+      continue;
+    }
+    if (result.ok || result.status === 204) return;
+    attempts.push(`${method} ${path} -> ${result.status}`);
+  }
+
+  throw new Error(`Não foi possível remover no painel Sigma. Respostas: ${attempts.slice(0, 3).join(" • ")}`);
+}
+
+/** Renova a linha do cliente no painel Sigma. */
 export async function renewSigmaCustomer(
   config: SigmaConfig,
   ref: { id?: string | null; username?: string | null },
@@ -383,7 +569,7 @@ export async function renewSigmaCustomer(
   const id = ref?.id ? String(ref.id).trim() : "";
   const username = ref?.username ? String(ref.username).trim() : "";
   if (!id && !username) {
-    throw new Error("Cliente sem vínculo com o painel (falta o id ou o usuário do painel).");
+    throw new Error("Cliente sem vínculo com o painel (falta o id ou o usuário).");
   }
   const days = Math.max(1, Math.round(months * 30.44));
 
@@ -423,19 +609,57 @@ export async function renewSigmaCustomer(
     let result: HttpResult;
     try {
       result = await authorizedRequest(config, path, { method: "POST", body: JSON.stringify(body) });
-    } catch (error) {
-      attempts.push(`${path} -> erro de conexão`);
+    } catch {
+      attempts.push(`${path} -> erro de rede`);
       continue;
     }
     if (result.ok) return;
     attempts.push(`${path} -> ${result.status}`);
   }
 
-  if (attempts.length > 0 && attempts.every((a) => /401|403/.test(a))) {
-    throw new Error("Usuário/senha do painel incorretos ou sem permissão para renovar.");
-  }
-  throw new Error(
-    `O painel recusou a renovação. Respostas: ${attempts.slice(0, 5).join(" • ") || "nenhuma"}.`,
-  );
+  throw new Error(`O painel recusou a renovação. Respostas: ${attempts.slice(0, 3).join(" • ")}`);
 }
 
+/** Altera o status (bloqueia ou ativa) do cliente no painel Sigma. */
+export async function toggleSigmaCustomerStatus(
+  config: SigmaConfig,
+  ref: { id?: string | null; username?: string | null },
+  targetStatus: "active" | "blocked" | "inactive",
+): Promise<void> {
+  const id = ref?.id ? String(ref.id).trim() : "";
+  const username = ref?.username ? String(ref.username).trim() : "";
+  if (!id && !username) throw new Error("Identificador do cliente não fornecido.");
+
+  const isBlocked = targetStatus === "blocked" || targetStatus === "inactive";
+  const action = isBlocked ? "block" : "unblock";
+  const enableAction = isBlocked ? "disable" : "enable";
+
+  const calls: Array<{ method: string; path: string; body?: any }> = [];
+  if (id) {
+    calls.push({ method: "POST", path: `/api/customers/${id}/${action}` });
+    calls.push({ method: "POST", path: `/api/customers/${id}/${enableAction}` });
+    calls.push({ method: "POST", path: `/api/customers/${id}/status`, body: { status: targetStatus } });
+    calls.push({ method: "PUT", path: `/api/customers/${id}`, body: { is_active: !isBlocked, status: targetStatus } });
+  }
+  if (username) {
+    calls.push({ method: "POST", path: `/api/user/${action}`, body: { username } });
+    calls.push({ method: "POST", path: `/api/user/status`, body: { username, status: targetStatus } });
+  }
+
+  const attempts: string[] = [];
+  for (const call of calls) {
+    let result: HttpResult;
+    try {
+      result = await authorizedRequest(config, call.path, {
+        method: call.method,
+        body: call.body ? JSON.stringify(call.body) : undefined,
+      });
+    } catch {
+      continue;
+    }
+    if (result.ok) return;
+    attempts.push(`${call.path} -> ${result.status}`);
+  }
+
+  throw new Error(`Não foi possível alterar o status no painel. Respostas: ${attempts.slice(0, 3).join(" • ")}`);
+}

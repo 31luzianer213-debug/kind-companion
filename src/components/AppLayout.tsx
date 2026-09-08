@@ -1,11 +1,14 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
 import {
   Users,
   ListVideo,
@@ -17,14 +20,18 @@ import {
   X,
   Sparkles,
   MonitorPlay,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  ChevronRight,
 } from "lucide-react";
 
 const nav = [
-  { to: "/painel", label: "Painel", icon: LayoutDashboard },
-  { to: "/clientes", label: "Clientes", icon: Users },
-  { to: "/listas", label: "Listas IPTV", icon: ListVideo },
-  { to: "/cobrancas", label: "Cobranças", icon: Receipt },
-  { to: "/configuracoes", label: "WhatsApp", icon: Settings },
+  { to: "/painel", label: "Painel", icon: LayoutDashboard, badgeKey: null },
+  { to: "/clientes", label: "Clientes", icon: Users, badgeKey: "clients" },
+  { to: "/listas", label: "Listas IPTV", icon: ListVideo, badgeKey: "lists" },
+  { to: "/cobrancas", label: "Cobranças", icon: Receipt, badgeKey: "invoices" },
+  { to: "/configuracoes", label: "WhatsApp & Ajustes", icon: Settings, badgeKey: null },
 ] as const;
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -32,6 +39,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
+  const statusFn = useServerFn(getWhatsAppStatus);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
@@ -41,42 +49,123 @@ export function AppLayout({ children }: { children: ReactNode }) {
     setOpen(false);
   }, [pathname]);
 
+  // Quick counts for sidebar badges
+  const { data: counts } = useQuery({
+    queryKey: ["sidebar-counts"],
+    queryFn: async () => {
+      const [clientsRes, invoicesRes, listsRes] = await Promise.all([
+        supabase.from("clients").select("id", { count: "exact", head: true }),
+        supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "overdue"),
+        supabase.from("iptv_lists").select("id", { count: "exact", head: true }),
+      ]);
+      return {
+        clients: clientsRes.count ?? 0,
+        overdueInvoices: invoicesRes.count ?? 0,
+        lists: listsRes.count ?? 0,
+      };
+    },
+    staleTime: 30000,
+  });
+
+  // WhatsApp status
+  const { data: waStatus } = useQuery({
+    queryKey: ["layout-whatsapp-status"],
+    queryFn: () => statusFn({}),
+    staleTime: 60000,
+    refetchInterval: 120000,
+  });
+
   async function signOut() {
     await supabase.auth.signOut();
     navigate({ to: "/auth" });
   }
 
+  const isWaConnected = waStatus?.state === "open";
+
   const brand = (
-    <div className="flex items-center gap-3">
-      <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/20 ring-1 ring-primary/15">
-        <MonitorPlay className="h-[22px] w-[22px]" />
-      </span>
-      <span className="leading-none">
-        <span className="block text-[15px] font-bold tracking-tight">IPTV Manager</span>
-        <span className="block text-[11px] font-medium tracking-widest text-muted-foreground">GESTÃO PREMIUM</span>
-      </span>
-    </div>
+    <Link to="/painel" className="flex items-center gap-3 transition-opacity hover:opacity-90">
+      <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 p-2 text-primary-foreground shadow-md shadow-primary/25 ring-1 ring-primary/20">
+        <img src={logo} alt="IPTV Manager" className="h-full w-full object-contain" />
+      </div>
+      <div className="leading-none">
+        <span className="block text-[15px] font-extrabold tracking-tight text-foreground">
+          IPTV Manager
+        </span>
+        <span className="block text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+          Gestão Inteligente
+        </span>
+      </div>
+    </Link>
+  );
+
+  const whatsappBadge = (
+    <Link
+      to="/configuracoes"
+      className={cn(
+        "group flex items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-xs font-medium transition-all",
+        isWaConnected
+          ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15"
+          : "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15",
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <span className="relative flex h-2 w-2">
+          {isWaConnected && (
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+          )}
+          <span
+            className={cn(
+              "relative inline-flex h-2 w-2 rounded-full",
+              isWaConnected ? "bg-emerald-500" : "bg-amber-500",
+            )}
+          />
+        </span>
+        <span className="truncate">
+          {isWaConnected ? "WhatsApp Online" : "WhatsApp Desconectado"}
+        </span>
+      </div>
+      <ChevronRight className="h-3.5 w-3.5 opacity-60 transition-transform group-hover:translate-x-0.5" />
+    </Link>
   );
 
   const links = (
-    <nav className="flex flex-col gap-1.5">
-      <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">Menu</p>
-      {nav.map(({ to, label, icon: Icon }) => {
+    <nav className="flex flex-col gap-1">
+      <p className="mb-1.5 px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70">
+        Navegação Principal
+      </p>
+      {nav.map(({ to, label, icon: Icon, badgeKey }) => {
         const active = pathname === to || pathname.startsWith(to + "/");
+        let badgeCount: number | null = null;
+        if (badgeKey === "invoices" && (counts?.overdueInvoices ?? 0) > 0) {
+          badgeCount = counts?.overdueInvoices ?? null;
+        }
+
         return (
           <Link
             key={to}
             to={to}
             className={cn(
-              "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+              "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200",
               active
-                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                : "text-muted-foreground hover:bg-accent/80 hover:text-foreground",
             )}
           >
-            <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} />
-            {label}
-            {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary-foreground/90" />}
+            <Icon
+              className={cn(
+                "h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110",
+                active ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground",
+              )}
+            />
+            <span className="flex-1 truncate">{label}</span>
+            {badgeCount !== null && (
+              <span className="rounded-full bg-destructive/90 px-1.5 py-0.5 text-[10px] font-bold text-destructive-foreground animate-pulse">
+                {badgeCount} em atraso
+              </span>
+            )}
+            {active && badgeCount === null && (
+              <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground/90" />
+            )}
           </Link>
         );
       })}
@@ -84,64 +173,82 @@ export function AppLayout({ children }: { children: ReactNode }) {
   );
 
   const footer = (
-    <div className="mt-auto space-y-3 pt-6">
-      <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Conectado como</p>
-        <div className="mt-2 flex items-center gap-2.5">
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary ring-1 ring-primary/15">
-            {(email?.[0] ?? "?").toUpperCase()}
-          </span>
-          <p className="min-w-0 flex-1 truncate text-sm font-medium leading-none">{email ?? "..."}</p>
+    <div className="mt-auto space-y-3 pt-6 border-t border-border/40">
+      {whatsappBadge}
+
+      <div className="rounded-2xl border border-border/60 bg-card/70 p-3 shadow-sm backdrop-blur-sm">
+        <div className="flex items-center gap-2.5">
+          <div className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-xs font-bold text-primary ring-1 ring-primary/20">
+            {(email?.[0] ?? "U").toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-bold text-foreground">
+              {email ? email.split("@")[0] : "Minha Conta"}
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">{email ?? "Carregando..."}</p>
+          </div>
         </div>
-        <p className="mt-1 truncate text-xs text-muted-foreground">{email ?? ""}</p>
       </div>
-      <div className="rounded-2xl border border-primary/10 bg-primary/[0.06] p-3">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <Sparkles className="h-4 w-4 text-primary" /> Cobrança automática
-        </div>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">WhatsApp enviando sozinho todo dia às 9h.</p>
+
+      <div className="flex items-center justify-between gap-2 pt-1">
+        <ThemeToggle withLabel />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="rounded-xl text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          onClick={signOut}
+        >
+          <LogOut className="mr-1.5 h-3.5 w-3.5" /> Sair
+        </Button>
       </div>
-      <ThemeToggle withLabel />
-      <Button
-        variant="ghost"
-        className="w-full justify-start gap-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-        onClick={signOut}
-      >
-        <LogOut className="h-4 w-4" /> Sair
-      </Button>
-      <p className="px-1 text-[11px] text-muted-foreground/60">© {new Date().getFullYear()} IPTV Manager</p>
+
+      <p className="px-1 text-center text-[10px] text-muted-foreground/60">
+        © {new Date().getFullYear()} IPTV Manager Pro
+      </p>
     </div>
   );
 
   return (
-    <div className="app-aurora min-h-screen bg-background md:flex">
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border/60 bg-background/80 px-4 py-3 backdrop-blur-xl md:hidden">
+    <div className="app-aurora min-h-screen bg-background text-foreground md:flex">
+      {/* Mobile Top Header */}
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border/60 bg-background/85 px-4 py-3 backdrop-blur-xl md:hidden">
         {brand}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button variant="ghost" size="icon" onClick={() => setOpen((v) => !v)} aria-label="Menu" className="rounded-full">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setOpen((v) => !v)}
+            aria-label="Menu"
+            className="h-9 w-9 rounded-xl border-border"
+          >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
       </header>
 
+      {/* Mobile Slide-down Menu */}
       {open && (
-        <div className="border-b border-border/60 bg-sidebar/95 px-4 py-4 backdrop-blur-xl md:hidden">
+        <div className="fixed inset-x-0 top-[61px] z-30 border-b border-border/60 bg-background/95 p-4 shadow-xl backdrop-blur-xl md:hidden animate-in slide-in-from-top-2">
           {links}
           <div className="mt-4">{footer}</div>
         </div>
       )}
 
-      <aside className="sticky top-0 hidden h-[100dvh] w-[276px] shrink-0 flex-col border-r border-border/60 bg-sidebar/80 p-5 backdrop-blur-xl md:flex">
+      {/* Desktop Sticky Sidebar */}
+      <aside className="sticky top-0 hidden h-[100dvh] w-[280px] shrink-0 flex-col border-r border-border/60 bg-sidebar/85 p-5 backdrop-blur-xl md:flex">
         {brand}
-        <div className="mt-8">{links}</div>
+        <div className="mt-6 flex-1 space-y-4 overflow-y-auto subtle-scrollbar">
+          {links}
+        </div>
         {footer}
       </aside>
 
+      {/* Main Workspace Area */}
       <main className="relative min-w-0 flex-1 overflow-x-hidden overflow-y-auto subtle-scrollbar">
         <div className="pointer-events-none absolute inset-0 hidden app-grid opacity-[0.32] dark:opacity-[0.10] md:block" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent" />
-        <div className="relative flex min-h-full flex-col px-4 py-6 sm:px-6 md:px-8 md:py-9 lg:px-10">
+        <div className="relative flex min-h-full flex-col px-4 py-6 sm:px-6 md:px-8 md:py-8 lg:px-10">
           <div className="mx-auto w-full max-w-7xl flex-1">{children}</div>
         </div>
       </main>

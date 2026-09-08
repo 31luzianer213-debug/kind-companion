@@ -177,7 +177,37 @@ function AuthPage() {
     setLoading(false);
 
     if (error) {
-      toast.error(getFriendlyErrorMessage(error.message));
+      const isInvalidCredentials =
+        error.message.includes("Invalid login credentials") || error.message.includes("invalid_grant");
+      const isEmailNotConfirmed =
+        error.message.includes("Email not confirmed") || error.message.includes("not confirmed");
+
+      if (isInvalidCredentials) {
+        toast.error("E-mail ou senha incorretos.", {
+          description: "Não lembra sua senha? Clique em 'Recuperar' para receber um link.",
+          action: {
+            label: "Recuperar",
+            onClick: () => {
+              if (email.trim()) setForgotEmail(email.trim());
+              setForgotOpen(true);
+            },
+          },
+        });
+      } else if (isEmailNotConfirmed) {
+        toast.error("E-mail ainda não confirmado.", {
+          description: "Verifique sua caixa de entrada e spam, ou reenvie o e-mail.",
+          action: {
+            label: "Reenviar",
+            onClick: async () => {
+              const res = await supabase.auth.resend({ type: "signup", email: email.trim() });
+              if (res.error) toast.error(getFriendlyErrorMessage(res.error.message));
+              else toast.success("E-mail de confirmação reenviado!");
+            },
+          },
+        });
+      } else {
+        toast.error(getFriendlyErrorMessage(error.message));
+      }
       return;
     }
 
@@ -219,7 +249,24 @@ function AuthPage() {
 
     if (error) {
       setLoading(false);
-      toast.error(getFriendlyErrorMessage(error.message));
+      const isAlreadyRegistered =
+        error.message.includes("User already registered") || error.message.includes("already registered");
+
+      if (isAlreadyRegistered) {
+        toast.info("Este e-mail já possui uma conta!", {
+          description: "Redirecionamos você para a aba de login. Não lembra a senha?",
+          action: {
+            label: "Recuperar Senha",
+            onClick: () => {
+              if (email.trim()) setForgotEmail(email.trim());
+              setForgotOpen(true);
+            },
+          },
+        });
+        setTab("login");
+      } else {
+        toast.error(getFriendlyErrorMessage(error.message));
+      }
       return;
     }
 
@@ -501,6 +548,9 @@ function AuthPage() {
                       <DialogTrigger asChild>
                         <button
                           type="button"
+                          onClick={() => {
+                            if (email.trim()) setForgotEmail(email.trim());
+                          }}
                           className="text-xs font-semibold text-primary hover:underline transition-colors focus:outline-none"
                         >
                           Esqueceu a senha?
