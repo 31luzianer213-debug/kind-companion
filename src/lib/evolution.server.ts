@@ -85,3 +85,51 @@ export async function logoutInstance(userId: string) {
   await call(`/instance/logout/${instance}`, { method: "DELETE", base, key });
   return true;
 }
+
+/** Configura o webhook da instância diretamente na Evolution API na VPS */
+export async function setInstanceWebhook(userId: string, webhookUrl: string) {
+  const { base, key, instance } = evolutionConfig(userId);
+
+  const bodies = [
+    {
+      webhook: {
+        enabled: true,
+        url: webhookUrl,
+        byEvents: false,
+        base64: false,
+        events: ["MESSAGES_UPSERT", "messages.upsert"],
+      },
+    },
+    {
+      enabled: true,
+      url: webhookUrl,
+      byEvents: false,
+      base64: false,
+      events: ["MESSAGES_UPSERT", "messages.upsert"],
+    },
+  ];
+
+  let lastStatus = 0;
+  let lastRaw = "";
+
+  for (const body of bodies) {
+    const res = await call(`/webhook/set/${instance}`, {
+      method: "POST",
+      base,
+      key,
+      body: JSON.stringify(body),
+    });
+    lastStatus = res.status;
+    lastRaw = res.raw;
+    if (res.status === 200 || res.status === 201) {
+      return { ok: true, instance, message: "Webhook configurado com sucesso na VPS!" };
+    }
+  }
+
+  if (lastStatus >= 400) {
+    throw new Error(`Evolution API retornou status ${lastStatus}: ${lastRaw.slice(0, 150)}`);
+  }
+
+  return { ok: true, instance };
+}
+

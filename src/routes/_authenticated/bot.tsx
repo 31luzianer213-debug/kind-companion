@@ -226,6 +226,25 @@ function BotPage() {
     ]);
   }
 
+  const autoConfigWebhook = useServerFn(autoConfigureEvolutionWebhook);
+  const [configuringWebhook, setConfiguringWebhook] = useState(false);
+
+  async function handleAutoConfigureWebhook() {
+    setConfiguringWebhook(true);
+    try {
+      const res = await autoConfigWebhook({ data: { webhookUrl } });
+      if (res.ok) {
+        toast.success(res.message || "Webhook configurado com sucesso na sua Evolution API!");
+      } else {
+        toast.error(res.error || "Não foi possível configurar automaticamente. Configure manualmente pelo passo a passo.");
+      }
+    } catch {
+      toast.error("Erro ao enviar comando de configuração para a VPS.");
+    } finally {
+      setConfiguringWebhook(false);
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-6xl animate-in fade-in duration-300">
       {/* Top Header */}
@@ -425,16 +444,21 @@ function BotPage() {
           </form>
 
           {/* Card 4: Webhook da Evolution API */}
-          <Card className="surface-card border-primary/20 bg-primary/[0.02] shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary">
-                <KeyRound className="size-4" /> Webhook de Ativação do Robô na Evolution API
-              </CardTitle>
+          <Card className="surface-card border-primary/30 bg-primary/[0.02] shadow-sm">
+            <CardHeader className="pb-3 border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary">
+                  <KeyRound className="size-4" /> Webhook da Evolution API (Na sua VPS)
+                </CardTitle>
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px]">
+                  Evento: MESSAGES_UPSERT
+                </Badge>
+              </div>
               <CardDescription className="text-xs">
-                Para o robô responder automaticamente no WhatsApp, configure esta URL de Webhook no painel da sua Evolution API (evento: <strong>MESSAGES_UPSERT</strong>):
+                Esta é a URL que a Evolution API na sua VPS chama quando alguém manda mensagem no seu WhatsApp.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-4 space-y-4">
               <div className="flex items-center gap-2 bg-muted/60 p-2.5 rounded-xl border border-border/60">
                 <Input
                   readOnly
@@ -451,6 +475,40 @@ function BotPage() {
                   {copiedWebhook ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
                   {copiedWebhook ? "Copiado!" : "Copiar URL"}
                 </Button>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-xl bg-muted/30 border border-border/50">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-foreground">Configuração Automática em 1 Clique</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Envia o comando direto para sua Evolution API registrar o webhook na sua instância sem você precisar acessar a VPS.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleAutoConfigureWebhook}
+                  disabled={configuringWebhook}
+                  className="rounded-xl gap-1.5 text-xs font-bold shrink-0 bg-primary hover:bg-primary/90 shadow-sm"
+                >
+                  <Zap className="size-3.5" />
+                  {configuringWebhook ? "Configurando na VPS..." : "Ativar na Minha VPS"}
+                </Button>
+              </div>
+
+              {/* Passo a Passo Manual */}
+              <div className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/80 text-xs space-y-2">
+                <p className="font-bold text-foreground flex items-center gap-1.5">
+                  <HelpCircle className="size-3.5 text-primary" /> Como configurar manualmente no painel da Evolution:
+                </p>
+                <ol className="list-decimal list-inside space-y-1 text-muted-foreground text-[11px] leading-relaxed">
+                  <li>Acesse o painel da sua Evolution API no navegador (ex: <code className="text-primary font-mono">http://IP-DA-VPS:8080/manager</code>).</li>
+                  <li>Clique na sua instância de WhatsApp conectada.</li>
+                  <li>Abra a aba <strong>Webhook</strong>.</li>
+                  <li>Marque a opção <strong>Enabled (Ativado)</strong> como Sim/True.</li>
+                  <li>No campo <strong>URL do Webhook</strong>, cole o link copiado acima.</li>
+                  <li>Em <strong>Eventos (Events)</strong>, selecione: <code className="text-emerald-400 font-mono">MESSAGES_UPSERT</code> (ou <code className="text-emerald-400 font-mono">messages.upsert</code>).</li>
+                  <li>Clique em <strong>Salvar (Save)</strong>. Pronto! O bot responderá a todas as mensagens instantaneamente.</li>
+                </ol>
               </div>
             </CardContent>
           </Card>
