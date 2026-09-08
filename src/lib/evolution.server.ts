@@ -133,9 +133,12 @@ export async function connectInstance(userId: string, publicAppUrl?: string) {
   return { state: "connecting" as const, qr: extractQr(connected.json) };
 }
 
-/** Remove completamente a instância da VPS (deletando sessões, caches e histórico). */
+/** Remove completamente a instância da VPS (desconecta e deleta sessões, caches e histórico). */
 export async function deleteInstance(userId: string) {
   const { base, key, instance } = evolutionConfig(userId);
+  try {
+    await call(`/instance/logout/${instance}`, { method: "DELETE", base, key }).catch(() => {});
+  } catch {}
   try {
     await call(`/instance/delete/${instance}`, { method: "DELETE", base, key });
   } catch {}

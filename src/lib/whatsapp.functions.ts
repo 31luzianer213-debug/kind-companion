@@ -122,13 +122,13 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
     }
   });
 
-/** Desconecta o número conectado. */
+/** Desconecta o número conectado e remove a instância completamente da VPS. */
 export const disconnectWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { logoutInstance } = await import("./evolution.server");
+    const { deleteInstance } = await import("./evolution.server");
     try {
-      await logoutInstance(context.userId);
+      await deleteInstance(context.userId);
       return { ok: true as const, error: null };
     } catch (error) {
       return {

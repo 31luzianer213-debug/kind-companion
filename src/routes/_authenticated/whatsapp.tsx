@@ -30,6 +30,7 @@ import {
   ExternalLink,
   Loader2,
   Clock,
+  Trash2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/whatsapp")({
@@ -119,7 +120,7 @@ function WhatsAppPage() {
     try {
       const result = await disconnect({});
       if (result.ok) {
-        toast.success("WhatsApp desconectado com sucesso.");
+        toast.success("WhatsApp desconectado e instância removida com sucesso.");
         setQr(null);
       } else {
         toast.error(result.error ?? "Não foi possível desconectar.");
@@ -227,21 +228,36 @@ function WhatsAppPage() {
                     size="sm"
                     onClick={desconectar}
                     disabled={busy}
-                    className="text-rose-400 hover:text-rose-300 gap-1.5"
+                    className="text-rose-400 hover:text-rose-300 gap-1.5 border-rose-500/30 hover:bg-rose-500/10"
                   >
                     <Unplug className="size-3.5" />
                     Desconectar
                   </Button>
                 ) : (
-                  <Button
-                    size="sm"
-                    onClick={gerarQr}
-                    disabled={busy}
-                    className="gap-1.5 bg-primary text-primary-foreground font-medium"
-                  >
-                    {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Plug className="size-3.5" />}
-                    {qr ? "Atualizar QR Code" : "Conectar WhatsApp"}
-                  </Button>
+                  <>
+                    {(qr || state === "connecting" || state === "close") && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={desconectar}
+                        disabled={busy}
+                        className="text-muted-foreground hover:text-rose-400 gap-1.5"
+                        title="Remove a instância atual da VPS"
+                      >
+                        <Trash2 className="size-3.5" />
+                        Remover Sessão
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      onClick={gerarQr}
+                      disabled={busy}
+                      className="gap-1.5 bg-primary text-primary-foreground font-medium"
+                    >
+                      {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Plug className="size-3.5" />}
+                      {qr ? "Atualizar QR Code" : "Conectar WhatsApp"}
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
