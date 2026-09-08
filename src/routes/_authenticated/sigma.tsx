@@ -132,7 +132,18 @@ function SigmaPage() {
         },
       });
       if (res.ok) {
-        toast.success("Conexão estabelecida com sucesso com o Servidor Sigma! ✅");
+        const detectedServer = (res as any).detectedServerName;
+        const detectedDns = (res as any).detectedDns;
+        if (detectedServer || detectedDns) {
+          setForm((prev) => ({
+            ...prev,
+            ...(detectedServer && !prev.sigma_server_name ? { sigma_server_name: detectedServer } : {}),
+            ...(detectedDns && !prev.sigma_streaming_dns ? { sigma_streaming_dns: detectedDns } : {}),
+          }));
+        }
+        const serverInfo = detectedServer ? ` Servidor detectado: "${detectedServer}".` : "";
+        const dnsInfo = detectedDns ? ` DNS: ${detectedDns}.` : "";
+        toast.success(`Conexão estabelecida com sucesso! ✅${serverInfo}${dnsInfo}`);
         queryClient.invalidateQueries({ queryKey: ["sigma-settings"] });
       } else {
         toast.error(res.error ?? "Não foi possível conectar ao servidor Sigma.", { duration: 9000 });
@@ -168,6 +179,16 @@ function SigmaPage() {
     try {
       const res = await syncSigma({ data: {} });
       if (res.ok) {
+        const detectedServer = (res as any).detectedServerName;
+        const detectedDns = (res as any).detectedDns;
+        if (detectedServer || detectedDns) {
+          setForm((prev) => ({
+            ...prev,
+            ...(detectedServer && !prev.sigma_server_name ? { sigma_server_name: detectedServer } : {}),
+            ...(detectedDns && !prev.sigma_streaming_dns ? { sigma_streaming_dns: detectedDns } : {}),
+          }));
+        }
+
         if (res.created > 0) {
           const names = res.createdNames?.slice(0, 3).join(", ") || "";
           toast.success(
@@ -176,9 +197,9 @@ function SigmaPage() {
               : `🎉 ${res.created} novas linhas importadas do Sigma! (${names})`,
           );
         } else if (res.updated > 0) {
-          toast.success(`${res.updated} linha(s) atualizadas com o servidor.`);
+          toast.success(`${res.updated} linha(s) sincronizadas com os dados de dentro do painel.`);
         } else {
-          toast.info("Tudo em dia! Nenhuma linha nova pendente no servidor.");
+          toast.info("Tudo em dia! Dados de clientes e servidor sincronizados.");
         }
         queryClient.invalidateQueries({ queryKey: ["clients"] });
         queryClient.invalidateQueries({ queryKey: ["sigma-lines-count"] });
@@ -334,16 +355,16 @@ function SigmaPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Nome Amigável do Servidor (Opcional)</Label>
+                <Label className="text-xs font-semibold">Nome do Servidor / Pacote IPTV (Detectado Automaticamente)</Label>
                 <Input
                   type="text"
-                  placeholder="Ex: Servidor Ouro ou Turbo IPTV"
+                  placeholder="Extraído de dentro do painel Sigma ou digite um nome"
                   value={form.sigma_server_name}
                   onChange={(e) => setForm({ ...form, sigma_server_name: e.target.value })}
-                  className="rounded-xl text-sm"
+                  className="rounded-xl text-sm font-medium"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Aparece nas mensagens enviadas aos clientes no WhatsApp.
+                  Puxado automaticamente de dentro do painel Sigma (ou digite para personalizar o nome enviado ao cliente).
                 </p>
               </div>
             </div>

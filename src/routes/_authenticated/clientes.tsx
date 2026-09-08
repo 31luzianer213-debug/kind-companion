@@ -281,14 +281,36 @@ function Clientes() {
 
   const clients = data ?? [];
   const isSigmaConfigured = Boolean(sigmaConfigQuery.data?.isConfigured);
-  const sigmaServerName =
+  const isRawDomain = (name?: string | null) =>
+    !name ||
+    name.trim().startsWith("http") ||
+    /\.(click|com|net|org|xyz|st|top|io|tv|online|site|app|live)\b/i.test(name);
+
+  const rawConfigServerName =
     sigmaConfigQuery.data?.sigma_server_name?.trim() ||
-    sigmaConfigQuery.data?.sigma_server_display_name ||
-    "Servidor Sigma";
+    sigmaConfigQuery.data?.sigma_server_display_name;
+
+  const sigmaServerName =
+    rawConfigServerName && !isRawDomain(rawConfigServerName)
+      ? rawConfigServerName
+      : "Servidor Principal";
+
   const sigmaServerUrl =
     sigmaConfigQuery.data?.sigma_streaming_dns?.trim() ||
     sigmaConfigQuery.data?.sigma_url ||
     "";
+
+  function getClientServerLabel(client: ClientRow): string {
+    if (client.notes) {
+      const matchServer = client.notes.match(/(?:Servidor|Server):\s*([^|\n,]+)/i);
+      if (matchServer?.[1]?.trim() && !isRawDomain(matchServer[1].trim())) {
+        return matchServer[1].trim();
+      }
+      const matchPack = client.notes.match(/(?:Pacote|Plano|Package):\s*([^|\n,]+)/i);
+      if (matchPack?.[1]?.trim()) return matchPack[1].trim();
+    }
+    return sigmaServerName;
+  }
 
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0] ?? "", []);
 
@@ -587,9 +609,10 @@ function Clientes() {
   }
 
   function copiarDadosAcesso(client: ClientRow) {
+    const serverLabel = getClientServerLabel(client);
     const texto = formatIptvAccessMessage({
       name: client.name,
-      serverName: sigmaServerName,
+      serverName: serverLabel,
       serverUrl: sigmaServerUrl,
       username: client.iptv_username,
       password: client.iptv_password,
@@ -1621,6 +1644,7 @@ function Clientes() {
 
           {viewAccessClient && (() => {
             const cleanDns = extractCleanIptvDns(sigmaServerUrl);
+            const serverLabel = getClientServerLabel(viewAccessClient);
             const user = viewAccessClient.iptv_username || "";
             const pass = viewAccessClient.iptv_password || "";
             const m3uTs = generateM3uUrl(cleanDns, user, pass, "ts");
@@ -1645,7 +1669,27 @@ function Clientes() {
 
                   <div className="space-y-2">
                     <div>
-                      <span className="text-[10px] text-muted-foreground font-semibold">URL / Servidor (DNS):</span>
+                      <span className="text-[10px] text-muted-foreground font-semibold">Nome do Servidor:</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className="flex-1 rounded-lg bg-background border px-2.5 py-1.5 text-xs text-foreground font-semibold truncate flex items-center gap-1.5">
+                          <span className="size-2 rounded-full bg-emerald-400 inline-block" />
+                          {serverLabel}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2.5 text-xs gap-1"
+                          onClick={() => copyText(serverLabel, "Nome do Servidor")}
+                        >
+                          {copiedField === "Nome do Servidor" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          Copiar
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-semibold">URL / DNS (Xtream Codes API):</span>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <code className="flex-1 rounded-lg bg-background border px-2.5 py-1.5 font-mono text-xs text-foreground truncate">
                           {cleanDns || "Servidor não configurado"}

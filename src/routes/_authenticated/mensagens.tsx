@@ -45,7 +45,7 @@ const defaults: MessageTemplates = {
   overdue_template:
     "Oi {nome}, sua mensalidade de {valor} venceu em {vencimento} ({dias} dias atrás). Para não perder o acesso à sua conta no {servidor}, pague pelo PIX {pix}. 🙏",
   welcome_template:
-    "📡 *DADOS DE ACESSO IPTV* 📡\n\n👤 *Cliente:* {nome}\n📺 *Servidor / DNS:* {servidor}\n🔑 *Usuário:* {usuario}\n🔒 *Senha:* {senha}\n🖥️ *Telas:* {telas}\n📅 *Vencimento:* {vencimento}\n\n🔗 *Lista M3U Plus:*\n{m3u}\n\n📺 *Guia de Canais (EPG):*\n{epg}\n\n📱 *Como Conectar:*\n• No IPTV Smarters Pro, XCIPTV ou TiviMate: use a opção *Xtream Codes API* com Servidor, Usuário e Senha acima.\n• Em Smart TVs ou SS IPTV: use a *Lista M3U Plus* completa acima.\n\nBom divertimento! 🍿 Qualquer dúvida, estamos à disposição.",
+    "📡 *DADOS DE ACESSO IPTV* 📡\n\n👤 *Cliente:* {nome}\n📺 *Servidor:* {servidor}\n🌐 *URL / DNS:* {dns}\n🔑 *Usuário:* {usuario}\n🔒 *Senha:* {senha}\n🖥️ *Telas:* {telas}\n📅 *Vencimento:* {vencimento}\n\n🔗 *Lista M3U Plus:*\n{m3u}\n\n📺 *Guia de Canais (EPG):*\n{epg}\n\n📱 *Como Conectar:*\n• No IPTV Smarters Pro, XCIPTV ou TiviMate: use a opção *Xtream Codes API* com Servidor (ou URL), Usuário e Senha acima.\n• Em Smart TVs ou SS IPTV: use a *Lista M3U Plus* completa acima.\n\nBom divertimento! 🍿 Qualquer dúvida, estamos à disposição.",
 };
 
 function WhatsAppSimulator({
@@ -73,7 +73,7 @@ function WhatsAppSimulator({
     vencimento: "15/10/2026",
     dias: "2",
     lista: serverName || "Servidor Sigma Pro",
-    servidor: cleanDns,
+    servidor: serverName || "Servidor Principal",
     dns: cleanDns,
     usuario: "carlos_silva",
     senha: "px876543",

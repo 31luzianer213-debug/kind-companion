@@ -203,7 +203,7 @@ export const sendAccessDetails = createServerFn({ method: "POST" })
 
     const template =
       settings?.welcome_template?.trim() ||
-      "📡 *DADOS DE ACESSO IPTV* 📡\n\n👤 *Cliente:* {nome}\n📺 *Servidor:* {servidor}\n🔑 *Usuário:* {usuario}\n🔒 *Senha:* {senha}\n🖥️ *Telas:* {telas}\n📅 *Vencimento:* {vencimento}\n\n🔗 *Lista M3U Plus:*\n{m3u}\n\n📺 *Guia de Canais (EPG):*\n{epg}\n\n📱 *Como Conectar:*\n• No IPTV Smarters Pro, XCIPTV ou TiviMate: use a opção *Xtream Codes API* com o Servidor, Usuário e Senha acima.\n• Em Smart TVs ou SS IPTV: adicione a *Lista M3U Plus* completa acima.\n\nBom divertimento! 🍿 Qualquer dúvida, estamos à disposição.";
+      "📡 *DADOS DE ACESSO IPTV* 📡\n\n👤 *Cliente:* {nome}\n📺 *Servidor:* {servidor}\n🌐 *URL / DNS:* {dns}\n🔑 *Usuário:* {usuario}\n🔒 *Senha:* {senha}\n🖥️ *Telas:* {telas}\n📅 *Vencimento:* {vencimento}\n\n🔗 *Lista M3U Plus:*\n{m3u}\n\n📺 *Guia de Canais (EPG):*\n{epg}\n\n📱 *Como Conectar:*\n• No IPTV Smarters Pro, XCIPTV ou TiviMate: use a opção *Xtream Codes API* com o Servidor (ou URL), Usuário e Senha acima.\n• Em Smart TVs ou SS IPTV: adicione a *Lista M3U Plus* completa acima.\n\nBom divertimento! 🍿 Qualquer dúvida, estamos à disposição.";
 
     const body = renderTemplate(
       template,

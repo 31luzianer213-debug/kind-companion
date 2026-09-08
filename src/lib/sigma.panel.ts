@@ -24,8 +24,20 @@ export type SigmaCustomer = {
   /** Status normalizado: 'active' | 'inactive' | 'expired' | 'suspended' */
   status: string | null;
   packageId?: string | number | null;
+  packageName?: string | null;
+  serverName?: string | null;
   dns?: string | null;
   m3uUrl?: string | null;
+  notes?: string | null;
+};
+
+export type SigmaPanelDetails = {
+  serverName: string | null;
+  dns: string | null;
+  brandName: string | null;
+  credits: number | null;
+  packages: string[];
+  servers: Array<{ id?: string | number; name: string; url?: string }>;
 };
 
 export type CreateSigmaCustomerInput = {
@@ -599,12 +611,80 @@ function normalizeStatus(value: any): string | null {
   return status;
 }
 
+function isRawDomainOrUrl(val?: string | null): boolean {
+  if (!val) return false;
+  const s = val.trim();
+  return /^https?:\/\//i.test(s) || /\.(click|com|net|org|xyz|st|top|io|tv|online|site|app|live)\b/i.test(s);
+}
+
 function mapCustomer(raw: any): SigmaCustomer | null {
   const id = pickField(raw, ["id", "uuid", "customer_id", "client_id", "user_id", "uid"]);
   if (id === null) return null;
   const screensValue = Number(
     pickField(raw, ["connections", "screens", "max_connections", "connection_limit", "devices"]) ?? 0,
   );
+
+  // 1. Extrai o nome do servidor vinculado à linha no painel Sigma
+  let rawServerName = pickField(raw, [
+    "server_name",
+    "server.name",
+    "server_title",
+    "server_display_name",
+    "assigned_server",
+    "servidor",
+    "nome_servidor",
+    "server_label",
+  ]);
+
+  if (!rawServerName && typeof raw?.server === "string") {
+    const s = raw.server.trim();
+    if (s && !isRawDomainOrUrl(s)) {
+      rawServerName = s;
+    }
+  } else if (!rawServerName && typeof raw?.server === "object" && raw?.server?.name) {
+    rawServerName = raw.server.name;
+  }
+
+  // 2. Extrai pacote ou plano da linha
+  let rawPackageName = pickField(raw, [
+    "package_name",
+    "package.name",
+    "plan_name",
+    "plan.name",
+    "package_title",
+    "bouquet_name",
+    "category_name",
+    "pacote",
+    "plano",
+  ]);
+  if (!rawPackageName && typeof raw?.package === "string") {
+    rawPackageName = raw.package.trim();
+  } else if (!rawPackageName && typeof raw?.package === "object" && raw?.package?.name) {
+    rawPackageName = raw.package.name;
+  }
+
+  // 3. Extrai DNS / URL apenas se for realmente uma URL ou domínio
+  let rawDns = pickField(raw, [
+    "dns",
+    "server_dns",
+    "streaming_dns",
+    "stream_url",
+    "server_url",
+    "server_info.url",
+    "host",
+    "domain",
+  ]);
+  if (rawDns && typeof rawDns === "string") {
+    if (!isRawDomainOrUrl(rawDns)) {
+      // Se não tem formato de URL/domínio, pode ter sido gravado o nome do servidor aqui
+      if (!rawServerName) rawServerName = rawDns;
+      rawDns = null;
+    }
+  }
+
+  // 4. Notas adicionais gravadas na linha
+  const rawNotes = pickField(raw, ["notes", "note", "obs", "observacao", "observacoes", "comment", "description"]);
+
   return {
     id: String(id),
     name: String(
@@ -621,8 +701,11 @@ function mapCustomer(raw: any): SigmaCustomer | null {
     ),
     status: normalizeStatus(pickField(raw, ["status", "state", "is_active", "isActive"])),
     packageId: pickField(raw, ["package_id", "packageId", "plan_id", "plan"]),
-    dns: pickField(raw, ["dns", "server_dns", "server_url", "server", "stream_url", "streaming_url", "host", "domain"]),
+    packageName: rawPackageName ? String(rawPackageName).trim() : null,
+    serverName: rawServerName ? String(rawServerName).trim() : null,
+    dns: rawDns ? String(rawDns).trim() : null,
     m3uUrl: pickField(raw, ["m3u_url", "m3u", "line_url", "url"]),
+    notes: rawNotes ? String(rawNotes).trim() : null,
   };
 }
 
@@ -724,13 +807,24 @@ function normalizeIptvDns(urlStr: string): string {
 }
 
 /**
- * Tenta descobrir o DNS/URL oficial de transmissão diretamente de dentro do painel Sigma.
- * Consulta endpoints de informações de servidor (/api/server-info, /api/dns, /panel_api.php, etc.).
+ * Tenta descobrir todos os detalhes do painel Sigma diretamente de dentro da sua API:
+ * - Nome oficial do servidor / marca do revendedor
+ * - DNS / URL oficial de streaming para os aplicativos
+ * - Créditos restantes
+ * - Pacotes / planos disponíveis
+ * - Servidores cadastrados
  */
-export async function fetchSigmaPanelDns(config: SigmaConfig): Promise<string | null> {
+export async function fetchSigmaPanelDetails(config: SigmaConfig): Promise<SigmaPanelDetails> {
   const base = normalizeBaseUrl(config.url);
   const user = config.username?.trim();
   const pass = config.password ?? "";
+
+  let discoveredServerName: string | null = null;
+  let discoveredDns: string | null = null;
+  let discoveredBrand: string | null = null;
+  let discoveredCredits: number | null = null;
+  const discoveredPackages: string[] = [];
+  const discoveredServers: Array<{ id?: string | number; name: string; url?: string }> = [];
 
   // 1. Tenta endpoints de Xtream/Player API se tiver credenciais
   if (user && pass) {
@@ -740,15 +834,27 @@ export async function fetchSigmaPanelDns(config: SigmaConfig): Promise<string | 
     ]) {
       try {
         const res = await requestJson(base, xtreamPath, { method: "GET" }, 5000);
-        if (res.ok && res.payload?.server_info) {
-          const s = res.payload.server_info;
-          const urlCandidate = s.url || s.server_dns || s.dns;
-          if (urlCandidate && typeof urlCandidate === "string" && !urlCandidate.includes("/sign-in")) {
-            return normalizeIptvDns(urlCandidate);
+        if (res.ok && res.payload) {
+          const p = res.payload;
+          if (p.server_info) {
+            const s = p.server_info;
+            const sName = s.server_name || s.name || s.title;
+            if (sName && typeof sName === "string" && !isRawDomainOrUrl(sName)) {
+              if (!discoveredServerName) discoveredServerName = sName.trim();
+            }
+            const urlCandidate = s.url || s.server_dns || s.dns;
+            if (urlCandidate && typeof urlCandidate === "string" && !urlCandidate.includes("/sign-in")) {
+              if (!discoveredDns) discoveredDns = normalizeIptvDns(urlCandidate);
+            } else if (s.server_ip) {
+              const port = s.port ? `:${s.port}` : "";
+              if (!discoveredDns) discoveredDns = `http://${s.server_ip}${port}`;
+            }
           }
-          if (s.server_ip) {
-            const port = s.port ? `:${s.port}` : "";
-            return `http://${s.server_ip}${port}`;
+          if (p.user_info) {
+            const u = p.user_info;
+            if (u.credits != null && !Number.isNaN(Number(u.credits))) {
+              discoveredCredits = Number(u.credits);
+            }
           }
         }
       } catch {
@@ -757,16 +863,22 @@ export async function fetchSigmaPanelDns(config: SigmaConfig): Promise<string | 
     }
   }
 
-  // 2. Tenta endpoints REST de informações do servidor
+  // 2. Tenta endpoints REST de informações do servidor e perfil de revenda
   const candidateEndpoints = [
+    "/api/profile",
+    "/api/resellers/me",
+    "/api/reseller/me",
+    "/api/reseller/profile",
+    "/api/user/info",
+    "/api/user/me",
+    "/api/auth/me",
+    "/api/me",
     "/api/server-info",
     "/api/server/info",
     "/api/servers",
     "/api/dns",
-    "/api/profile",
-    "/api/user/info",
-    "/api/resellers/me",
-    "/api/me",
+    "/api/dashboard",
+    "/api/reseller/dashboard",
     "/api/config",
   ];
 
@@ -776,43 +888,116 @@ export async function fetchSigmaPanelDns(config: SigmaConfig): Promise<string | 
       if (!res.ok || !res.payload) continue;
 
       const p = res.payload;
+
+      // Nome do servidor ou da marca do painel
+      const rawServer = pickField(p, [
+        "server_name",
+        "server.name",
+        "brand_name",
+        "brand",
+        "panel_title",
+        "panel_name",
+        "site_name",
+        "app_name",
+        "server_info.server_name",
+        "server_info.name",
+        "server_info.title",
+        "data.server_name",
+        "data.brand_name",
+        "data.panel_title",
+        "data.server_info.server_name",
+      ]);
+      if (rawServer && typeof rawServer === "string" && !isRawDomainOrUrl(rawServer)) {
+        if (!discoveredServerName) discoveredServerName = rawServer.trim();
+      }
+
+      // Créditos
+      const rawCredits = pickField(p, ["credits", "balance", "credit", "data.credits", "data.balance"]);
+      if (rawCredits != null && !Number.isNaN(Number(rawCredits))) {
+        discoveredCredits = Number(rawCredits);
+      }
+
+      // DNS
       const dnsCandidate = pickField(p, [
         "dns",
         "server_dns",
         "streaming_dns",
         "stream_url",
         "server_url",
-        "server",
-        "host",
-        "domain",
         "server_info.url",
         "server_info.dns",
         "data.dns",
         "data.server_url",
         "data.streaming_dns",
-        "data.server_dns",
-        "data.server_info.url",
       ]);
-
       if (dnsCandidate && typeof dnsCandidate === "string" && !dnsCandidate.includes("/sign-in")) {
-        return normalizeIptvDns(dnsCandidate);
-      }
-
-      // Se for array de servidores
-      const rows = extractRows(p);
-      if (rows.length > 0) {
-        const first = rows[0];
-        const rowDns = pickField(first, ["dns", "server_url", "url", "host", "domain"]);
-        if (rowDns && typeof rowDns === "string" && !rowDns.includes("/sign-in")) {
-          return normalizeIptvDns(rowDns);
-        }
+        if (!discoveredDns) discoveredDns = normalizeIptvDns(dnsCandidate);
       }
     } catch {
       // continua tentando
     }
   }
 
-  return null;
+  // 3. Consulta endpoints de servidores cadastrados no painel
+  for (const sEndpoint of ["/api/servers", "/api/server-info", "/api/server/info", "/api/dns"]) {
+    try {
+      const res = await authorizedRequest(config, sEndpoint, { method: "GET" }, 4000);
+      if (!res.ok || !res.payload) continue;
+      const rows = extractRows(res.payload);
+      for (const row of rows) {
+        const sName = pickField(row, ["name", "server_name", "title", "label"]);
+        const sUrl = pickField(row, ["url", "dns", "server_url", "streaming_dns", "domain"]);
+        if (sName && typeof sName === "string") {
+          discoveredServers.push({
+            id: row.id,
+            name: sName.trim(),
+            url: sUrl ? normalizeIptvDns(String(sUrl)) : undefined,
+          });
+          if (!discoveredServerName && !isRawDomainOrUrl(sName)) {
+            discoveredServerName = sName.trim();
+          }
+          if (sUrl && !discoveredDns && !String(sUrl).includes("/sign-in")) {
+            discoveredDns = normalizeIptvDns(String(sUrl));
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // 4. Consulta pacotes disponíveis (/api/packages, /api/plans, /api/categories)
+  for (const pkgEndpoint of ["/api/packages", "/api/plans", "/api/categories", "/api/bouquets"]) {
+    try {
+      const res = await authorizedRequest(config, pkgEndpoint, { method: "GET" }, 4000);
+      if (!res.ok || !res.payload) continue;
+      const rows = extractRows(res.payload);
+      for (const row of rows) {
+        const pName = pickField(row, ["name", "package_name", "title", "plan_name"]);
+        if (pName && typeof pName === "string") {
+          const cleaned = pName.trim();
+          if (!discoveredPackages.includes(cleaned)) {
+            discoveredPackages.push(cleaned);
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return {
+    serverName: discoveredServerName,
+    dns: discoveredDns,
+    brandName: discoveredBrand,
+    credits: discoveredCredits,
+    packages: discoveredPackages,
+    servers: discoveredServers,
+  };
+}
+
+/**
+ * Tenta descobrir o DNS/URL oficial de transmissão diretamente de dentro do painel Sigma.
+ */
+export async function fetchSigmaPanelDns(config: SigmaConfig): Promise<string | null> {
+  const details = await fetchSigmaPanelDetails(config);
+  return details.dns;
 }
 
 /** Cria um novo cliente / linha no painel Sigma. */

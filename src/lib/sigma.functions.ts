@@ -63,7 +63,7 @@ async function loadConfig(supabase: any, userId: string): Promise<
   const url = (dbData?.sigma_url ?? userMetaSigma?.url ?? "").trim();
   const server_name = (dbData?.sigma_server_name ?? userMetaSigma?.server_name ?? "").trim();
   const streaming_dns = (dbData?.sigma_streaming_dns ?? userMetaSigma?.streaming_dns ?? "").trim();
-  const server_display_name = server_name || extractServerHost(streaming_dns || url) || "Servidor Sigma";
+  const server_display_name = server_name || "Servidor Sigma";
   const username = (dbData?.sigma_username ?? userMetaSigma?.username ?? "").trim();
   const password = dbData?.sigma_password ?? userMetaSigma?.password ?? "";
   const token = dbData?.sigma_token ?? userMetaSigma?.token ?? null;
@@ -249,22 +249,51 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
     }
 
     try {
-      const token = await sigmaLogin(url, username, password);
-      const { fetchSigmaPanelDns } = await import("./sigma.server");
-      const detectedDns = await fetchSigmaPanelDns({ url, token, username, password });
+      const token = directToken || (await sigmaLogin(url, username, password));
+      const { fetchSigmaPanelDetails } = await import("./sigma.server");
+      const details = await fetchSigmaPanelDetails({ url, token, username, password });
 
-      // Persiste o token atualizado e o DNS detectado se não houver um manual
+      const detectedServerName = details.serverName?.trim() || null;
+      const detectedDns = details.dns?.trim() || null;
+
+      // Persiste o token atualizado, server name detectado e DNS detectado se não houver manual
+      const updatePayload: Record<string, any> = { sigma_token: token };
+      if (detectedDns && !saved.streaming_dns) {
+        updatePayload.sigma_streaming_dns = detectedDns;
+      }
+      if (detectedServerName && !saved.server_name) {
+        updatePayload.sigma_server_name = detectedServerName;
+      }
+
       try {
-        const updatePayload: Record<string, any> = { sigma_token: token };
-        if (detectedDns && !saved.streaming_dns) {
-          updatePayload.sigma_streaming_dns = detectedDns;
-        }
         await supabase.from("whatsapp_settings").update(updatePayload).eq("user_id", userId);
       } catch {
         // ignora se coluna não existir
       }
 
-      return { ok: true as const, error: null, detectedDns };
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            sigma_settings: {
+              ...saved,
+              token,
+              ...(detectedDns && !saved.streaming_dns ? { streaming_dns: detectedDns } : {}),
+              ...(detectedServerName && !saved.server_name ? { server_name: detectedServerName } : {}),
+            },
+          },
+        });
+      } catch {
+        // ignora erro de metadata
+      }
+
+      return {
+        ok: true as const,
+        error: null,
+        detectedDns,
+        detectedServerName,
+        packagesCount: details.packages.length,
+        credits: details.credits,
+      };
     } catch (error) {
       return {
         ok: false as const,
@@ -301,32 +330,74 @@ export async function runSigmaSyncForUser(
     };
   }
 
-  let customers;
+  let customers: any[] = [];
+  let detectedServerName: string | null = null;
+  let detectedDns: string | null = null;
+
   try {
     const token = await ensureSigmaToken(panelConfig);
+    const { fetchSigmaPanelDetails } = await import("./sigma.server");
+    const panelDetails = await fetchSigmaPanelDetails({ ...panelConfig, token });
+
     customers = await listSigmaCustomers({ ...panelConfig, token });
 
-    // Tenta detectar se o painel ou alguma linha entregou o DNS de streaming oficial
-    let detectedDns: string | null = null;
-    for (const c of customers) {
-      if (c.dns) {
-        detectedDns = c.dns;
-        break;
+    // 1. Detecta o nome oficial do servidor:
+    // Prioriza os detalhes retornados pelos endpoints do painel
+    detectedServerName = panelDetails.serverName?.trim() || null;
+
+    // Se o painel não retornou o nome via profile/server-info, extrai das linhas de clientes
+    if (!detectedServerName) {
+      for (const c of customers) {
+        if (c.serverName && !c.serverName.startsWith("http") && !/\.(click|com|net|org|xyz|st|top|io)\b/i.test(c.serverName)) {
+          detectedServerName = c.serverName.trim();
+          break;
+        }
       }
     }
-    if (!detectedDns) {
-      try {
-        const { fetchSigmaPanelDns } = await import("./sigma.server");
-        detectedDns = await fetchSigmaPanelDns({ ...panelConfig, token });
-      } catch {}
+
+    // Se ainda não encontrou, checa se há pacotes disponíveis no painel
+    if (!detectedServerName && panelDetails.packages.length > 0) {
+      detectedServerName = panelDetails.packages[0].trim();
     }
 
-    if (detectedDns && !panelConfig.streaming_dns) {
+    // 2. Detecta o DNS oficial de transmissão:
+    detectedDns = panelDetails.dns?.trim() || null;
+    if (!detectedDns) {
+      for (const c of customers) {
+        if (c.dns) {
+          detectedDns = c.dns.trim();
+          break;
+        }
+      }
+    }
+
+    // 3. Atualiza automaticamente no banco e no user_metadata
+    const updateSettings: Record<string, any> = {};
+    if (detectedDns && !saved.streaming_dns) {
+      updateSettings.sigma_streaming_dns = detectedDns;
+    }
+    if (detectedServerName && !saved.server_name) {
+      updateSettings.sigma_server_name = detectedServerName;
+    }
+
+    if (Object.keys(updateSettings).length > 0) {
       try {
         await supabase
           .from("whatsapp_settings")
-          .update({ sigma_streaming_dns: detectedDns })
+          .update(updateSettings)
           .eq("user_id", userId);
+      } catch {}
+
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            sigma_settings: {
+              ...saved,
+              ...(updateSettings.sigma_streaming_dns ? { streaming_dns: updateSettings.sigma_streaming_dns } : {}),
+              ...(updateSettings.sigma_server_name ? { server_name: updateSettings.sigma_server_name } : {}),
+            },
+          },
+        });
       } catch {}
     }
   } catch (error) {
@@ -365,12 +436,18 @@ export async function runSigmaSyncForUser(
     const dueDay = customer.dueDate ? Number(customer.dueDate.slice(8, 10)) : null;
     const localStatus = customer.status === "active" ? "active" : customer.status ? "inactive" : "active";
 
-    const base = {
+    const clientNotes =
+      customer.notes?.trim() ||
+      (customer.packageName ? `Pacote: ${customer.packageName}` : null) ||
+      (customer.serverName ? `Servidor: ${customer.serverName}` : null);
+
+    const base: Record<string, any> = {
       sigma_customer_id: customer.id,
       sigma_username: customer.username,
       sigma_synced_at: now,
       iptv_username: customer.username,
       iptv_password: customer.password,
+      ...(clientNotes ? { notes: clientNotes } : {}),
       ...(customer.screens != null ? { screens: customer.screens } : {}),
       ...(customer.dueDate ? { next_due_date: customer.dueDate } : {}),
       ...(dueDay ? { due_day: dueDay } : {}),
@@ -421,6 +498,8 @@ export async function runSigmaSyncForUser(
     created,
     updated,
     createdNames,
+    detectedServerName,
+    detectedDns,
     error: failedNames.length
       ? `Falha ao importar ${failedNames.length} cliente(s): ${failedNames.slice(0, 3).join(", ")}`
       : null,

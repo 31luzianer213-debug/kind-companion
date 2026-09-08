@@ -128,10 +128,17 @@ export function formatIptvAccessMessage(params: {
   businessName?: string | null;
 }): string {
   const cleanDns = extractCleanIptvDns(params.serverUrl);
+
+  const isRawDomain = (name?: string | null) =>
+    !name ||
+    name.trim().startsWith("http") ||
+    /\.(click|com|net|org|xyz|st|top|io|tv|online|site|app|live)\b/i.test(name);
+
   const serverLabel =
-    params.serverName?.trim() ||
-    extractHostOnly(params.serverUrl) ||
-    "Servidor IPTV";
+    params.serverName?.trim() && !isRawDomain(params.serverName)
+      ? params.serverName.trim()
+      : params.businessName?.trim() || "Servidor IPTV";
+
   const u = (params.username ?? "").trim();
   const p = (params.password ?? "").trim();
   const m3uUrl = generateM3uUrl(cleanDns, u, p, "ts");
@@ -163,7 +170,7 @@ export function formatIptvAccessMessage(params: {
   }
 
   msg += `📱 *Como Conectar:*\n` +
-    `• No IPTV Smarters Pro, XCIPTV ou TiviMate: use a opção *Xtream Codes API* com o Servidor, Usuário e Senha.\n` +
+    `• No IPTV Smarters Pro, XCIPTV ou TiviMate: use a opção *Xtream Codes API* com o Servidor (ou URL), Usuário e Senha.\n` +
     `• Em Smart TVs ou SS IPTV: adicione a *Lista M3U Plus* completa acima.\n\n` +
     `Bom divertimento! 🍿 Qualquer dúvida, estamos à disposição.`;
 
@@ -179,11 +186,22 @@ export function buildTemplateVars(input: TemplateVarInput): Record<string, strin
     settings?.sigma_url ||
     "";
   const cleanDns = extractCleanIptvDns(rawServerUrl);
-  const sigmaServerName =
+
+  const isRawDomain = (name?: string | null) =>
+    !name ||
+    name.trim().startsWith("http") ||
+    /\.(click|com|net|org|xyz|st|top|io|tv|online|site|app|live)\b/i.test(name);
+
+  // Nome oficial do servidor (nunca domínio ou URL crua)
+  const candidateServerName =
     settings?.sigma_server_name?.trim() ||
-    settings?.sigma_server_display_name?.trim() ||
-    extractHostOnly(rawServerUrl) ||
-    "Servidor Sigma";
+    list?.name?.trim() ||
+    settings?.sigma_server_display_name?.trim();
+
+  const realServerName =
+    candidateServerName && !isRawDomain(candidateServerName)
+      ? candidateServerName
+      : settings?.business_name?.trim() || "Servidor IPTV";
 
   const username = client?.iptv_username || list?.username || "";
   const password = client?.iptv_password || list?.password || "";
@@ -197,8 +215,8 @@ export function buildTemplateVars(input: TemplateVarInput): Record<string, strin
     valor: formatBRL(input.amount ?? 0),
     vencimento: formatDate(input.dueDate ?? null),
     dias: String(Math.abs(input.days ?? 0)),
-    lista: list?.name ?? sigmaServerName,
-    servidor: cleanDns || sigmaServerName,
+    lista: list?.name ?? realServerName,
+    servidor: realServerName,
     dns: cleanDns,
     usuario: username,
     senha: password,
@@ -219,8 +237,8 @@ export const TEMPLATE_VARS: { key: string; label: string }[] = [
   { key: "vencimento", label: "data de vencimento" },
   { key: "dias", label: "dias de antecedência/atraso" },
   { key: "lista", label: "nome da lista / servidor" },
-  { key: "servidor", label: "endereço limpo do servidor (DNS)" },
-  { key: "dns", label: "URL/DNS de conexão (Xtream Codes)" },
+  { key: "servidor", label: "nome oficial do servidor IPTV" },
+  { key: "dns", label: "endereço/URL de conexão (Xtream Codes)" },
   { key: "usuario", label: "usuário de acesso" },
   { key: "senha", label: "senha de acesso" },
   { key: "m3u", label: "link completo da lista M3U Plus" },
