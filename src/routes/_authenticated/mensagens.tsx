@@ -61,7 +61,7 @@ function WhatsAppSimulator({
   serverUrl: string;
   pixKey: string;
 }) {
-  const cleanDns = extractCleanIptvDns(serverUrl) || "http://aplicativoz342.click";
+  const cleanDns = extractCleanIptvDns(serverUrl) || "http://stream.iptvserver.net:8080";
   const m3u = generateM3uUrl(cleanDns, "carlos_silva", "px876543", "ts");
   const m3uHls = generateM3uUrl(cleanDns, "carlos_silva", "px876543", "m3u8");
   const epg = generateEpgUrl(cleanDns, "carlos_silva", "px876543");
@@ -133,10 +133,16 @@ function MensagensPage() {
 
   useEffect(() => {
     if (data) {
+      const rawWelcome = data.welcome_template?.trim() || defaults.welcome_template;
+      const effectiveWelcome =
+        rawWelcome.includes("{m3u}")
+          ? rawWelcome
+          : `${rawWelcome}\n\n🔗 *Lista M3U Plus:*\n{m3u}\n\n📺 *Guia de Canais (EPG):*\n{epg}`;
+
       setForm({
         message_template: data.message_template || defaults.message_template,
         overdue_template: data.overdue_template || defaults.overdue_template,
-        welcome_template: data.welcome_template || defaults.welcome_template,
+        welcome_template: effectiveWelcome,
       });
     }
   }, [data]);

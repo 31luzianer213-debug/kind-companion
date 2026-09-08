@@ -85,6 +85,20 @@ export function extractHostOnly(rawUrl?: string | null): string {
   return cleaned.replace(/^https?:\/\//i, "").split(":")[0] ?? "";
 }
 
+/**
+ * Extrai a URL completa da lista M3U gravada nas observações do cliente (sincronizada do painel Sigma).
+ */
+export function extractM3uFromNotes(notes?: string | null): string | null {
+  if (!notes) return null;
+  const match = /(?:m3u|lista|link|playlist)\s*:\s*(https?:\/\/[^\s]+)/i.exec(notes);
+  if (match) return match[1].trim();
+  const directMatch = /(https?:\/\/[^\s"'<>]+\.(?:m3u|m3u8)\b[^\s"'<>]*)/i.exec(notes);
+  if (directMatch) return directMatch[1].trim();
+  const getMatch = /(https?:\/\/[^\s"'<>]+\/get\.php\?[^\s"'<>]+)/i.exec(notes);
+  if (getMatch) return getMatch[1].trim();
+  return null;
+}
+
 /** Gera a URL completa da lista M3U Plus (TS ou HLS) */
 export function generateM3uUrl(
   serverDns?: string | null,
@@ -126,8 +140,12 @@ export function formatIptvAccessMessage(params: {
   screens?: number | null;
   dueDate?: string | null;
   businessName?: string | null;
+  m3uUrl?: string | null;
+  notes?: string | null;
 }): string {
-  const cleanDns = extractCleanIptvDns(params.serverUrl);
+  const directM3u = params.m3uUrl || extractM3uFromNotes(params.notes);
+  const cleanDns =
+    extractCleanIptvDns(params.serverUrl) || (directM3u ? extractCleanIptvDns(directM3u) : "");
 
   const isRawDomain = (name?: string | null) =>
     !name ||
@@ -141,7 +159,7 @@ export function formatIptvAccessMessage(params: {
 
   const u = (params.username ?? "").trim();
   const p = (params.password ?? "").trim();
-  const m3uUrl = generateM3uUrl(cleanDns, u, p, "ts");
+  const m3uUrl = directM3u || generateM3uUrl(cleanDns, u, p, "ts");
   const epgUrl = generateEpgUrl(cleanDns, u, p);
   const screens = params.screens ?? 1;
   const dueStr = params.dueDate ? formatDate(params.dueDate) : "A combinar";
@@ -180,8 +198,11 @@ export function formatIptvAccessMessage(params: {
 /** Variáveis disponíveis nos modelos de mensagem. */
 export function buildTemplateVars(input: TemplateVarInput): Record<string, string> {
   const { client, list, settings } = input;
+  const directM3u = extractM3uFromNotes(client?.notes);
+
   const rawServerUrl =
     settings?.sigma_streaming_dns?.trim() ||
+    (directM3u ? extractCleanIptvDns(directM3u) : "") ||
     list?.server_url ||
     settings?.sigma_url ||
     "";
@@ -205,9 +226,11 @@ export function buildTemplateVars(input: TemplateVarInput): Record<string, strin
 
   const username = client?.iptv_username || list?.username || "";
   const password = client?.iptv_password || list?.password || "";
-  const m3u = generateM3uUrl(cleanDns, username, password, "ts");
-  const m3uHls = generateM3uUrl(cleanDns, username, password, "m3u8");
-  const epg = generateEpgUrl(cleanDns, username, password);
+  const effectiveDns = cleanDns || (directM3u ? extractCleanIptvDns(directM3u) : "");
+
+  const m3u = directM3u || generateM3uUrl(effectiveDns, username, password, "ts");
+  const m3uHls = directM3u || generateM3uUrl(effectiveDns, username, password, "m3u8");
+  const epg = generateEpgUrl(effectiveDns, username, password);
 
   return {
     nome: client?.name ?? "",
@@ -217,7 +240,7 @@ export function buildTemplateVars(input: TemplateVarInput): Record<string, strin
     dias: String(Math.abs(input.days ?? 0)),
     lista: list?.name ?? realServerName,
     servidor: realServerName,
-    dns: cleanDns,
+    dns: effectiveDns,
     usuario: username,
     senha: password,
     m3u: m3u,

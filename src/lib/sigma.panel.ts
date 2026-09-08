@@ -617,6 +617,126 @@ function isRawDomainOrUrl(val?: string | null): boolean {
   return /^https?:\/\//i.test(s) || /\.(click|com|net|org|xyz|st|top|io|tv|online|site|app|live)\b/i.test(s);
 }
 
+function extractM3uFromRaw(raw: any): string | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  // 1. Campos diretos de lista M3U conhecidos no ecossistema IPTV / Sigma
+  const directFields = [
+    "m3u_url",
+    "m3u",
+    "m3u_plus",
+    "m3u_plus_url",
+    "m3u8_url",
+    "line_url",
+    "playlist_url",
+    "playlist",
+    "get_url",
+    "download_url",
+    "stream_url",
+    "stream_link",
+    "links.m3u",
+    "links.m3u_plus",
+    "links.hls",
+    "links.ts",
+    "links.line",
+    "urls.m3u",
+    "urls.m3u_plus",
+    "urls.hls",
+    "urls.ts",
+    "urls.get",
+    "data.m3u_url",
+    "data.m3u",
+    "data.line_url",
+    "data.playlist_url",
+    "output_urls.m3u",
+    "output_urls.m3u_plus",
+    "details.m3u_url",
+    "lines.0.m3u_url",
+    "lines.0.m3u",
+    "lines.0.line_url",
+  ];
+
+  for (const field of directFields) {
+    const val = pickField(raw, [field]);
+    if (typeof val === "string" && /^https?:\/\//i.test(val.trim())) {
+      const trimmed = val.trim();
+      if (!trimmed.includes("/sign-in") && !trimmed.includes("#/") && !trimmed.includes("/dashboard") && !trimmed.includes("/login")) {
+        return trimmed;
+      }
+    }
+  }
+
+  // 2. Varredura recursiva de strings no JSON para detectar URLs de transmissão M3U
+  const scan = (obj: any, depth: number): string | null => {
+    if (!obj || depth > 5) return null;
+    if (typeof obj === "string") {
+      const s = obj.trim();
+      if (
+        /^https?:\/\//i.test(s) &&
+        !s.includes("/sign-in") &&
+        !s.includes("#/") &&
+        !s.includes("/dashboard") &&
+        !s.includes("/login") &&
+        (/get\.php\?/i.test(s) || /\.m3u8?\b/i.test(s) || /\/playlist\//i.test(s) || /output=(ts|m3u8)/i.test(s) || /type=m3u/i.test(s))
+      ) {
+        return s;
+      }
+      return null;
+    }
+    if (typeof obj === "object") {
+      for (const val of Object.values(obj)) {
+        const found = scan(val, depth + 1);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  return scan(raw, 0);
+}
+
+function extractStreamingDnsFromRaw(raw: any): string | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  const directCandidates = [
+    "streaming_dns",
+    "server_dns",
+    "stream_dns",
+    "dns",
+    "stream_domain",
+    "stream_url",
+    "server_url",
+    "host",
+    "server_host",
+    "domain",
+    "server.dns",
+    "server.streaming_dns",
+    "server.url",
+    "server_info.dns",
+    "server_info.url",
+    "data.dns",
+    "data.streaming_dns",
+  ];
+
+  for (const cand of directCandidates) {
+    const val = pickField(raw, [cand]);
+    if (typeof val === "string" && val.trim()) {
+      const s = val.trim();
+      if (!s.includes("/sign-in") && !s.includes("#/") && !s.includes("/dashboard") && !s.includes("/login")) {
+        const norm = normalizeIptvDns(s);
+        if (norm) return norm;
+      }
+    }
+  }
+
+  const m3u = extractM3uFromRaw(raw);
+  if (m3u) {
+    return normalizeIptvDns(m3u);
+  }
+
+  return null;
+}
+
 function mapCustomer(raw: any): SigmaCustomer | null {
   const id = pickField(raw, ["id", "uuid", "customer_id", "client_id", "user_id", "uid"]);
   if (id === null) return null;
@@ -663,8 +783,9 @@ function mapCustomer(raw: any): SigmaCustomer | null {
     rawPackageName = raw.package.name;
   }
 
-  // 3. Extrai DNS / URL apenas se for realmente uma URL ou domínio
-  let rawDns = pickField(raw, [
+  // 3. Extrai DNS / URL de transmissão diretamente do objeto da linha
+  const extractedM3u = extractM3uFromRaw(raw);
+  let rawDns = extractStreamingDnsFromRaw(raw) || pickField(raw, [
     "dns",
     "server_dns",
     "streaming_dns",
@@ -678,6 +799,8 @@ function mapCustomer(raw: any): SigmaCustomer | null {
     if (!isRawDomainOrUrl(rawDns)) {
       // Se não tem formato de URL/domínio, pode ter sido gravado o nome do servidor aqui
       if (!rawServerName) rawServerName = rawDns;
+      rawDns = null;
+    } else if (rawDns.includes("/sign-in") || rawDns.includes("#/")) {
       rawDns = null;
     }
   }
@@ -703,8 +826,8 @@ function mapCustomer(raw: any): SigmaCustomer | null {
     packageId: pickField(raw, ["package_id", "packageId", "plan_id", "plan"]),
     packageName: rawPackageName ? String(rawPackageName).trim() : null,
     serverName: rawServerName ? String(rawServerName).trim() : null,
-    dns: rawDns ? String(rawDns).trim() : null,
-    m3uUrl: pickField(raw, ["m3u_url", "m3u", "line_url", "url"]),
+    dns: rawDns ? normalizeIptvDns(String(rawDns).trim()) : null,
+    m3uUrl: extractedM3u,
     notes: rawNotes ? String(rawNotes).trim() : null,
   };
 }
@@ -799,11 +922,14 @@ export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCust
 }
 
 function normalizeIptvDns(urlStr: string): string {
+  if (!urlStr) return "";
   let cleaned = urlStr.trim().split("#")[0].split("?")[0].replace(/\/+$/, "");
-  if (!/^https?:\/\//i.test(cleaned)) {
-    cleaned = `http://${cleaned}`;
-  }
-  return cleaned;
+  const hasHttps = /^https:\/\//i.test(cleaned);
+  const proto = hasHttps ? "https://" : "http://";
+  cleaned = cleaned.replace(/^https?:\/\//i, "");
+  const hostPart = cleaned.split("/")[0]?.trim() ?? "";
+  if (!hostPart) return "";
+  return `${proto}${hostPart}`;
 }
 
 /**
@@ -918,18 +1044,20 @@ export async function fetchSigmaPanelDetails(config: SigmaConfig): Promise<Sigma
       }
 
       // DNS
-      const dnsCandidate = pickField(p, [
-        "dns",
-        "server_dns",
-        "streaming_dns",
-        "stream_url",
-        "server_url",
-        "server_info.url",
-        "server_info.dns",
-        "data.dns",
-        "data.server_url",
-        "data.streaming_dns",
-      ]);
+      const dnsCandidate =
+        extractStreamingDnsFromRaw(p) ||
+        pickField(p, [
+          "dns",
+          "server_dns",
+          "streaming_dns",
+          "stream_url",
+          "server_url",
+          "server_info.url",
+          "server_info.dns",
+          "data.dns",
+          "data.server_url",
+          "data.streaming_dns",
+        ]);
       if (dnsCandidate && typeof dnsCandidate === "string" && !dnsCandidate.includes("/sign-in")) {
         if (!discoveredDns) discoveredDns = normalizeIptvDns(dnsCandidate);
       }
@@ -938,15 +1066,42 @@ export async function fetchSigmaPanelDetails(config: SigmaConfig): Promise<Sigma
     }
   }
 
-  // 3. Consulta endpoints de servidores cadastrados no painel
-  for (const sEndpoint of ["/api/servers", "/api/server-info", "/api/server/info", "/api/dns"]) {
+  // 3. Consulta endpoints de servidores cadastrados no painel e DNS de streaming
+  const serverEndpoints = [
+    "/api/servers",
+    "/api/server-info",
+    "/api/server/info",
+    "/api/dns",
+    "/api/streaming-dns",
+    "/api/streaming_dns",
+    "/api/stream-dns",
+    "/api/domains",
+    "/api/reseller/dns",
+    "/api/reseller/servers",
+    "/api/resellers/dns",
+    "/api/resellers/servers",
+    "/api/lines/dns",
+    "/api/panel/dns",
+    "/api/settings/dns",
+    "/api/links",
+  ];
+
+  for (const sEndpoint of serverEndpoints) {
     try {
       const res = await authorizedRequest(config, sEndpoint, { method: "GET" }, 4000);
       if (!res.ok || !res.payload) continue;
+
+      const payloadDns = extractStreamingDnsFromRaw(res.payload);
+      if (payloadDns && !discoveredDns) {
+        discoveredDns = payloadDns;
+      }
+
       const rows = extractRows(res.payload);
       for (const row of rows) {
         const sName = pickField(row, ["name", "server_name", "title", "label"]);
-        const sUrl = pickField(row, ["url", "dns", "server_url", "streaming_dns", "domain"]);
+        const sUrl =
+          extractStreamingDnsFromRaw(row) ||
+          pickField(row, ["url", "dns", "server_url", "streaming_dns", "domain"]);
         if (sName && typeof sName === "string") {
           discoveredServers.push({
             id: row.id,
@@ -980,6 +1135,68 @@ export async function fetchSigmaPanelDetails(config: SigmaConfig): Promise<Sigma
         }
       }
     } catch {}
+  }
+
+  // 5. Se ainda não detectou o DNS de transmissão oficial, inspeciona as linhas dos clientes
+  if (!discoveredDns) {
+    for (const custEndpoint of [
+      "/api/customers",
+      "/api/reseller-api/v1/customers",
+      "/api/resellers/customers",
+      "/api/clients",
+      "/api/users",
+    ]) {
+      try {
+        const res = await authorizedRequest(config, custEndpoint, { method: "GET" }, 4000);
+        if (!res.ok || !res.payload) continue;
+        const rows = extractRows(res.payload);
+        if (rows.length > 0) {
+          for (const row of rows.slice(0, 10)) {
+            const m3u = extractM3uFromRaw(row);
+            if (m3u) {
+              discoveredDns = normalizeIptvDns(m3u);
+              break;
+            }
+            const dns = extractStreamingDnsFromRaw(row);
+            if (dns) {
+              discoveredDns = dns;
+              break;
+            }
+          }
+
+          if (!discoveredDns && rows[0]?.id) {
+            const firstId = rows[0].id;
+            for (const detailPath of [
+              `/api/customers/${firstId}`,
+              `/api/customers/${firstId}/urls`,
+              `/api/customers/${firstId}/links`,
+              `/api/customers/${firstId}/lines`,
+              `/api/reseller/customers/${firstId}`,
+              `/api/resellers/customers/${firstId}`,
+              `/api/lines/${firstId}`,
+              `/api/lines/${firstId}/urls`,
+            ]) {
+              try {
+                const detailRes = await authorizedRequest(config, detailPath, { method: "GET" }, 3000);
+                if (detailRes.ok && detailRes.payload) {
+                  const m3u = extractM3uFromRaw(detailRes.payload);
+                  if (m3u) {
+                    discoveredDns = normalizeIptvDns(m3u);
+                    break;
+                  }
+                  const dns = extractStreamingDnsFromRaw(detailRes.payload);
+                  if (dns) {
+                    discoveredDns = dns;
+                    break;
+                  }
+                }
+              } catch {}
+            }
+          }
+          break;
+        }
+      } catch {}
+    }
   }
 
   return {

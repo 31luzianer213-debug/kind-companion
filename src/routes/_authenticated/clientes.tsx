@@ -71,6 +71,7 @@ import {
   extractCleanIptvDns,
   generateM3uUrl,
   generateEpgUrl,
+  extractM3uFromNotes,
 } from "@/lib/format";
 import {
   KeyRound,
@@ -610,6 +611,7 @@ function Clientes() {
 
   function copiarDadosAcesso(client: ClientRow) {
     const serverLabel = getClientServerLabel(client);
+    const directM3u = extractM3uFromNotes(client.notes);
     const texto = formatIptvAccessMessage({
       name: client.name,
       serverName: serverLabel,
@@ -618,6 +620,8 @@ function Clientes() {
       password: client.iptv_password,
       screens: client.screens,
       dueDate: client.next_due_date,
+      m3uUrl: directM3u,
+      notes: client.notes,
     });
 
     navigator.clipboard.writeText(texto);
@@ -1643,12 +1647,14 @@ function Clientes() {
           </DialogHeader>
 
           {viewAccessClient && (() => {
-            const cleanDns = extractCleanIptvDns(sigmaServerUrl);
+            const directM3u = extractM3uFromNotes(viewAccessClient.notes);
+            const cleanDns =
+              extractCleanIptvDns(sigmaServerUrl) || (directM3u ? extractCleanIptvDns(directM3u) : "");
             const serverLabel = getClientServerLabel(viewAccessClient);
             const user = viewAccessClient.iptv_username || "";
             const pass = viewAccessClient.iptv_password || "";
-            const m3uTs = generateM3uUrl(cleanDns, user, pass, "ts");
-            const m3uHls = generateM3uUrl(cleanDns, user, pass, "m3u8");
+            const m3uTs = directM3u || generateM3uUrl(cleanDns, user, pass, "ts");
+            const m3uHls = directM3u || generateM3uUrl(cleanDns, user, pass, "m3u8");
             const epg = generateEpgUrl(cleanDns, user, pass);
 
             return (

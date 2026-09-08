@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { CreateSigmaCustomerInput, SigmaConfig } from "./sigma.panel";
+import { extractCleanIptvDns, generateM3uUrl } from "./format";
 
 export type SigmaSettingsPayload = {
   sigma_url: string;
@@ -258,12 +259,27 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
 
       // Persiste o token atualizado, server name detectado e DNS detectado se não houver manual
       const updatePayload: Record<string, any> = { sigma_token: token };
-      if (detectedDns && !saved.streaming_dns) {
+      const currentSavedDns = saved.streaming_dns?.trim();
+      const isBadDns = !currentSavedDns || currentSavedDns.includes("/sign-in") || currentSavedDns.includes("#/");
+
+      if (detectedDns && isBadDns) {
         updatePayload.sigma_streaming_dns = detectedDns;
       }
-      if (detectedServerName && !saved.server_name) {
+      if (detectedServerName && (!saved.server_name || saved.server_name.startsWith("http"))) {
         updatePayload.sigma_server_name = detectedServerName;
       }
+
+      try {
+        const { data: wsRow } = await supabase
+          .from("whatsapp_settings")
+          .select("welcome_template")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (wsRow?.welcome_template && !wsRow.welcome_template.includes("{m3u}")) {
+          updatePayload.welcome_template = `${wsRow.welcome_template.trim()}\n\n🔗 *Lista M3U Plus:*\n{m3u}\n\n📺 *Guia de Canais (EPG):*\n{epg}`;
+        }
+      } catch {}
 
       try {
         await supabase.from("whatsapp_settings").update(updatePayload).eq("user_id", userId);
@@ -364,6 +380,13 @@ export async function runSigmaSyncForUser(
     detectedDns = panelDetails.dns?.trim() || null;
     if (!detectedDns) {
       for (const c of customers) {
+        if (c.m3uUrl) {
+          const fromM3u = extractCleanIptvDns(c.m3uUrl);
+          if (fromM3u) {
+            detectedDns = fromM3u;
+            break;
+          }
+        }
         if (c.dns) {
           detectedDns = c.dns.trim();
           break;
@@ -372,13 +395,29 @@ export async function runSigmaSyncForUser(
     }
 
     // 3. Atualiza automaticamente no banco e no user_metadata
+    const currentSavedDns = saved.streaming_dns?.trim();
+    const isBadDns = !currentSavedDns || currentSavedDns.includes("/sign-in") || currentSavedDns.includes("#/");
+
     const updateSettings: Record<string, any> = {};
-    if (detectedDns && !saved.streaming_dns) {
+    if (detectedDns && isBadDns) {
       updateSettings.sigma_streaming_dns = detectedDns;
     }
-    if (detectedServerName && !saved.server_name) {
+    if (detectedServerName && (!saved.server_name || saved.server_name.startsWith("http"))) {
       updateSettings.sigma_server_name = detectedServerName;
     }
+
+    // Garante que o welcome_template da revenda possui as tags {m3u} e {epg}
+    try {
+      const { data: wsRow } = await supabase
+        .from("whatsapp_settings")
+        .select("welcome_template")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (wsRow?.welcome_template && !wsRow.welcome_template.includes("{m3u}")) {
+        updateSettings.welcome_template = `${wsRow.welcome_template.trim()}\n\n🔗 *Lista M3U Plus:*\n{m3u}\n\n📺 *Guia de Canais (EPG):*\n{epg}`;
+      }
+    } catch {}
 
     if (Object.keys(updateSettings).length > 0) {
       try {
@@ -436,10 +475,20 @@ export async function runSigmaSyncForUser(
     const dueDay = customer.dueDate ? Number(customer.dueDate.slice(8, 10)) : null;
     const localStatus = customer.status === "active" ? "active" : customer.status ? "inactive" : "active";
 
-    const clientNotes =
-      customer.notes?.trim() ||
-      (customer.packageName ? `Pacote: ${customer.packageName}` : null) ||
-      (customer.serverName ? `Servidor: ${customer.serverName}` : null);
+    const effectiveDns = detectedDns || saved.streaming_dns;
+    const directOrGeneratedM3u =
+      customer.m3uUrl ||
+      (effectiveDns && customer.username && customer.password
+        ? generateM3uUrl(effectiveDns, customer.username, customer.password, "ts")
+        : null);
+
+    const noteParts = [
+      customer.notes?.trim(),
+      customer.packageName ? `Pacote: ${customer.packageName}` : null,
+      customer.serverName ? `Servidor: ${customer.serverName}` : null,
+      directOrGeneratedM3u ? `M3U: ${directOrGeneratedM3u}` : null,
+    ].filter(Boolean);
+    const clientNotes = noteParts.length > 0 ? noteParts.join("\n") : null;
 
     const base: Record<string, any> = {
       sigma_customer_id: customer.id,
