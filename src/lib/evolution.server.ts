@@ -5,7 +5,8 @@ export function instanceNameFor(userId: string) {
 }
 
 export function evolutionConfig(userId: string) {
-  const base = (process.env["EVOLUTION_API_URL"] ?? "").replace(/\/+$/, "");
+  const envBase = process.env["EVOLUTION_API_URL"]?.trim();
+  const base = (envBase && envBase.length > 0 ? envBase : "https://cobrancas-whatsapp.shop").replace(/\/+$/, "");
   const key = process.env["EVOLUTION_API_KEY"] ?? "";
   if (!base || !key) {
     throw new Error("Servidor do WhatsApp não configurado.");
@@ -51,24 +52,68 @@ function extractQr(json: any) {
   return { base64, code };
 }
 
-/** Cria a instância se necessário e devolve o QR Code para leitura. */
-export async function connectInstance(userId: string) {
+/** Cache de controle para evitar chamadas redundantes de webhook na VPS */
+const lastWebhookSync = new Map<string, number>();
+
+/** Garante que o Webhook do Bot está configurado na Evolution API sem sobrecarregar a VPS */
+export async function ensureInstanceWebhook(userId: string, publicAppUrl: string) {
+  if (!publicAppUrl) return;
+  const last = lastWebhookSync.get(userId) ?? 0;
+  const now = Date.now();
+  // Se configurou há menos de 10 minutos, não precisa reenviar
+  if (now - last < 10 * 60 * 1000) return;
+
+  const webhookUrl = `${publicAppUrl.replace(/\/+$/, "")}/api/public/hooks/whatsapp-bot?userId=${userId}`;
+  try {
+    await setInstanceWebhook(userId, webhookUrl);
+    lastWebhookSync.set(userId, now);
+  } catch (err) {
+    console.warn(`[Evolution Webhook Auto] Falha silenciosa ao sincronizar para ${userId}:`, err);
+  }
+}
+
+/** Cria a instância se necessário, já registra o Webhook do Bot automaticamente e devolve o QR Code para leitura. */
+export async function connectInstance(userId: string, publicAppUrl?: string) {
   const { base, key, instance } = evolutionConfig(userId);
   const state = await fetchState(userId);
-  if (state === "open") return { state: "open" as const, qr: null };
+
+  const webhookUrl = publicAppUrl
+    ? `${publicAppUrl.replace(/\/+$/, "")}/api/public/hooks/whatsapp-bot?userId=${userId}`
+    : undefined;
+
+  if (state === "open") {
+    if (publicAppUrl) {
+      ensureInstanceWebhook(userId, publicAppUrl).catch(() => {});
+    }
+    return { state: "open" as const, qr: null };
+  }
 
   if (state === "none") {
+    const createPayload: any = {
+      instanceName: instance,
+      qrcode: true,
+      integration: "WHATSAPP-BAILEYS",
+    };
+    if (webhookUrl) {
+      createPayload.webhook = webhookUrl;
+      createPayload.webhook_by_events = false;
+      createPayload.events = ["MESSAGES_UPSERT", "messages.upsert"];
+    }
+
     const created = await call(`/instance/create`, {
       method: "POST",
       base,
       key,
-      body: JSON.stringify({
-        instanceName: instance,
-        qrcode: true,
-        integration: "WHATSAPP-BAILEYS",
-      }),
+      body: JSON.stringify(createPayload),
     });
     const qr = extractQr(created.json);
+
+    // Registra webhook explicitamente também caso a versão da Evolution exija POST /webhook/set
+    if (webhookUrl) {
+      setInstanceWebhook(userId, webhookUrl).catch(() => {});
+      lastWebhookSync.set(userId, Date.now());
+    }
+
     if (qr.base64) return { state: "connecting" as const, qr };
   }
 
@@ -76,6 +121,12 @@ export async function connectInstance(userId: string) {
   if (connected.status >= 400) {
     throw new Error(`Erro ${connected.status}: ${connected.raw.slice(0, 200)}`);
   }
+
+  if (webhookUrl) {
+    setInstanceWebhook(userId, webhookUrl).catch(() => {});
+    lastWebhookSync.set(userId, Date.now());
+  }
+
   return { state: "connecting" as const, qr: extractQr(connected.json) };
 }
 
@@ -83,6 +134,7 @@ export async function connectInstance(userId: string) {
 export async function logoutInstance(userId: string) {
   const { base, key, instance } = evolutionConfig(userId);
   await call(`/instance/logout/${instance}`, { method: "DELETE", base, key });
+  lastWebhookSync.delete(userId);
   return true;
 }
 

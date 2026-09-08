@@ -444,21 +444,28 @@ function BotPage() {
           </form>
 
           {/* Card 4: Webhook da Evolution API */}
-          <Card className="surface-card border-primary/30 bg-primary/[0.02] shadow-sm">
+          <Card className="surface-card border-emerald-500/30 bg-emerald-500/[0.02] shadow-sm">
             <CardHeader className="pb-3 border-b border-border/50">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary">
-                  <KeyRound className="size-4" /> Webhook da Evolution API (Na sua VPS)
+                <CardTitle className="text-sm font-bold flex items-center gap-2 text-emerald-400">
+                  <KeyRound className="size-4" /> Webhook da Evolution API (VPS)
                 </CardTitle>
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px]">
-                  Evento: MESSAGES_UPSERT
+                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]">
+                  ⚡ 100% Automático ao Ler QR Code
                 </Badge>
               </div>
               <CardDescription className="text-xs">
-                Esta é a URL que a Evolution API na sua VPS chama quando alguém manda mensagem no seu WhatsApp.
+                Sua Evolution API em <code className="font-mono text-emerald-300">https://cobrancas-whatsapp.shop</code> é configurada automaticamente pelo sistema.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4 space-y-4">
+              <div className="flex items-start gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+                <Sparkles className="size-4 shrink-0 text-emerald-400 mt-0.5" />
+                <div>
+                  <strong className="text-emerald-200">Zero Trabalho Manual:</strong> Ao escanear o QR Code na aba <strong>WhatsApp</strong>, o sistema registra este Webhook na Evolution da sua VPS automaticamente. Seus usuários só precisam ler o QR Code no celular e o Robô já começa a responder!
+                </div>
+              </div>
+
               <div className="flex items-center gap-2 bg-muted/60 p-2.5 rounded-xl border border-border/60">
                 <Input
                   readOnly
@@ -479,9 +486,9 @@ function BotPage() {
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-xl bg-muted/30 border border-border/50">
                 <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-foreground">Configuração Automática em 1 Clique</p>
+                  <p className="text-xs font-bold text-foreground">Sincronização Manual / Reenvio</p>
                   <p className="text-[11px] text-muted-foreground">
-                    Envia o comando direto para sua Evolution API registrar o webhook na sua instância sem você precisar acessar a VPS.
+                    Caso tenha reiniciado sua VPS ou queira forçar a reativação imediata do Webhook na Evolution.
                   </p>
                 </div>
                 <Button
@@ -491,24 +498,18 @@ function BotPage() {
                   className="rounded-xl gap-1.5 text-xs font-bold shrink-0 bg-primary hover:bg-primary/90 shadow-sm"
                 >
                   <Zap className="size-3.5" />
-                  {configuringWebhook ? "Configurando na VPS..." : "Ativar na Minha VPS"}
+                  {configuringWebhook ? "Configurando na VPS..." : "Sincronizar Agora com VPS"}
                 </Button>
               </div>
 
-              {/* Passo a Passo Manual */}
+              {/* Informações da VPS e Manager */}
               <div className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/80 text-xs space-y-2">
                 <p className="font-bold text-foreground flex items-center gap-1.5">
-                  <HelpCircle className="size-3.5 text-primary" /> Como configurar manualmente no painel da Evolution:
+                  <HelpCircle className="size-3.5 text-primary" /> Painel Evolution Manager:
                 </p>
-                <ol className="list-decimal list-inside space-y-1 text-muted-foreground text-[11px] leading-relaxed">
-                  <li>Acesse o painel da sua Evolution API no navegador (ex: <code className="text-primary font-mono">http://IP-DA-VPS:8080/manager</code>).</li>
-                  <li>Clique na sua instância de WhatsApp conectada.</li>
-                  <li>Abra a aba <strong>Webhook</strong>.</li>
-                  <li>Marque a opção <strong>Enabled (Ativado)</strong> como Sim/True.</li>
-                  <li>No campo <strong>URL do Webhook</strong>, cole o link copiado acima.</li>
-                  <li>Em <strong>Eventos (Events)</strong>, selecione: <code className="text-emerald-400 font-mono">MESSAGES_UPSERT</code> (ou <code className="text-emerald-400 font-mono">messages.upsert</code>).</li>
-                  <li>Clique em <strong>Salvar (Save)</strong>. Pronto! O bot responderá a todas as mensagens instantaneamente.</li>
-                </ol>
+                <p className="text-muted-foreground text-[11px] leading-relaxed">
+                  Sua Evolution API está operando no domínio <a href="https://cobrancas-whatsapp.shop/manager/" target="_blank" rel="noreferrer" className="text-primary hover:underline font-mono">https://cobrancas-whatsapp.shop/manager/</a>. O sistema gerencia as instâncias e webhooks com o evento <code className="text-emerald-400 font-mono">MESSAGES_UPSERT</code> de forma 100% autônoma.
+                </p>
               </div>
             </CardContent>
           </Card>

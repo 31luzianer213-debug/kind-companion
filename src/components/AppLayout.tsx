@@ -77,7 +77,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // WhatsApp status
   const { data: waStatus } = useQuery({
     queryKey: ["layout-whatsapp-status"],
-    queryFn: () => statusFn({}),
+    queryFn: () =>
+      statusFn({
+        data: { origin: typeof window !== "undefined" ? window.location.origin : undefined },
+      }),
     staleTime: 60000,
     refetchInterval: 120000,
   });

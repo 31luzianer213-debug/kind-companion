@@ -63,7 +63,7 @@ function WhatsAppPage() {
 
   const session = useQuery({
     queryKey: ["whatsapp-session"],
-    queryFn: () => status({}),
+    queryFn: () => status({ data: { origin: typeof window !== "undefined" ? window.location.origin : undefined } }),
     refetchInterval: qr ? 4000 : 20000,
   });
 
@@ -92,7 +92,9 @@ function WhatsAppPage() {
   async function gerarQr() {
     setBusy(true);
     try {
-      const result = await connect({});
+      const result = await connect({
+        data: { origin: typeof window !== "undefined" ? window.location.origin : undefined },
+      });
       if (!result.ok) {
         toast.error(result.error ?? "Não foi possível gerar o QR Code.");
         return;
@@ -241,6 +243,13 @@ function WhatsAppPage() {
                     {qr ? "Atualizar QR Code" : "Conectar WhatsApp"}
                   </Button>
                 )}
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+              <Sparkles className="size-4 shrink-0 text-emerald-400 mt-0.5" />
+              <div>
+                <strong className="text-emerald-200">Webhook 100% Automático:</strong> Ao ler o QR Code, a integração com sua Evolution API (<code className="font-mono text-[11px] bg-black/30 px-1 py-0.5 rounded">https://cobrancas-whatsapp.shop</code>) e o Robô de Auto-Atendimento são vinculados na hora. Nem você nem seus clientes precisam configurar nada na VPS!
               </div>
             </div>
 

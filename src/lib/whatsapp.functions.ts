@@ -44,10 +44,31 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
 /** Estado atual da sessão de WhatsApp da conta. */
 export const getWhatsAppStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { fetchState } = await import("./evolution.server");
+  .inputValidator((input?: { origin?: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { fetchState, ensureInstanceWebhook } = await import("./evolution.server");
+    const { getRequest } = await import("@tanstack/react-start/server");
     try {
       const state = await fetchState(context.userId);
+
+      // Se a conexão estiver ativa ("open"), garante em segundo plano que o Webhook está configurado na VPS
+      if (state === "open") {
+        let publicUrl = data?.origin;
+        if (!publicUrl) {
+          try {
+            const req = getRequest();
+            if (req) {
+              const proto = req.headers.get("x-forwarded-proto") || "https";
+              const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+              if (host) publicUrl = `${proto}://${host}`;
+            }
+          } catch {}
+        }
+        if (publicUrl) {
+          ensureInstanceWebhook(context.userId, publicUrl).catch(() => {});
+        }
+      }
+
       return { ok: true as const, state, error: null };
     } catch (error) {
       return {
@@ -58,13 +79,28 @@ export const getWhatsAppStatus = createServerFn({ method: "POST" })
     }
   });
 
-/** Cria/abre a sessão e devolve o QR Code. */
+/** Cria/abre a sessão e devolve o QR Code, já vinculando o Webhook automaticamente na Evolution API. */
 export const connectWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input?: { origin?: string }) => input)
+  .handler(async ({ data, context }) => {
     const { connectInstance } = await import("./evolution.server");
+    const { getRequest } = await import("@tanstack/react-start/server");
+
+    let publicUrl = data?.origin;
+    if (!publicUrl) {
+      try {
+        const req = getRequest();
+        if (req) {
+          const proto = req.headers.get("x-forwarded-proto") || "https";
+          const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+          if (host) publicUrl = `${proto}://${host}`;
+        }
+      } catch {}
+    }
+
     try {
-      const result = await connectInstance(context.userId);
+      const result = await connectInstance(context.userId, publicUrl);
       return {
         ok: true as const,
         state: result.state,
