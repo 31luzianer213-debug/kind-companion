@@ -569,6 +569,10 @@ function PagamentosPage() {
                     {copiedWebhook ? "Copiado!" : "Copiar Webhook"}
                   </Button>
                 </div>
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                  <span className="text-amber-400">💡</span>
+                  Nota: Para o Mercado Pago enviar as notificações de pagamento aprovado automaticamente, seu site precisa estar publicado online com HTTPS (caso esteja rodando no localhost, use o link da sua hospedagem / Lovable Cloud).
+                </p>
               </div>
             </CardContent>
           </Card>

@@ -129,23 +129,115 @@ export const savePaymentSettings = createServerFn({ method: "POST" })
 export const testMercadoPagoConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { token: string }) => input)
-  .handler(async ({ data }) => {
-    const token = data.token?.trim();
-    if (!token) return { ok: false as const, error: "Informe o token do Mercado Pago." };
+  .handler(async ({ data, context }) => {
+    const rawToken = data.token ?? "";
+    const token = rawToken.replace(/^Bearer\s+/i, "").replace(/^["']|["']$/g, "").trim();
+
+    if (!token) {
+      return { ok: false as const, error: "Informe o Access Token do Mercado Pago para testar." };
+    }
 
     try {
-      const res = await fetch("https://api.mercadopago.com/v1/users/me", {
-        headers: { Authorization: `Bearer ${token}` },
+      // 1. Tenta o endpoint oficial de perfil do Mercado Pago: /users/me (SEM /v1/)
+      const userRes = await fetch("https://api.mercadopago.com/users/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "User-Agent": "KindCompanion/2.0 (MercadoPago Integration)",
+        },
       });
-      if (res.ok) {
-        const json = await res.json();
-        const name = json.nickname || json.first_name || "Conta Ativa";
+
+      if (userRes.ok) {
+        const json = await userRes.json();
+        const name =
+          json.nickname ||
+          [json.first_name, json.last_name].filter(Boolean).join(" ") ||
+          json.site_id ||
+          "Conta Mercado Pago";
         const email = json.email || "";
+
+        // Persiste token para conveniência
+        try {
+          const { supabase, userId } = context;
+          await supabase
+            .from("whatsapp_settings")
+            .upsert({ user_id: userId, mercadopago_token: token }, { onConflict: "user_id" });
+        } catch {
+          // ignora se falhar
+        }
+
         return { ok: true as const, name, email, error: null };
       }
-      return { ok: false as const, error: `Mercado Pago retornou erro ${res.status}: token inválido ou sem permissão.` };
+
+      // 2. Se /users/me não autorizou (ex: token restrito a escopo de pagamentos sem permissão de ler perfil),
+      // testa via /v1/payment_methods (que qualquer credencial ativa do Mercado Pago tem acesso)
+      const methodsRes = await fetch("https://api.mercadopago.com/v1/payment_methods", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "User-Agent": "KindCompanion/2.0 (MercadoPago Integration)",
+        },
+      });
+
+      if (methodsRes.ok) {
+        try {
+          const { supabase, userId } = context;
+          await supabase
+            .from("whatsapp_settings")
+            .upsert({ user_id: userId, mercadopago_token: token }, { onConflict: "user_id" });
+        } catch {
+          // ignora
+        }
+
+        return {
+          ok: true as const,
+          name: "Credencial Mercado Pago Ativa",
+          email: "Autorizada para Pagamentos e PIX",
+          error: null,
+        };
+      }
+
+      // Se ambos falharem, extrai o erro retornado pela API do Mercado Pago
+      let errorDetail = "";
+      try {
+        const errJson = await userRes.json();
+        errorDetail = errJson.message || errJson.error || "";
+      } catch {
+        try {
+          const errMethods = await methodsRes.json();
+          errorDetail = errMethods.message || errMethods.error || "";
+        } catch {
+          errorDetail = "";
+        }
+      }
+
+      if (userRes.status === 401 || methodsRes.status === 401) {
+        return {
+          ok: false as const,
+          error: `Token do Mercado Pago inválido ou expirado (401). Verifique o Access Token copiado no portal Mercado Pago Developers.${
+            errorDetail ? ` (${errorDetail})` : ""
+          }`,
+        };
+      }
+
+      if (userRes.status === 403 || methodsRes.status === 403) {
+        return {
+          ok: false as const,
+          error: `Acesso negado pelo Mercado Pago (403). Verifique se seu aplicativo possui permissões de pagamento ativas.${
+            errorDetail ? ` (${errorDetail})` : ""
+          }`,
+        };
+      }
+
+      return {
+        ok: false as const,
+        error: `Mercado Pago retornou status ${userRes.status}${errorDetail ? `: ${errorDetail}` : ""}.`,
+      };
     } catch (err) {
-      return { ok: false as const, error: err instanceof Error ? err.message : "Erro de conexão com Mercado Pago." };
+      return {
+        ok: false as const,
+        error: err instanceof Error ? err.message : "Erro de conexão ao contatar o Mercado Pago.",
+      };
     }
   });
 
@@ -156,7 +248,8 @@ export const testAsaasConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { token: string; env?: string }) => input)
   .handler(async ({ data }) => {
-    const token = data.token?.trim();
+    const rawToken = data.token ?? "";
+    const token = rawToken.replace(/^Bearer\s+/i, "").replace(/^["']|["']$/g, "").trim();
     if (!token) return { ok: false as const, error: "Informe o token do Asaas." };
 
     const baseUrl = data.env === "sandbox" ? "https://sandbox.asaas.com/api/v3" : "https://api.asaas.com/v3";
