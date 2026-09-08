@@ -352,8 +352,8 @@ function Clientes() {
         if (error) throw new Error(error.message);
         savedRow = updated;
 
-        // Se o cliente ainda não tem linha no Sigma, mas o usuário marcou para provisionar
-        if (values.create_in_sigma && !savedRow?.sigma_customer_id && isSigmaConfigured && values.iptv_username) {
+        // Se o cliente ainda não tem linha no Sigma, provisiona automaticamente no painel
+        if (!savedRow?.sigma_customer_id && isSigmaConfigured && values.iptv_username) {
           try {
             const sigmaRes = await createSigma({
               data: {
@@ -417,8 +417,8 @@ function Clientes() {
         if (error) throw new Error(error.message);
         savedRow = inserted;
 
-        // Se solicitado criar no painel Sigma
-        if (values.create_in_sigma && isSigmaConfigured && savedRow?.id && values.iptv_username) {
+        // Provisiona automaticamente no painel Sigma se configurado e informado usuário IPTV
+        if (isSigmaConfigured && savedRow?.id && values.iptv_username) {
           try {
             const sigmaRes = await createSigma({
               data: {
@@ -1511,26 +1511,6 @@ function Clientes() {
                   />
                 </div>
               </div>
-
-              {isSigmaConfigured ? (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                      <Server className="size-3.5 text-primary" />
-                      {form.id ? "Sincronizar no Painel Sigma" : "Criar linha no Painel Sigma"}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {form.id
-                        ? "Envia as alterações de usuário, senha, telas, vencimento e status diretamente para o painel Sigma."
-                        : "Cria e ativa automaticamente a conta do cliente no painel Sigma."}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={form.create_in_sigma}
-                    onCheckedChange={(checked) => setForm({ ...form, create_in_sigma: checked })}
-                  />
-                </div>
-              ) : null}
             </div>
 
             {/* Seção 4: Status e Observações */}
