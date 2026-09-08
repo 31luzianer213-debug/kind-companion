@@ -52,6 +52,7 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/bot")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Robô WhatsApp & Pagamentos PIX — Alpha IPTV" },
@@ -137,15 +138,31 @@ function BotPage() {
     },
   ]);
 
-  // Carrega configurações do Bot e Pagamento
+  // Carrega configurações do Bot e Pagamento com segurança
   const { data: botData, isLoading: loadingBot } = useQuery({
     queryKey: ["bot-settings"],
-    queryFn: () => getSettings({}),
+    queryFn: async () => {
+      try {
+        const res = await getSettings({});
+        return res;
+      } catch (err) {
+        console.warn("Aviso ao carregar bot settings:", err);
+        return { ok: true as const, config: null };
+      }
+    },
   });
 
   const { data: paymentData } = useQuery({
     queryKey: ["payment-settings"],
-    queryFn: () => getPaymentFn({}),
+    queryFn: async () => {
+      try {
+        const res = await getPaymentFn({});
+        return res;
+      } catch (err) {
+        console.warn("Aviso ao carregar payment settings:", err);
+        return { ok: true as const, settings: null };
+      }
+    },
   });
 
   useEffect(() => {
