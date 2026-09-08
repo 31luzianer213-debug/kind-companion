@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { runAutoBilling, sendWhatsAppMessage } from "@/lib/whatsapp.functions";
+import { getSigmaSettings, syncSigmaClients } from "@/lib/sigma.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,6 @@ import { formatBRL, formatDate, formatDateTime } from "@/lib/format";
 import {
   Send,
   Users,
-  ListVideo,
   Wallet,
   AlertTriangle,
   ArrowUpRight,
@@ -29,6 +29,8 @@ import {
   Smartphone,
   Check,
   ChevronRight,
+  Server,
+  Zap,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -59,26 +61,30 @@ function Painel() {
   const queryClient = useQueryClient();
   const billing = useServerFn(runAutoBilling);
   const send = useServerFn(sendWhatsAppMessage);
+  const syncSigma = useServerFn(syncSigmaClients);
+  const getSigma = useServerFn(getSigmaSettings);
+
   const [running, setRunning] = useState(false);
+  const [syncingSigma, setSyncingSigma] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-v2"],
     queryFn: async () => {
-      const [clients, lists, invoices, logs, settings] = await Promise.all([
+      const [clients, invoices, logs, settings, sigmaRes] = await Promise.all([
         supabase.from("clients").select("*").order("name"),
-        supabase.from("iptv_lists").select("*").order("created_at"),
         supabase.from("invoices").select("*, clients(name, phone)").order("due_date", { ascending: true }),
         supabase.from("message_logs").select("*, clients(name)").order("created_at", { ascending: false }).limit(6),
         supabase.from("whatsapp_settings").select("*").maybeSingle(),
+        getSigma({}),
       ]);
 
       return {
         clients: clients.data ?? [],
-        lists: lists.data ?? [],
         invoices: invoices.data ?? [],
         logs: logs.data ?? [],
         settings: settings.data,
+        sigma: sigmaRes.ok ? sigmaRes.settings : null,
       };
     },
     staleTime: 15000,
@@ -86,11 +92,12 @@ function Painel() {
 
   const clients = data?.clients ?? [];
   const invoices = data?.invoices ?? [];
-  const lists = data?.lists ?? [];
   const logs = data?.logs ?? [];
+  const sigmaSettings = data?.sigma;
 
   // Financial calculations
   const activeClients = useMemo(() => clients.filter((c) => c.status === "active"), [clients]);
+  const sigmaClients = useMemo(() => clients.filter((c) => Boolean(c.sigma_customer_id)), [clients]);
   const totalMonthlyFee = useMemo(
     () => activeClients.reduce((sum, c) => sum + Number(c.monthly_fee || 0), 0),
     [activeClients],
@@ -118,16 +125,10 @@ function Painel() {
     [pendingInvoices],
   );
 
-  // Lists capacity
-  const totalCapacity = useMemo(
-    () => lists.reduce((sum, l) => sum + Number(l.capacity || 0), 0),
-    [lists],
-  );
-  const totalScreensUsed = useMemo(
-    () => activeClients.reduce((sum, c) => sum + Number(c.screens || 1), 0),
-    [activeClients],
-  );
-  const occupancyRate = totalCapacity > 0 ? Math.min(100, Math.round((totalScreensUsed / totalCapacity) * 100)) : 0;
+  const serverDisplayName =
+    sigmaSettings?.sigma_server_name?.trim() ||
+    sigmaSettings?.sigma_server_display_name ||
+    (sigmaSettings?.sigma_url ? sigmaSettings.sigma_url.replace(/^https?:\/\//i, "").split("/")[0] : "Servidor Sigma");
 
   // Clientes que vencem hoje ou nos próximos 3 dias
   const todayStr = new Date().toISOString().split("T")[0] ?? "";
@@ -199,14 +200,31 @@ function Painel() {
     }
   }
 
+  async function handleSyncSigma() {
+    setSyncingSigma(true);
+    try {
+      const res = await syncSigma({});
+      if (res.ok) {
+        toast.success(`Sigma sincronizado: ${res.created} novos e ${res.updated} atualizados!`);
+        queryClient.invalidateQueries();
+      } else {
+        toast.error(res.error ?? "Falha ao sincronizar com o Sigma.");
+      }
+    } catch {
+      toast.error("Erro ao sincronizar com o Sigma.");
+    } finally {
+      setSyncingSigma(false);
+    }
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Top Header com Quick Actions */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/50 pb-6">
         <div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Painel Operacional
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" /> Painel Sigma Operacional
             </span>
             <span className="text-xs text-muted-foreground">• Atualizado em tempo real</span>
           </div>
@@ -214,11 +232,21 @@ function Painel() {
             Visão Geral
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Acompanhe o faturamento, controle a inadimplência e gerencie seus clientes em piloto automático.
+            Acompanhe o faturamento, controle a inadimplência e sincronize linhas do Painel Sigma em piloto automático.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            variant="outline"
+            onClick={handleSyncSigma}
+            disabled={syncingSigma}
+            className="rounded-xl border-border/80 font-semibold gap-2 shadow-sm"
+          >
+            {syncingSigma ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <RefreshCw className="h-4 w-4 text-primary" />}
+            Sincronizar Sigma
+          </Button>
+
           <Button
             asChild
             variant="outline"
@@ -310,28 +338,28 @@ function Painel() {
           <div className="h-1 w-full bg-gradient-to-r from-destructive to-amber-500" />
         </Card>
 
-        {/* Ocupação das Listas IPTV */}
+        {/* Painel Sigma & Servidor */}
         <Card className="surface-card hover-lift relative overflow-hidden">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                Lotação de Telas
+                Painel Sigma
               </span>
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-chart-4/10 text-chart-4">
-                <Layers className="h-5 w-5" />
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+                <Server className="h-5 w-5" />
               </span>
             </div>
-            <p className="mt-3 text-3xl font-extrabold text-foreground truncate">
-              {occupancyRate}%
+            <p className="mt-3 text-xl font-extrabold text-foreground truncate" title={serverDisplayName}>
+              {serverDisplayName}
             </p>
-            <div className="mt-2 space-y-1.5">
-              <Progress value={occupancyRate} className="h-2" />
-              <div className="flex justify-between text-[11px] text-muted-foreground">
-                <span>{totalScreensUsed} ocupadas</span>
-                <span>{totalCapacity > 0 ? `${totalCapacity} contratadas` : "Sem limite"}</span>
-              </div>
+            <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+              <span>{sigmaClients.length} linhas vinculadas</span>
+              <Link to="/sigma" className="font-semibold text-primary hover:underline flex items-center gap-0.5">
+                Servidor <ArrowUpRight className="h-3 w-3" />
+              </Link>
             </div>
           </CardContent>
+          <div className="h-1 w-full bg-gradient-to-r from-primary to-indigo-500" />
         </Card>
       </div>
 

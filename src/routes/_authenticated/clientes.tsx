@@ -241,7 +241,7 @@ function Clientes() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("*, iptv_lists(id, name, server_url)")
+        .select("*")
         .order("name", { ascending: true });
       if (error) throw error;
       return data;
@@ -256,21 +256,13 @@ function Clientes() {
     },
   });
 
-  const { data: listsData } = useQuery({
-    queryKey: ["iptv-lists"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("iptv_lists")
-        .select("id, name, capacity, server_url")
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const clients = data ?? [];
-  const lists = listsData ?? [];
   const isSigmaConfigured = Boolean(sigmaConfigQuery.data?.isConfigured);
+  const sigmaServerName =
+    sigmaConfigQuery.data?.sigma_server_name?.trim() ||
+    sigmaConfigQuery.data?.sigma_server_display_name ||
+    "Servidor Sigma";
+  const sigmaServerUrl = sigmaConfigQuery.data?.sigma_url || "";
 
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0] ?? "", []);
 
@@ -545,12 +537,11 @@ function Clientes() {
   }
 
   // Copiar dados de acesso
-  function copiarDadosAcesso(client: Tables<"clients"> & { iptv_lists: { name: string; server_url: string | null } | null }) {
-    const listInfo = client.iptv_lists;
+  function copiarDadosAcesso(client: Tables<"clients">) {
     const texto = `📡 *DADOS DE ACESSO IPTV* 📡\n\n` +
       `👤 *Cliente:* ${client.name}\n` +
-      `📺 *Lista:* ${listInfo?.name ?? "Padrão"}\n` +
-      (listInfo?.server_url ? `🌐 *Servidor:* ${listInfo.server_url}\n` : "") +
+      `📺 *Servidor:* ${sigmaServerName}\n` +
+      (sigmaServerUrl ? `🌐 *Endereço/URL:* ${sigmaServerUrl}\n` : "") +
       (client.iptv_username ? `🔑 *Usuário:* ${client.iptv_username}\n` : "") +
       (client.iptv_password ? `🔒 *Senha:* ${client.iptv_password}\n` : "") +
       `🖥️ *Telas:* ${client.screens ?? 1}\n` +
@@ -624,7 +615,7 @@ function Clientes() {
       return;
     }
 
-    const headers = ["Nome", "Telefone", "E-mail", "Mensalidade", "Dia Venc", "Próximo Venc", "Status", "Lista", "Telas", "Sigma ID"];
+    const headers = ["Nome", "Telefone", "E-mail", "Mensalidade", "Dia Venc", "Próximo Venc", "Status", "Servidor Sigma", "Telas", "Sigma ID"];
     const rows = filteredClients.map((c) => [
       `"${c.name}"`,
       `"${c.phone}"`,
@@ -633,7 +624,7 @@ function Clientes() {
       `"${c.due_day}"`,
       `"${c.next_due_date ?? ""}"`,
       `"${c.status}"`,
-      `"${c.iptv_lists?.name ?? ""}"`,
+      `"${sigmaServerName}"`,
       `"${c.screens ?? 1}"`,
       `"${c.sigma_customer_id ?? ""}"`,
     ]);
@@ -947,7 +938,7 @@ function Clientes() {
                         <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
                           <Tv className="size-3" />
                           {client.screens || 1} tela{(client.screens || 1) > 1 ? "s" : ""}
-                          {client.iptv_lists?.name ? ` • ${client.iptv_lists.name}` : ""}
+                          <span className="text-primary font-medium">• {sigmaServerName}</span>
                         </div>
                       </TableCell>
 
@@ -1338,20 +1329,18 @@ function Clientes() {
 
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1.5 sm:col-span-2">
-                  <Label className="text-xs font-semibold">Lista / Servidor IPTV</Label>
-                  <Select value={form.list_id} onValueChange={(val) => setForm({ ...form, list_id: val })}>
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Selecione uma lista" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhuma lista associada</SelectItem>
-                      {lists.map((list) => (
-                        <SelectItem key={list.id} value={list.id}>
-                          {list.name} {list.capacity ? `(${list.capacity} telas máx)` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-xs font-semibold flex items-center gap-1">
+                    <Server className="size-3 text-primary" /> Servidor Painel Sigma
+                  </Label>
+                  <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-xs">
+                    <span className="size-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                    <span className="font-semibold text-foreground truncate">{sigmaServerName}</span>
+                    {sigmaServerUrl && (
+                      <span className="text-muted-foreground font-mono truncate text-[11px]">
+                        ({sigmaServerUrl})
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Quantidade de Telas</Label>

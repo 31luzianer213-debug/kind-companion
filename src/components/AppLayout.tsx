@@ -11,7 +11,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
 import {
   Users,
-  ListVideo,
   Receipt,
   Settings,
   LogOut,
@@ -19,19 +18,21 @@ import {
   Menu,
   X,
   Sparkles,
-  MonitorPlay,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
+  Server,
+  MessageCircle,
+  CreditCard,
   ChevronRight,
 } from "lucide-react";
 
 const nav = [
-  { to: "/painel", label: "Painel", icon: LayoutDashboard, badgeKey: null },
-  { to: "/clientes", label: "Clientes", icon: Users, badgeKey: "clients" },
-  { to: "/listas", label: "Listas IPTV", icon: ListVideo, badgeKey: "lists" },
+  { to: "/painel", label: "Painel Geral", icon: LayoutDashboard, badgeKey: null },
+  { to: "/clientes", label: "Clientes & Linhas", icon: Users, badgeKey: "clients" },
   { to: "/cobrancas", label: "Cobranças", icon: Receipt, badgeKey: "invoices" },
-  { to: "/configuracoes", label: "WhatsApp & Ajustes", icon: Settings, badgeKey: null },
+  { to: "/sigma", label: "Painel Sigma", icon: Server, badgeKey: "sigma" },
+  { to: "/whatsapp", label: "WhatsApp", icon: MessageCircle, badgeKey: null },
+  { to: "/pagamentos", label: "Pagamentos", icon: CreditCard, badgeKey: null },
+  { to: "/mensagens", label: "Mensagens", icon: Sparkles, badgeKey: null },
+  { to: "/configuracoes", label: "Ajustes & Robô", icon: Settings, badgeKey: null },
 ] as const;
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -53,15 +54,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { data: counts } = useQuery({
     queryKey: ["sidebar-counts"],
     queryFn: async () => {
-      const [clientsRes, invoicesRes, listsRes] = await Promise.all([
+      const [clientsRes, invoicesRes, sigmaClientsRes] = await Promise.all([
         supabase.from("clients").select("id", { count: "exact", head: true }),
         supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "overdue"),
-        supabase.from("iptv_lists").select("id", { count: "exact", head: true }),
+        supabase.from("clients").select("id", { count: "exact", head: true }).not("sigma_customer_id", "is", null),
       ]);
       return {
         clients: clientsRes.count ?? 0,
         overdueInvoices: invoicesRes.count ?? 0,
-        lists: listsRes.count ?? 0,
+        sigmaClients: sigmaClientsRes.count ?? 0,
       };
     },
     staleTime: 30000,
@@ -92,7 +93,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           IPTV Manager
         </span>
         <span className="block text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-          Gestão Inteligente
+          Painel Sigma Pro
         </span>
       </div>
     </Link>
@@ -100,7 +101,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const whatsappBadge = (
     <Link
-      to="/configuracoes"
+      to="/whatsapp"
       className={cn(
         "group flex items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-xs font-medium transition-all",
         isWaConnected
@@ -136,8 +137,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {nav.map(({ to, label, icon: Icon, badgeKey }) => {
         const active = pathname === to || pathname.startsWith(to + "/");
         let badgeCount: number | null = null;
+        let isOverdue = false;
         if (badgeKey === "invoices" && (counts?.overdueInvoices ?? 0) > 0) {
           badgeCount = counts?.overdueInvoices ?? null;
+          isOverdue = true;
+        } else if (badgeKey === "sigma" && (counts?.sigmaClients ?? 0) > 0) {
+          badgeCount = counts?.sigmaClients ?? null;
         }
 
         return (
@@ -145,7 +150,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             key={to}
             to={to}
             className={cn(
-              "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200",
+              "group flex items-center gap-3 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all duration-200",
               active
                 ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
                 : "text-muted-foreground hover:bg-accent/80 hover:text-foreground",
@@ -159,8 +164,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
             />
             <span className="flex-1 truncate">{label}</span>
             {badgeCount !== null && (
-              <span className="rounded-full bg-destructive/90 px-1.5 py-0.5 text-[10px] font-bold text-destructive-foreground animate-pulse">
-                {badgeCount} em atraso
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+                  isOverdue
+                    ? "bg-destructive/90 text-destructive-foreground animate-pulse"
+                    : active
+                    ? "bg-primary-foreground/20 text-primary-foreground"
+                    : "bg-muted text-muted-foreground",
+                )}
+              >
+                {badgeCount}
               </span>
             )}
             {active && badgeCount === null && (

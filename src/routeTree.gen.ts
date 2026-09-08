@@ -16,7 +16,11 @@ import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedCobrancasRouteImport } from './routes/_authenticated/cobrancas'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedListasRouteImport } from './routes/_authenticated/listas'
+import { Route as AuthenticatedMensagensRouteImport } from './routes/_authenticated/mensagens'
+import { Route as AuthenticatedPagamentosRouteImport } from './routes/_authenticated/pagamentos'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
+import { Route as AuthenticatedSigmaRouteImport } from './routes/_authenticated/sigma'
+import { Route as AuthenticatedWhatsappRouteImport } from './routes/_authenticated/whatsapp'
 import { Route as ApiPublicHooksCobrancaDiariaRouteImport } from './routes/api/public/hooks/cobranca-diaria'
 
 const IndexRoute = IndexRouteImport.update({
@@ -54,9 +58,29 @@ const AuthenticatedListasRoute = AuthenticatedListasRouteImport.update({
   path: '/listas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMensagensRoute = AuthenticatedMensagensRouteImport.update({
+  id: '/mensagens',
+  path: '/mensagens',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPagamentosRoute = AuthenticatedPagamentosRouteImport.update({
+  id: '/pagamentos',
+  path: '/pagamentos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
   id: '/painel',
   path: '/painel',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSigmaRoute = AuthenticatedSigmaRouteImport.update({
+  id: '/sigma',
+  path: '/sigma',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedWhatsappRoute = AuthenticatedWhatsappRouteImport.update({
+  id: '/whatsapp',
+  path: '/whatsapp',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const ApiPublicHooksCobrancaDiariaRoute =
@@ -73,7 +97,11 @@ export interface FileRoutesByFullPath {
   '/cobrancas': typeof AuthenticatedCobrancasRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/listas': typeof AuthenticatedListasRoute
+  '/mensagens': typeof AuthenticatedMensagensRoute
+  '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/painel': typeof AuthenticatedPainelRoute
+  '/sigma': typeof AuthenticatedSigmaRoute
+  '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
 }
 export interface FileRoutesByTo {
@@ -83,7 +111,11 @@ export interface FileRoutesByTo {
   '/cobrancas': typeof AuthenticatedCobrancasRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/listas': typeof AuthenticatedListasRoute
+  '/mensagens': typeof AuthenticatedMensagensRoute
+  '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/painel': typeof AuthenticatedPainelRoute
+  '/sigma': typeof AuthenticatedSigmaRoute
+  '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
 }
 export interface FileRoutesById {
@@ -95,7 +127,11 @@ export interface FileRoutesById {
   '/_authenticated/cobrancas': typeof AuthenticatedCobrancasRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/listas': typeof AuthenticatedListasRoute
+  '/_authenticated/mensagens': typeof AuthenticatedMensagensRoute
+  '/_authenticated/pagamentos': typeof AuthenticatedPagamentosRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
+  '/_authenticated/sigma': typeof AuthenticatedSigmaRoute
+  '/_authenticated/whatsapp': typeof AuthenticatedWhatsappRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
 }
 export interface FileRouteTypes {
@@ -107,7 +143,11 @@ export interface FileRouteTypes {
     | '/cobrancas'
     | '/configuracoes'
     | '/listas'
+    | '/mensagens'
+    | '/pagamentos'
     | '/painel'
+    | '/sigma'
+    | '/whatsapp'
     | '/api/public/hooks/cobranca-diaria'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -117,7 +157,11 @@ export interface FileRouteTypes {
     | '/cobrancas'
     | '/configuracoes'
     | '/listas'
+    | '/mensagens'
+    | '/pagamentos'
     | '/painel'
+    | '/sigma'
+    | '/whatsapp'
     | '/api/public/hooks/cobranca-diaria'
   id:
     | '__root__'
@@ -128,7 +172,11 @@ export interface FileRouteTypes {
     | '/_authenticated/cobrancas'
     | '/_authenticated/configuracoes'
     | '/_authenticated/listas'
+    | '/_authenticated/mensagens'
+    | '/_authenticated/pagamentos'
     | '/_authenticated/painel'
+    | '/_authenticated/sigma'
+    | '/_authenticated/whatsapp'
     | '/api/public/hooks/cobranca-diaria'
   fileRoutesById: FileRoutesById
 }
@@ -190,11 +238,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedListasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/mensagens': {
+      id: '/_authenticated/mensagens'
+      path: '/mensagens'
+      fullPath: '/mensagens'
+      preLoaderRoute: typeof AuthenticatedMensagensRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pagamentos': {
+      id: '/_authenticated/pagamentos'
+      path: '/pagamentos'
+      fullPath: '/pagamentos'
+      preLoaderRoute: typeof AuthenticatedPagamentosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/painel': {
       id: '/_authenticated/painel'
       path: '/painel'
       fullPath: '/painel'
       preLoaderRoute: typeof AuthenticatedPainelRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sigma': {
+      id: '/_authenticated/sigma'
+      path: '/sigma'
+      fullPath: '/sigma'
+      preLoaderRoute: typeof AuthenticatedSigmaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/whatsapp': {
+      id: '/_authenticated/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/whatsapp'
+      preLoaderRoute: typeof AuthenticatedWhatsappRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/public/hooks/cobranca-diaria': {
@@ -212,7 +288,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCobrancasRoute: typeof AuthenticatedCobrancasRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedListasRoute: typeof AuthenticatedListasRoute
+  AuthenticatedMensagensRoute: typeof AuthenticatedMensagensRoute
+  AuthenticatedPagamentosRoute: typeof AuthenticatedPagamentosRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
+  AuthenticatedSigmaRoute: typeof AuthenticatedSigmaRoute
+  AuthenticatedWhatsappRoute: typeof AuthenticatedWhatsappRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -220,7 +300,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCobrancasRoute: AuthenticatedCobrancasRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedListasRoute: AuthenticatedListasRoute,
+  AuthenticatedMensagensRoute: AuthenticatedMensagensRoute,
+  AuthenticatedPagamentosRoute: AuthenticatedPagamentosRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
+  AuthenticatedSigmaRoute: AuthenticatedSigmaRoute,
+  AuthenticatedWhatsappRoute: AuthenticatedWhatsappRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

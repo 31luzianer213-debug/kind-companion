@@ -44,6 +44,9 @@ export type TemplateVarInput = {
     pix_key?: string | null;
     pix_holder?: string | null;
     payment_link?: string | null;
+    sigma_url?: string | null;
+    sigma_server_name?: string | null;
+    sigma_server_display_name?: string | null;
   } | null;
   amount?: number | string | null;
   dueDate?: string | null;
@@ -53,14 +56,20 @@ export type TemplateVarInput = {
 /** Variáveis disponíveis nos modelos de mensagem. */
 export function buildTemplateVars(input: TemplateVarInput): Record<string, string> {
   const { client, list, settings } = input;
+  const sigmaUrl = settings?.sigma_url?.trim() || "";
+  const sigmaServerName =
+    settings?.sigma_server_name?.trim() ||
+    settings?.sigma_server_display_name?.trim() ||
+    (sigmaUrl ? sigmaUrl.replace(/^https?:\/\//i, "").split("/")[0] : "Servidor Sigma");
+
   return {
     nome: client?.name ?? "",
     telefone: client?.phone ?? "",
     valor: formatBRL(input.amount ?? 0),
     vencimento: formatDate(input.dueDate ?? null),
     dias: String(Math.abs(input.days ?? 0)),
-    lista: list?.name ?? "",
-    servidor: list?.server_url ?? "",
+    lista: list?.name ?? sigmaServerName,
+    servidor: list?.server_url ?? sigmaUrl,
     usuario: client?.iptv_username || list?.username || "",
     senha: client?.iptv_password || list?.password || "",
     telas: String(client?.screens ?? 1),
