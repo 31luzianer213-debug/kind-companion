@@ -176,21 +176,9 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
             } catch {}
 
             try {
-              const { sendViaEvolution, sendButtonsViaEvolution, sendListViaEvolution } = await import("@/lib/billing.server");
-              if (botResult.interactive?.type === "list") {
-                await sendListViaEvolution(settings ?? {}, senderPhone, {
-                  ...botResult.interactive,
-                  fallbackText: botResult.reply,
-                }, targetUserId);
-              } else if (botResult.interactive?.type === "buttons") {
-                await sendButtonsViaEvolution(settings ?? {}, senderPhone, {
-                  ...botResult.interactive,
-                  fallbackText: botResult.reply,
-                }, targetUserId);
-              } else {
-                await sendViaEvolution(settings ?? {}, senderPhone, botResult.reply, targetUserId);
-              }
-              console.log(`[WhatsApp Bot Webhook] Resposta enviada com sucesso para ${senderPhone}!`);
+              const { sendViaEvolution } = await import("@/lib/billing.server");
+              await sendViaEvolution(settings ?? {}, senderPhone, botResult.reply, targetUserId);
+              console.log(`[WhatsApp Bot Webhook] Resposta em texto enviada com sucesso para ${senderPhone}!`);
             } catch (sendErr) {
               console.error("[WhatsApp Bot Webhook] Erro ao enviar resposta via Evolution:", sendErr);
             }

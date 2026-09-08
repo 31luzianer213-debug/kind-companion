@@ -379,7 +379,7 @@ export async function createTrialForBot(
 
 // Estado de conversa em memória para gerenciar fluxos interativos (timeout 15 minutos)
 type ConversationSession = {
-  step: "awaiting_renew_username" | "awaiting_renew_confirm";
+  step: "awaiting_renew_username" | "awaiting_renew_confirm" | "awaiting_plan_choice";
   timestamp: number;
   data?: {
     candidateUsername?: string;
@@ -390,6 +390,107 @@ type ConversationSession = {
 };
 
 const conversationSessions = new Map<string, ConversationSession>();
+
+/**
+ * Cria pedido para o plano escolhido e formata a resposta 100% em texto puro
+ */
+async function handlePlanOrderCreation({
+  userId,
+  cleanPhone,
+  pushName,
+  durationMonths,
+  wsRow,
+  pixKey,
+  pixHolder,
+}: {
+  userId: string;
+  cleanPhone: string;
+  pushName?: string;
+  durationMonths: number;
+  wsRow: any;
+  pixKey: string;
+  pixHolder: string;
+}): Promise<BotProcessResult> {
+  let planName = "Plano Mensal (1 Mês - 1 Tela)";
+  let amount = 35.0;
+
+  if (durationMonths === 3) {
+    planName = "Plano Trimestral (3 Meses - Econômico)";
+    amount = 90.0;
+  } else if (durationMonths === 6) {
+    planName = "Plano Semestral (6 Meses - Super Desconto)";
+    amount = 160.0;
+  }
+
+  const order = await createOrderServer(userId, {
+    customer_name: pushName || "Cliente WhatsApp",
+    customer_phone: cleanPhone,
+    plan_name: planName,
+    amount,
+    duration_months: durationMonths,
+    screens: 1,
+    type: "new_access",
+  });
+
+  const mpToken = wsRow?.mercadopago_token?.trim();
+  let mpPixResult: any = null;
+
+  if (mpToken) {
+    mpPixResult = await createMercadoPagoPixPayment({
+      token: mpToken,
+      amount,
+      description: `${planName} - Pedido #${order.order_number}`,
+      orderId: order.id,
+      customerName: pushName || "Cliente",
+      customerPhone: cleanPhone,
+    });
+
+    if (mpPixResult.ok && mpPixResult.qrCode) {
+      order.pix_code = mpPixResult.qrCode;
+      order.gateway_payment_id = mpPixResult.paymentId;
+      order.payment_method = "mercadopago_pix";
+    }
+  }
+
+  if (mpPixResult?.ok && mpPixResult?.qrCode) {
+    // MODO AUTOMÁTICO MERCADO PAGO
+    const reply =
+      `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
+      `📦 *Plano:* ${planName}\n` +
+      `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
+      `⚡ *Forma de Pagamento:* PIX Automático (Mercado Pago)\n\n` +
+      `👇 *PIX COPIA E COLA (Toque no código abaixo para copiar):*\n` +
+      `\`${mpPixResult.qrCode}\`\n\n` +
+      (mpPixResult.ticketUrl ? `🔗 *Link para pagar pelo navegador:*\n${mpPixResult.ticketUrl}\n\n` : "") +
+      `✅ *Liberação 100% Automática!*\n` +
+      `Assim que você pagar no aplicativo do seu banco, o sistema reconhece em poucos segundos e já envia seu Login, Senha e Lista M3U aqui mesmo nesta conversa! 🚀\n\n` +
+      `_Dica: Se já concluiu o PIX e quer checar agora, basta digitar *verificar*._`;
+
+    return {
+      reply,
+      action: "order_created_mp",
+    };
+  }
+
+  // MODO MANUAL (Sem Mercado Pago cadastrado ou falha de token)
+  const effectivePixKey = pixKey || "Consulte nossa chave PIX com nosso suporte";
+  const reply =
+    `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
+    `📦 *Plano:* ${planName}\n` +
+    `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
+    `💳 *Forma de Pagamento:* Transferência PIX (Liberação no Painel)\n\n` +
+    `🔑 *Chave PIX:* \`${effectivePixKey}\`\n` +
+    `👤 *Titular:* ${pixHolder}\n\n` +
+    `📌 *Como Ativar Seu Acesso:*\n` +
+    `1️⃣ Faça o PIX no valor de *R$ ${amount.toFixed(2).replace(".", ",")}* para a chave acima.\n` +
+    `2️⃣ *Envie o comprovante do PIX aqui nesta conversa*.\n` +
+    `3️⃣ Nosso administrador confirmará pelo painel e seu acesso será liberado imediatamente! 🚀`;
+
+  return {
+    reply,
+    action: "order_created_manual",
+  };
+}
 
 /**
  * Processador central de mensagens do Bot.
@@ -431,16 +532,30 @@ export async function processBotMessage(
   const pixHolder = config.pixHolder || wsRow?.pix_holder || config.businessName;
 
   // =========================================================================
-  // CONSULTA DE STATUS DE PEDIDO (Botão "Verificar Pagamento" ou "Status")
+  // CONSULTA DE STATUS DE PEDIDO ("verificar", "status", "paguei", etc.)
   // =========================================================================
-  if (text.startsWith("check_order_") || text.startsWith("status_order_")) {
-    const orderId = text.replace(/^(check_order_|status_order_)/, "").trim();
+  if (
+    text === "verificar" ||
+    text === "status" ||
+    text === "paguei" ||
+    text === "ja paguei" ||
+    text === "já paguei" ||
+    text === "conferi" ||
+    text.startsWith("check_order_") ||
+    text.startsWith("status_order_")
+  ) {
+    let orderId = "";
+    if (text.startsWith("check_order_") || text.startsWith("status_order_")) {
+      orderId = text.replace(/^(check_order_|status_order_)/, "").trim();
+    }
     const orders = await listOrdersServer(userId);
-    const order = orders.find((o) => o.id === orderId);
+    const order = orderId
+      ? orders.find((o) => o.id === orderId)
+      : orders.find((o) => o.customer_phone === cleanPhone);
 
     if (!order) {
       return {
-        reply: "🔍 Pedido não encontrado ou já processado. Toque em *3* para ver os planos e iniciar uma assinatura!",
+        reply: "🔍 Não encontrei nenhum pedido pendente para o seu número. Digite *3* para ver nossos planos e assinar!",
         action: "order_not_found",
       };
     }
@@ -452,7 +567,7 @@ export async function processBotMessage(
           `📦 *Plano:* ${order.plan_name}\n` +
           `🔑 *Usuário:* *${order.target_username}*\n` +
           `📺 *Servidor:* ${serverName}\n\n` +
-          `Para ver seus dados de acesso completos (usuário, senha e M3U), envie *4*! 🍿`,
+          `Para ver seus dados de acesso completos (usuário, senha e M3U), digite *4*! 🍿`,
         action: "order_already_approved",
       };
     }
@@ -491,148 +606,71 @@ export async function processBotMessage(
         `📦 *Plano:* ${order.plan_name}\n` +
         `💰 *Valor:* R$ ${Number(order.amount).toFixed(2).replace(".", ",")}\n` +
         (order.payment_method === "mercadopago_pix"
-          ? `⚡ O Mercado Pago confirmará automaticamente assim que o PIX for concluído.${pixCodeNotice}`
-          : `💳 Chave PIX: \`${pixKey}\`\nPor favor, envie o comprovante do PIX aqui para liberação pelo painel do administrador!`),
+          ? `⚡ O Mercado Pago confirmará automaticamente assim que o PIX for concluído.${pixCodeNotice}\n\n_Assim que pagar, digite *verificar* para checar novamente._`
+          : `💳 *Chave PIX:* \`${pixKey}\`\n👤 *Titular:* ${pixHolder}\n\nPor favor, envie o comprovante do PIX aqui para liberação pelo administrador!`),
       action: "order_status_checked",
-      interactive: {
-        type: "buttons",
-        title: `Pedido #${order.order_number} Pendente ⏳`,
-        description: `Seu pedido #${order.order_number} está aguardando confirmação do PIX de R$ ${Number(order.amount).toFixed(2).replace(".", ",")}.`,
-        buttons: [
-          { id: `check_order_${order.id}`, displayText: "🔄 Verificar Novamente", type: "reply" },
-          { id: "5", displayText: "👨‍💼 Falar com Atendente", type: "reply" },
-        ],
-        footer: "Sistema IPTV Inteligente",
-      },
     };
   }
 
   // =========================================================================
-  // SELEÇÃO DIRETA DE PLANO (Via Botões Interativos ou Resposta Rápida)
+  // SELEÇÃO DIRETA DE PLANO (Via comando rápido de texto)
   // =========================================================================
   const isPlan1m =
+    text === "plano 1" ||
+    text === "plano 1m" ||
     text === "plano_1m" ||
     text === "1m" ||
-    text === "1 mes" ||
-    text === "1 mês" ||
     text === "mensal" ||
     text === "plano mensal";
 
   const isPlan3m =
+    text === "plano 2" ||
+    text === "plano 3m" ||
     text === "plano_3m" ||
     text === "3m" ||
-    text === "3 meses" ||
     text === "trimestral" ||
     text === "plano trimestral";
 
   const isPlan6m =
+    text === "plano 3" ||
+    text === "plano 6m" ||
     text === "plano_6m" ||
     text === "6m" ||
-    text === "6 meses" ||
     text === "semestral" ||
     text === "plano semestral";
 
-  if (isPlan1m || isPlan3m || isPlan6m) {
-    let planName = "Plano Mensal (1 Mês - 1 Tela)";
-    let amount = 35.0;
-    let durationMonths = 1;
-
-    if (isPlan3m) {
-      planName = "Plano Trimestral (3 Meses - Econômico)";
-      amount = 90.0;
-      durationMonths = 3;
-    } else if (isPlan6m) {
-      planName = "Plano Semestral (6 Meses - Super Desconto)";
-      amount = 160.0;
-      durationMonths = 6;
-    }
-
-    const order = await createOrderServer(userId, {
-      customer_name: params.pushName || "Cliente WhatsApp",
-      customer_phone: cleanPhone,
-      plan_name: planName,
-      amount,
-      duration_months: durationMonths,
-      screens: 1,
-      type: "new_access",
+  if (isPlan1m) {
+    return await handlePlanOrderCreation({
+      userId,
+      cleanPhone,
+      pushName: params.pushName,
+      durationMonths: 1,
+      wsRow,
+      pixKey,
+      pixHolder,
     });
-
-    const mpToken = wsRow?.mercadopago_token?.trim();
-    let mpPixResult: any = null;
-
-    if (mpToken) {
-      mpPixResult = await createMercadoPagoPixPayment({
-        token: mpToken,
-        amount,
-        description: `${planName} - Pedido #${order.order_number}`,
-        orderId: order.id,
-        customerName: params.pushName || "Cliente",
-        customerPhone: cleanPhone,
-      });
-
-      if (mpPixResult.ok && mpPixResult.qrCode) {
-        order.pix_code = mpPixResult.qrCode;
-        order.gateway_payment_id = mpPixResult.paymentId;
-        order.payment_method = "mercadopago_pix";
-      }
-    }
-
-    if (mpPixResult?.ok && mpPixResult?.qrCode) {
-      // MODO AUTOMÁTICO MERCADO PAGO
-      const reply =
-        `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
-        `📦 *Plano:* ${planName}\n` +
-        `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-        `⚡ *Forma de Pagamento:* PIX Automático (Mercado Pago)\n\n` +
-        `👇 *PIX COPIA E COLA (Toque para copiar):*\n` +
-        `\`${mpPixResult.qrCode}\`\n\n` +
-        `✅ *Liberação 100% Automática!*\n` +
-        `Assim que você pagar no seu banco, o sistema reconhece em poucos segundos e já envia seu Login, Senha e Lista M3U aqui mesmo nesta conversa! 🚀`;
-
-      return {
-        reply,
-        action: "order_created_mp",
-        interactive: {
-          type: "buttons",
-          title: `Pedido #${order.order_number} Gerado 🍿`,
-          description: reply,
-          buttons: [
-            { id: `check_order_${order.id}`, displayText: "⚡ Já Paguei / Verificar", type: "reply" },
-            { id: "menu", displayText: "🏠 Menu Principal", type: "reply" },
-          ],
-          footer: "Liberação automática via Mercado Pago",
-        },
-      };
-    }
-
-    // MODO MANUAL (Sem Mercado Pago cadastrado ou falha de token)
-    const effectivePixKey = pixKey || "Consulte nossa chave PIX com nosso suporte";
-    const reply =
-      `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
-      `📦 *Plano:* ${planName}\n` +
-      `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-      `💳 *Forma de Pagamento:* Transferência PIX\n\n` +
-      `🔑 *Chave PIX:* \`${effectivePixKey}\`\n` +
-      `👤 *Titular:* ${pixHolder}\n\n` +
-      `📌 *Como Ativar Seu Acesso:*\n` +
-      `1️⃣ Faça o PIX no valor de *R$ ${amount.toFixed(2).replace(".", ",")}* para a chave acima.\n` +
-      `2️⃣ *Envie o comprovante do PIX aqui nesta conversa*.\n` +
-      `3️⃣ Nosso administrador confirmará pelo painel e seu acesso será liberado imediatamente! 🚀`;
-
-    return {
-      reply,
-      action: "order_created_manual",
-      interactive: {
-        type: "buttons",
-        title: `Pedido #${order.order_number} Criado 🍿`,
-        description: reply,
-        buttons: [
-          { id: `status_order_${order.id}`, displayText: "📋 Status do Pedido", type: "reply" },
-          { id: "5", displayText: "👨‍💼 Falar com Atendente", type: "reply" },
-        ],
-        footer: "Liberação manual via Painel de Pedidos",
-      },
-    };
+  }
+  if (isPlan3m) {
+    return await handlePlanOrderCreation({
+      userId,
+      cleanPhone,
+      pushName: params.pushName,
+      durationMonths: 3,
+      wsRow,
+      pixKey,
+      pixHolder,
+    });
+  }
+  if (isPlan6m) {
+    return await handlePlanOrderCreation({
+      userId,
+      cleanPhone,
+      pushName: params.pushName,
+      durationMonths: 6,
+      wsRow,
+      pixKey,
+      pixHolder,
+    });
   }
 
   // =========================================================================
@@ -649,13 +687,34 @@ export async function processBotMessage(
     text === "sair" ||
     text === "cancelar" ||
     text === "voltar" ||
-    text === "1" ||
-    text === "3" ||
-    text === "4" ||
-    text === "5"
+    (session?.step !== "awaiting_plan_choice" &&
+      (text === "1" || text === "2" || text === "3" || text === "4" || text === "5"))
   ) {
     if (session) conversationSessions.delete(cleanPhone);
   } else if (isSessionValid && session) {
+    // -----------------------------------------------------------------------
+    // Etapa de Escolha do Plano (Opção 3 via texto)
+    // -----------------------------------------------------------------------
+    if (session.step === "awaiting_plan_choice") {
+      let chosenMonths = 0;
+      if (text === "1" || text === "1m" || text === "mensal" || text.includes("mensal")) chosenMonths = 1;
+      else if (text === "2" || text === "3m" || text === "trimestral" || text.includes("trimestral")) chosenMonths = 3;
+      else if (text === "3" || text === "6m" || text === "semestral" || text.includes("semestral")) chosenMonths = 6;
+
+      if (chosenMonths > 0) {
+        conversationSessions.delete(cleanPhone);
+        return await handlePlanOrderCreation({
+          userId,
+          cleanPhone,
+          pushName: params.pushName,
+          durationMonths: chosenMonths,
+          wsRow,
+          pixKey,
+          pixHolder,
+        });
+      }
+    }
+
     // -----------------------------------------------------------------------
     // Etapa 2A: Cliente confirmando o usuário sugerido ("SIM") ou digitando outro
     // -----------------------------------------------------------------------
@@ -782,18 +841,10 @@ export async function processBotMessage(
       `Bom divertimento! Qualquer dúvida, digite *5* para falar conosco. 🍿`;
 
     return {
-      reply,
+      reply:
+        reply +
+        `\n\n_Gostou e quer assinar? Digite *3* para ver nossos planos e garantir seu acesso definitivo!_ 🚀`,
       action: "trial_created",
-      interactive: {
-        type: "buttons",
-        title: "🍿 Teste Grátis Ativado!",
-        description: reply,
-        buttons: [
-          { id: "3", displayText: "🛒 Comprar Assinatura", type: "reply" },
-          { id: "5", displayText: "👨‍💼 Falar com Suporte", type: "reply" },
-        ],
-        footer: "Aproveite seu teste!",
-      },
     };
   }
 
@@ -937,27 +988,25 @@ export async function processBotMessage(
     text.includes("preco") ||
     text.includes("valor")
   ) {
+    conversationSessions.set(cleanPhone, {
+      step: "awaiting_plan_choice",
+      timestamp: Date.now(),
+    });
+
     const pixKey = config.pixKey || wsRow?.pix_key || "";
     const pixBlock = pixKey ? `\n\n🔑 *Chave PIX:* \`${pixKey}\`` : "";
 
     const reply =
       `${config.plansText}${pixBlock}\n\n` +
-      `👇 *Para assinar agora, toque no botão do plano desejado abaixo:*`;
+      `👇 *Para assinar agora, responda com o número do plano desejado:*\n\n` +
+      `👉 Digite *1* para *Plano Mensal (R$ 35,00)*\n` +
+      `👉 Digite *2* para *Plano Trimestral (R$ 90,00)*\n` +
+      `👉 Digite *3* para *Plano Semestral (R$ 160,00)*\n\n` +
+      `_Ou digite *0* para voltar ao menu principal._`;
 
     return {
       reply,
       action: "plans_shown",
-      interactive: {
-        type: "buttons",
-        title: "🍿 Escolha seu Plano IPTV",
-        description: `${config.plansText}\n\n👇 *Selecione o plano desejado nos botões abaixo para gerar seu PIX imediato:*`,
-        buttons: [
-          { id: "plano_1m", displayText: "1️⃣ Mensal - R$ 35", type: "reply" },
-          { id: "plano_3m", displayText: "2️⃣ Trimestral - R$ 90", type: "reply" },
-          { id: "plano_6m", displayText: "3️⃣ Semestral - R$ 160", type: "reply" },
-        ],
-        footer: "Liberação imediata pós-pagamento",
-      },
     };
   }
 
@@ -1019,16 +1068,6 @@ export async function processBotMessage(
     return {
       reply,
       action: "credentials_resent",
-      interactive: {
-        type: "buttons",
-        title: "📡 Dados de Conexão IPTV",
-        description: reply,
-        buttons: [
-          { id: "2", displayText: "💳 Renovar Assinatura", type: "reply" },
-          { id: "menu", displayText: "🏠 Menu Principal", type: "reply" },
-        ],
-        footer: "Sistema IPTV Inteligente",
-      },
     };
   }
 
@@ -1059,44 +1098,5 @@ export async function processBotMessage(
   return {
     reply: greeting,
     action: "menu_shown",
-    interactive: {
-      type: "list",
-      title: "Menu de Atendimento 🍿",
-      description: `👋 Olá! Bem-vindo(a) à *${config.businessName}*! Escolha uma das opções abaixo:`,
-      buttonText: "Abrir Opções 🍿",
-      footerText: "Atendimento automático 24h",
-      sections: [
-        {
-          title: "Opções de Atendimento",
-          rows: [
-            {
-              title: "1️⃣ Gerar Teste Grátis",
-              description: `Teste grátis de ${config.testDurationHours}h imediato`,
-              rowId: "1",
-            },
-            {
-              title: "2️⃣ Renovar Assinatura",
-              description: "Renove seu login existente com PIX",
-              rowId: "2",
-            },
-            {
-              title: "3️⃣ Comprar Assinatura",
-              description: "Ver planos e assinar novo acesso",
-              rowId: "3",
-            },
-            {
-              title: "4️⃣ Meus Acessos / M3U",
-              description: "Recupere login, senha e lista IPTV",
-              rowId: "4",
-            },
-            {
-              title: "5️⃣ Suporte Humano",
-              description: "Fale com nossa equipe de atendentes",
-              rowId: "5",
-            },
-          ],
-        },
-      ],
-    },
   };
 }
