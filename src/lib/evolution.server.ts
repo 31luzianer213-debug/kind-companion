@@ -79,70 +79,72 @@ export async function ensureInstanceWebhook(userId: string, publicAppUrl: string
   }
 }
 
-/** Cria a instância se necessário, já registra o Webhook do Bot automaticamente e devolve o QR Code para leitura. */
+/** Cria a instância do zero ou devolve o QR Code limpo para leitura. */
 export async function connectInstance(userId: string, publicAppUrl?: string) {
   const { base, key, instance } = evolutionConfig(userId);
   const state = await fetchState(userId);
 
-  const webhookUrl = publicAppUrl
-    ? `${publicAppUrl.replace(/\/+$/, "")}/api/public/hooks/whatsapp-bot?userId=${userId}`
-    : undefined;
-
   if (state === "open") {
-    if (publicAppUrl) {
-      ensureInstanceWebhook(userId, publicAppUrl).catch(() => {});
-    }
     return { state: "open" as const, qr: null };
   }
 
-  if (state === "none") {
-    const createPayload: any = {
+  // Sempre que for conectar e não estiver aberto, remove qualquer resquício antigo na VPS para criar do zero
+  try {
+    await call(`/instance/delete/${instance}`, { method: "DELETE", base, key });
+  } catch {}
+
+  // Cria a instância 100% nova do zero
+  const created = await call(`/instance/create`, {
+    method: "POST",
+    base,
+    key,
+    body: JSON.stringify({
       instanceName: instance,
       qrcode: true,
       integration: "WHATSAPP-BAILEYS",
-    };
-    if (webhookUrl) {
-      createPayload.webhook = webhookUrl;
-      createPayload.webhook_by_events = false;
-      createPayload.events = ["MESSAGES_UPSERT", "messages.upsert"];
-    }
+    }),
+  });
 
-    const created = await call(`/instance/create`, {
+  // Configura opções recomendadas na instância nova
+  try {
+    await call(`/settings/set/${instance}`, {
       method: "POST",
       base,
       key,
-      body: JSON.stringify(createPayload),
+      body: JSON.stringify({
+        rejectCall: false,
+        msgCall: "",
+        groupsIgnore: true,
+        alwaysOnline: true,
+        readMessages: true,
+        readStatus: false,
+        syncFullHistory: false,
+      }),
     });
-    const qr = extractQr(created.json);
+  } catch {}
 
-    // Registra webhook explicitamente também caso a versão da Evolution exija POST /webhook/set
-    if (webhookUrl) {
-      setInstanceWebhook(userId, webhookUrl).catch(() => {});
-      lastWebhookSync.set(userId, Date.now());
-    }
-
-    if (qr.base64) return { state: "connecting" as const, qr };
+  const qr = extractQr(created.json);
+  if (qr.base64) {
+    return { state: "connecting" as const, qr };
   }
 
+  // Fallback para connect se qrcode não veio direto no create
   const connected = await call(`/instance/connect/${instance}`, { method: "GET", base, key });
-  if (connected.status >= 400) {
-    throw new Error(`Erro ${connected.status}: ${connected.raw.slice(0, 200)}`);
-  }
-
-  if (webhookUrl) {
-    setInstanceWebhook(userId, webhookUrl).catch(() => {});
-    lastWebhookSync.set(userId, Date.now());
-  }
-
   return { state: "connecting" as const, qr: extractQr(connected.json) };
 }
 
-/** Desconecta o número do WhatsApp mantendo a instância criada. */
-export async function logoutInstance(userId: string) {
+/** Remove completamente a instância da VPS (deletando sessões, caches e histórico). */
+export async function deleteInstance(userId: string) {
   const { base, key, instance } = evolutionConfig(userId);
-  await call(`/instance/logout/${instance}`, { method: "DELETE", base, key });
+  try {
+    await call(`/instance/delete/${instance}`, { method: "DELETE", base, key });
+  } catch {}
   lastWebhookSync.delete(userId);
   return true;
+}
+
+export async function logoutInstance(userId: string) {
+  return deleteInstance(userId);
 }
 
 /** Configura o webhook da instância diretamente na Evolution API na VPS */
