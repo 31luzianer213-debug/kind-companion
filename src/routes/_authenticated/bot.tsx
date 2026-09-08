@@ -29,6 +29,7 @@ import {
   MessageSquare,
   Smartphone,
   Server,
+  Zap,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/bot")({

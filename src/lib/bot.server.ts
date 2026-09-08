@@ -50,46 +50,51 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
 
 /** Carrega as configurações do bot com fallback no user_metadata */
 export async function loadBotConfig(supabase: any, userId: string): Promise<BotConfigData> {
-  let wsRow: any = null;
   try {
-    const { data } = await supabase
-      .from("whatsapp_settings")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
-    wsRow = data;
-  } catch {
-    wsRow = null;
+    let wsRow: any = null;
+    try {
+      const { data } = await supabase
+        .from("whatsapp_settings")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+      wsRow = data;
+    } catch {
+      wsRow = null;
+    }
+
+    let metaBot: any = null;
+    try {
+      const { data: authUser } = await supabase.auth.getUser();
+      metaBot = authUser?.user?.user_metadata?.bot_settings ?? null;
+    } catch {
+      metaBot = null;
+    }
+
+    const businessName =
+      wsRow?.business_name?.trim() ||
+      metaBot?.businessName?.trim() ||
+      DEFAULT_BOT_CONFIG.businessName;
+
+    return {
+      enabled: metaBot?.enabled ?? (wsRow?.auto_send_enabled ?? DEFAULT_BOT_CONFIG.enabled),
+      businessName,
+      testEnabled: metaBot?.testEnabled ?? DEFAULT_BOT_CONFIG.testEnabled,
+      testDurationHours: metaBot?.testDurationHours ?? DEFAULT_BOT_CONFIG.testDurationHours,
+      testPackageName:
+        metaBot?.testPackageName?.trim() ||
+        DEFAULT_BOT_CONFIG.testPackageName,
+      blockRepeatDays: metaBot?.blockRepeatDays ?? DEFAULT_BOT_CONFIG.blockRepeatDays,
+      menuGreeting: metaBot?.menuGreeting?.trim() || DEFAULT_BOT_CONFIG.menuGreeting,
+      plansText: metaBot?.plansText?.trim() || DEFAULT_BOT_CONFIG.plansText,
+      supportMessage: metaBot?.supportMessage?.trim() || DEFAULT_BOT_CONFIG.supportMessage,
+      pixKey: wsRow?.pix_key || metaBot?.pixKey,
+      pixHolder: wsRow?.pix_holder || metaBot?.pixHolder,
+    };
+  } catch (err) {
+    console.error("[loadBotConfig] Fallback para DEFAULT_BOT_CONFIG:", err);
+    return { ...DEFAULT_BOT_CONFIG };
   }
-
-  let metaBot: any = null;
-  try {
-    const { data: authUser } = await supabase.auth.getUser();
-    metaBot = authUser?.user?.user_metadata?.bot_settings ?? null;
-  } catch {
-    metaBot = null;
-  }
-
-  const businessName =
-    wsRow?.business_name?.trim() ||
-    metaBot?.businessName?.trim() ||
-    DEFAULT_BOT_CONFIG.businessName;
-
-  return {
-    enabled: metaBot?.enabled ?? (wsRow?.auto_send_enabled ?? DEFAULT_BOT_CONFIG.enabled),
-    businessName,
-    testEnabled: metaBot?.testEnabled ?? DEFAULT_BOT_CONFIG.testEnabled,
-    testDurationHours: metaBot?.testDurationHours ?? DEFAULT_BOT_CONFIG.testDurationHours,
-    testPackageName:
-      metaBot?.testPackageName?.trim() ||
-      DEFAULT_BOT_CONFIG.testPackageName,
-    blockRepeatDays: metaBot?.blockRepeatDays ?? DEFAULT_BOT_CONFIG.blockRepeatDays,
-    menuGreeting: metaBot?.menuGreeting?.trim() || DEFAULT_BOT_CONFIG.menuGreeting,
-    plansText: metaBot?.plansText?.trim() || DEFAULT_BOT_CONFIG.plansText,
-    supportMessage: metaBot?.supportMessage?.trim() || DEFAULT_BOT_CONFIG.supportMessage,
-    pixKey: wsRow?.pix_key || metaBot?.pixKey,
-    pixHolder: wsRow?.pix_holder || metaBot?.pixHolder,
-  };
 }
 
 /** Salva as configurações do bot */
