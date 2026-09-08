@@ -139,6 +139,27 @@ function BotPage() {
     }
   }
 
+  async function handleToggleEnabled(val: boolean) {
+    setForm((prev) => ({ ...prev, enabled: val }));
+    try {
+      const res = await saveSettings({ data: { ...form, enabled: val } });
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ["bot-settings"] });
+        if (val) {
+          toast.success("Robô WhatsApp ATIVADO! 🤖 Respondendo clientes 24h.");
+        } else {
+          toast.warning("Robô WhatsApp DESLIGADO! 🛑 Respostas automáticas pausadas.");
+        }
+      } else {
+        setForm((prev) => ({ ...prev, enabled: !val }));
+        toast.error("Erro ao alterar status do robô.");
+      }
+    } catch {
+      setForm((prev) => ({ ...prev, enabled: !val }));
+      toast.error("Falha ao conectar com o servidor para alterar status.");
+    }
+  }
+
   async function handleSendSim(textToSend?: string) {
     const text = (textToSend ?? simText).trim();
     if (!text) return;
@@ -233,7 +254,7 @@ function BotPage() {
           <div className="flex items-center gap-2">
             <Switch
               checked={form.enabled}
-              onCheckedChange={(val) => setForm({ ...form, enabled: val })}
+              onCheckedChange={handleToggleEnabled}
               id="bot-toggle"
             />
             <Label htmlFor="bot-toggle" className="text-xs cursor-pointer font-medium">

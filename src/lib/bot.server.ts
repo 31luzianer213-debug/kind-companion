@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { generateM3uUrl, generateEpgUrl, extractCleanIptvDns } from "./format";
 import type { SigmaConfig } from "./sigma.panel";
 
@@ -48,8 +50,58 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
     "Por favor, deixe sua dúvida ou mensagem abaixo para agilizar seu atendimento. 👇",
 };
 
-/** Carrega as configurações do bot com fallback no user_metadata */
+// Cache em memória para leitura ultrarrápida (0ms) sem bloqueio de RLS
+const botConfigCache = new Map<string, BotConfigData>();
+
+function getLocalConfigPath(userId?: string): string {
+  const safeId = (userId || "default").replace(/[^a-zA-Z0-9_-]/g, "_");
+  const dir = path.resolve(process.cwd(), "data");
+  if (!fs.existsSync(dir)) {
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch {}
+  }
+  return path.join(dir, `bot_config_${safeId}.json`);
+}
+
+function readLocalConfig(userId?: string): Partial<BotConfigData> | null {
+  try {
+    const file = getLocalConfigPath(userId);
+    if (fs.existsSync(file)) {
+      const raw = fs.readFileSync(file, "utf-8");
+      return JSON.parse(raw);
+    }
+  } catch {}
+  return null;
+}
+
+function writeLocalConfig(userId: string | undefined, data: BotConfigData): void {
+  try {
+    const file = getLocalConfigPath(userId);
+    fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+  } catch (err) {
+    console.warn("Aviso ao gravar config local do bot:", err);
+  }
+}
+
+/** Carrega as configurações do bot com persistência em 3 níveis (Disco -> Memória -> Banco) */
 export async function loadBotConfig(supabase: any, userId: string): Promise<BotConfigData> {
+  const uid = userId || "default";
+
+  // 1. Arquivo persistente no disco (garante atualização instantânea entre processos)
+  const diskData = readLocalConfig(uid);
+  if (diskData && typeof diskData.enabled === "boolean") {
+    const merged: BotConfigData = { ...DEFAULT_BOT_CONFIG, ...diskData };
+    botConfigCache.set(uid, merged);
+    return merged;
+  }
+
+  // 2. Cache em memória
+  if (botConfigCache.has(uid)) {
+    return botConfigCache.get(uid)!;
+  }
+
+  // 3. Fallback para banco de dados e metadata
   try {
     let wsRow: any = null;
     try {
@@ -65,8 +117,10 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
 
     let metaBot: any = null;
     try {
-      const { data: authUser } = await supabase.auth.getUser();
-      metaBot = authUser?.user?.user_metadata?.bot_settings ?? null;
+      if (supabase?.auth?.getUser) {
+        const { data: authUser } = await supabase.auth.getUser();
+        metaBot = authUser?.user?.user_metadata?.bot_settings ?? null;
+      }
     } catch {
       metaBot = null;
     }
@@ -76,8 +130,15 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
       metaBot?.businessName?.trim() ||
       DEFAULT_BOT_CONFIG.businessName;
 
-    return {
-      enabled: metaBot?.enabled ?? (wsRow?.auto_send_enabled ?? DEFAULT_BOT_CONFIG.enabled),
+    const enabled =
+      metaBot?.enabled !== undefined
+        ? Boolean(metaBot.enabled)
+        : wsRow?.auto_send_enabled !== undefined
+          ? Boolean(wsRow.auto_send_enabled)
+          : DEFAULT_BOT_CONFIG.enabled;
+
+    const config: BotConfigData = {
+      enabled,
       businessName,
       testEnabled: metaBot?.testEnabled ?? DEFAULT_BOT_CONFIG.testEnabled,
       testDurationHours: metaBot?.testDurationHours ?? DEFAULT_BOT_CONFIG.testDurationHours,
@@ -91,43 +152,55 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
       pixKey: wsRow?.pix_key || metaBot?.pixKey,
       pixHolder: wsRow?.pix_holder || metaBot?.pixHolder,
     };
+
+    botConfigCache.set(uid, config);
+    writeLocalConfig(uid, config);
+    return config;
   } catch (err) {
     console.error("[loadBotConfig] Fallback para DEFAULT_BOT_CONFIG:", err);
     return { ...DEFAULT_BOT_CONFIG };
   }
 }
 
-/** Salva as configurações do bot */
+/** Salva as configurações do bot imediatamente no disco, memória e banco */
 export async function saveBotConfigServer(
   supabase: any,
   userId: string,
   config: Partial<BotConfigData>,
 ): Promise<void> {
+  const uid = userId || "default";
   const current = await loadBotConfig(supabase, userId);
   const updated: BotConfigData = { ...current, ...config };
 
-  // 1. Tenta salvar na tabela whatsapp_settings se colunas existirem
+  // 1. Atualiza imediatamente cache em memória e arquivo no disco
+  botConfigCache.set(uid, updated);
+  writeLocalConfig(uid, updated);
+
+  // 2. Atualiza na tabela whatsapp_settings
   try {
     await supabase
       .from("whatsapp_settings")
       .update({
         business_name: updated.businessName,
+        auto_send_enabled: updated.enabled,
         ...(updated.pixKey ? { pix_key: updated.pixKey } : {}),
         ...(updated.pixHolder ? { pix_holder: updated.pixHolder } : {}),
       })
       .eq("user_id", userId);
   } catch {}
 
-  // 2. Salva SEMPRE no user_metadata
+  // 3. Salva no user_metadata se houver autenticação
   try {
-    await supabase.auth.updateUser({
-      data: {
-        bot_settings: {
-          ...updated,
-          updated_at: new Date().toISOString(),
+    if (supabase?.auth?.updateUser) {
+      await supabase.auth.updateUser({
+        data: {
+          bot_settings: {
+            ...updated,
+            updated_at: new Date().toISOString(),
+          },
         },
-      },
-    });
+      });
+    }
   } catch (err) {
     console.error("Erro ao salvar bot_settings no metadata:", err);
   }
@@ -278,6 +351,20 @@ export async function createTrialForBot(
   };
 }
 
+// Estado de conversa em memória para gerenciar fluxos interativos (timeout 15 minutos)
+type ConversationSession = {
+  step: "awaiting_renew_username" | "awaiting_renew_confirm";
+  timestamp: number;
+  data?: {
+    candidateUsername?: string;
+    clientId?: string;
+    clientName?: string;
+    fee?: string;
+  };
+};
+
+const conversationSessions = new Map<string, ConversationSession>();
+
 /**
  * Processador central de mensagens do Bot.
  * Recebe o texto que o cliente mandou, decide o fluxo e devolve a resposta formatada.
@@ -292,6 +379,12 @@ export async function processBotMessage(
   },
 ): Promise<{ reply: string; action: string }> {
   const config = await loadBotConfig(supabase, userId);
+
+  // Se o robô foi desligado no painel pelo revendedor, não responde nada
+  if (!config.enabled) {
+    return { reply: "", action: "bot_disabled" };
+  }
+
   const cleanPhone = params.phone.replace(/\D/g, "");
   const text = (params.text ?? "").trim().toLowerCase();
 
@@ -308,6 +401,115 @@ export async function processBotMessage(
 
   const serverName = wsRow?.sigma_server_name?.trim() || config.businessName || "Alpha server IPTV";
   const streamingDns = wsRow?.sigma_streaming_dns?.trim() || "http://karen256.top";
+  const pixKey = config.pixKey || wsRow?.pix_key || "Consulte nossa chave PIX";
+  const pixHolder = config.pixHolder || wsRow?.pix_holder || config.businessName;
+
+  // =========================================================================
+  // GERENCIAMENTO DE SESSÃO MULTI-PASSO (Ex: pergunta de usuário na renovação)
+  // =========================================================================
+  const now = Date.now();
+  const session = conversationSessions.get(cleanPhone);
+  const isSessionValid = session && now - session.timestamp < 15 * 60 * 1000;
+
+  // Se o cliente digitou comando para trocar de opção, limpa o estado anterior
+  if (
+    text === "0" ||
+    text === "menu" ||
+    text === "sair" ||
+    text === "cancelar" ||
+    text === "voltar" ||
+    text === "1" ||
+    text === "3" ||
+    text === "4" ||
+    text === "5"
+  ) {
+    if (session) conversationSessions.delete(cleanPhone);
+  } else if (isSessionValid && session) {
+    // -----------------------------------------------------------------------
+    // Etapa 2A: Cliente confirmando o usuário sugerido ("SIM") ou digitando outro
+    // -----------------------------------------------------------------------
+    if (session.step === "awaiting_renew_confirm") {
+      const isYes =
+        text === "sim" ||
+        text === "s" ||
+        text === "ok" ||
+        text === "confirmo" ||
+        text === "quero" ||
+        text === "renovar";
+
+      const targetUsername = isYes
+        ? (session.data?.candidateUsername || cleanPhone)
+        : params.text.trim();
+
+      conversationSessions.delete(cleanPhone);
+
+      let clientMatch: any = null;
+      try {
+        const { data } = await supabase
+          .from("clients")
+          .select("*")
+          .eq("user_id", userId)
+          .or(`iptv_username.eq.${targetUsername},name.ilike.%${targetUsername}%`)
+          .limit(1)
+          .maybeSingle();
+        clientMatch = data;
+      } catch {}
+
+      const fee = clientMatch?.monthly_fee
+        ? `R$ ${Number(clientMatch.monthly_fee).toFixed(2).replace(".", ",")}`
+        : (session.data?.fee || "R$ 35,00");
+
+      const reply =
+        `💳 *DADOS PARA PAGAMENTO PIX* 📺\n\n` +
+        `✅ *Usuário a Renovar:* *${targetUsername}*\n` +
+        (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
+        `📺 *Servidor:* ${serverName}\n` +
+        `💰 *Valor:* ${fee}\n\n` +
+        `🔑 *Chave PIX:* \`${pixKey}\`\n` +
+        `👤 *Titular:* ${pixHolder}\n\n` +
+        `Após realizar o PIX, *envie o comprovante aqui* nesta conversa para ativarmos imediatamente! 🚀\n` +
+        `Dúvidas? Digite *5* para falar com um atendente.`;
+
+      return { reply, action: "renew_pix_sent" };
+    }
+
+    // -----------------------------------------------------------------------
+    // Etapa 2B: Cliente digitou o login/usuário que quer renovar
+    // -----------------------------------------------------------------------
+    if (session.step === "awaiting_renew_username") {
+      const targetUsername = params.text.trim();
+      conversationSessions.delete(cleanPhone);
+
+      let clientMatch: any = null;
+      try {
+        const { data } = await supabase
+          .from("clients")
+          .select("*")
+          .eq("user_id", userId)
+          .or(`iptv_username.eq.${targetUsername},name.ilike.%${targetUsername}%`)
+          .limit(1)
+          .maybeSingle();
+        clientMatch = data;
+      } catch {}
+
+      const fee = clientMatch?.monthly_fee
+        ? `R$ ${Number(clientMatch.monthly_fee).toFixed(2).replace(".", ",")}`
+        : "R$ 35,00";
+
+      const reply =
+        `💳 *DADOS PARA PAGAMENTO PIX* 📺\n\n` +
+        `✅ *Usuário a Renovar:* *${targetUsername}*\n` +
+        (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
+        `📺 *Servidor:* ${serverName}\n` +
+        `💰 *Valor da Mensalidade:* ${fee}\n\n` +
+        `🔑 *Chave PIX:* \`${pixKey}\`\n` +
+        `👤 *Titular:* ${pixHolder}\n\n` +
+        `Após realizar o PIX, por favor *envie o comprovante aqui* nesta conversa para renovarmos seu acesso imediatamente! 🚀\n` +
+        `Se precisar de suporte, digite *5*.`;
+
+      return { reply, action: "renew_pix_sent" };
+    }
+  }
 
   // =========================================================================
   // OPÇÃO 1: TESTE GRÁTIS
@@ -352,46 +554,129 @@ export async function processBotMessage(
   }
 
   // =========================================================================
-  // OPÇÃO 2: RENOVAR ASSINATURA
+  // OPÇÃO 2: RENOVAR ASSINATURA (Pergunta qual usuário a pessoa quer renovar)
   // =========================================================================
   if (
     text === "2" ||
     text === "2." ||
+    text.startsWith("2 ") ||
     text.includes("renovar") ||
     text.includes("renovacao") ||
     text.includes("renovação") ||
     text.includes("pagar") ||
     text.includes("pix")
   ) {
-    // Procura a linha do cliente cadastrada com esse número de WhatsApp
-    let client: any = null;
+    // 1. Verifica se o cliente já enviou o usuário junto na mensagem (ex: "renovar carlos123" ou "2 114818587")
+    const words = params.text.trim().split(/\s+/);
+    let inlineUser = "";
+    if (words.length >= 2 && (words[0].toLowerCase().includes("renov") || words[0] === "2")) {
+      inlineUser = words.slice(1).join(" ").trim();
+    }
+
+    if (inlineUser) {
+      let clientMatch: any = null;
+      try {
+        const { data } = await supabase
+          .from("clients")
+          .select("*")
+          .eq("user_id", userId)
+          .or(`iptv_username.eq.${inlineUser},name.ilike.%${inlineUser}%`)
+          .limit(1)
+          .maybeSingle();
+        clientMatch = data;
+      } catch {}
+
+      const fee = clientMatch?.monthly_fee
+        ? `R$ ${Number(clientMatch.monthly_fee).toFixed(2).replace(".", ",")}`
+        : "R$ 35,00";
+
+      const reply =
+        `💳 *DADOS PARA PAGAMENTO PIX* 📺\n\n` +
+        `✅ *Usuário a Renovar:* *${inlineUser}*\n` +
+        (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
+        `📺 *Servidor:* ${serverName}\n` +
+        `💰 *Valor da Mensalidade:* ${fee}\n\n` +
+        `🔑 *Chave PIX:* \`${pixKey}\`\n` +
+        `👤 *Titular:* ${pixHolder}\n\n` +
+        `Após realizar o PIX, por favor *envie o comprovante aqui* nesta conversa para renovação imediata! 🚀`;
+
+      return { reply, action: "renew_pix_sent" };
+    }
+
+    // 2. Busca linhas existentes cadastradas para esse número de WhatsApp
+    let matchingClients: any[] = [];
     try {
       const { data } = await supabase
         .from("clients")
         .select("*")
         .eq("user_id", userId)
         .eq("phone", cleanPhone)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      client = data;
+        .order("created_at", { ascending: false });
+      matchingClients = data ?? [];
     } catch {}
 
-    const fee = client?.monthly_fee ? `R$ ${Number(client.monthly_fee).toFixed(2).replace(".", ",")}` : "R$ 35,00";
-    const pixKey = config.pixKey || wsRow?.pix_key || "Consulte nossa chave PIX";
-    const pixHolder = config.pixHolder || wsRow?.pix_holder || config.businessName;
+    // Caso A: Encontrou exatamente 1 linha associada a este WhatsApp
+    if (matchingClients.length === 1) {
+      const c = matchingClients[0];
+      const fee = c.monthly_fee ? `R$ ${Number(c.monthly_fee).toFixed(2).replace(".", ",")}` : "R$ 35,00";
+
+      conversationSessions.set(cleanPhone, {
+        step: "awaiting_renew_confirm",
+        timestamp: Date.now(),
+        data: {
+          candidateUsername: c.iptv_username || c.name,
+          clientId: c.id,
+          clientName: c.name,
+          fee,
+        },
+      });
+
+      const reply =
+        `💳 *RENOVAÇÃO DE ASSINATURA* 📺\n\n` +
+        `Localizamos a seguinte conta vinculada ao seu WhatsApp:\n` +
+        `👤 *Cliente:* ${c.name}\n` +
+        `🔑 *Usuário:* *${c.iptv_username || c.name}*\n` +
+        (c.next_due_date ? `📅 *Vencimento:* ${c.next_due_date}\n` : "") +
+        `💰 *Valor:* ${fee}\n\n` +
+        `👉 Digite *SIM* para renovar este usuário acima.\n` +
+        `👉 Ou *digite o outro usuário* que você deseja renovar: 👇`;
+
+      return { reply, action: "renew_confirm_prompted" };
+    }
+
+    // Caso B: Mais de 1 linha associada a este WhatsApp
+    if (matchingClients.length > 1) {
+      conversationSessions.set(cleanPhone, {
+        step: "awaiting_renew_username",
+        timestamp: Date.now(),
+      });
+
+      let listText = "";
+      matchingClients.slice(0, 5).forEach((c) => {
+        listText += `• Usuário: *${c.iptv_username || c.name}* (Vencimento: ${c.next_due_date || "N/A"})\n`;
+      });
+
+      const reply =
+        `💳 *RENOVAÇÃO DE ASSINATURA* 📺\n\n` +
+        `Encontramos mais de uma assinatura vinculada ao seu WhatsApp:\n\n` +
+        listText +
+        `\n👉 Por favor, *digite o Usuário* que você deseja renovar: 👇`;
+
+      return { reply, action: "renew_multiple_prompted" };
+    }
+
+    // Caso C: Nenhuma linha encontrada para este WhatsApp -> Pergunta o usuário
+    conversationSessions.set(cleanPhone, {
+      step: "awaiting_renew_username",
+      timestamp: Date.now(),
+    });
 
     const reply =
       `💳 *RENOVAÇÃO DE ASSINATURA* 📺\n\n` +
-      (client ? `👤 *Cliente:* ${client.name}\n🔑 *Usuário:* ${client.iptv_username || client.name}\n` : "") +
-      `📺 *Servidor:* ${serverName}\n` +
-      `💰 *Valor da Mensalidade:* ${fee}\n\n` +
-      `🔑 *Chave PIX:* \`${pixKey}\`\n` +
-      `👤 *Titular:* ${pixHolder}\n\n` +
-      `Assim que efetuar o pagamento, envie o comprovante aqui para ativação imediata! ✅\n` +
-      `Se preferir pagar no Cartão ou Boleto, digite *5* para falar com o suporte.`;
+      `Por favor, **digite o seu Usuário** (login do seu aplicativo IPTV) que você deseja renovar: 👇\n\n` +
+      `_Exemplo: digite apenas o nome do seu usuário._`;
 
-    return { reply, action: "renew_requested" };
+    return { reply, action: "renew_user_prompted" };
   }
 
   // =========================================================================

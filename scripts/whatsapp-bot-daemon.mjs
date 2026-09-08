@@ -102,7 +102,11 @@ async function forwardToLocalWebhook(instanceName, msg) {
 
     if (res.ok) {
       const resJson = await res.json().catch(() => null);
-      console.log(`[Daemon] ✅ Mensagem de ${senderPhone} processada com sucesso: "${text}" (Ação: ${resJson?.action || "ok"})`);
+      if (resJson?.ignored === "bot_disabled" || resJson?.action === "bot_disabled") {
+        console.log(`[Daemon] 🛑 Robô DESLIGADO no painel. Nenhuma mensagem enviada para ${senderPhone}.`);
+      } else {
+        console.log(`[Daemon] ✅ Mensagem de ${senderPhone} processada: "${text}" (Ação: ${resJson?.action || "ok"})`);
+      }
     } else {
       console.warn(`[Daemon] ⚠️ Webhook local respondeu com status ${res.status}`);
     }
