@@ -29,11 +29,11 @@ const nav = [
   { to: "/painel", label: "Painel Geral", icon: LayoutDashboard, badgeKey: null },
   { to: "/clientes", label: "Clientes & Linhas", icon: Users, badgeKey: "clients" },
   { to: "/cobrancas", label: "Cobranças", icon: Receipt, badgeKey: "invoices" },
-  { to: "/sigma", label: "Painel Sigma", icon: Server, badgeKey: "sigma" },
+  { to: "/sigma", label: "Servidor Sigma", icon: Server, badgeKey: null },
   { to: "/whatsapp", label: "WhatsApp", icon: MessageCircle, badgeKey: null },
   { to: "/pagamentos", label: "Pagamentos", icon: CreditCard, badgeKey: null },
   { to: "/mensagens", label: "Mensagens", icon: Sparkles, badgeKey: null },
-  { to: "/configuracoes", label: "Ajustes & Robô", icon: Settings, badgeKey: null },
+  { to: "/configuracoes", label: "Configurações", icon: Settings, badgeKey: null },
 ] as const;
 
 export function AppLayout({ children }: { children: ReactNode }) {
