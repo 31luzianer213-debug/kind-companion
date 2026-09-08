@@ -49,6 +49,147 @@ export async function sendViaEvolution(
   return raw.slice(0, 500);
 }
 
+export interface ButtonItem {
+  id: string;
+  displayText: string;
+  type?: "reply" | "copy" | "url" | "call" | "pix";
+  copyCode?: string;
+  url?: string;
+  phoneNumber?: string;
+}
+
+/**
+ * Envia botões interativos via Evolution API v2 (/message/sendButtons/:instance).
+ * Se a API ou WhatsApp rejeitar, faz fallback automático para mensagem de texto normal.
+ */
+export async function sendButtonsViaEvolution(
+  settings: WhatsAppSettings & { user_id?: string },
+  phone: string,
+  options: {
+    title?: string;
+    description: string;
+    buttons: ButtonItem[];
+    footer?: string;
+    fallbackText?: string;
+  },
+  userId?: string,
+) {
+  const { evolutionConfig } = await import("./evolution.server");
+  const owner = userId ?? settings.user_id;
+  if (!owner) throw new Error("Conta sem WhatsApp conectado.");
+  const { base, key, instance } = evolutionConfig(
+    owner,
+    settings.api_url ?? undefined,
+    settings.api_key ?? undefined,
+  );
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (key) headers["apikey"] = key;
+
+  try {
+    const formattedButtons = options.buttons.map((b) => ({
+      id: String(b.id),
+      displayText: b.displayText,
+      type: b.type || "reply",
+      ...(b.copyCode ? { copyCode: b.copyCode } : {}),
+      ...(b.url ? { url: b.url } : {}),
+      ...(b.phoneNumber ? { phoneNumber: b.phoneNumber } : {}),
+    }));
+
+    const payload: any = {
+      number: normalizeNumber(phone),
+      description: options.description,
+      buttons: formattedButtons,
+    };
+    if (options.title) payload.title = options.title;
+    if (options.footer) payload.footer = options.footer;
+
+    const res = await fetch(`${base}/message/sendButtons/${instance}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      return await res.text();
+    }
+
+    console.warn(`Evolution sendButtons retornado status ${res.status}. Usando fallback para texto.`);
+  } catch (btnErr) {
+    console.warn("Exceção no sendButtons, caindo para fallback de texto:", btnErr);
+  }
+
+  // Fallback para texto normal
+  const fallback = options.fallbackText || options.description;
+  return await sendViaEvolution(settings, phone, fallback, userId);
+}
+
+export interface ListSection {
+  title: string;
+  rows: Array<{
+    title: string;
+    description?: string;
+    rowId: string;
+  }>;
+}
+
+/**
+ * Envia Menu de Lista Interativa via Evolution API v2 (/message/sendList/:instance).
+ * Se o dispositivo do cliente não suportar ou a API falhar, cai para fallback de texto limpo.
+ */
+export async function sendListViaEvolution(
+  settings: WhatsAppSettings & { user_id?: string },
+  phone: string,
+  options: {
+    title: string;
+    description: string;
+    buttonText: string;
+    footerText?: string;
+    sections: ListSection[];
+    fallbackText?: string;
+  },
+  userId?: string,
+) {
+  const { evolutionConfig } = await import("./evolution.server");
+  const owner = userId ?? settings.user_id;
+  if (!owner) throw new Error("Conta sem WhatsApp conectado.");
+  const { base, key, instance } = evolutionConfig(
+    owner,
+    settings.api_url ?? undefined,
+    settings.api_key ?? undefined,
+  );
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (key) headers["apikey"] = key;
+
+  try {
+    const payload = {
+      number: normalizeNumber(phone),
+      title: options.title,
+      description: options.description,
+      buttonText: options.buttonText,
+      footerText: options.footerText || "Selecione uma opção acima",
+      sections: options.sections,
+    };
+
+    const res = await fetch(`${base}/message/sendList/${instance}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      return await res.text();
+    }
+
+    console.warn(`Evolution sendList retornado status ${res.status}. Usando fallback para texto.`);
+  } catch (listErr) {
+    console.warn("Exceção no sendList, caindo para fallback de texto:", listErr);
+  }
+
+  // Fallback para texto normal
+  const fallback = options.fallbackText || options.description;
+  return await sendViaEvolution(settings, phone, fallback, userId);
+}
+
 function iso(date: Date) {
   return date.toISOString().slice(0, 10);
 }

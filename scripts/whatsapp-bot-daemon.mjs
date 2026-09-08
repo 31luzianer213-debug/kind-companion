@@ -61,8 +61,12 @@ async function forwardToLocalWebhook(instanceName, msg) {
   const text =
     msg.message?.conversation ||
     msg.message?.extendedTextMessage?.text ||
+    msg.message?.buttonsResponseMessage?.selectedButtonId ||
     msg.message?.buttonsResponseMessage?.selectedDisplayText ||
+    msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId ||
     msg.message?.listResponseMessage?.title ||
+    msg.message?.templateButtonReplyMessage?.selectedId ||
+    msg.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||
     "";
 
   if (!text.trim()) return;

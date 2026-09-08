@@ -2,6 +2,32 @@ import fs from "fs";
 import path from "path";
 import { generateM3uUrl, generateEpgUrl, extractCleanIptvDns } from "./format";
 import type { SigmaConfig } from "./sigma.panel";
+import { createOrderServer, listOrdersServer, approveAndReleaseOrderServer } from "./orders.server";
+import { createMercadoPagoPixPayment } from "./mercadopago.server";
+import type { ButtonItem, ListSection } from "./billing.server";
+
+export type BotInteractivePayload =
+  | {
+      type: "buttons";
+      title?: string;
+      description: string;
+      buttons: ButtonItem[];
+      footer?: string;
+    }
+  | {
+      type: "list";
+      title: string;
+      description: string;
+      buttonText: string;
+      footerText?: string;
+      sections: ListSection[];
+    };
+
+export type BotProcessResult = {
+  reply: string;
+  action: string;
+  interactive?: BotInteractivePayload;
+};
 
 export type BotConfigData = {
   enabled: boolean;
@@ -377,7 +403,7 @@ export async function processBotMessage(
     text: string;
     pushName?: string;
   },
-): Promise<{ reply: string; action: string }> {
+): Promise<BotProcessResult> {
   const config = await loadBotConfig(supabase, userId);
 
   // Se o robô foi desligado no painel pelo revendedor, não responde nada
@@ -403,6 +429,211 @@ export async function processBotMessage(
   const streamingDns = wsRow?.sigma_streaming_dns?.trim() || "http://karen256.top";
   const pixKey = config.pixKey || wsRow?.pix_key || "Consulte nossa chave PIX";
   const pixHolder = config.pixHolder || wsRow?.pix_holder || config.businessName;
+
+  // =========================================================================
+  // CONSULTA DE STATUS DE PEDIDO (Botão "Verificar Pagamento" ou "Status")
+  // =========================================================================
+  if (text.startsWith("check_order_") || text.startsWith("status_order_")) {
+    const orderId = text.replace(/^(check_order_|status_order_)/, "").trim();
+    const orders = await listOrdersServer(userId);
+    const order = orders.find((o) => o.id === orderId);
+
+    if (!order) {
+      return {
+        reply: "🔍 Pedido não encontrado ou já processado. Toque em *3* para ver os planos e iniciar uma assinatura!",
+        action: "order_not_found",
+      };
+    }
+
+    if (order.status === "approved") {
+      return {
+        reply:
+          `🎉 *PEDIDO #${order.order_number} APROVADO E LIBERADO!* 🍿\n\n` +
+          `📦 *Plano:* ${order.plan_name}\n` +
+          `🔑 *Usuário:* *${order.target_username}*\n` +
+          `📺 *Servidor:* ${serverName}\n\n` +
+          `Para ver seus dados de acesso completos (usuário, senha e M3U), envie *4*! 🍿`,
+        action: "order_already_approved",
+      };
+    }
+
+    // Se é Mercado Pago, consulta em tempo real na API do MP para ver se foi pago
+    if (order.status === "pending" && wsRow?.mercadopago_token && order.gateway_payment_id) {
+      try {
+        const mpCheck = await fetch(`https://api.mercadopago.com/v1/payments/${order.gateway_payment_id}`, {
+          headers: { Authorization: `Bearer ${wsRow.mercadopago_token.trim()}` },
+        });
+        if (mpCheck.ok) {
+          const mpData = await mpCheck.json();
+          if (mpData.status === "approved") {
+            const approvedRes = await approveAndReleaseOrderServer(userId, order.id);
+            if (approvedRes.ok) {
+              return {
+                reply:
+                  `🎉 *PAGAMENTO CONFIRMADO COM SUCESSO!* 🍿\n\n` +
+                  `Identificamos seu pagamento do Pedido *#${order.order_number}* via Mercado Pago!\n` +
+                  `Seu acesso acabou de ser ativado no servidor. Digite *4* para ver seus dados de conexão completos! 🍿`,
+                action: "order_auto_approved",
+              };
+            }
+          }
+        }
+      } catch {}
+    }
+
+    const pixCodeNotice = order.pix_code
+      ? `\n\n👇 *PIX Copia e Cola:*\n\`${order.pix_code}\``
+      : "";
+
+    return {
+      reply:
+        `⏳ *PEDIDO #${order.order_number} AGUARDANDO PAGAMENTO* ⏳\n\n` +
+        `📦 *Plano:* ${order.plan_name}\n` +
+        `💰 *Valor:* R$ ${Number(order.amount).toFixed(2).replace(".", ",")}\n` +
+        (order.payment_method === "mercadopago_pix"
+          ? `⚡ O Mercado Pago confirmará automaticamente assim que o PIX for concluído.${pixCodeNotice}`
+          : `💳 Chave PIX: \`${pixKey}\`\nPor favor, envie o comprovante do PIX aqui para liberação pelo painel do administrador!`),
+      action: "order_status_checked",
+      interactive: {
+        type: "buttons",
+        title: `Pedido #${order.order_number} Pendente ⏳`,
+        description: `Seu pedido #${order.order_number} está aguardando confirmação do PIX de R$ ${Number(order.amount).toFixed(2).replace(".", ",")}.`,
+        buttons: [
+          { id: `check_order_${order.id}`, displayText: "🔄 Verificar Novamente", type: "reply" },
+          { id: "5", displayText: "👨‍💼 Falar com Atendente", type: "reply" },
+        ],
+        footer: "Sistema IPTV Inteligente",
+      },
+    };
+  }
+
+  // =========================================================================
+  // SELEÇÃO DIRETA DE PLANO (Via Botões Interativos ou Resposta Rápida)
+  // =========================================================================
+  const isPlan1m =
+    text === "plano_1m" ||
+    text === "1m" ||
+    text === "1 mes" ||
+    text === "1 mês" ||
+    text === "mensal" ||
+    text === "plano mensal";
+
+  const isPlan3m =
+    text === "plano_3m" ||
+    text === "3m" ||
+    text === "3 meses" ||
+    text === "trimestral" ||
+    text === "plano trimestral";
+
+  const isPlan6m =
+    text === "plano_6m" ||
+    text === "6m" ||
+    text === "6 meses" ||
+    text === "semestral" ||
+    text === "plano semestral";
+
+  if (isPlan1m || isPlan3m || isPlan6m) {
+    let planName = "Plano Mensal (1 Mês - 1 Tela)";
+    let amount = 35.0;
+    let durationMonths = 1;
+
+    if (isPlan3m) {
+      planName = "Plano Trimestral (3 Meses - Econômico)";
+      amount = 90.0;
+      durationMonths = 3;
+    } else if (isPlan6m) {
+      planName = "Plano Semestral (6 Meses - Super Desconto)";
+      amount = 160.0;
+      durationMonths = 6;
+    }
+
+    const order = await createOrderServer(userId, {
+      customer_name: params.pushName || "Cliente WhatsApp",
+      customer_phone: cleanPhone,
+      plan_name: planName,
+      amount,
+      duration_months: durationMonths,
+      screens: 1,
+      type: "new_access",
+    });
+
+    const mpToken = wsRow?.mercadopago_token?.trim();
+    let mpPixResult: any = null;
+
+    if (mpToken) {
+      mpPixResult = await createMercadoPagoPixPayment({
+        token: mpToken,
+        amount,
+        description: `${planName} - Pedido #${order.order_number}`,
+        orderId: order.id,
+        customerName: params.pushName || "Cliente",
+        customerPhone: cleanPhone,
+      });
+
+      if (mpPixResult.ok && mpPixResult.qrCode) {
+        order.pix_code = mpPixResult.qrCode;
+        order.gateway_payment_id = mpPixResult.paymentId;
+        order.payment_method = "mercadopago_pix";
+      }
+    }
+
+    if (mpPixResult?.ok && mpPixResult?.qrCode) {
+      // MODO AUTOMÁTICO MERCADO PAGO
+      const reply =
+        `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
+        `📦 *Plano:* ${planName}\n` +
+        `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
+        `⚡ *Forma de Pagamento:* PIX Automático (Mercado Pago)\n\n` +
+        `👇 *PIX COPIA E COLA (Toque para copiar):*\n` +
+        `\`${mpPixResult.qrCode}\`\n\n` +
+        `✅ *Liberação 100% Automática!*\n` +
+        `Assim que você pagar no seu banco, o sistema reconhece em poucos segundos e já envia seu Login, Senha e Lista M3U aqui mesmo nesta conversa! 🚀`;
+
+      return {
+        reply,
+        action: "order_created_mp",
+        interactive: {
+          type: "buttons",
+          title: `Pedido #${order.order_number} Gerado 🍿`,
+          description: reply,
+          buttons: [
+            { id: `check_order_${order.id}`, displayText: "⚡ Já Paguei / Verificar", type: "reply" },
+            { id: "menu", displayText: "🏠 Menu Principal", type: "reply" },
+          ],
+          footer: "Liberação automática via Mercado Pago",
+        },
+      };
+    }
+
+    // MODO MANUAL (Sem Mercado Pago cadastrado ou falha de token)
+    const effectivePixKey = pixKey || "Consulte nossa chave PIX com nosso suporte";
+    const reply =
+      `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
+      `📦 *Plano:* ${planName}\n` +
+      `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
+      `💳 *Forma de Pagamento:* Transferência PIX\n\n` +
+      `🔑 *Chave PIX:* \`${effectivePixKey}\`\n` +
+      `👤 *Titular:* ${pixHolder}\n\n` +
+      `📌 *Como Ativar Seu Acesso:*\n` +
+      `1️⃣ Faça o PIX no valor de *R$ ${amount.toFixed(2).replace(".", ",")}* para a chave acima.\n` +
+      `2️⃣ *Envie o comprovante do PIX aqui nesta conversa*.\n` +
+      `3️⃣ Nosso administrador confirmará pelo painel e seu acesso será liberado imediatamente! 🚀`;
+
+    return {
+      reply,
+      action: "order_created_manual",
+      interactive: {
+        type: "buttons",
+        title: `Pedido #${order.order_number} Criado 🍿`,
+        description: reply,
+        buttons: [
+          { id: `status_order_${order.id}`, displayText: "📋 Status do Pedido", type: "reply" },
+          { id: "5", displayText: "👨‍💼 Falar com Atendente", type: "reply" },
+        ],
+        footer: "Liberação manual via Painel de Pedidos",
+      },
+    };
+  }
 
   // =========================================================================
   // GERENCIAMENTO DE SESSÃO MULTI-PASSO (Ex: pergunta de usuário na renovação)
@@ -550,7 +781,20 @@ export async function processBotMessage(
       `• Em Smart TVs ou SS IPTV: adicione a *Lista M3U Plus* completa acima.\n\n` +
       `Bom divertimento! Qualquer dúvida, digite *5* para falar conosco. 🍿`;
 
-    return { reply, action: "trial_created" };
+    return {
+      reply,
+      action: "trial_created",
+      interactive: {
+        type: "buttons",
+        title: "🍿 Teste Grátis Ativado!",
+        description: reply,
+        buttons: [
+          { id: "3", displayText: "🛒 Comprar Assinatura", type: "reply" },
+          { id: "5", displayText: "👨‍💼 Falar com Suporte", type: "reply" },
+        ],
+        footer: "Aproveite seu teste!",
+      },
+    };
   }
 
   // =========================================================================
@@ -694,13 +938,27 @@ export async function processBotMessage(
     text.includes("valor")
   ) {
     const pixKey = config.pixKey || wsRow?.pix_key || "";
-    const pixBlock = pixKey ? `\n\n🔑 *Chave PIX para Assinatura:* \`${pixKey}\`` : "";
+    const pixBlock = pixKey ? `\n\n🔑 *Chave PIX:* \`${pixKey}\`` : "";
 
     const reply =
       `${config.plansText}${pixBlock}\n\n` +
-      `Para ativar agora, basta escolher o plano e nos enviar o comprovante aqui! 🍿`;
+      `👇 *Para assinar agora, toque no botão do plano desejado abaixo:*`;
 
-    return { reply, action: "plans_shown" };
+    return {
+      reply,
+      action: "plans_shown",
+      interactive: {
+        type: "buttons",
+        title: "🍿 Escolha seu Plano IPTV",
+        description: `${config.plansText}\n\n👇 *Selecione o plano desejado nos botões abaixo para gerar seu PIX imediato:*`,
+        buttons: [
+          { id: "plano_1m", displayText: "1️⃣ Mensal - R$ 35", type: "reply" },
+          { id: "plano_3m", displayText: "2️⃣ Trimestral - R$ 90", type: "reply" },
+          { id: "plano_6m", displayText: "3️⃣ Semestral - R$ 160", type: "reply" },
+        ],
+        footer: "Liberação imediata pós-pagamento",
+      },
+    };
   }
 
   // =========================================================================
@@ -758,7 +1016,20 @@ export async function processBotMessage(
       `📺 *Guia de Canais (EPG):*\n${epgUrl}\n\n` +
       `Bom divertimento! 🍿`;
 
-    return { reply, action: "credentials_resent" };
+    return {
+      reply,
+      action: "credentials_resent",
+      interactive: {
+        type: "buttons",
+        title: "📡 Dados de Conexão IPTV",
+        description: reply,
+        buttons: [
+          { id: "2", displayText: "💳 Renovar Assinatura", type: "reply" },
+          { id: "menu", displayText: "🏠 Menu Principal", type: "reply" },
+        ],
+        footer: "Sistema IPTV Inteligente",
+      },
+    };
   }
 
   // =========================================================================
@@ -788,5 +1059,44 @@ export async function processBotMessage(
   return {
     reply: greeting,
     action: "menu_shown",
+    interactive: {
+      type: "list",
+      title: "Menu de Atendimento 🍿",
+      description: `👋 Olá! Bem-vindo(a) à *${config.businessName}*! Escolha uma das opções abaixo:`,
+      buttonText: "Abrir Opções 🍿",
+      footerText: "Atendimento automático 24h",
+      sections: [
+        {
+          title: "Opções de Atendimento",
+          rows: [
+            {
+              title: "1️⃣ Gerar Teste Grátis",
+              description: `Teste grátis de ${config.testDurationHours}h imediato`,
+              rowId: "1",
+            },
+            {
+              title: "2️⃣ Renovar Assinatura",
+              description: "Renove seu login existente com PIX",
+              rowId: "2",
+            },
+            {
+              title: "3️⃣ Comprar Assinatura",
+              description: "Ver planos e assinar novo acesso",
+              rowId: "3",
+            },
+            {
+              title: "4️⃣ Meus Acessos / M3U",
+              description: "Recupere login, senha e lista IPTV",
+              rowId: "4",
+            },
+            {
+              title: "5️⃣ Suporte Humano",
+              description: "Fale com nossa equipe de atendentes",
+              rowId: "5",
+            },
+          ],
+        },
+      ],
+    },
   };
 }

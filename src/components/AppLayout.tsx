@@ -24,10 +24,12 @@ import {
   CreditCard,
   ChevronRight,
   Bot,
+  ShoppingBag,
 } from "lucide-react";
 
 const nav = [
   { to: "/painel", label: "Painel Geral", icon: LayoutDashboard, badgeKey: null },
+  { to: "/pedidos", label: "Pedidos & PIX", icon: ShoppingBag, badgeKey: "orders" },
   { to: "/clientes", label: "Clientes & Linhas", icon: Users, badgeKey: "clients" },
   { to: "/cobrancas", label: "Cobranças", icon: Receipt, badgeKey: "invoices" },
   { to: "/sigma", label: "Servidor Sigma", icon: Server, badgeKey: null },
@@ -60,18 +62,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { data: counts } = useQuery({
     queryKey: ["sidebar-counts"],
     queryFn: async () => {
-      const [clientsRes, invoicesRes, sigmaClientsRes] = await Promise.all([
+      const [clientsRes, invoicesRes, sigmaClientsRes, ordersRes] = await Promise.all([
         supabase.from("clients").select("id", { count: "exact", head: true }),
         supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "overdue"),
         supabase.from("clients").select("id", { count: "exact", head: true }).not("sigma_customer_id", "is", null),
+        supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
       ]);
       return {
         clients: clientsRes.count ?? 0,
         overdueInvoices: invoicesRes.count ?? 0,
         sigmaClients: sigmaClientsRes.count ?? 0,
+        pendingOrders: ordersRes.count ?? 0,
       };
     },
-    staleTime: 30000,
+    staleTime: 10000,
   });
 
   // WhatsApp status
@@ -150,7 +154,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
         const active = pathname === to || pathname.startsWith(to + "/");
         let badgeCount: number | null = null;
         let isOverdue = false;
-        if (badgeKey === "invoices" && (counts?.overdueInvoices ?? 0) > 0) {
+        if (badgeKey === "orders" && (counts?.pendingOrders ?? 0) > 0) {
+          badgeCount = counts?.pendingOrders ?? null;
+          isOverdue = true;
+        } else if (badgeKey === "invoices" && (counts?.overdueInvoices ?? 0) > 0) {
           badgeCount = counts?.overdueInvoices ?? null;
           isOverdue = true;
         } else if (badgeKey === "sigma" && (counts?.sigmaClients ?? 0) > 0) {

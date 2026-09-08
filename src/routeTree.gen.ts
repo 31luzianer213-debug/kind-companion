@@ -20,6 +20,7 @@ import { Route as AuthenticatedListasRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedMensagensRouteImport } from './routes/_authenticated/mensagens'
 import { Route as AuthenticatedPagamentosRouteImport } from './routes/_authenticated/pagamentos'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
+import { Route as AuthenticatedPedidosRouteImport } from './routes/_authenticated/pedidos'
 import { Route as AuthenticatedSigmaRouteImport } from './routes/_authenticated/sigma'
 import { Route as AuthenticatedWhatsappRouteImport } from './routes/_authenticated/whatsapp'
 import { Route as ApiPublicHooksCobrancaDiariaRouteImport } from './routes/api/public/hooks/cobranca-diaria'
@@ -82,6 +83,11 @@ const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
   path: '/painel',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPedidosRoute = AuthenticatedPedidosRouteImport.update({
+  id: '/pedidos',
+  path: '/pedidos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSigmaRoute = AuthenticatedSigmaRouteImport.update({
   id: '/sigma',
   path: '/sigma',
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/mensagens': typeof AuthenticatedMensagensRoute
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/painel': typeof AuthenticatedPainelRoute
+  '/pedidos': typeof AuthenticatedPedidosRoute
   '/sigma': typeof AuthenticatedSigmaRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
@@ -145,6 +152,7 @@ export interface FileRoutesByTo {
   '/mensagens': typeof AuthenticatedMensagensRoute
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/painel': typeof AuthenticatedPainelRoute
+  '/pedidos': typeof AuthenticatedPedidosRoute
   '/sigma': typeof AuthenticatedSigmaRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/_authenticated/mensagens': typeof AuthenticatedMensagensRoute
   '/_authenticated/pagamentos': typeof AuthenticatedPagamentosRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
+  '/_authenticated/pedidos': typeof AuthenticatedPedidosRoute
   '/_authenticated/sigma': typeof AuthenticatedSigmaRoute
   '/_authenticated/whatsapp': typeof AuthenticatedWhatsappRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/mensagens'
     | '/pagamentos'
     | '/painel'
+    | '/pedidos'
     | '/sigma'
     | '/whatsapp'
     | '/api/public/hooks/cobranca-diaria'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/mensagens'
     | '/pagamentos'
     | '/painel'
+    | '/pedidos'
     | '/sigma'
     | '/whatsapp'
     | '/api/public/hooks/cobranca-diaria'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mensagens'
     | '/_authenticated/pagamentos'
     | '/_authenticated/painel'
+    | '/_authenticated/pedidos'
     | '/_authenticated/sigma'
     | '/_authenticated/whatsapp'
     | '/api/public/hooks/cobranca-diaria'
@@ -319,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPainelRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/pedidos': {
+      id: '/_authenticated/pedidos'
+      path: '/pedidos'
+      fullPath: '/pedidos'
+      preLoaderRoute: typeof AuthenticatedPedidosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/sigma': {
       id: '/_authenticated/sigma'
       path: '/sigma'
@@ -373,6 +392,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMensagensRoute: typeof AuthenticatedMensagensRoute
   AuthenticatedPagamentosRoute: typeof AuthenticatedPagamentosRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
+  AuthenticatedPedidosRoute: typeof AuthenticatedPedidosRoute
   AuthenticatedSigmaRoute: typeof AuthenticatedSigmaRoute
   AuthenticatedWhatsappRoute: typeof AuthenticatedWhatsappRoute
 }
@@ -386,6 +406,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMensagensRoute: AuthenticatedMensagensRoute,
   AuthenticatedPagamentosRoute: AuthenticatedPagamentosRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
+  AuthenticatedPedidosRoute: AuthenticatedPedidosRoute,
   AuthenticatedSigmaRoute: AuthenticatedSigmaRoute,
   AuthenticatedWhatsappRoute: AuthenticatedWhatsappRoute,
 }

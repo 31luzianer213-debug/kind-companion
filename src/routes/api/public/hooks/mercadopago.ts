@@ -89,6 +89,23 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago")({
 
           const externalRef = paymentData.external_reference;
 
+          // Se external_reference for um Pedido do WhatsApp/Loja, aprova e entrega o acesso imediatamente
+          if (externalRef && (externalRef.startsWith("ord_") || String(externalRef).length > 10)) {
+            try {
+              const { approveAndReleaseOrderServer } = await import("@/lib/orders.server");
+              const orderResult = await approveAndReleaseOrderServer(matchedSettings.user_id, externalRef);
+              if (orderResult.ok) {
+                return Response.json({
+                  ok: true,
+                  message: `Pedido #${orderResult.order?.order_number} aprovado com sucesso via Mercado Pago! Acesso entregue.`,
+                  order: orderResult.order,
+                });
+              }
+            } catch (ordErr) {
+              console.warn("Aviso ao tentar aprovar pedido pelo external_reference:", ordErr);
+            }
+          }
+
           let invoice: any = null;
 
           // 1. Tenta localizar a fatura pelo external_reference (ID da fatura)
