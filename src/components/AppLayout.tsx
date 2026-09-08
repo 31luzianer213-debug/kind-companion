@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
+import { useSigmaAutoSync } from "@/lib/useSigmaAutoSync";
 import {
   Users,
   Receipt,
@@ -41,6 +42,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const statusFn = useServerFn(getWhatsAppStatus);
+
+  // Mantém os clientes e linhas do Painel Sigma automaticamente sincronizados em segundo plano
+  useSigmaAutoSync();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));

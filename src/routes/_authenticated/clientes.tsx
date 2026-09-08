@@ -268,26 +268,6 @@ function Clientes() {
 
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0] ?? "", []);
 
-  // Sincronização em segundo plano silenciosa quando a página carrega e os dados do Sigma estiverem defasados
-  useEffect(() => {
-    if (!isSigmaConfigured) return;
-    const lastSync = sigmaConfigQuery.data?.sigma_last_sync_at;
-    const minutesSinceLast = lastSync
-      ? (Date.now() - new Date(lastSync).getTime()) / 60000
-      : 999;
-
-    if (minutesSinceLast > 10) {
-      syncSigma({ data: {} })
-        .then((res) => {
-          if (res.ok && (res.created > 0 || res.updated > 0)) {
-            queryClient.invalidateQueries({ queryKey: ["clients"] });
-            queryClient.invalidateQueries({ queryKey: ["sigma-settings"] });
-          }
-        })
-        .catch(() => {});
-    }
-  }, [isSigmaConfigured, sigmaConfigQuery.data?.sigma_last_sync_at]);
-
   // KPIs
   const stats = useMemo(() => {
     let total = clients.length;
@@ -710,9 +690,22 @@ function Clientes() {
     const result = await syncSigma({ data: {} });
     setSyncing(false);
     if (result.ok) {
-      toast.success(`${result.created} novos e ${result.updated} atualizados pelo painel Sigma.`);
+      if (result.created > 0) {
+        const names = result.createdNames?.slice(0, 3).join(", ") || "";
+        toast.success(
+          result.created === 1
+            ? `🎉 Novo cliente importado do Sigma: ${names}`
+            : `🎉 ${result.created} novos clientes importados do Sigma! (${names})`,
+        );
+      } else if (result.updated > 0) {
+        toast.success(`${result.updated} cliente(s) atualizados com o painel Sigma.`);
+      } else {
+        toast.info("Tudo em dia! Nenhum cliente novo pendente no Painel Sigma.");
+      }
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["sigma-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["sigma-clients-list"] });
+      queryClient.invalidateQueries({ queryKey: ["sidebar-counts"] });
     } else {
       toast.error(result.error ?? "Falha ao sincronizar com o painel.");
     }
@@ -762,9 +755,12 @@ function Clientes() {
               {stats.total} total
             </Badge>
             {isSigmaConfigured ? (
-              <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 gap-1 text-[11px]">
+              <Badge
+                className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 gap-1 text-[11px]"
+                title="Sincronização em tempo real ativa: clientes adicionados no Sigma aparecem automaticamente"
+              >
                 <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Sigma Integrado
+                Auto-Sync Sigma Ativo
               </Badge>
             ) : null}
           </div>

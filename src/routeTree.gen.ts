@@ -22,6 +22,7 @@ import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedSigmaRouteImport } from './routes/_authenticated/sigma'
 import { Route as AuthenticatedWhatsappRouteImport } from './routes/_authenticated/whatsapp'
 import { Route as ApiPublicHooksCobrancaDiariaRouteImport } from './routes/api/public/hooks/cobranca-diaria'
+import { Route as ApiPublicHooksSigmaSyncRouteImport } from './routes/api/public/hooks/sigma-sync'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -89,6 +90,11 @@ const ApiPublicHooksCobrancaDiariaRoute =
     path: '/api/public/hooks/cobranca-diaria',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSigmaSyncRoute = ApiPublicHooksSigmaSyncRouteImport.update({
+  id: '/api/public/hooks/sigma-sync',
+  path: '/api/public/hooks/sigma-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/sigma': typeof AuthenticatedSigmaRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
+  '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/sigma': typeof AuthenticatedSigmaRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
+  '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/_authenticated/sigma': typeof AuthenticatedSigmaRoute
   '/_authenticated/whatsapp': typeof AuthenticatedWhatsappRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
+  '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/sigma'
     | '/whatsapp'
     | '/api/public/hooks/cobranca-diaria'
+    | '/api/public/hooks/sigma-sync'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -163,6 +173,7 @@ export interface FileRouteTypes {
     | '/sigma'
     | '/whatsapp'
     | '/api/public/hooks/cobranca-diaria'
+    | '/api/public/hooks/sigma-sync'
   id:
     | '__root__'
     | '/'
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '/_authenticated/sigma'
     | '/_authenticated/whatsapp'
     | '/api/public/hooks/cobranca-diaria'
+    | '/api/public/hooks/sigma-sync'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -185,6 +197,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiPublicHooksCobrancaDiariaRoute: typeof ApiPublicHooksCobrancaDiariaRoute
+  ApiPublicHooksSigmaSyncRoute: typeof ApiPublicHooksSigmaSyncRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -280,6 +293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksCobrancaDiariaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/sigma-sync': {
+      id: '/api/public/hooks/sigma-sync'
+      path: '/api/public/hooks/sigma-sync'
+      fullPath: '/api/public/hooks/sigma-sync'
+      preLoaderRoute: typeof ApiPublicHooksSigmaSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -315,6 +335,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiPublicHooksCobrancaDiariaRoute: ApiPublicHooksCobrancaDiariaRoute,
+  ApiPublicHooksSigmaSyncRoute: ApiPublicHooksSigmaSyncRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

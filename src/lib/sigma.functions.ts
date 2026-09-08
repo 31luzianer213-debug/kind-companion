@@ -256,123 +256,143 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
   });
 
 /**
+ * Executa a sincronização de clientes do Painel Sigma para um determinado usuário.
+ */
+export async function runSigmaSyncForUser(
+  supabase: any,
+  userId: string,
+  data?: { url?: string; username?: string; password?: string; token?: string },
+) {
+  const { listSigmaCustomers, ensureSigmaToken } = await import("./sigma.server");
+  const saved = await loadConfig(supabase, userId);
+
+  const panelConfig: SigmaConfig = {
+    url: (data?.url ?? "").trim() || saved.url,
+    username: (data?.username ?? "").trim() || saved.username,
+    password: data?.password ?? saved.password,
+    token: (data?.token ?? "").trim() || saved.token,
+  };
+
+  if (!hasSigmaAccess(panelConfig)) {
+    return {
+      ok: false as const,
+      created: 0,
+      updated: 0,
+      createdNames: [] as string[],
+      error: "Painel Sigma não configurado. Em Configurações, preencha o endereço, usuário e senha.",
+    };
+  }
+
+  let customers;
+  try {
+    const token = await ensureSigmaToken(panelConfig);
+    customers = await listSigmaCustomers({ ...panelConfig, token });
+  } catch (error) {
+    return {
+      ok: false as const,
+      created: 0,
+      updated: 0,
+      createdNames: [] as string[],
+      error: error instanceof Error ? error.message : "Falha ao consultar o painel Sigma.",
+    };
+  }
+
+  const { data: existing } = await supabase
+    .from("clients")
+    .select("id, sigma_customer_id, iptv_username")
+    .eq("user_id", userId);
+
+  const bySigmaId = new Map<string, any>();
+  const byUsername = new Map<string, any>();
+  for (const row of existing ?? []) {
+    if (row.sigma_customer_id) bySigmaId.set(String(row.sigma_customer_id), row);
+    if (row.iptv_username) byUsername.set(String(row.iptv_username).toLowerCase(), row);
+  }
+
+  const now = new Date().toISOString();
+  let created = 0;
+  let updated = 0;
+  const createdNames: string[] = [];
+  const failedNames: string[] = [];
+
+  for (const customer of customers) {
+    const match =
+      bySigmaId.get(customer.id) ??
+      (customer.username ? byUsername.get(customer.username.toLowerCase()) : undefined);
+
+    const dueDay = customer.dueDate ? Number(customer.dueDate.slice(8, 10)) : null;
+    const localStatus = customer.status === "active" ? "active" : customer.status ? "inactive" : "active";
+
+    const base = {
+      sigma_customer_id: customer.id,
+      sigma_username: customer.username,
+      sigma_synced_at: now,
+      iptv_username: customer.username,
+      iptv_password: customer.password,
+      ...(customer.screens != null ? { screens: customer.screens } : {}),
+      ...(customer.dueDate ? { next_due_date: customer.dueDate } : {}),
+      ...(dueDay ? { due_day: dueDay } : {}),
+    };
+
+    if (match) {
+      const { error } = await supabase
+        .from("clients")
+        .update({ ...base, status: localStatus })
+        .eq("id", match.id)
+        .eq("user_id", userId);
+
+      if (!error) updated++;
+      else failedNames.push(customer.name || customer.username || "Cliente");
+    } else {
+      const clientName = (customer.name?.trim()) || (customer.username?.trim()) || "Cliente Sigma";
+      const clientPhone = (customer.phone ?? "").replace(/\D/g, "");
+      const { error } = await supabase.from("clients").insert({
+        user_id: userId,
+        name: clientName,
+        phone: clientPhone,
+        status: localStatus,
+        monthly_fee: 35.0,
+        ...base,
+      });
+
+      if (!error) {
+        created++;
+        createdNames.push(clientName);
+      } else {
+        failedNames.push(clientName);
+      }
+    }
+  }
+
+  // Registra a data da última sincronização
+  try {
+    await supabase
+      .from("whatsapp_settings")
+      .update({ sigma_last_sync_at: now })
+      .eq("user_id", userId);
+  } catch {
+    // continua mesmo se update falhar
+  }
+
+  return {
+    ok: true as const,
+    created,
+    updated,
+    createdNames,
+    error: failedNames.length
+      ? `Falha ao importar ${failedNames.length} cliente(s): ${failedNames.slice(0, 3).join(", ")}`
+      : null,
+  };
+}
+
+/**
  * Importa e sincroniza todos os clientes do painel Sigma no Supabase.
  */
 export const syncSigmaClients = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { url?: string; username?: string; password?: string; token?: string }) => input ?? {})
   .handler(async ({ data, context }) => {
-    const { listSigmaCustomers, ensureSigmaToken } = await import("./sigma.server");
-    const { supabase, userId } = context;
-    const saved = await loadConfig(supabase, userId);
-
-    const panelConfig: SigmaConfig = {
-      url: (data?.url ?? "").trim() || saved.url,
-      username: (data?.username ?? "").trim() || saved.username,
-      password: data?.password ?? saved.password,
-      token: (data?.token ?? "").trim() || saved.token,
-    };
-
-    if (!hasSigmaAccess(panelConfig)) {
-      return {
-        ok: false as const,
-        created: 0,
-        updated: 0,
-        error: "Painel Sigma não configurado. Em Configurações, preencha o endereço, usuário e senha.",
-      };
-    }
-
-    let customers;
-    try {
-      const token = await ensureSigmaToken(panelConfig);
-      customers = await listSigmaCustomers({ ...panelConfig, token });
-    } catch (error) {
-      return {
-        ok: false as const,
-        created: 0,
-        updated: 0,
-        error: error instanceof Error ? error.message : "Falha ao consultar o painel Sigma.",
-      };
-    }
-
-    const { data: existing } = await supabase
-      .from("clients")
-      .select("id, sigma_customer_id, iptv_username")
-      .eq("user_id", userId);
-
-    const bySigmaId = new Map<string, any>();
-    const byUsername = new Map<string, any>();
-    for (const row of existing ?? []) {
-      if (row.sigma_customer_id) bySigmaId.set(String(row.sigma_customer_id), row);
-      if (row.iptv_username) byUsername.set(String(row.iptv_username).toLowerCase(), row);
-    }
-
-    const now = new Date().toISOString();
-    let created = 0;
-    let updated = 0;
-    const failedNames: string[] = [];
-
-    for (const customer of customers) {
-      const match =
-        bySigmaId.get(customer.id) ??
-        (customer.username ? byUsername.get(customer.username.toLowerCase()) : undefined);
-
-      const dueDay = customer.dueDate ? Number(customer.dueDate.slice(8, 10)) : null;
-      const localStatus = customer.status === "active" ? "active" : customer.status ? "inactive" : "active";
-
-      const base = {
-        sigma_customer_id: customer.id,
-        sigma_username: customer.username,
-        sigma_synced_at: now,
-        iptv_username: customer.username,
-        iptv_password: customer.password,
-        ...(customer.screens != null ? { screens: customer.screens } : {}),
-        ...(customer.dueDate ? { next_due_date: customer.dueDate } : {}),
-        ...(dueDay ? { due_day: dueDay } : {}),
-      };
-
-      if (match) {
-        const { error } = await supabase
-          .from("clients")
-          .update({ ...base, status: localStatus })
-          .eq("id", match.id)
-          .eq("user_id", userId);
-
-        if (!error) updated++;
-        else failedNames.push(customer.name);
-      } else {
-        const { error } = await supabase.from("clients").insert({
-          user_id: userId,
-          name: customer.name,
-          phone: (customer.phone ?? "").replace(/\D/g, ""),
-          status: localStatus,
-          monthly_fee: 35.0,
-          ...base,
-        });
-
-        if (!error) created++;
-        else failedNames.push(customer.name);
-      }
-    }
-
-    // Registra a data da última sincronização
-    try {
-      await supabase
-        .from("whatsapp_settings")
-        .update({ sigma_last_sync_at: now })
-        .eq("user_id", userId);
-    } catch {
-      // continua mesmo se update falhar
-    }
-
-    return {
-      ok: true as const,
-      created,
-      updated,
-      error: failedNames.length
-        ? `Falha ao importar ${failedNames.length} cliente(s): ${failedNames.slice(0, 3).join(", ")}`
-        : null,
-    };
+    return runSigmaSyncForUser(context.supabase, context.userId, data);
   });
 
 /**
