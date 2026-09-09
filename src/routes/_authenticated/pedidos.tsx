@@ -89,11 +89,27 @@ function PedidosPage() {
     queryFn: async () => {
       try {
         const res = await getOrdersFn({ data: {} });
-        return res?.orders || [];
+        if (res?.orders && res.orders.length > 0) {
+          return res.orders;
+        }
       } catch (err) {
-        console.warn("Aviso ao carregar lista de pedidos:", err);
-        return [];
+        console.warn("Aviso ao carregar lista via serverFn:", err);
       }
+
+      // Fallback seguro via API pública
+      try {
+        const res = await fetch("/api/public/orders");
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json?.orders)) {
+            return json.orders;
+          }
+        }
+      } catch (err) {
+        console.warn("Aviso no fallback /api/public/orders:", err);
+      }
+
+      return [];
     },
     refetchInterval: 3000,
   });

@@ -80,6 +80,21 @@ export function readLocalOrders(userId?: string): OrderItem[] {
   return list;
 }
 
+let gitSyncTimeout: any = null;
+export function triggerOrdersGitSync(): void {
+  if (gitSyncTimeout) clearTimeout(gitSyncTimeout);
+  gitSyncTimeout = setTimeout(async () => {
+    try {
+      const { exec } = await import("child_process");
+      exec('git add data/ && git commit -m "chore(orders): auto sync orders" && git push origin main', (err) => {
+        if (!err) {
+          console.log("[AutoGitSync] ✅ Pedidos sincronizados com sucesso no GitHub/Lovable!");
+        }
+      });
+    } catch {}
+  }, 2000);
+}
+
 export function writeLocalOrders(userId: string | undefined, orders: OrderItem[]): void {
   try {
     const dir = path.resolve(process.cwd(), "data");
@@ -108,6 +123,9 @@ export function writeLocalOrders(userId: string | undefined, orders: OrderItem[]
         fs.writeFileSync(filePath, payload, "utf-8");
       } catch {}
     }
+
+    // Dispara sincronização em segundo plano para o GitHub / Lovable Cloud
+    triggerOrdersGitSync();
   } catch (err) {
     console.warn("Aviso ao gravar pedidos no arquivo local:", err);
   }
