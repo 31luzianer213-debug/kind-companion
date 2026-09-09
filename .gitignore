@@ -14,8 +14,8 @@ dist-ssr
 .vinxi
 .tanstack/**
 .nitro
-*.local
-data/
+data/*.tmp
+!data/*.json
 
 # Wrangler / Cloudflare
 .wrangler/

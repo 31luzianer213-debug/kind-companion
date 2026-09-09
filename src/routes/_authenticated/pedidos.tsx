@@ -64,8 +64,8 @@ function PedidosPage() {
   const [releasedCredentials, setReleasedCredentials] = useState<{
     orderNumber: number;
     username: string;
-    password?: string;
-    m3uUrl?: string;
+    password?: string | undefined;
+    m3uUrl?: string | undefined;
     customerPhone: string;
   } | null>(null);
 
@@ -83,14 +83,19 @@ function PedidosPage() {
     notes: "",
   });
 
-  // Query para listar os pedidos em tempo real (atualiza a cada 8s)
+  // Query para listar os pedidos em tempo real (atualiza a cada 3s)
   const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ["orders-list"],
     queryFn: async () => {
-      const res = await getOrdersFn({ data: {} });
-      return res.orders || [];
+      try {
+        const res = await getOrdersFn({ data: {} });
+        return res?.orders || [];
+      } catch (err) {
+        console.warn("Aviso ao carregar lista de pedidos:", err);
+        return [];
+      }
     },
-    refetchInterval: 8000,
+    refetchInterval: 3000,
   });
 
   const orders: OrderItem[] = data ?? [];
@@ -146,19 +151,18 @@ function PedidosPage() {
 
   const createOrderMutation = useMutation({
     mutationFn: async () => {
-      return await createOrderFn({
-        data: {
-          customer_name: newOrderForm.customer_name,
-          customer_phone: newOrderForm.customer_phone,
-          plan_name: newOrderForm.plan_name,
-          amount: parseFloat(newOrderForm.amount) || 35.0,
-          duration_months: Number(newOrderForm.duration_months) || 1,
-          screens: Number(newOrderForm.screens) || 1,
-          type: newOrderForm.type,
-          target_username: newOrderForm.target_username || undefined,
-          notes: newOrderForm.notes || undefined,
-        },
-      });
+      const payload: any = {
+        customer_name: newOrderForm.customer_name,
+        customer_phone: newOrderForm.customer_phone,
+        plan_name: newOrderForm.plan_name,
+        amount: parseFloat(newOrderForm.amount) || 35.0,
+        duration_months: Number(newOrderForm.duration_months) || 1,
+        screens: Number(newOrderForm.screens) || 1,
+        type: newOrderForm.type,
+      };
+      if (newOrderForm.target_username) payload.target_username = newOrderForm.target_username;
+      if (newOrderForm.notes) payload.notes = newOrderForm.notes;
+      return await createOrderFn({ data: payload });
     },
     onSuccess: (res) => {
       if (res.ok) {
@@ -226,16 +230,19 @@ function PedidosPage() {
       {/* Header Principal */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
               Pedidos & Liberação de Acesso
             </h1>
+            <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 gap-1 text-xs font-semibold">
+              <Zap className="h-3 w-3 fill-emerald-400" /> Liberação 1-Clique
+            </Badge>
             <Badge className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 gap-1 text-xs">
-              <Zap className="h-3 w-3" /> PIX & Sigma
+              <RefreshCw className="h-3 w-3" /> Tempo Real
             </Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie pedidos gerados no WhatsApp e Loja. Libere acessos manuais via PIX ou acompanhe aprovações automáticas pelo Mercado Pago.
+            Acompanhe pedidos gerados pelo Bot WhatsApp e Loja. Você pode aprovar e liberar acessos no Sigma e WhatsApp a qualquer momento (mesmo antes do cliente pagar o PIX).
           </p>
         </div>
 
@@ -588,9 +595,22 @@ function PedidosPage() {
                       </div>
 
                       {/* Bloco 3: Botões de Ação */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {isPending && (
                           <>
+                            {order.pix_code && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => copyToClipboard(order.pix_code!, "Código PIX Copia e Cola")}
+                                className="gap-1 text-xs border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
+                                title="Copiar código PIX para testar ou enviar"
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                                Copiar PIX
+                              </Button>
+                            )}
+
                             <Button
                               size="sm"
                               onClick={() => {
@@ -598,9 +618,10 @@ function PedidosPage() {
                                 setReleaseModalOpen(true);
                               }}
                               className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 font-bold text-white shadow-md shadow-emerald-600/30 transition-all hover:scale-[1.02]"
+                              title="Aprovar este pedido e liberar acesso no Sigma e WhatsApp sem esperar o cliente pagar"
                             >
                               <Zap className="h-4 w-4 fill-white" />
-                              ⚡ Confirmar PIX & Liberar Acesso
+                              ⚡ Liberar Acesso Agora
                             </Button>
 
                             <Button
@@ -673,12 +694,12 @@ function PedidosPage() {
       <Dialog open={releaseModalOpen} onOpenChange={setReleaseModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
-              <Zap className="h-5 w-5 text-emerald-500 fill-emerald-500" />
-              Confirmar PIX e Liberar Acesso
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-emerald-500">
+              <Zap className="h-5 w-5 fill-emerald-500" />
+              Liberar Acesso do Pedido #{selectedOrder?.order_number}
             </DialogTitle>
             <DialogDescription>
-              Ao confirmar, o sistema executará as seguintes ações automaticamente:
+              Você pode liberar o acesso imediatamente (mesmo antes do cliente pagar o PIX).
             </DialogDescription>
           </DialogHeader>
 
@@ -707,16 +728,29 @@ function PedidosPage() {
                     R$ {Number(selectedOrder.amount).toFixed(2).replace(".", ",")}
                   </span>
                 </div>
+                {selectedOrder.pix_code && (
+                  <div className="pt-2 border-t border-border/40 flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">PIX Copia e Cola:</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard(selectedOrder.pix_code!, "Código PIX Copia e Cola")}
+                      className="h-7 text-xs gap-1 text-primary hover:bg-primary/10"
+                    >
+                      <Copy className="h-3 w-3" /> Copiar Código PIX
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs space-y-1.5 text-emerald-700 dark:text-emerald-300">
                 <div className="flex items-center gap-1.5 font-bold">
                   <CheckCircle2 className="h-4 w-4" />
-                  O que acontecerá ao clicar:
+                  Ao clicar em Aprovar Agora:
                 </div>
-                <p>1. Criará ou renovará a linha no <strong>Painel Sigma</strong> com os dias correspondentes.</p>
+                <p>1. Criará ou renovará a linha no <strong>Painel Sigma</strong> com os dias do plano.</p>
                 <p>2. Gerará a <strong>Lista M3U Plus</strong> e o Guia EPG completos.</p>
-                <p>3. Enviará uma mensagem imediata no <strong>WhatsApp do cliente</strong> com todos os dados de acesso.</p>
+                <p>3. Enviará uma mensagem imediata no <strong>WhatsApp do cliente</strong> com login, senha e URL da lista.</p>
                 <p>4. Atualizará o status do pedido para APROVADO.</p>
               </div>
             </div>
@@ -743,7 +777,7 @@ function PedidosPage() {
               ) : (
                 <>
                   <Zap className="h-4 w-4 fill-white" />
-                  Confirmar & Liberar Agora
+                  Aprovar & Liberar Agora
                 </>
               )}
             </Button>

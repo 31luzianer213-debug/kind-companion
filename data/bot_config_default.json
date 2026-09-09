@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "businessName": "Alpha IPTV",
+  "serverName": "Alpha server IPTV",
+  "streamingDns": "http://karen256.top",
+  "testEnabled": true,
+  "testDurationHours": 4,
+  "testPackageName": "TESTE LISTA IPTV ALPHA COM TODOS CONTEUDOS COM ADULTOS 🔞",
+  "blockRepeatDays": 7,
+  "planMonthlyPrice": 35,
+  "planQuarterlyPrice": 90,
+  "planSemiannualPrice": 160,
+  "planAnnualPrice": 290,
+  "renewalPrice": 35,
+  "mercadopago_token": "APP_USR-3160859496295692-031614-d4b7df3cf7507800baabef77d641c0f2-1487021055",
+  "payment_provider": "mercadopago",
+  "menuGreeting": "👋 Olá! Seja muito bem-vindo(a) à *{empresa}*! 🍿\nEu sou o assistente virtual do *{servidor}* e estou aqui para te atender 24h por dia.\n\nComo posso te ajudar hoje? Digite o *número* da opção desejada:\n\n1️⃣ *Gerar Teste Grátis* (Acesso Imediato)\n2️⃣ *Renovar Minha Assinatura* (PIX Automático)\n3️⃣ *Comprar Novo Acesso / Planos*\n4️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n5️⃣ *Falar com Atendente Humano*\n\n_Responda com 1, 2, 3, 4 ou 5._",
+  "plansText": "🛒 *PLANOS E ASSINATURAS DISPONÍVEIS* 🍿\n\n📺 *1 Mês (1 Tela):* R$ 35,00\n📺 *3 Meses (Trimestral):* R$ 90,00 (Mais econômico!)\n📺 *6 Meses (Semestral):* R$ 160,00\n📺 *12 Meses (Anual):* R$ 290,00 (Melhor custo-benefício!)\n\n⭐ *Todos os planos incluem:*\n• Mais de 80.000 conteúdos (Canais 4K/FHD, Filmes e Séries atualizados)\n• Guia de Canais completo (EPG)\n• Funciona em TV Box, Smart TV, Celular, Computador e Tablet.",
+  "supportMessage": "👨‍💼 *ATENDIMENTO HUMANO*\n\nSua solicitação foi recebida! Um de nossos atendentes irá te responder diretamente aqui em instantes.\nPor favor, deixe sua dúvida ou mensagem abaixo para agilizar seu atendimento. 👇"
+}

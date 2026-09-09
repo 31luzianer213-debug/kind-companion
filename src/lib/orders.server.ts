@@ -45,7 +45,6 @@ export function getOrdersFilePath(userId?: string): string {
 }
 
 export function readLocalOrders(userId?: string): OrderItem[] {
-  const canonicalId = getCanonicalUserId(userId);
   const dir = path.resolve(process.cwd(), "data");
   if (!fs.existsSync(dir)) return [];
 
@@ -55,13 +54,6 @@ export function readLocalOrders(userId?: string): OrderItem[] {
     const files = fs.readdirSync(dir);
     for (const f of files) {
       if (!f.startsWith("orders_") || !f.endsWith(".json")) continue;
-      // Lê e consolida arquivos de pedidos para que pedidos gerados pelo bot ou pelo painel apareçam unificados
-      const isMatch =
-        canonicalId === "default" ||
-        f.includes(canonicalId) ||
-        files.filter((x) => x.startsWith("orders_") && x.endsWith(".json")).length <= 3;
-      if (!isMatch) continue;
-
       try {
         const raw = fs.readFileSync(path.join(dir, f), "utf-8");
         const content = JSON.parse(raw);
@@ -90,8 +82,32 @@ export function readLocalOrders(userId?: string): OrderItem[] {
 
 export function writeLocalOrders(userId: string | undefined, orders: OrderItem[]): void {
   try {
-    const file = getOrdersFilePath(userId);
-    fs.writeFileSync(file, JSON.stringify(orders, null, 2), "utf-8");
+    const dir = path.resolve(process.cwd(), "data");
+    if (!fs.existsSync(dir)) {
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+      } catch {}
+    }
+
+    const canonicalId = getCanonicalUserId(userId);
+    const filesToSync = new Set<string>([
+      path.join(dir, `orders_${canonicalId}.json`),
+      path.join(dir, "orders_default.json"),
+      path.join(dir, "orders_ccd7362726074f97.json"),
+      path.join(dir, "orders_ccd73627-2607-4f97-bf96-b333469e38d7.json"),
+    ]);
+
+    if (userId && userId !== "default") {
+      const cleanRaw = userId.replace(/[^a-zA-Z0-9_-]/g, "");
+      filesToSync.add(path.join(dir, `orders_${cleanRaw}.json`));
+    }
+
+    const payload = JSON.stringify(orders, null, 2);
+    for (const filePath of filesToSync) {
+      try {
+        fs.writeFileSync(filePath, payload, "utf-8");
+      } catch {}
+    }
   } catch (err) {
     console.warn("Aviso ao gravar pedidos no arquivo local:", err);
   }
@@ -272,12 +288,28 @@ export async function approveAndReleaseOrderServer(
     wsRow = data;
   } catch {}
 
-  const panelUrl = wsRow?.sigma_url || "https://aplicativoz342.click";
-  const panelToken = wsRow?.sigma_token || null;
-  const panelUser = wsRow?.sigma_username || "Karen256";
-  const panelPass = wsRow?.sigma_password || "";
-  const serverName = wsRow?.sigma_server_name?.trim() || wsRow?.business_name || "Alpha server IPTV";
-  const streamingDns = wsRow?.sigma_streaming_dns?.trim() || "http://karen256.top";
+  let botCfg: any = null;
+  try {
+    const dir = path.resolve(process.cwd(), "data");
+    const canonicalId = getCanonicalUserId(userId);
+    const cfgFiles = [
+      path.join(dir, `bot_config_${canonicalId}.json`),
+      path.join(dir, "bot_config_default.json"),
+    ];
+    for (const cf of cfgFiles) {
+      if (fs.existsSync(cf)) {
+        botCfg = JSON.parse(fs.readFileSync(cf, "utf-8"));
+        if (botCfg) break;
+      }
+    }
+  } catch {}
+
+  const panelUrl = wsRow?.sigma_url || botCfg?.sigma_url || "https://aplicativoz342.click";
+  const panelToken = wsRow?.sigma_token || botCfg?.sigma_token || null;
+  const panelUser = wsRow?.sigma_username || botCfg?.sigma_username || "Karen256";
+  const panelPass = wsRow?.sigma_password || botCfg?.sigma_password || "";
+  const serverName = wsRow?.sigma_server_name?.trim() || botCfg?.serverName || wsRow?.business_name || botCfg?.businessName || "Alpha server IPTV";
+  const streamingDns = wsRow?.sigma_streaming_dns?.trim() || botCfg?.streamingDns || "http://karen256.top";
   const cleanDns = extractCleanIptvDns(streamingDns) || "http://karen256.top";
 
   const durationMonths = order.duration_months || 1;

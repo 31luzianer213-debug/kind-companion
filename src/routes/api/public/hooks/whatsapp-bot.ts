@@ -278,7 +278,7 @@ function unwrapMessage(m: any): any {
                     destinationJid,
                     {
                       base64: botResult.media.base64,
-                      caption: botResult.media.caption,
+                      ...(botResult.media.caption ? { caption: botResult.media.caption } : {}),
                       mimetype: "image/png",
                       fileName: "qrcode-pix.png",
                     },
