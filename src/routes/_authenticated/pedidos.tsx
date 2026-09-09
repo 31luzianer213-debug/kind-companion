@@ -45,6 +45,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+import defaultOrdersSeed from "../../../data/orders_default.json";
+
 export const Route = createFileRoute("/_authenticated/pedidos")({
   component: PedidosPage,
 });
@@ -86,6 +88,7 @@ function PedidosPage() {
   // Query para listar os pedidos em tempo real (atualiza a cada 3s)
   const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ["orders-list"],
+    initialData: (defaultOrdersSeed as unknown as OrderItem[]) || [],
     queryFn: async () => {
       try {
         const res = await getOrdersFn({ data: {} });
@@ -101,12 +104,17 @@ function PedidosPage() {
         const res = await fetch("/api/public/orders");
         if (res.ok) {
           const json = await res.json();
-          if (Array.isArray(json?.orders)) {
+          if (Array.isArray(json?.orders) && json.orders.length > 0) {
             return json.orders;
           }
         }
       } catch (err) {
         console.warn("Aviso no fallback /api/public/orders:", err);
+      }
+
+      // Fallback garantido pré-compilado no bundle (Lovable Cloud / Edge Workers)
+      if (Array.isArray(defaultOrdersSeed) && defaultOrdersSeed.length > 0) {
+        return defaultOrdersSeed as unknown as OrderItem[];
       }
 
       return [];

@@ -5,6 +5,8 @@ import { generateM3uUrl, generateEpgUrl, extractCleanIptvDns } from "./format";
 import type { SigmaConfig } from "./sigma.panel";
 import { sendViaEvolution } from "./billing.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import defaultOrdersData from "../../data/orders_default.json";
+import defaultBotConfigData from "../../data/bot_config_default.json";
 
 export type OrderItem = {
   id: string;
@@ -45,33 +47,45 @@ export function getOrdersFilePath(userId?: string): string {
 }
 
 export function readLocalOrders(userId?: string): OrderItem[] {
-  const dir = path.resolve(process.cwd(), "data");
-  if (!fs.existsSync(dir)) return [];
-
   const ordersMap = new Map<string, OrderItem>();
 
+  // 1. Inicializa com os pedidos pré-compilados (garante funcionamento no Lovable Cloud / Edge Workers)
   try {
-    const files = fs.readdirSync(dir);
-    for (const f of files) {
-      if (!f.startsWith("orders_") || !f.endsWith(".json")) continue;
-      try {
-        const raw = fs.readFileSync(path.join(dir, f), "utf-8");
-        const content = JSON.parse(raw);
-        if (Array.isArray(content)) {
-          for (const item of content) {
-            if (item && item.id) {
-              const existing = ordersMap.get(item.id);
-              if (
-                !existing ||
-                new Date(item.updated_at || item.created_at).getTime() >=
-                  new Date(existing.updated_at || existing.created_at).getTime()
-              ) {
-                ordersMap.set(item.id, item);
+    if (Array.isArray(defaultOrdersData)) {
+      for (const item of defaultOrdersData as OrderItem[]) {
+        if (item && item.id) {
+          ordersMap.set(item.id, item);
+        }
+      }
+    }
+  } catch {}
+
+  // 2. Se houver sistema de arquivos local (Node.js/localhost), mescla dados mais recentes do disco
+  try {
+    const dir = path.resolve(process.cwd(), "data");
+    if (fs.existsSync(dir)) {
+      const files = fs.readdirSync(dir);
+      for (const f of files) {
+        if (!f.startsWith("orders_") || !f.endsWith(".json")) continue;
+        try {
+          const raw = fs.readFileSync(path.join(dir, f), "utf-8");
+          const content = JSON.parse(raw);
+          if (Array.isArray(content)) {
+            for (const item of content) {
+              if (item && item.id) {
+                const existing = ordersMap.get(item.id);
+                if (
+                  !existing ||
+                  new Date(item.updated_at || item.created_at).getTime() >=
+                    new Date(existing.updated_at || existing.created_at).getTime()
+                ) {
+                  ordersMap.set(item.id, item);
+                }
               }
             }
           }
-        }
-      } catch {}
+        } catch {}
+      }
     }
   } catch {}
 
@@ -321,6 +335,10 @@ export async function approveAndReleaseOrderServer(
       }
     }
   } catch {}
+
+  if (!botCfg && defaultBotConfigData) {
+    botCfg = defaultBotConfigData;
+  }
 
   const panelUrl = wsRow?.sigma_url || botCfg?.sigma_url || "https://aplicativoz342.click";
   const panelToken = wsRow?.sigma_token || botCfg?.sigma_token || null;
