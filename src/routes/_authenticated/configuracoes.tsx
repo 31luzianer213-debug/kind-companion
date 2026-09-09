@@ -23,6 +23,9 @@ import {
   Zap,
   Building,
   Bot,
+  Download,
+  Database,
+  FileJson,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
@@ -54,6 +57,50 @@ const defaults: AutomationSettings = {
 function ConfiguracoesPage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<AutomationSettings>(defaults);
+  const [exportingBackup, setExportingBackup] = useState(false);
+
+  async function handleExportFullBackup() {
+    setExportingBackup(true);
+    try {
+      // 1. Clientes
+      const { data: clients } = await supabase.from("clients").select("*");
+      // 2. Configurações WhatsApp
+      const { data: wsSettings } = await supabase.from("whatsapp_settings").select("*");
+      // 3. User metadata
+      const { data: authUser } = await supabase.auth.getUser();
+
+      const backupData = {
+        version: "2.0",
+        timestamp: new Date().toISOString(),
+        exported_by: authUser?.user?.email || "admin",
+        system: "IPTV Manager Pro",
+        data: {
+          clients: clients || [],
+          whatsapp_settings: wsSettings || [],
+          bot_settings: authUser?.user?.user_metadata?.bot_settings || null,
+          sigma_settings: authUser?.user?.user_metadata?.sigma_settings || null,
+        },
+      };
+
+      const jsonStr = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `backup_completo_iptv_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success("Backup completo (JSON) exportado com sucesso! 🛡️");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao gerar backup dos dados.");
+    } finally {
+      setExportingBackup(false);
+    }
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ["whatsapp-settings"],
@@ -383,6 +430,47 @@ function ConfiguracoesPage() {
               >
                 {save.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
                 Salvar Ajustes & Automação
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Seção: Backup & Segurança Geral */}
+        <Card className="surface-card border-border/60">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Database className="size-4 text-emerald-400" /> Backup Completo & Segurança dos Dados
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Gere um instantâneo JSON contendo seus clientes, credenciais IPTV, regras do robô e configurações.
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="text-emerald-400 border-emerald-400/30 text-xs self-start sm:self-auto">
+                🛡️ 100% Grátis & Ilimitado
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-3.5 rounded-xl border border-border/60 bg-muted/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="space-y-0.5">
+                <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <FileJson className="size-3.5 text-primary" /> Arquivo de Backup Estruturado (.json)
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Compatível com restauração rápida ou importação em qualquer banco de dados relacional.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExportFullBackup}
+                disabled={exportingBackup}
+                className="gap-2 text-xs font-semibold rounded-xl border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 shrink-0"
+              >
+                {exportingBackup ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                {exportingBackup ? "Exportando..." : "Exportar Backup Completo"}
               </Button>
             </div>
           </CardContent>

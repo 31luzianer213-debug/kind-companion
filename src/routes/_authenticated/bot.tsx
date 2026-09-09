@@ -38,6 +38,9 @@ import {
   Tv,
   RefreshCw,
   ExternalLink,
+  Download,
+  Laptop,
+  Monitor,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/bot")({
@@ -119,6 +122,13 @@ function BotPage() {
     pixHolder: "Alpha IPTV",
     mercadopago_token: "APP_USR-3160859496295692-031614-d4b7df3cf7507800baabef77d641c0f2-1487021055",
     payment_provider: "mercadopago",
+    appAndroidApk: "https://bit.ly/app-xciptv-oficial",
+    appAndroidDownloaderCode: "389471",
+    appIosLink: "https://apps.apple.com/app/smarters-player-lite/id1628995509",
+    appWindowsLink: "https://www.iptvsmarters.com/download?download=windows",
+    appWebPlayerLink: "http://webtv.iptvsmarters.com",
+    appSmartTvText: "• Smart TV Samsung / LG: Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.",
+    appsCustomText: "",
   });
 
   // Simulator State
@@ -135,9 +145,10 @@ function BotPage() {
         "1️⃣ *Gerar Teste Grátis* (Acesso Imediato)\n" +
         "2️⃣ *Renovar Minha Assinatura* (PIX Automático)\n" +
         "3️⃣ *Comprar Novo Acesso / Planos*\n" +
-        "4️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n" +
-        "5️⃣ *Falar com Atendente Humano*\n\n" +
-        "_Responda com 1, 2, 3, 4 ou 5._",
+        "4️⃣ *Baixar Aplicativos* (Celular, TV Box, PC, iOS) 📲\n" +
+        "5️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n" +
+        "6️⃣ *Falar com Atendente Humano*\n\n" +
+        "_Responda com 1, 2, 3, 4, 5 ou 6._",
       time: "Agora",
     },
   ]);
@@ -181,6 +192,13 @@ function BotPage() {
         mercadopago_token:
           c.mercadopago_token || "APP_USR-3160859496295692-031614-d4b7df3cf7507800baabef77d641c0f2-1487021055",
         payment_provider: c.payment_provider || "mercadopago",
+        appAndroidApk: c.appAndroidApk || "https://bit.ly/app-xciptv-oficial",
+        appAndroidDownloaderCode: c.appAndroidDownloaderCode || "389471",
+        appIosLink: c.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509",
+        appWindowsLink: c.appWindowsLink || "https://www.iptvsmarters.com/download?download=windows",
+        appWebPlayerLink: c.appWebPlayerLink || "http://webtv.iptvsmarters.com",
+        appSmartTvText: c.appSmartTvText || "• Smart TV Samsung / LG: Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.",
+        appsCustomText: c.appsCustomText || "",
       });
     }
   }, [botData]);
@@ -276,6 +294,20 @@ function BotPage() {
     }
   }
 
+  function handleRestoreDefaultAppLinks() {
+    setForm((prev) => ({
+      ...prev,
+      appAndroidApk: "https://bit.ly/app-xciptv-oficial",
+      appAndroidDownloaderCode: "389471",
+      appIosLink: "https://apps.apple.com/app/smarters-player-lite/id1628995509",
+      appWindowsLink: "https://www.iptvsmarters.com/download?download=windows",
+      appWebPlayerLink: "http://webtv.iptvsmarters.com",
+      appSmartTvText: "• Smart TV Samsung / LG: Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.",
+      appsCustomText: "",
+    }));
+    toast.success("Links recomendados dos aplicativos restaurados com sucesso! 📲");
+  }
+
   function handleResetChat() {
     setMessages([
       {
@@ -292,9 +324,10 @@ function BotPage() {
               "1️⃣ *Gerar Teste Grátis* (Acesso Imediato)\n" +
               "2️⃣ *Renovar Minha Assinatura* (PIX Automático)\n" +
               "3️⃣ *Comprar Novo Acesso / Planos*\n" +
-              "4️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n" +
-              "5️⃣ *Falar com Atendente Humano*\n\n" +
-              "_Responda com 1, 2, 3, 4 ou 5._",
+              "4️⃣ *Baixar Aplicativos* (Celular, TV Box, PC, iOS) 📲\n" +
+              "5️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n" +
+              "6️⃣ *Falar com Atendente Humano*\n\n" +
+              "_Responda com 1, 2, 3, 4, 5 ou 6._",
         time: "Agora",
       },
     ]);
@@ -673,14 +706,161 @@ function BotPage() {
               </CardContent>
             </Card>
 
-            {/* CARD 4: MENSAGENS PERSONALIZADAS */}
+            {/* CARD 4: LINKS DE DOWNLOAD DOS APLICATIVOS (OPÇÃO 4) */}
+            <Card className="surface-card border-border/60 shadow-sm">
+              <CardHeader className="pb-3 border-b border-border/50">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-base flex items-center gap-2 text-foreground font-bold">
+                      <Download className="size-5 text-sky-400" /> Links dos Aplicativos para Baixar (Opção 4)
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Enviado automaticamente quando o cliente digita <strong>4</strong>, clica em "Baixar Apps" ou pergunta sobre aplicativos.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRestoreDefaultAppLinks}
+                    className="rounded-xl text-xs gap-1.5 self-start sm:self-auto"
+                  >
+                    <Sparkles className="size-3 text-sky-400" /> Restaurar Links Recomendados
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* Código Downloader */}
+                  <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                        <Tv className="size-3.5 text-sky-400" /> Código no App Downloader
+                      </Label>
+                      <Badge variant="outline" className="text-[10px] text-sky-400 border-sky-400/30">
+                        TV Box / Firestick
+                      </Badge>
+                    </div>
+                    <Input
+                      type="text"
+                      placeholder="Ex: 389471"
+                      value={form.appAndroidDownloaderCode}
+                      onChange={(e) => setForm({ ...form, appAndroidDownloaderCode: e.target.value })}
+                      className="rounded-xl font-mono text-sm"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Código numérico de 5 ou 6 dígitos para digitar diretamente no aplicativo Downloader da TV.
+                    </p>
+                  </div>
+
+                  {/* APK Android Direto */}
+                  <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                        <Smartphone className="size-3.5 text-emerald-400" /> Link APK Android (Celular & TV)
+                      </Label>
+                      <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-400/30">
+                        APK Direto
+                      </Badge>
+                    </div>
+                    <Input
+                      type="text"
+                      placeholder="Ex: https://bit.ly/seu-app-iptv"
+                      value={form.appAndroidApk}
+                      onChange={(e) => setForm({ ...form, appAndroidApk: e.target.value })}
+                      className="rounded-xl font-mono text-xs"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Link direto encurtado para download do arquivo instalador (.apk).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* iPhone / iOS */}
+                  <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                      <Smartphone className="size-3.5 text-primary" /> Link App Store (iPhone / iPad / Apple TV)
+                    </Label>
+                    <Input
+                      type="text"
+                      placeholder="Ex: https://apps.apple.com/app/..."
+                      value={form.appIosLink}
+                      onChange={(e) => setForm({ ...form, appIosLink: e.target.value })}
+                      className="rounded-xl font-mono text-xs"
+                    />
+                  </div>
+
+                  {/* Windows / PC */}
+                  <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                      <Laptop className="size-3.5 text-primary" /> Aplicativo Computador / Windows (.exe)
+                    </Label>
+                    <Input
+                      type="text"
+                      placeholder="Ex: https://www.iptvsmarters.com/download?download=windows"
+                      value={form.appWindowsLink}
+                      onChange={(e) => setForm({ ...form, appWindowsLink: e.target.value })}
+                      className="rounded-xl font-mono text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Web Player */}
+                <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                    <Monitor className="size-3.5 text-primary" /> Web Player (Assistir direto no Navegador sem instalar)
+                  </Label>
+                  <Input
+                    type="text"
+                    placeholder="Ex: http://webtv.iptvsmarters.com"
+                    value={form.appWebPlayerLink}
+                    onChange={(e) => setForm({ ...form, appWebPlayerLink: e.target.value })}
+                    className="rounded-xl font-mono text-xs"
+                  />
+                </div>
+
+                {/* Instruções Smart TV */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5">
+                    <Tv className="size-3.5 text-sky-400" /> Instruções para Smart TV (Samsung, LG e Roku)
+                  </Label>
+                  <Textarea
+                    rows={2}
+                    value={form.appSmartTvText}
+                    onChange={(e) => setForm({ ...form, appSmartTvText: e.target.value })}
+                    className="rounded-xl font-mono text-xs leading-relaxed resize-none"
+                    placeholder="Orientações de quais apps baixar na loja da Smart TV..."
+                  />
+                </div>
+
+                {/* Custom Override (Opcional) */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold text-muted-foreground">
+                      Texto 100% Personalizado da Opção 4 (Opcional)
+                    </Label>
+                    <span className="text-[11px] text-muted-foreground">Deixe em branco para usar o modelo automático</span>
+                  </div>
+                  <Textarea
+                    rows={3}
+                    value={form.appsCustomText}
+                    onChange={(e) => setForm({ ...form, appsCustomText: e.target.value })}
+                    className="rounded-xl font-mono text-xs leading-relaxed resize-none"
+                    placeholder="Deixe em branco para o sistema gerar automaticamente a mensagem estruturada acima."
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* CARD 5: MENSAGENS PERSONALIZADAS */}
             <Card className="surface-card border-border/60 shadow-sm">
               <CardHeader className="pb-3 border-b border-border/50">
                 <CardTitle className="text-base flex items-center gap-2">
                   <MessageSquare className="size-4 text-primary" /> Textos do Menu & Suporte
                 </CardTitle>
                 <CardDescription>
-                  Personalize os textos do menu e atendimento do assistente virtual.
+                  Personalize os textos do menu principal e atendimento humano.
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
@@ -720,7 +900,7 @@ function BotPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Mensagem de Atendente Humano (Opção 5)</Label>
+                  <Label className="text-xs font-semibold">Mensagem de Atendente Humano (Opção 6)</Label>
                   <Textarea
                     rows={3}
                     value={form.supportMessage}
@@ -872,9 +1052,9 @@ function BotPage() {
                   size="sm"
                   onClick={() => handleSendSim("4")}
                   disabled={simLoading}
-                  className="h-6 text-[10px] rounded-lg px-2"
+                  className="h-6 text-[10px] rounded-lg px-2 border-sky-500/30 text-sky-400 hover:bg-sky-500/10"
                 >
-                  4 - Reenviar Dados
+                  4 - Baixar Apps 📲
                 </Button>
                 <Button
                   type="button"
@@ -884,7 +1064,17 @@ function BotPage() {
                   disabled={simLoading}
                   className="h-6 text-[10px] rounded-lg px-2"
                 >
-                  5 - Suporte
+                  5 - Reenviar Dados
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSendSim("6")}
+                  disabled={simLoading}
+                  className="h-6 text-[10px] rounded-lg px-2"
+                >
+                  6 - Suporte
                 </Button>
               </div>
 
@@ -894,7 +1084,7 @@ function BotPage() {
                   value={simText}
                   onChange={(e) => setSimText(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSendSim()}
-                  placeholder="Digite uma mensagem ou número (1 a 5)..."
+                  placeholder="Digite uma mensagem ou número (1 a 6)..."
                   className="h-8 text-xs rounded-xl"
                   disabled={simLoading}
                 />

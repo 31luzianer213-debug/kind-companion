@@ -69,3 +69,17 @@ export const generatePlansMessageText = createServerFn({ method: "POST" })
     const text = generateDefaultPlansText(data);
     return { ok: true as const, text };
   });
+
+/** Gera o texto formatado com os links dos aplicativos */
+export const generateAppsMessageText = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { config?: Partial<BotConfigData>; serverName?: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { loadBotConfig, generateAppsMessage } = await import("./bot.server");
+    const currentConfig = await loadBotConfig(supabase, userId);
+    const merged = { ...currentConfig, ...(data?.config || {}) };
+    const text = generateAppsMessage(merged, data?.serverName || merged.serverName || merged.businessName);
+    return { ok: true as const, text };
+  });
+

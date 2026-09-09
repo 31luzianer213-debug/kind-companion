@@ -56,6 +56,14 @@ export type BotConfigData = {
   renewalPrice: number;
   mercadopago_token?: string;
   payment_provider?: string;
+  // Links de Download de Aplicativos
+  appAndroidApk?: string;
+  appAndroidDownloaderCode?: string;
+  appIosLink?: string;
+  appWindowsLink?: string;
+  appWebPlayerLink?: string;
+  appSmartTvText?: string;
+  appsCustomText?: string;
 };
 
 export const DEFAULT_BOT_CONFIG: BotConfigData = {
@@ -74,9 +82,10 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
     "1️⃣ *Gerar Teste Grátis* (Acesso Imediato)\n" +
     "2️⃣ *Renovar Minha Assinatura* (PIX Automático)\n" +
     "3️⃣ *Comprar Novo Acesso / Planos*\n" +
-    "4️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n" +
-    "5️⃣ *Falar com Atendente Humano*\n\n" +
-    "_Responda com 1, 2, 3, 4 ou 5._",
+    "4️⃣ *Baixar Aplicativos* (Celular, TV Box, PC, iOS) 📲\n" +
+    "5️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n" +
+    "6️⃣ *Falar com Atendente Humano*\n\n" +
+    "_Responda com 1, 2, 3, 4, 5 ou 6._",
   plansText:
     "🛒 *PLANOS E ASSINATURAS DISPONÍVEIS* 🍿\n\n" +
     "📺 *1 Mês (1 Tela):* R$ 35,00\n" +
@@ -100,6 +109,13 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
     process.env.MERCADOPAGO_ACCESS_TOKEN ||
     "APP_USR-3160859496295692-031614-d4b7df3cf7507800baabef77d641c0f2-1487021055",
   payment_provider: "mercadopago",
+  appAndroidApk: "https://bit.ly/app-xciptv-oficial",
+  appAndroidDownloaderCode: "389471",
+  appIosLink: "https://apps.apple.com/app/smarters-player-lite/id1628995509",
+  appWindowsLink: "https://www.iptvsmarters.com/download?download=windows",
+  appWebPlayerLink: "http://webtv.iptvsmarters.com",
+  appSmartTvText: "• Smart TV Samsung / LG: Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.",
+  appsCustomText: "",
 };
 
 export function generateDefaultPlansText(params: {
@@ -126,6 +142,44 @@ export function generateDefaultPlansText(params: {
     `• Guia de Canais completo (EPG)\n` +
     `• Compatível com TV Box, Smart TV, Celular, Computador e Tablet\n` +
     `• Ativação Imediata via PIX Automático!`
+  );
+}
+
+export function generateAppsMessage(config: BotConfigData, serverName: string): string {
+  if (config.appsCustomText && config.appsCustomText.trim().length > 10) {
+    return config.appsCustomText.trim();
+  }
+
+  const apk = config.appAndroidApk || DEFAULT_BOT_CONFIG.appAndroidApk;
+  const code = config.appAndroidDownloaderCode || DEFAULT_BOT_CONFIG.appAndroidDownloaderCode;
+  const ios = config.appIosLink || DEFAULT_BOT_CONFIG.appIosLink;
+  const win = config.appWindowsLink || DEFAULT_BOT_CONFIG.appWindowsLink;
+  const web = config.appWebPlayerLink || DEFAULT_BOT_CONFIG.appWebPlayerLink;
+  const smartTv = config.appSmartTvText || DEFAULT_BOT_CONFIG.appSmartTvText;
+
+  return (
+    `📲 *APLICATIVOS OFICIAIS — ${serverName.toUpperCase()}* 🍿\n\n` +
+    `Escolha o seu dispositivo abaixo para instalar nosso aplicativo recomendado:\n\n` +
+    `🤖 *TV BOX / ANDROID TV / FIRESTICK:*\n` +
+    `• Abra o aplicativo *Downloader* na TV e digite o código: *${code}*\n` +
+    `• Ou baixe o instalador APK direto: ${apk}\n\n` +
+    `📱 *CELULAR & TABLET ANDROID:*\n` +
+    `• Baixar APK Direto: ${apk}\n\n` +
+    `🍏 *IPHONE / IPAD / APPLE TV (iOS):*\n` +
+    `• Baixar na App Store (Smarters Player Lite):\n` +
+    `${ios}\n\n` +
+    `💻 *COMPUTADOR & NOTEBOOK (WINDOWS):*\n` +
+    `• Baixar IPTV Smarters Pro (.exe):\n` +
+    `${win}\n\n` +
+    `🌐 *ASSISTIR NO NAVEGADOR (WEB PLAYER):*\n` +
+    `• Acesso direto sem instalar nada: ${web}\n\n` +
+    `📺 *SMART TV (SAMSUNG / LG / ROKU):*\n` +
+    `${smartTv}\n\n` +
+    `━━━━━━━━━━━━━━━━━━━\n` +
+    `🔑 *Como Conectar:*\n` +
+    `Após instalar, abra o app e entre com os dados do seu teste ou assinatura (Usuário, Senha e URL/DNS do servidor).\n\n` +
+    `_Precisa dos seus dados de acesso? Digite *5*._\n` +
+    `_Dúvidas na instalação? Digite *6* para falar com o suporte._`
   );
 }
 
@@ -329,6 +383,13 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
       renewalPrice: metaBot?.renewalPrice ?? DEFAULT_BOT_CONFIG.renewalPrice,
       mercadopago_token: wsRow?.mercadopago_token || metaBot?.mercadopago_token || localPayment?.mercadopago_token,
       payment_provider: wsRow?.payment_provider || metaBot?.payment_provider || localPayment?.payment_provider,
+      appAndroidApk: metaBot?.appAndroidApk ?? DEFAULT_BOT_CONFIG.appAndroidApk,
+      appAndroidDownloaderCode: metaBot?.appAndroidDownloaderCode ?? DEFAULT_BOT_CONFIG.appAndroidDownloaderCode,
+      appIosLink: metaBot?.appIosLink ?? DEFAULT_BOT_CONFIG.appIosLink,
+      appWindowsLink: metaBot?.appWindowsLink ?? DEFAULT_BOT_CONFIG.appWindowsLink,
+      appWebPlayerLink: metaBot?.appWebPlayerLink ?? DEFAULT_BOT_CONFIG.appWebPlayerLink,
+      appSmartTvText: metaBot?.appSmartTvText ?? DEFAULT_BOT_CONFIG.appSmartTvText,
+      appsCustomText: metaBot?.appsCustomText ?? DEFAULT_BOT_CONFIG.appsCustomText,
     };
 
     botConfigCache.set(uid, config);
@@ -828,7 +889,7 @@ async function handleRenewOrderCreation({
     `1️⃣ Faça o PIX no valor de *R$ ${amount.toFixed(2).replace(".", ",")}* para a chave acima.\n` +
     `2️⃣ *Envie o comprovante do PIX aqui nesta conversa*.\n` +
     `3️⃣ Nosso administrador confirmará pelo painel e seu acesso será renovado imediatamente! 🚀\n\n` +
-    `Se precisar de suporte, digite *5*.`;
+    `Se precisar de suporte, digite *6*.`;
 
   return {
     reply,
@@ -911,7 +972,8 @@ export async function processBotMessage(
           `📦 *Plano:* ${order.plan_name}\n` +
           `🔑 *Usuário:* *${order.target_username}*\n` +
           `📺 *Servidor:* ${serverName}\n\n` +
-          `Para ver seus dados de acesso completos (usuário, senha e M3U), digite *4*! 🍿`,
+          `• Digite *5* para ver seus dados de acesso completos (usuário, senha e M3U)!\n` +
+          `• Digite *4* para baixar os aplicativos de TV Box, Celular e PC! 📲`,
         action: "order_already_approved",
       };
     }
@@ -931,7 +993,9 @@ export async function processBotMessage(
                 reply:
                   `🎉 *PAGAMENTO CONFIRMADO COM SUCESSO!* 🍿\n\n` +
                   `Identificamos seu pagamento do Pedido *#${order.order_number}* via Mercado Pago!\n` +
-                  `Seu acesso acabou de ser ativado no servidor. Digite *4* para ver seus dados de conexão completos! 🍿`,
+                  `Seu acesso acabou de ser ativado no servidor.\n\n` +
+                  `• Digite *5* para ver seus dados de conexão e lista M3U!\n` +
+                  `• Digite *4* para baixar os aplicativos oficiais! 📲`,
                 action: "order_auto_approved",
               };
             }
@@ -1048,7 +1112,7 @@ export async function processBotMessage(
     text === "cancelar" ||
     text === "voltar" ||
     (session?.step !== "awaiting_plan_choice" &&
-      (text === "1" || text === "2" || text === "3" || text === "4" || text === "5"))
+      (text === "1" || text === "2" || text === "3" || text === "4" || text === "5" || text === "6"))
   ) {
     if (session) conversationSessions.delete(cleanPhone);
   } else if (isSessionValid && session) {
@@ -1186,7 +1250,8 @@ export async function processBotMessage(
       `📱 *Como Conectar:*\n` +
       `• No IPTV Smarters Pro, XCIPTV ou TiviMate: use a opção *Xtream Codes API* com o Servidor, Usuário e Senha acima.\n` +
       `• Em Smart TVs ou SS IPTV: adicione a *Lista M3U Plus* completa acima.\n\n` +
-      `Bom divertimento! Qualquer dúvida, digite *5* para falar conosco. 🍿`;
+      `📲 *Precisa baixar o aplicativo?* Digite *4* para receber os links de download!\n` +
+      `Bom divertimento! Qualquer dúvida, digite *6* para falar conosco. 🍿`;
 
     return {
       reply:
@@ -1199,8 +1264,9 @@ export async function processBotMessage(
         description: "Seu teste gratuito foi ativado com sucesso! Escolha o próximo passo:",
         footer: `${serverName} • Suporte 24h`,
         buttons: [
+          { id: "4", displayText: "📲 Baixar Aplicativos", type: "reply" },
           { id: "3", displayText: "🛒 Ver Nossos Planos", type: "reply" },
-          { id: "5", displayText: "💬 Falar com Suporte", type: "reply" },
+          { id: "6", displayText: "💬 Falar com Suporte", type: "reply" },
         ],
       },
     };
@@ -1414,11 +1480,52 @@ export async function processBotMessage(
   }
 
   // =========================================================================
-  // OPÇÃO 4: REENVIAR MEUS DADOS DE ACESSO / LISTA M3U
+  // OPÇÃO 4: BAIXAR APLICATIVOS (ANDROID, TV BOX, PC, IOS)
   // =========================================================================
   if (
     text === "4" ||
     text === "4." ||
+    text.includes("app") ||
+    text.includes("apps") ||
+    text.includes("baixar") ||
+    text.includes("download") ||
+    text.includes("aplicativo") ||
+    text.includes("aplicativos") ||
+    text.includes("instalar") ||
+    text.includes("tv box") ||
+    text.includes("celular") ||
+    text.includes("ios") ||
+    text.includes("iphone") ||
+    text.includes("computador") ||
+    text.includes("pc") ||
+    text.includes("smart tv") ||
+    text.includes("firestick") ||
+    text.includes("downloader")
+  ) {
+    const appsReply = generateAppsMessage(config, serverName);
+    return {
+      reply: appsReply,
+      action: "apps_links_sent",
+      interactive: {
+        type: "buttons",
+        title: "📲 Aplicativos de Streaming",
+        description: "Links de download para Celular, TV Box, PC, Smart TV e iPhone.",
+        footer: `${serverName} • Suporte 24h`,
+        buttons: [
+          { id: "1", displayText: "1️⃣ Gerar Teste Grátis", type: "reply" },
+          { id: "5", displayText: "5️⃣ Meus Dados de Acesso", type: "reply" },
+          { id: "6", displayText: "6️⃣ Atendimento Humano", type: "reply" },
+        ],
+      },
+    };
+  }
+
+  // =========================================================================
+  // OPÇÃO 5: REENVIAR MEUS DADOS DE ACESSO / LISTA M3U
+  // =========================================================================
+  if (
+    text === "5" ||
+    text === "5." ||
     text.includes("dados") ||
     text.includes("acesso") ||
     text.includes("m3u") ||
@@ -1444,7 +1551,8 @@ export async function processBotMessage(
           `🔍 Não encontrei uma assinatura ativa com o número *${cleanPhone}*.\n\n` +
           `• Digite *1* para gerar um Teste Grátis agora mesmo!\n` +
           `• Digite *3* para assinar um novo plano.\n` +
-          `• Digite *5* se você contratou com outro número para falar com o suporte.`,
+          `• Digite *4* para baixar nossos aplicativos.\n` +
+          `• Digite *6* se você contratou com outro número para falar com o suporte.`,
         action: "credentials_not_found",
       };
     }
@@ -1466,6 +1574,7 @@ export async function processBotMessage(
       (client.next_due_date ? `📅 *Vencimento:* ${client.next_due_date}\n\n` : "\n") +
       `🔗 *Lista M3U Plus Completa:*\n${m3uUrl}\n\n` +
       `📺 *Guia de Canais (EPG):*\n${epgUrl}\n\n` +
+      `📲 _Precisa instalar o aplicativo no seu aparelho? Digite *4*._\n\n` +
       `Bom divertimento! 🍿`;
 
     return {
@@ -1475,11 +1584,11 @@ export async function processBotMessage(
   }
 
   // =========================================================================
-  // OPÇÃO 5: ATENDENTE HUMANO
+  // OPÇÃO 6: ATENDENTE HUMANO
   // =========================================================================
   if (
-    text === "5" ||
-    text === "5." ||
+    text === "6" ||
+    text === "6." ||
     text.includes("suporte") ||
     text.includes("humano") ||
     text.includes("atendente") ||
@@ -1528,12 +1637,17 @@ export async function processBotMessage(
             },
             {
               rowId: "4",
-              title: "4️⃣ Reenviar Meus Dados",
-              description: "Receber login, senha e lista M3U",
+              title: "4️⃣ Baixar Aplicativos",
+              description: "Links para Celular, TV Box, PC, iOS e Smart TV 📲",
             },
             {
               rowId: "5",
-              title: "5️⃣ Falar com Atendente",
+              title: "5️⃣ Reenviar Meus Dados",
+              description: "Receber login, senha e lista M3U",
+            },
+            {
+              rowId: "6",
+              title: "6️⃣ Falar com Atendente",
               description: "Suporte com nossa equipe humana",
             },
           ],

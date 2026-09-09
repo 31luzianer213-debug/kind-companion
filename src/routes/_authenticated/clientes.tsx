@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { sendAccessDetails, sendWhatsAppMessage } from "@/lib/whatsapp.functions";
+import { getBotSettings } from "@/lib/bot.functions";
 import {
   syncSigmaClients,
   createSigmaClient,
@@ -261,6 +262,7 @@ function Clientes() {
   const toggleBlock = useServerFn(toggleSigmaClientBlock);
   const getSigma = useServerFn(getSigmaSettings);
   const quickTest = useServerFn(createSigmaQuickTest);
+  const getBot = useServerFn(getBotSettings);
 
   // Modal de Teste Rápido no Sigma
   const [testModalOpen, setTestModalOpen] = useState(false);
@@ -796,6 +798,69 @@ function Clientes() {
     if (result.ok) toast.success("Dados de acesso enviados via WhatsApp!");
     else toast.error(result.error ?? "Falha no envio.");
     queryClient.invalidateQueries({ queryKey: ["clients"] });
+  }
+
+  async function enviarLinksApps(client: ClientRow) {
+    if (!client.phone) {
+      toast.error("Este cliente não possui telefone de WhatsApp cadastrado.");
+      return;
+    }
+    setActionBusyId(client.id);
+    try {
+      let appsText = "";
+      try {
+        const botRes = await getBot({});
+        if (botRes?.config) {
+          const c = botRes.config;
+          const apk = c.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
+          const code = c.appAndroidDownloaderCode || "389471";
+          const ios = c.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509";
+          const win = c.appWindowsLink || "https://www.iptvsmarters.com/download?download=windows";
+          const web = c.appWebPlayerLink || "http://webtv.iptvsmarters.com";
+          const smart = c.appSmartTvText || "• Smart TV Samsung / LG: Baixe o app IBO Player ou SmartOne na loja de aplicativos da TV.";
+
+          appsText =
+            `📲 *APLICATIVOS OFICIAIS — ${sigmaServerName.toUpperCase()}* 🍿\n\n` +
+            `Olá ${client.name}! Seguem os links oficiais para instalar nosso aplicativo no seu dispositivo:\n\n` +
+            `🤖 *TV BOX / ANDROID TV / FIRESTICK:*\n` +
+            `• Código no Downloader: *${code}*\n` +
+            `• Baixar APK Direto: ${apk}\n\n` +
+            `📱 *CELULAR ANDROID:*\n` +
+            `• Baixar APK Direto: ${apk}\n\n` +
+            `🍏 *IPHONE / IPAD / APPLE TV (iOS):*\n` +
+            `• App Store (Smarters Player Lite):\n${ios}\n\n` +
+            `💻 *COMPUTADOR / PC (WINDOWS):*\n` +
+            `• Baixar IPTV Smarters (.exe):\n${win}\n\n` +
+            `🌐 *ASSISTIR NO NAVEGADOR (WEB PLAYER):*\n` +
+            `• ${web}\n\n` +
+            `📺 *SMART TV:*\n${smart}\n\n` +
+            `Qualquer dúvida para conectar seu acesso, é só responder aqui! 🍿`;
+        }
+      } catch {}
+
+      if (!appsText) {
+        appsText =
+          `📲 *APLICATIVOS OFICIAIS — ${sigmaServerName.toUpperCase()}* 🍿\n\n` +
+          `Olá ${client.name}! Seguem os links recomendados para seu acesso:\n\n` +
+          `🤖 *TV Box / Firestick:* Downloader código *389471*\n` +
+          `📱 *Android APK:* https://bit.ly/app-xciptv-oficial\n` +
+          `🍏 *iPhone / iOS:* https://apps.apple.com/app/smarters-player-lite/id1628995509\n` +
+          `💻 *Computador Windows:* https://www.iptvsmarters.com/download?download=windows\n` +
+          `🌐 *Web Player:* http://webtv.iptvsmarters.com\n\n` +
+          `Qualquer dúvida estou à disposição! 🍿`;
+      }
+
+      const res = await send({ data: { phone: client.phone, body: appsText, clientId: client.id } });
+      if (res.ok) {
+        toast.success(`Links dos apps enviados com sucesso para ${client.name}! 📲`);
+      } else {
+        toast.error(res.error ?? "Falha ao enviar mensagem.");
+      }
+    } catch {
+      toast.error("Erro ao enviar links dos aplicativos.");
+    } finally {
+      setActionBusyId(null);
+    }
   }
 
   function edit(client: ClientRow) {
@@ -1382,6 +1447,10 @@ function Clientes() {
                                 <Smartphone className="size-4" />
                                 Enviar dados de acesso
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => enviarLinksApps(client)} className="gap-2">
+                                <Download className="size-4 text-sky-400" />
+                                Enviar links dos apps
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setConfirmRenewClient(client)} className="gap-2">
                                 <CalendarPlus className="size-4 text-emerald-500" />
                                 Renovar +30 dias
@@ -1499,12 +1568,13 @@ function Clientes() {
                   ) : null}
 
                   {/* Ações Mobile com rótulos explícitos */}
-                  <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-border/40">
+                  <div className="grid grid-cols-5 gap-1.5 pt-2 border-t border-border/40">
                     <Button
                       variant="outline"
                       size="sm"
                       className="h-8 text-xs gap-1 px-1"
                       onClick={() => copiarDadosAcesso(client)}
+                      title="Copiar dados de acesso"
                     >
                       {isCopied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
                       Acesso
@@ -1514,8 +1584,21 @@ function Clientes() {
                       variant="outline"
                       size="sm"
                       disabled={isBusy}
+                      className="h-8 text-xs gap-1 px-1 text-sky-400 hover:bg-sky-500/10"
+                      onClick={() => enviarLinksApps(client)}
+                      title="Enviar Links dos Aplicativos via WhatsApp"
+                    >
+                      <Download className="size-3" />
+                      Apps
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isBusy}
                       className="h-8 text-xs gap-1 px-1 text-primary hover:bg-primary/10"
                       onClick={() => setConfirmRenewClient(client)}
+                      title="Renovar +30 dias"
                     >
                       {isBusy ? <Loader2 className="size-3 animate-spin" /> : <CalendarPlus className="size-3" />}
                       +30d
@@ -1527,6 +1610,7 @@ function Clientes() {
                       disabled={isBusy}
                       className="h-8 text-xs gap-1 px-1 text-emerald-500 hover:bg-emerald-500/10"
                       onClick={() => setConfirmRemindClient(client)}
+                      title="Cobrar via WhatsApp"
                     >
                       <MessageCircle className="size-3" />
                       Cobrar
@@ -1537,6 +1621,7 @@ function Clientes() {
                       size="sm"
                       className="h-8 text-xs gap-1 px-1"
                       onClick={() => edit(client)}
+                      title="Editar cliente"
                     >
                       <Pencil className="size-3" />
                       Editar
