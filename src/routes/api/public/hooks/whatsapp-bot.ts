@@ -185,7 +185,7 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
 
         // Extrai o conteúdo do texto enviado pelo cliente (todos os formatos conhecidos)
         const messageObj = item?.message ?? rawData?.message ?? payload?.message ?? {};
-        const incomingText = String(
+        let incomingText = String(
           messageObj?.conversation ||
           messageObj?.extendedTextMessage?.text ||
           messageObj?.buttonsResponseMessage?.selectedButtonId ||
@@ -193,12 +193,23 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
           messageObj?.listResponseMessage?.singleSelectReply?.selectedRowId ||
           messageObj?.listResponseMessage?.title ||
           messageObj?.templateButtonReplyMessage?.selectedId ||
-          messageObj?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||
           item?.body ||
           rawData?.body ||
           payload?.body ||
           ""
         ).trim();
+
+        if (!incomingText) {
+          const nativeFlow = messageObj?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson;
+          if (nativeFlow) {
+            try {
+              const parsed = JSON.parse(nativeFlow);
+              incomingText = String(parsed.id || parsed.selectedId || parsed.rowId || nativeFlow).trim();
+            } catch {
+              incomingText = String(nativeFlow).trim();
+            }
+          }
+        }
 
         if (!incomingText) {
           return Response.json({ ok: true, ignored: "empty_text" });
@@ -220,7 +231,7 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
             pushName,
           });
 
-          if (botResult?.reply) {
+          if (botResult?.reply || botResult?.interactive) {
             console.log(`[WhatsApp Bot Webhook] Respondendo para ${destinationJid}: "${botResult.reply.slice(0, 80)}..."`);
 
             // Busca configurações da conta para envio
@@ -235,9 +246,44 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
             } catch {}
 
             try {
-              const { sendViaEvolution, sendMediaViaEvolution } = await import("@/lib/billing.server");
-              // 1. Envia texto principal do pedido
-              await sendViaEvolution(settings ?? {}, destinationJid, botResult.reply, targetUserId);
+              const {
+                sendViaEvolution,
+                sendMediaViaEvolution,
+                sendListViaEvolution,
+                sendButtonsViaEvolution,
+              } = await import("@/lib/billing.server");
+
+              // 1. Se possuir lista interativa ou botões, dispara com fallback automático
+              if (botResult.interactive?.type === "list") {
+                await sendListViaEvolution(
+                  settings ?? {},
+                  destinationJid,
+                  {
+                    title: botResult.interactive.title,
+                    description: botResult.interactive.description || botResult.reply,
+                    buttonText: botResult.interactive.buttonText,
+                    footerText: botResult.interactive.footerText,
+                    sections: botResult.interactive.sections,
+                    fallbackText: botResult.reply,
+                  },
+                  targetUserId,
+                );
+              } else if (botResult.interactive?.type === "buttons") {
+                await sendButtonsViaEvolution(
+                  settings ?? {},
+                  destinationJid,
+                  {
+                    title: botResult.interactive.title,
+                    description: botResult.interactive.description || botResult.reply,
+                    buttons: botResult.interactive.buttons,
+                    footer: botResult.interactive.footer,
+                    fallbackText: botResult.reply,
+                  },
+                  targetUserId,
+                );
+              } else if (botResult.reply) {
+                await sendViaEvolution(settings ?? {}, destinationJid, botResult.reply, targetUserId);
+              }
 
               // 2. Se houver QR Code em imagem (base64 do Mercado Pago), envia a foto com legenda
               if (botResult.media?.base64) {

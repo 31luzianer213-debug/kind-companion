@@ -121,7 +121,7 @@ async function forwardToLocalWebhook(instanceName, msg) {
   const remoteJid = msg.key?.remoteJid || "";
   if (!remoteJid || remoteJid.endsWith("@g.us") || remoteJid.includes("@broadcast")) return;
 
-  const text =
+  let text =
     msg.message?.conversation ||
     msg.message?.extendedTextMessage?.text ||
     msg.message?.buttonsResponseMessage?.selectedButtonId ||
@@ -129,8 +129,19 @@ async function forwardToLocalWebhook(instanceName, msg) {
     msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId ||
     msg.message?.listResponseMessage?.title ||
     msg.message?.templateButtonReplyMessage?.selectedId ||
-    msg.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||
     "";
+
+  if (!text) {
+    const nativeFlow = msg.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson;
+    if (nativeFlow) {
+      try {
+        const parsed = JSON.parse(nativeFlow);
+        text = String(parsed.id || parsed.selectedId || parsed.rowId || nativeFlow);
+      } catch {
+        text = String(nativeFlow);
+      }
+    }
+  }
 
   if (!text.trim()) return;
 

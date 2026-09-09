@@ -1344,6 +1344,17 @@ export async function processBotMessage(
     return {
       reply,
       action: "plans_shown",
+      interactive: {
+        type: "buttons",
+        title: "🍿 Escolha seu Plano IPTV",
+        description: "Selecione o plano desejado para gerar seu PIX Automático:",
+        footer: `${serverName} • Liberação Imediata`,
+        buttons: [
+          { id: "1", displayText: `1️⃣ Mensal (${p1})`, type: "reply" },
+          { id: "2", displayText: `2️⃣ Trimestral (${p2})`, type: "reply" },
+          { id: "3", displayText: `3️⃣ Semestral (${p3})`, type: "reply" },
+        ],
+      },
     };
   }
 
@@ -1435,5 +1446,44 @@ export async function processBotMessage(
   return {
     reply: greeting,
     action: "menu_shown",
+    interactive: {
+      type: "list",
+      title: config.businessName || "Menu IPTV",
+      description: greeting,
+      buttonText: "Ver Opções do Menu",
+      footerText: `${serverName} • Auto-Atendimento 24h`,
+      sections: [
+        {
+          title: "Auto-Atendimento",
+          rows: [
+            {
+              rowId: "1",
+              title: "1️⃣ Gerar Teste Grátis",
+              description: `Acesso imediato de ${config.testDurationHours}h liberado na hora`,
+            },
+            {
+              rowId: "2",
+              title: "2️⃣ Renovar Assinatura",
+              description: "Renovação rápida com PIX Automático",
+            },
+            {
+              rowId: "3",
+              title: "3️⃣ Comprar Acesso / Planos",
+              description: "Consulte nossos planos e valores",
+            },
+            {
+              rowId: "4",
+              title: "4️⃣ Reenviar Meus Dados",
+              description: "Receber login, senha e lista M3U",
+            },
+            {
+              rowId: "5",
+              title: "5️⃣ Falar com Atendente",
+              description: "Suporte com nossa equipe humana",
+            },
+          ],
+        },
+      ],
+    },
   };
 }
