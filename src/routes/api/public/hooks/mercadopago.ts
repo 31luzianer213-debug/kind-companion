@@ -160,7 +160,6 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago")({
             .update({
               status: "paid",
               paid_at: new Date().toISOString(),
-              pix_code: paymentData.id ? `MP-${paymentData.id}` : invoice.pix_code,
             })
             .eq("id", invoice.id);
 

@@ -275,7 +275,7 @@ export const testMercadoPagoConnection = createServerFn({ method: "POST" })
  */
 export const testAsaasConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { token: string; env?: string }) => input)
+  .inputValidator((input: { token: string; env?: string | undefined }) => input)
   .handler(async ({ data }) => {
     const rawToken = data.token ?? "";
     const token = rawToken.replace(/^Bearer\s+/i, "").replace(/^["']|["']$/g, "").trim();

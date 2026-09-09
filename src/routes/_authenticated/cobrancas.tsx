@@ -265,16 +265,16 @@ function Cobrancas() {
 
     setSendingId(invoice.id);
     const template =
-      invoice.status === "overdue" && settings?.overdue_template
+      (invoice.status === "overdue" && settings?.overdue_template
         ? settings.overdue_template
-        : settings?.message_template;
+        : settings?.message_template) || "";
 
     const body = renderTemplate(template, {
       cliente: invoice.clients.name,
       valor: formatBRL(invoice.amount),
       vencimento: formatDate(invoice.due_date),
-      pix: invoice.pix_code ?? settings?.pix_key ?? "",
-      link: invoice.payment_link ?? settings?.payment_link ?? "",
+      pix: (invoice as any).pix_code ?? settings?.pix_key ?? "",
+      link: (invoice as any).payment_link ?? settings?.payment_link ?? "",
       empresa: settings?.business_name ?? "",
     });
 
@@ -297,7 +297,7 @@ function Cobrancas() {
   }
 
   function copiarChavePix(invoice: InvoiceRow) {
-    const pixVal = invoice.pix_code ?? settings?.pix_key;
+    const pixVal = (invoice as any).pix_code ?? settings?.pix_key;
     if (!pixVal) {
       toast.error("Configure sua chave Pix em Configurações para poder copiar.");
       return;
@@ -310,13 +310,13 @@ function Cobrancas() {
     setRunning(true);
     try {
       const result = await billing({});
-      if (result.ok) {
+      if (result && (!result.errors || result.errors.length === 0)) {
         toast.success(
           `Processamento concluído: ${result.created} faturas geradas, ${result.sent} mensagens enviadas.`,
         );
         queryClient.invalidateQueries({ queryKey: ["invoices"] });
       } else {
-        toast.error(result.error ?? "Falha ao executar cobrança.");
+        toast.error(result?.errors?.[0] ?? "Falha ao executar cobrança.");
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao rodar a cobrança.");
@@ -791,14 +791,14 @@ function Cobrancas() {
                 <div className="flex items-center gap-1.5">
                   <Input
                     readOnly
-                    value={pixModalInvoice.pix_code || settings?.pix_key || "Chave Pix não configurada"}
+                    value={(pixModalInvoice as any).pix_code || settings?.pix_key || "Chave Pix não configurada"}
                     className="font-mono text-xs bg-muted/30"
                   />
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      const code = pixModalInvoice.pix_code || settings?.pix_key;
+                      const code = (pixModalInvoice as any).pix_code || settings?.pix_key;
                       if (code) {
                         navigator.clipboard.writeText(code);
                         setCopiedPix(true);

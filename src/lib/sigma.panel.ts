@@ -1518,7 +1518,7 @@ export async function updateSigmaCustomer(
     throw new Error("Identificador do cliente não fornecido para atualização no Sigma.");
   }
 
-  const payload: Record<string, any> = {};
+  const payload: any = {};
   if (input.name) payload.name = input.name;
   if (input.username) {
     payload.username = input.username;

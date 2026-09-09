@@ -205,7 +205,7 @@ function SigmaPage() {
         queryClient.invalidateQueries({ queryKey: ["sigma-settings"] });
         queryClient.invalidateQueries({ queryKey: ["whatsapp-settings"] });
       } else {
-        toast.error(res.error ?? "Falha ao salvar configurações.");
+        toast.error((res as any).error ?? "Falha ao salvar configurações.");
       }
     } catch {
       toast.error("Erro inesperado ao salvar configurações.");
@@ -223,11 +223,12 @@ function SigmaPage() {
         const detectedDns = (res as any).detectedDns;
         if (detectedServer || detectedDns) {
           setForm((prev) => {
+            const domainPart = prev.sigma_url ? prev.sigma_url.replace(/^https?:\/\//i, "").split("/")[0] || "" : "";
             const isGenericDns =
               !prev.sigma_streaming_dns ||
               prev.sigma_streaming_dns.includes("/sign-in") ||
               prev.sigma_streaming_dns.includes("#/") ||
-              (prev.sigma_url && prev.sigma_streaming_dns.includes(prev.sigma_url.replace(/^https?:\/\//i, "").split("/")[0]));
+              (domainPart && prev.sigma_streaming_dns.includes(domainPart));
             const isGenericServer =
               !prev.sigma_server_name ||
               prev.sigma_server_name.startsWith("http") ||

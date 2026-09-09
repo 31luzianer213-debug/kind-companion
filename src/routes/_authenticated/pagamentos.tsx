@@ -155,7 +155,7 @@ function PagamentosPage() {
     setAsaasStatus(null);
     try {
       const res = await testAsaasFn({
-        data: { token: form.asaas_token, env: form.asaas_env },
+        data: { token: form.asaas_token, env: form.asaas_env || "production" },
       });
       if (res.ok) {
         setAsaasStatus({ ok: true, message: `Conectado com sucesso! Conta: ${res.name} (${res.email})` });
@@ -345,7 +345,7 @@ function PagamentosPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Tipo de Chave *</Label>
                   <Select
-                    value={form.pix_key_type}
+                    value={form.pix_key_type || "aleatoria"}
                     onValueChange={(val) => setForm({ ...form, pix_key_type: val })}
                   >
                     <SelectTrigger className="rounded-xl">
@@ -632,7 +632,7 @@ function PagamentosPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Ambiente</Label>
                   <Select
-                    value={form.asaas_env}
+                    value={form.asaas_env || "production"}
                     onValueChange={(val) => {
                       setForm({ ...form, asaas_env: val });
                       setAsaasStatus(null);

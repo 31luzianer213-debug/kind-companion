@@ -257,7 +257,7 @@ function Painel() {
   async function handleSyncSigma() {
     setSyncingSigma(true);
     try {
-      const res = await syncSigma({});
+      const res = await syncSigma({ data: {} });
       if (res.ok) {
         toast.success(`Sigma sincronizado: ${res.created} novos e ${res.updated} atualizados!`);
         queryClient.invalidateQueries();

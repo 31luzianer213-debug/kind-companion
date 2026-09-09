@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -114,6 +114,25 @@ export const Route = createFileRoute("/_authenticated/clientes")({
     ],
   }),
   component: Clientes,
+  errorComponent: ({ error, reset }) => (
+    <div className="p-8 text-center space-y-4 max-w-md mx-auto my-12 bg-card border border-border rounded-lg shadow-sm">
+      <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+        <AlertTriangle className="w-6 h-6" />
+      </div>
+      <h2 className="text-lg font-semibold text-foreground">Não foi possível carregar a página de clientes</h2>
+      <p className="text-sm text-muted-foreground">
+        {error?.message || "Ocorreu um erro ao processar os dados dos clientes."}
+      </p>
+      <div className="flex justify-center gap-2 pt-2">
+        <Button onClick={() => reset()} variant="default" size="sm" className="rounded-md">
+          Tentar novamente
+        </Button>
+        <Button onClick={() => window.location.reload()} variant="outline" size="sm" className="rounded-md">
+          Recarregar página
+        </Button>
+      </div>
+    </div>
+  ),
 });
 
 type ClientRow = Tables<"clients">;
@@ -167,17 +186,29 @@ function cleanPhoneDigits(phone?: string | null) {
 
 function getInitials(name?: string | null) {
   if (!name) return "CL";
-  const parts = String(name).trim().split(/\s+/);
-  if (parts.length === 0 || !parts[0]) return "CL";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + (parts[parts.length - 1][0] ?? "")).toUpperCase();
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  const first = parts[0];
+  if (!first) return "CL";
+  if (parts.length === 1) return first.slice(0, 2).toUpperCase();
+  const last = parts[parts.length - 1];
+  const char1 = first[0] ?? "C";
+  const char2 = last?.[0] ?? "";
+  return (char1 + char2).toUpperCase();
 }
 
 function getRelativeDueInfo(dueDateStr: string | null) {
   if (!dueDateStr) return { text: "Sem vencimento", tone: "text-muted-foreground", badge: "border-border bg-muted/30 text-muted-foreground" };
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const due = new Date(dueDateStr + "T00:00:00");
+  const cleanDateStr = String(dueDateStr).slice(0, 10);
+  const due = new Date(cleanDateStr + "T00:00:00");
+  if (isNaN(due.getTime())) {
+    return {
+      text: formatDate(dueDateStr),
+      tone: "text-foreground",
+      badge: "border-border bg-muted/30 text-foreground",
+    };
+  }
   const diffTime = due.getTime() - today.getTime();
   const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
@@ -237,12 +268,16 @@ function Clientes() {
   // Detecção de abertura automática ao vir do Painel Geral (?novo=1)
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("novo") === "1" || params.get("novo") === "true") {
-        setForm(empty);
-        setOpen(true);
-        window.history.replaceState({}, "", window.location.pathname);
-      }
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("novo") === "1" || params.get("novo") === "true") {
+          setForm(empty);
+          setOpen(true);
+          const url = new URL(window.location.href);
+          url.searchParams.delete("novo");
+          window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+        }
+      } catch {}
     }
   }, []);
 
@@ -426,19 +461,19 @@ function Clientes() {
         // Se ainda não tem linha no Sigma, cria
         if (!savedRow?.sigma_customer_id && isSigmaConfigured && values.iptv_username) {
           try {
-            const sigmaRes = await createSigma({
-              data: {
-                clientId: values.id,
-                name: values.name.trim(),
-                username: values.iptv_username.trim(),
-                password: values.iptv_password?.trim() || "",
-                phone: cleanPhoneDigits(values.phone),
-                email: values.email?.trim() || undefined,
-                screens: Number(values.screens || 1),
-                dueDate: values.next_due_date || undefined,
-                notes: values.notes?.trim() || undefined,
-              },
-            });
+            const createPayload: any = {
+              clientId: values.id,
+              name: values.name.trim(),
+              username: values.iptv_username.trim(),
+              password: values.iptv_password?.trim() || "",
+              phone: cleanPhoneDigits(values.phone),
+              screens: Number(values.screens || 1),
+            };
+            if (values.email?.trim()) createPayload.email = values.email.trim();
+            if (values.next_due_date) createPayload.dueDate = values.next_due_date;
+            if (values.notes?.trim()) createPayload.notes = values.notes.trim();
+
+            const sigmaRes = await createSigma({ data: createPayload });
             if (sigmaRes.ok) {
               toast.success("Linha criada e sincronizada no Painel Sigma!");
             }
@@ -448,20 +483,20 @@ function Clientes() {
         } else if (isSigmaConfigured && (values.iptv_username || savedRow?.sigma_customer_id)) {
           // Atualiza dados no Sigma
           try {
-            const updateRes = await updateSigma({
-              data: {
-                clientId: values.id,
-                name: values.name.trim(),
-                username: values.iptv_username?.trim(),
-                password: values.iptv_password?.trim(),
-                phone: cleanPhoneDigits(values.phone),
-                email: values.email?.trim() || undefined,
-                screens: Number(values.screens || 1),
-                dueDate: values.next_due_date || undefined,
-                status: values.status,
-                notes: values.notes?.trim() || undefined,
-              },
-            });
+            const updatePayload: any = {
+              clientId: values.id,
+              name: values.name.trim(),
+              phone: cleanPhoneDigits(values.phone),
+              screens: Number(values.screens || 1),
+              status: values.status,
+            };
+            if (values.iptv_username?.trim()) updatePayload.username = values.iptv_username.trim();
+            if (values.iptv_password?.trim()) updatePayload.password = values.iptv_password.trim();
+            if (values.email?.trim()) updatePayload.email = values.email.trim();
+            if (values.next_due_date) updatePayload.dueDate = values.next_due_date;
+            if (values.notes?.trim()) updatePayload.notes = values.notes.trim();
+
+            const updateRes = await updateSigma({ data: updatePayload });
             if (updateRes.ok) {
               toast.info("Linha atualizada no Painel Sigma!");
             }
@@ -480,19 +515,19 @@ function Clientes() {
 
         if (isSigmaConfigured && savedRow?.id && values.iptv_username) {
           try {
-            const sigmaRes = await createSigma({
-              data: {
-                clientId: savedRow.id,
-                name: values.name.trim(),
-                username: values.iptv_username.trim(),
-                password: values.iptv_password?.trim() || "",
-                phone: cleanPhoneDigits(values.phone),
-                email: values.email?.trim() || undefined,
-                screens: Number(values.screens || 1),
-                dueDate: values.next_due_date || undefined,
-                notes: values.notes?.trim() || undefined,
-              },
-            });
+            const createPayload: any = {
+              clientId: savedRow.id,
+              name: values.name.trim(),
+              username: values.iptv_username.trim(),
+              password: values.iptv_password?.trim() || "",
+              phone: cleanPhoneDigits(values.phone),
+              screens: Number(values.screens || 1),
+            };
+            if (values.email?.trim()) createPayload.email = values.email.trim();
+            if (values.next_due_date) createPayload.dueDate = values.next_due_date;
+            if (values.notes?.trim()) createPayload.notes = values.notes.trim();
+
+            const sigmaRes = await createSigma({ data: createPayload });
             if (sigmaRes.ok) {
               toast.success("Linha criada e sincronizada no Painel Sigma!");
             }
@@ -593,7 +628,7 @@ function Clientes() {
         const res = await toggleBlock({
           data: {
             clientId: client.id,
-            action: newStatus === "blocked" ? "block" : "unblock",
+            block: newStatus === "blocked",
           },
         });
         if (res.ok) {
