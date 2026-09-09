@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { runAutoBilling, sendWhatsAppMessage } from "@/lib/whatsapp.functions";
 import { getSigmaSettings, syncSigmaClients } from "@/lib/sigma.functions";
+import { approveOrder, type OrderItem } from "@/lib/orders.functions";
+import defaultOrdersSeed from "../../../data/orders_default.json";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +33,11 @@ import {
   ChevronRight,
   Server,
   Zap,
+  ShoppingBag,
+  Copy,
+  MessageCircle,
+  Tv,
+  ExternalLink,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -63,14 +70,48 @@ function Painel() {
   const send = useServerFn(sendWhatsAppMessage);
   const syncSigma = useServerFn(syncSigmaClients);
   const getSigma = useServerFn(getSigmaSettings);
+  const approveFn = useServerFn(approveOrder);
 
   const [running, setRunning] = useState(false);
   const [syncingSigma, setSyncingSigma] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
 
+  const approveMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      return await approveFn({ data: { orderId } });
+    },
+    onSuccess: (res) => {
+      if (res.ok) {
+        toast.success(res.message);
+        queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+        queryClient.invalidateQueries({ queryKey: ["orders-list"] });
+        queryClient.invalidateQueries({ queryKey: ["sidebar-counts"] });
+      } else {
+        toast.error(res.message || "Erro ao aprovar pedido.");
+      }
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Falha na aprovação.");
+    },
+  });
+
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-v2"],
     queryFn: async () => {
+      let ordersList: OrderItem[] = [];
+      try {
+        const oRes = await fetch("/api/public/orders");
+        if (oRes.ok) {
+          const json = await oRes.json();
+          if (Array.isArray(json?.orders) && json.orders.length > 0) {
+            ordersList = json.orders;
+          }
+        }
+      } catch {}
+      if (ordersList.length === 0 && Array.isArray(defaultOrdersSeed)) {
+        ordersList = defaultOrdersSeed as unknown as OrderItem[];
+      }
+
       const [clients, invoices, logs, settings, sigmaRes] = await Promise.all([
         supabase.from("clients").select("*").order("name"),
         supabase.from("invoices").select("*, clients(name, phone)").order("due_date", { ascending: true }),
@@ -85,14 +126,18 @@ function Painel() {
         logs: logs.data ?? [],
         settings: settings.data,
         sigma: sigmaRes.ok ? sigmaRes.settings : null,
+        orders: ordersList,
       };
     },
-    staleTime: 15000,
+    staleTime: 5000,
+    refetchInterval: 10000,
   });
 
   const clients = data?.clients ?? [];
   const invoices = data?.invoices ?? [];
   const logs = data?.logs ?? [];
+  const orders = (data?.orders ?? (defaultOrdersSeed as unknown as OrderItem[])) ?? [];
+  const pendingOrders = orders.filter((o) => o.status === "pending");
   const sigmaSettings = data?.sigma;
 
   // Financial calculations
@@ -250,6 +295,22 @@ function Painel() {
           <Button
             asChild
             variant="outline"
+            className="rounded-xl border-amber-500/30 text-amber-400 hover:bg-amber-500/10 font-bold gap-2 shadow-sm"
+          >
+            <Link to="/pedidos">
+              <ShoppingBag className="h-4 w-4" />
+              Pedidos & PIX
+              {pendingOrders.length > 0 && (
+                <span className="rounded-full bg-amber-500/20 px-1.5 py-0.2 text-[10px] font-black text-amber-400 animate-pulse">
+                  {pendingOrders.length}
+                </span>
+              )}
+            </Link>
+          </Button>
+
+          <Button
+            asChild
+            variant="outline"
             className="rounded-xl border-border/80 font-semibold gap-2 shadow-sm"
           >
             <Link to="/clientes">
@@ -362,6 +423,117 @@ function Painel() {
           <div className="h-1 w-full bg-gradient-to-r from-primary to-indigo-500" />
         </Card>
       </div>
+
+      {/* Widget Especial: Pedidos Recentes & Liberação 1-Clique */}
+      <Card className="surface-elevated overflow-hidden border-border/80 bg-gradient-to-br from-card via-card/90 to-card/60 shadow-xl">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/40 pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="grid h-8 w-8 place-items-center rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                <ShoppingBag className="h-4 w-4" />
+              </span>
+              <CardTitle className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                Pedidos do Robô & Liberação 1-Clique
+                {pendingOrders.length > 0 && (
+                  <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black animate-pulse">
+                    {pendingOrders.length} aguardando PIX
+                  </Badge>
+                )}
+              </CardTitle>
+            </div>
+            <CardDescription className="mt-1 text-xs text-muted-foreground">
+              Pedidos gerados pelo auto-atendimento do WhatsApp. Libere no Sigma e WhatsApp sem precisar esperar o cliente pagar.
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs rounded-xl border-border/80 font-bold">
+              <Link to="/pedidos">
+                Ver todos os pedidos ({orders.length}) <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-5">
+          {orders.length === 0 ? (
+            <div className="py-8 text-center text-xs text-muted-foreground">
+              Nenhum pedido gerado até o momento.
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {orders.slice(0, 4).map((order) => {
+                const isPending = order.status === "pending";
+                const isApproved = order.status === "approved";
+                return (
+                  <div
+                    key={order.id}
+                    className="flex flex-col justify-between rounded-2xl border border-border/70 bg-card/70 p-4 transition-all hover:border-primary/40 hover:bg-card shadow-sm"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-xs font-black text-cyan-400">
+                          #{order.order_number}
+                        </span>
+                        {isPending ? (
+                          <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
+                            ⏳ Aguardando
+                          </Badge>
+                        ) : isApproved ? (
+                          <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] font-bold">
+                            ✅ Liberado
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[9px]">Cancelado</Badge>
+                        )}
+                      </div>
+
+                      <p className="mt-2 text-sm font-extrabold text-white truncate">
+                        {order.customer_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {order.customer_phone}
+                      </p>
+
+                      <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-2 text-xs">
+                        <span className="text-muted-foreground truncate max-w-[130px]" title={order.plan_name}>
+                          {order.plan_name}
+                        </span>
+                        <span className="font-black text-white">
+                          R$ {Number(order.amount).toFixed(2).replace(".", ",")}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-2 border-t border-border/30 flex items-center gap-2">
+                      {isPending ? (
+                        <Button
+                          size="sm"
+                          onClick={() => approveMutation.mutate(order.id)}
+                          disabled={approveMutation.isPending}
+                          className="w-full h-8 text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20"
+                          title="Aprovar e liberar linha no Sigma e WhatsApp agora"
+                        >
+                          {approveMutation.isPending ? (
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1" />
+                          ) : (
+                            <Zap className="h-3.5 w-3.5 fill-white mr-1" />
+                          )}
+                          Liberar Agora
+                        </Button>
+                      ) : (
+                        <Button asChild size="sm" variant="ghost" className="w-full h-8 text-xs text-muted-foreground hover:text-foreground">
+                          <Link to="/pedidos">
+                            Ver Detalhes <ChevronRight className="h-3 w-3 ml-1" />
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Seção Central: Gráfico Financeiro + Clientes Vencendo Hoje */}
       <div className="grid gap-6 lg:grid-cols-3">

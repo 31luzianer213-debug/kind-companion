@@ -26,6 +26,7 @@ import {
   Bot,
   ShoppingBag,
 } from "lucide-react";
+import defaultOrdersSeed from "../../data/orders_default.json";
 
 const nav = [
   { to: "/painel", label: "Painel Geral", icon: LayoutDashboard, badgeKey: null },
@@ -62,20 +63,38 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { data: counts } = useQuery({
     queryKey: ["sidebar-counts"],
     queryFn: async () => {
-      const [clientsRes, invoicesRes, sigmaClientsRes, ordersRes] = await Promise.all([
+      let pendingOrdersCount = 0;
+      try {
+        const res = await fetch("/api/public/orders?status=pending");
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json?.orders)) {
+            pendingOrdersCount = json.orders.length;
+          }
+        }
+      } catch {}
+
+      if (pendingOrdersCount === 0 && Array.isArray(defaultOrdersSeed)) {
+        pendingOrdersCount = (defaultOrdersSeed as any[]).filter(
+          (o) => o.status === "pending",
+        ).length;
+      }
+
+      const [clientsRes, invoicesRes, sigmaClientsRes] = await Promise.all([
         supabase.from("clients").select("id", { count: "exact", head: true }),
         supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "overdue"),
         supabase.from("clients").select("id", { count: "exact", head: true }).not("sigma_customer_id", "is", null),
-        supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
       ]);
+
       return {
         clients: clientsRes.count ?? 0,
         overdueInvoices: invoicesRes.count ?? 0,
         sigmaClients: sigmaClientsRes.count ?? 0,
-        pendingOrders: ordersRes.count ?? 0,
+        pendingOrders: pendingOrdersCount,
       };
     },
-    staleTime: 10000,
+    staleTime: 5000,
+    refetchInterval: 10000,
   });
 
   // WhatsApp status
@@ -185,8 +204,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
             {badgeCount !== null && (
               <span
                 className={cn(
-                  "rounded-full px-1.5 py-0.5 text-[10px] font-bold",
-                  isOverdue
+                  "rounded-full px-2 py-0.5 text-[10px] font-black tracking-wide",
+                  badgeKey === "orders"
+                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.3)]"
+                    : isOverdue
                     ? "bg-destructive/90 text-destructive-foreground animate-pulse"
                     : active
                     ? "bg-primary-foreground/20 text-primary-foreground"
