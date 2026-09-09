@@ -155,8 +155,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <span className="text-[15px] font-black tracking-tight text-foreground group-hover:text-primary transition-colors">
             Painel Sigma
           </span>
-          <span className="rounded-md bg-primary text-primary-foreground px-1.5 py-0.5 text-[9px] font-black tracking-wider shadow-sm">
-            PRO
+          <span className="rounded-md bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 px-1.5 py-0.5 text-[9px] font-black tracking-wider shadow-sm">
+            GRÁTIS
           </span>
         </div>
         <span className="block text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
@@ -226,7 +226,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 className={cn(
                   "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
                   active
-                    ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                    ? "bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20 ring-1 ring-primary/40"
                     : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
                 )}
               >

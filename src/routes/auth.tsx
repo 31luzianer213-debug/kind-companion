@@ -339,8 +339,8 @@ function AuthPage() {
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
                 <span className="text-lg font-black leading-none text-white">Painel Sigma</span>
-                <span className="rounded-md bg-white text-black px-1.5 py-0.5 text-[9px] font-black tracking-wider">
-                  PRO
+                <span className="rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 text-[9px] font-black tracking-wider">
+                  GRÁTIS
                 </span>
               </div>
               <span className="text-[11px] font-medium text-zinc-400">Gestão & Cobrança Automática</span>
@@ -575,7 +575,7 @@ function AuthPage() {
                             <Button
                               type="button"
                               variant="outline"
-                              className="w-full rounded-xl border-white/20 text-white hover:bg-white/10"
+                              className="w-full rounded-xl border-border hover:bg-muted"
                               onClick={() => {
                                 setForgotSent(false);
                                 setForgotOpen(false);
@@ -606,7 +606,7 @@ function AuthPage() {
 
                             <Button
                               type="submit"
-                              className="h-12 w-full rounded-xl font-bold gap-2 bg-white text-black hover:bg-zinc-200 border-0 shadow-sm"
+                              className="h-12 w-full rounded-xl font-bold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
                               disabled={forgotLoading}
                             >
                               {forgotLoading ? (

@@ -881,8 +881,8 @@ function Clientes() {
               {stats.total} clientes
             </Badge>
             {isSigmaConfigured ? (
-              <Badge className="bg-white/10 text-white border-white/20 text-xs gap-1 font-normal">
-                <span className="size-1.5 rounded-full bg-white animate-pulse" />
+              <Badge className="bg-primary/10 text-primary border-primary/20 text-xs gap-1 font-normal">
+                <span className="size-1.5 rounded-full bg-primary animate-pulse" />
                 {sigmaServerName}
               </Badge>
             ) : null}
@@ -899,9 +899,9 @@ function Clientes() {
               size="sm"
               onClick={sincronizar}
               disabled={syncing}
-              className="gap-1.5 shadow-sm text-xs border-white/20 text-white hover:bg-white/10"
+              className="gap-1.5 shadow-sm text-xs border-border hover:bg-accent/60"
             >
-              {syncing ? <Loader2 className="size-3.5 animate-spin text-white" /> : <RefreshCw className="size-3.5 text-white" />}
+              {syncing ? <Loader2 className="size-3.5 animate-spin text-primary" /> : <RefreshCw className="size-3.5 text-primary" />}
               Sincronizar Servidor
             </Button>
           ) : null}
@@ -926,9 +926,9 @@ function Clientes() {
             variant="outline"
             size="sm"
             onClick={exportarCSV}
-            className="gap-1.5 shadow-sm text-xs border-white/20 text-white hover:bg-white/10"
+            className="gap-1.5 shadow-sm text-xs border-border hover:bg-accent/60"
           >
-            <Download className="size-3.5" />
+            <Download className="size-3.5 text-muted-foreground" />
             CSV
           </Button>
 
@@ -938,7 +938,7 @@ function Clientes() {
               setForm(empty);
               setOpen(true);
             }}
-            className="gap-1.5 shadow-sm bg-white text-black hover:bg-zinc-200 font-bold border-0 text-xs"
+            className="gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-xs"
           >
             <Plus className="size-3.5" />
             Novo Cliente / Linha
@@ -1072,61 +1072,61 @@ function Clientes() {
 
       {/* 4 Cards de Métricas */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <Card className="surface-card border-border/60">
+        <Card className="surface-card border-border/70">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total de Clientes</p>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total de Clientes</p>
               <p className="text-2xl font-bold mt-1 text-foreground">{stats.total}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {stats.inSigma} no servidor Sigma
               </p>
             </div>
-            <div className="rounded-lg p-2.5 bg-white/10 text-white border border-white/20">
+            <div className="rounded-lg p-2.5 bg-primary/10 text-primary border border-primary/20">
               <Users className="size-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="surface-card border-border/60">
+        <Card className="surface-card border-border/70">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Linhas Ativas</p>
-              <p className="text-2xl font-bold mt-1 text-white">{stats.active}</p>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Linhas Ativas</p>
+              <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">{stats.active}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% da base
               </p>
             </div>
-            <div className="rounded-lg p-2.5 bg-white text-black font-extrabold shadow-sm">
+            <div className="rounded-lg p-2.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
               <CheckCircle2 className="size-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="surface-card border-border/60">
+        <Card className="surface-card border-border/70">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Em Atraso</p>
-              <p className="text-2xl font-bold mt-1 text-white">{stats.overdue}</p>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Em Atraso</p>
+              <p className="text-2xl font-bold mt-1 text-rose-600 dark:text-rose-400">{stats.overdue}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
                 Requerem cobrança
               </p>
             </div>
-            <div className="rounded-lg p-2.5 bg-white/5 text-zinc-400 border border-white/10">
+            <div className="rounded-lg p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20">
               <AlertTriangle className="size-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="surface-card border-border/60">
+        <Card className="surface-card border-border/70">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Vencem Hoje</p>
-              <p className="text-2xl font-bold mt-1 text-white">{stats.todayDue}</p>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Vencem Hoje</p>
+              <p className="text-2xl font-bold mt-1 text-amber-500">{stats.todayDue}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 Vencimento do dia
               </p>
             </div>
-            <div className="rounded-lg p-2.5 bg-white/10 text-white border border-white/20">
+            <div className="rounded-lg p-2.5 bg-amber-500/10 text-amber-500 border border-amber-500/20">
               <Clock className="size-5" />
             </div>
           </CardContent>
@@ -1327,11 +1327,11 @@ function Clientes() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 px-2.5 text-xs font-medium gap-1 text-white border-white/20 hover:bg-white/10"
+                            className="h-8 px-2.5 text-xs font-medium gap-1 border-border hover:bg-accent/60 text-muted-foreground hover:text-foreground"
                             title="Copiar dados de acesso"
                             onClick={() => copiarDadosAcesso(client)}
                           >
-                            {isCopied ? <Check className="size-3.5 text-white" /> : <Copy className="size-3.5" />}
+                            {isCopied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
                             Copiar
                           </Button>
 
@@ -1340,11 +1340,11 @@ function Clientes() {
                             variant="outline"
                             size="sm"
                             disabled={isBusy}
-                            className="h-8 px-2.5 text-xs font-medium gap-1 border-white/20 text-white hover:bg-white/10"
+                            className="h-8 px-2.5 text-xs font-medium gap-1 border-border hover:bg-accent/60 text-muted-foreground hover:text-foreground"
                             title="Renovar 30 dias no painel Sigma"
                             onClick={() => setConfirmRenewClient(client)}
                           >
-                            {isBusy ? <Loader2 className="size-3.5 animate-spin" /> : <CalendarPlus className="size-3.5" />}
+                            {isBusy ? <Loader2 className="size-3.5 animate-spin text-primary" /> : <CalendarPlus className="size-3.5" />}
                             +30d
                           </Button>
 
@@ -1353,7 +1353,7 @@ function Clientes() {
                             variant="outline"
                             size="sm"
                             disabled={isBusy}
-                            className="h-8 px-2.5 text-xs font-medium gap-1 border-white/20 text-white hover:bg-white/10"
+                            className="h-8 px-2.5 text-xs font-medium gap-1 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
                             title="Cobrar via WhatsApp"
                             onClick={() => setConfirmRemindClient(client)}
                           >
@@ -1374,24 +1374,24 @@ function Clientes() {
                                 <Pencil className="size-4" />
                                 Editar dados
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setViewAccessClient(client)} className="gap-2 text-white font-medium">
-                                <Tv className="size-4" />
+                              <DropdownMenuItem onClick={() => setViewAccessClient(client)} className="gap-2 font-medium">
+                                <Tv className="size-4 text-primary" />
                                 Ver Acesso & Listas M3U
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => enviarAcesso(client.id)} className="gap-2">
                                 <Smartphone className="size-4" />
                                 Enviar dados de acesso
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setConfirmRenewClient(client)} className="gap-2 text-white">
-                                <CalendarPlus className="size-4" />
+                              <DropdownMenuItem onClick={() => setConfirmRenewClient(client)} className="gap-2">
+                                <CalendarPlus className="size-4 text-emerald-500" />
                                 Renovar +30 dias
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() => alternarBloqueio(client)}
-                                className="gap-2 text-white"
+                                className="gap-2"
                               >
-                                <Ban className="size-4" />
+                                <Ban className="size-4 text-amber-500" />
                                 {client.status === "blocked" ? "Desbloquear no Servidor" : "Bloquear no Servidor"}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
@@ -1403,7 +1403,7 @@ function Clientes() {
                                     hasSigma: Boolean(client.sigma_customer_id),
                                   })
                                 }
-                                className="gap-2 text-zinc-400 focus:text-white"
+                                className="gap-2 text-destructive focus:text-destructive"
                               >
                                 <Trash2 className="size-4" />
                                 Excluir cliente

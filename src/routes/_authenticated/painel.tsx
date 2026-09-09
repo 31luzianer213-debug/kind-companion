@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { runAutoBilling, sendWhatsAppMessage } from "@/lib/whatsapp.functions";
+import { runAutoBilling, sendWhatsAppMessage, getWhatsAppStatus } from "@/lib/whatsapp.functions";
 import { getSigmaSettings, syncSigmaClients } from "@/lib/sigma.functions";
 import { approveOrder, type OrderItem } from "@/lib/orders.functions";
 import defaultOrdersSeed from "../../../data/orders_default.json";
@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatBRL, formatDate, formatDateTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import {
   Send,
   Users,
@@ -30,6 +31,10 @@ import {
   Zap,
   ShoppingBag,
   Check,
+  Sparkles,
+  ShieldCheck,
+  CreditCard,
+  X,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -77,10 +82,23 @@ function Painel() {
   const syncSigma = useServerFn(syncSigmaClients);
   const getSigma = useServerFn(getSigmaSettings);
   const approveFn = useServerFn(approveOrder);
+  const getStatus = useServerFn(getWhatsAppStatus);
 
   const [running, setRunning] = useState(false);
   const [syncingSigma, setSyncingSigma] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("iptv_dismiss_onboarding") !== "true";
+    }
+    return true;
+  });
+
+  const { data: waStatus } = useQuery({
+    queryKey: ["painel-wa-status"],
+    queryFn: () => getStatus({ data: {} }),
+    staleTime: 60000,
+  });
 
   const approveMutation = useMutation({
     mutationFn: async (orderId: string) => {
@@ -271,6 +289,11 @@ function Painel() {
     }
   }
 
+  const isSigmaOk = Boolean(sigmaSettings?.isConfigured);
+  const isWaOk = waStatus?.state === "open";
+  const isPixOk = Boolean(data?.settings?.pix_key || data?.settings?.asaas_api_key || data?.settings?.mp_access_token);
+  const completedSteps = (isSigmaOk ? 1 : 0) + (isWaOk ? 1 : 0) + (isPixOk ? 1 : 0);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Top Header com Quick Actions */}
@@ -280,13 +303,13 @@ function Painel() {
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Visão Geral
             </h1>
-            <Badge variant="outline" className="text-xs gap-1.5 rounded-md border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
-              <span className="size-1.5 rounded-full bg-emerald-500" />
-              Painel Sigma
+            <Badge variant="outline" className="text-xs gap-1.5 rounded-md border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
+              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              100% Grátis
             </Badge>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Acompanhe o faturamento, controle faturas em aberto e sincronize linhas do servidor.
+            Acompanhe o faturamento em tempo real, aprove pedidos e automatize cobranças pelo WhatsApp.
           </p>
         </div>
 
@@ -324,6 +347,155 @@ function Painel() {
           </Button>
         </div>
       </div>
+
+      {/* 3-Step Setup Assistant for Revendedores */}
+      {showOnboarding && (
+        <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card p-4 sm:p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground font-bold shadow-sm">
+                <Sparkles className="size-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-foreground">
+                    Checklist de Ativação da sua Operação
+                  </h2>
+                  <span className="rounded-md border border-primary/30 bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
+                    {completedSteps} de 3 Prontos
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Complete as 3 etapas essenciais para deixar seu IPTV no piloto automático.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setShowOnboarding(false);
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("iptv_dismiss_onboarding", "true");
+                }
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground h-8 px-2 self-end sm:self-auto"
+            >
+              <X className="size-3.5 mr-1" /> Dispensar
+            </Button>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {/* Step 1: Servidor Sigma */}
+            <div className={cn(
+              "flex flex-col justify-between rounded-lg border p-3.5 transition-colors",
+              isSigmaOk
+                ? "border-emerald-500/30 bg-emerald-500/5"
+                : "border-border/80 bg-card/80 hover:border-primary/40"
+            )}>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                    <Server className="size-3.5 text-primary" />
+                    1. Servidor Sigma
+                  </span>
+                  {isSigmaOk ? (
+                    <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-500 text-[10px] gap-1 py-0 font-semibold">
+                      <CheckCircle2 className="size-3" /> Conectado
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-500 text-[10px] py-0 font-medium">
+                      Pendente
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {isSigmaOk ? "Sincronização de linhas e renovações ativa." : "Informe a URL da API e token para sincronizar linhas."}
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-border/40">
+                <Button asChild size="sm" variant={isSigmaOk ? "outline" : "default"} className="w-full h-7 text-xs font-semibold rounded-md">
+                  <Link to="/sigma">
+                    {isSigmaOk ? "Ver Configurações" : "Conectar Sigma"} <ChevronRight className="size-3 ml-1" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            {/* Step 2: WhatsApp Evolution */}
+            <div className={cn(
+              "flex flex-col justify-between rounded-lg border p-3.5 transition-colors",
+              isWaOk
+                ? "border-emerald-500/30 bg-emerald-500/5"
+                : "border-border/80 bg-card/80 hover:border-primary/40"
+            )}>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                    <MessageSquare className="size-3.5 text-emerald-500" />
+                    2. WhatsApp Evolution
+                  </span>
+                  {isWaOk ? (
+                    <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-500 text-[10px] gap-1 py-0 font-semibold">
+                      <CheckCircle2 className="size-3" /> Online
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-500 text-[10px] py-0 font-medium">
+                      Desconectado
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {isWaOk ? "Disparos automáticos de cobrança e boas-vindas ativos." : "Escaneie o QR Code para disparar mensagens automáticas."}
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-border/40">
+                <Button asChild size="sm" variant={isWaOk ? "outline" : "default"} className="w-full h-7 text-xs font-semibold rounded-md">
+                  <Link to="/whatsapp">
+                    {isWaOk ? "Ver Conexão" : "Escanear QR Code"} <ChevronRight className="size-3 ml-1" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            {/* Step 3: Forma de Recebimento PIX */}
+            <div className={cn(
+              "flex flex-col justify-between rounded-lg border p-3.5 transition-colors",
+              isPixOk
+                ? "border-emerald-500/30 bg-emerald-500/5"
+                : "border-border/80 bg-card/80 hover:border-primary/40"
+            )}>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                    <CreditCard className="size-3.5 text-amber-500" />
+                    3. Recebimento Pix
+                  </span>
+                  {isPixOk ? (
+                    <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-500 text-[10px] gap-1 py-0 font-semibold">
+                      <CheckCircle2 className="size-3" /> Configurado
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-500 text-[10px] py-0 font-medium">
+                      Pendente
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {isPixOk ? "Chave Pix / Gateway configurado para os pagamentos." : "Defina sua chave Pix ou conecte Asaas / Mercado Pago."}
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-border/40">
+                <Button asChild size="sm" variant={isPixOk ? "outline" : "default"} className="w-full h-7 text-xs font-semibold rounded-md">
+                  <Link to="/pagamentos">
+                    {isPixOk ? "Ver Chaves" : "Configurar Pix"} <ChevronRight className="size-3 ml-1" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 4 Cards Principais de Indicadores Financeiros */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

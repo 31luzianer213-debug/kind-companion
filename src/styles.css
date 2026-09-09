@@ -84,38 +84,38 @@
 }
 
 .dark {
-  --background: #090d16;
-  --foreground: #f8fafc;
-  --card: #111827;
-  --card-foreground: #f8fafc;
-  --popover: #111827;
-  --popover-foreground: #f8fafc;
-  --primary: #3b82f6;
+  --background: #080b11;
+  --foreground: #f1f5f9;
+  --card: #0e1320;
+  --card-foreground: #f1f5f9;
+  --popover: #0e1320;
+  --popover-foreground: #f1f5f9;
+  --primary: #6366f1;
   --primary-foreground: #ffffff;
-  --secondary: #1e293b;
+  --secondary: #141b2e;
   --secondary-foreground: #f8fafc;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --accent: #1e293b;
+  --muted: #13192a;
+  --muted-foreground: #8b9bb4;
+  --accent: #17223b;
   --accent-foreground: #f8fafc;
   --destructive: #f43f5e;
   --destructive-foreground: #ffffff;
   --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.12);
-  --ring: #3b82f6;
+  --input: rgba(255, 255, 255, 0.10);
+  --ring: #6366f1;
   --chart-1: #10b981;
-  --chart-2: #3b82f6;
+  --chart-2: #6366f1;
   --chart-3: #f59e0b;
   --chart-4: #f43f5e;
   --chart-5: #8b5cf6;
-  --sidebar: #070a12;
-  --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #3b82f6;
+  --sidebar: #06090e;
+  --sidebar-foreground: #f1f5f9;
+  --sidebar-primary: #6366f1;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #111827;
+  --sidebar-accent: #0f1524;
   --sidebar-accent-foreground: #f8fafc;
-  --sidebar-border: rgba(255, 255, 255, 0.07);
-  --sidebar-ring: #3b82f6;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: #6366f1;
 }
 
 @layer base {
@@ -125,6 +125,7 @@
 
   html {
     scroll-behavior: smooth;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
   body {
@@ -132,6 +133,7 @@
     overflow-x: hidden;
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-feature-settings: "cv11", "ss01";
     text-rendering: optimizeLegibility;
     transition: background-color 200ms ease, color 200ms ease;
@@ -139,8 +141,12 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  code, pre, kbd, samp {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
   ::selection {
-    background: rgba(59, 130, 246, 0.25);
+    background: rgba(99, 102, 241, 0.3);
     color: #ffffff;
   }
 
