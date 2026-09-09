@@ -222,7 +222,7 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { url?: string; username?: string; password?: string; token?: string }) => input ?? {})
   .handler(async ({ data, context }) => {
-    const { sigmaLogin, listSigmaCustomers } = await import("./sigma.server");
+    const { sigmaLogin, listSigmaCustomers, fetchSigmaPanelDetails } = await import("./sigma.server");
     const { supabase, userId } = context;
     const saved = await loadConfig(supabase, userId);
 
@@ -238,24 +238,7 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
       };
     }
 
-    // 1. Se forneceu token direto (no formulário ou já salvo), prioriza testá-lo
-    if (directToken) {
-      try {
-        await listSigmaCustomers({ url, token: directToken });
-        return { ok: true as const, error: null };
-      } catch (tokenError) {
-        // Se NÃO informou usuário e senha, devolve o erro do token
-        if (!username || !password) {
-          return {
-            ok: false as const,
-            error: tokenError instanceof Error ? tokenError.message : "Token inválido ou painel inacessível.",
-          };
-        }
-        // Se informou usuário e senha, tenta autenticação por login abaixo
-      }
-    }
-
-    if (!username || !password) {
+    if (!directToken && (!username || !password)) {
       return {
         ok: false as const,
         error: "Informe o usuário e a senha (ou o token da API) do painel Sigma para testar.",
@@ -263,17 +246,61 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
     }
 
     try {
-      const token = directToken || (await sigmaLogin(url, username, password));
-      const { fetchSigmaPanelDetails } = await import("./sigma.server");
-      const details = await fetchSigmaPanelDetails({ url, token, username, password });
+      let activeToken = directToken;
 
+      // 1. Se tem token direto, tenta validar primeiro com o token
+      let tokenWorked = false;
+      let listError: string | null = null;
+      if (activeToken) {
+        try {
+          await listSigmaCustomers({ url, token: activeToken });
+          tokenWorked = true;
+        } catch (err) {
+          listError = err instanceof Error ? err.message : String(err);
+          // Se falhou e NÃO há usuário/senha para tentar login, retorna o erro do token
+          if (!username || !password) {
+            return {
+              ok: false as const,
+              error: listError,
+            };
+          }
+          // Se há usuário e senha, descarta o token que falhou e tenta login
+          activeToken = "";
+        }
+      }
+
+      // 2. Se não tinha token ou o token falhou, realiza login com usuário e senha
+      if (!activeToken && username && password) {
+        activeToken = await sigmaLogin(url, username, password);
+      }
+
+      // 3. Testa a listagem de clientes com o token obtido se ainda não testou
+      if (!tokenWorked) {
+        try {
+          await listSigmaCustomers({ url, token: activeToken, username, password });
+          tokenWorked = true;
+        } catch (err) {
+          listError = err instanceof Error ? err.message : String(err);
+        }
+      }
+
+      // 4. Busca os detalhes do painel (servidor, DNS, créditos, pacotes)
+      const details = await fetchSigmaPanelDetails({ url, token: activeToken, username, password });
       const detectedServerName = details.serverName?.trim() || null;
       const detectedDns = details.dns?.trim() || null;
+
+      // 5. Se a listagem falhou E nenhum detalhe foi recuperado, a conexão NÃO é válida!
+      if (!tokenWorked && !detectedServerName && !detectedDns && details.credits == null && details.packages.length === 0) {
+        return {
+          ok: false as const,
+          error: listError || "Não foi possível validar a conexão com o painel Sigma.",
+        };
+      }
 
       // Persiste os dados testados e validados no banco e no user_metadata
       const updatePayload: Record<string, any> = {
         sigma_url: url,
-        sigma_token: token,
+        sigma_token: activeToken,
       };
       if (username) updatePayload.sigma_username = username;
       if (password) updatePayload.sigma_password = password;
@@ -315,7 +342,7 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
               url,
               username: username || saved.username,
               password: password || saved.password,
-              token,
+              token: activeToken,
               streaming_dns: detectedDns || saved.streaming_dns,
               server_name: detectedServerName || saved.server_name,
               enabled: true,

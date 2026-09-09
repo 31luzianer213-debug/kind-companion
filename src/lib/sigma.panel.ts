@@ -399,7 +399,12 @@ export async function sigmaLogin(url: string, username: string, password: string
 
   const isEmail = user.includes("@");
   const bodies: Array<Record<string, any>> = [
-    // 1. Formato oficial do painel Sigma / XUI Web (Laravel Sanctum com captcha)
+    // 1. Formato padrão sem captcha (usado pela maioria das APIs REST do Sigma / XUI)
+    { username: user, password: pass },
+    ...(isEmail ? [{ email: user, password: pass }] : []),
+    { login: user, password: pass },
+    { user: user, password: pass },
+    // 2. Formato oficial do painel Sigma / XUI Web (Laravel Sanctum com captcha)
     {
       username: user,
       password: pass,
@@ -422,11 +427,6 @@ export async function sigmaLogin(url: string, username: string, password: string
           },
         ]
       : []),
-    // 2. Formato padrão sem captcha
-    { username: user, password: pass },
-    ...(isEmail ? [{ email: user, password: pass }] : []),
-    { login: user, password: pass },
-    { user: user, password: pass },
   ];
 
   const attempts: string[] = [];
@@ -464,15 +464,28 @@ export async function sigmaLogin(url: string, username: string, password: string
         throw new Error("Usuário ou senha do painel Sigma incorretos.");
       }
 
-      // Se o painel respondeu 403 (Acesso Proibido), continua testando outros formatos de corpo
+      // Se o painel respondeu 403 (Acesso Proibido ou Cloudflare Challenge)
       if (result.status === 403) {
         had403Forbidden = true;
+        const isCloudflare =
+          result.text?.includes("challenges.cloudflare.com") ||
+          result.text?.includes("Just a moment") ||
+          result.text?.includes("cf-mitigated");
+        if (isCloudflare) {
+          throw new Error(
+            `O painel Sigma (${base}) está protegido pelo Cloudflare (verificação antibot/captcha).\n\n` +
+            `Como resolver:\n` +
+            `1. O login automático por usuário e senha é bloqueado pelo Cloudflare.\n` +
+            `2. Acesse seu painel Sigma no navegador, vá em "Configurações" ou "Integrações / API de Revenda" e gere seu "Token da API".\n` +
+            `3. Cole esse token no campo "Token da API" em Servidor Sigma. Com o Token, as requisições passam sem bloqueio.`
+          );
+        }
         const serverMsg = extractServerMessage(result.payload, result.text);
         attempts.push(`${endpoint} → 403 (${serverMsg || "Acesso Proibido"})`);
         continue;
       }
 
-      // Se for 404 ou 405, passa para o próximo endpoint
+      // Se for 404 ou 405, passa para o próximo endpoint sem testar outros corpos
       if (result.status === 404 || result.status === 405) {
         attempts.push(`${endpoint} → ${result.status}`);
         break;
@@ -508,6 +521,13 @@ export async function sigmaLogin(url: string, username: string, password: string
 
   const notFound = attempts.filter((a) => /404|405/.test(a)).length;
   if (attempts.length > 0 && notFound === attempts.length) {
+    const isStreamHost = /karen256\.top|\bcdn\b|\bstream\b|\bplay\b/i.test(base);
+    if (isStreamHost) {
+      throw new Error(
+        `O endereço "${base}" parece ser o servidor de transmissão de streaming (DNS) e não o painel de gerenciamento de revenda.\n\n` +
+        `Coloque a URL onde você faz login (ex.: https://aplicativoz342.click) no campo "Endereço do Painel", e mantenha "${base}" no campo "DNS de Transmissão".`
+      );
+    }
     throw new Error(
       `Não encontrei uma API de login em ${base}. Confira se o endereço é o painel de revenda correto (ex.: https://painel.sigma.st).`,
     );
@@ -940,23 +960,17 @@ export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCust
     pass = parts.slice(1).join(":");
   }
 
-  const candidateEndpoints: string[] = [];
-
-  // Se tiver usuário e senha, tenta os endpoints de revenda do Xtream UI / Xtream Codes
-  if (user && pass) {
-    const u = encodeURIComponent(user);
-    const p = encodeURIComponent(pass);
-    candidateEndpoints.push(
-      `/panel_api.php?username=${u}&password=${p}&action=get_lines`,
-      `/panel_api.php?username=${u}&password=${p}&action=get_users`,
-      `/panel_api.php?username=${u}&password=${p}&action=user_list`,
-      `/panel_api.php?username=${u}&password=${p}&action=manage_users`,
-      `/player_api.php?username=${u}&password=${p}&action=get_lines`,
-      `/player_api.php?username=${u}&password=${p}&action=get_users`,
-    );
+  // 1. Se NÃO foi fornecido um token direto e temos usuário e senha, realiza login primeiro
+  let token = config.token?.trim() || null;
+  if (!token && user && pass) {
+    // Se o login falhar (ex.: Cloudflare ou credenciais inválidas), interrompe imediatamente e avisa o usuário!
+    token = await sigmaLogin(config.url, user, pass);
   }
 
-  // Endpoints REST de clientes e linhas do Painel Sigma / XUI
+  const effectiveConfig: SigmaConfig = token ? { ...config, token } : config;
+  const candidateEndpoints: string[] = [];
+
+  // Endpoints REST oficiais de clientes e linhas do Painel Sigma / XUI (PRIORIDADE MÁXIMA)
   candidateEndpoints.push(
     "/api/customers",
     "/api/lines",
@@ -980,27 +994,42 @@ export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCust
     "/api/members",
   );
 
-  const rawToken = config.token?.trim();
-  if (rawToken && !rawToken.startsWith("xtream:") && !rawToken.startsWith("cookie:")) {
-    const encToken = encodeURIComponent(rawToken);
+  if (token && !token.startsWith("xtream:") && !token.startsWith("cookie:")) {
+    const encToken = encodeURIComponent(token);
     candidateEndpoints.push(
       `/api/customers?token=${encToken}`,
       `/api/customers?api_token=${encToken}`,
       `/api/lines?token=${encToken}`,
       `/api/lines?api_token=${encToken}`,
+      `/api/reseller/lines?token=${encToken}`,
+    );
+  }
+
+  // Se tiver usuário e senha, tenta os endpoints legados de Xtream UI / Xtream Codes por ÚLTIMO
+  if (user && pass) {
+    const u = encodeURIComponent(user);
+    const p = encodeURIComponent(pass);
+    candidateEndpoints.push(
+      `/panel_api.php?username=${u}&password=${p}&action=get_lines`,
+      `/panel_api.php?username=${u}&password=${p}&action=get_users`,
+      `/panel_api.php?username=${u}&password=${p}&action=user_list`,
+      `/panel_api.php?username=${u}&password=${p}&action=manage_users`,
+      `/player_api.php?username=${u}&password=${p}&action=get_lines`,
+      `/player_api.php?username=${u}&password=${p}&action=get_users`,
     );
   }
 
   for (const endpoint of candidateEndpoints) {
     let result: HttpResult;
     try {
-      result = await authorizedRequest(config, endpoint, { method: "GET" });
+      result = await authorizedRequest(effectiveConfig, endpoint, { method: "GET" });
     } catch (error) {
       attempts.push(`${endpoint} -> ${error instanceof Error ? error.message : "erro"}`);
       continue;
     }
     if (!result.ok) {
-      attempts.push(`${endpoint} -> ${result.status}`);
+      const errNote = result.text && result.text.length < 80 && !result.text.includes("<") ? ` (${result.text})` : "";
+      attempts.push(`${endpoint} -> ${result.status}${errNote}`);
       continue;
     }
     const firstPage = extractRows(result.payload);
@@ -1041,7 +1070,7 @@ export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCust
       const separator = endpoint.includes("?") ? "&" : "?";
       let next: HttpResult;
       try {
-        next = await authorizedRequest(config, `${endpoint}${separator}page=${page}&per_page=100`, { method: "GET" });
+        next = await authorizedRequest(effectiveConfig, `${endpoint}${separator}page=${page}&per_page=100`, { method: "GET" });
       } catch {
         break;
       }
@@ -1054,11 +1083,50 @@ export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCust
     return customers;
   }
 
-  if (attempts.every((a) => /401|403/.test(a))) {
-    throw new Error("Usuário ou senha do painel Sigma sem permissão para listar clientes.");
+  // Analisa os erros ocorridos para apresentar um diagnóstico preciso ao usuário
+  const cfBlocked = attempts.some((a) => /cloudflare|challenge|just a moment|cf-mitigated/i.test(a));
+  const hasForbidden = attempts.some((a) => /403/.test(a));
+  const hasUnauthorized = attempts.some((a) => /401/.test(a));
+  const onlyNotFound = attempts.length > 0 && attempts.every((a) => /404/.test(a));
+
+  // Se o painel estiver bloqueando por Cloudflare (ou 403 challenge)
+  if (cfBlocked || (hasForbidden && !config.token)) {
+    throw new Error(
+      `O painel Sigma (${config.url}) está protegido pelo Cloudflare (Erro 403 / Captcha).\n\n` +
+      `Como resolver:\n` +
+      `1. O login automático via usuário/senha é barrado pelo antibot do Cloudflare.\n` +
+      `2. Acesse seu painel Sigma no navegador, vá em "Configurações" ou "Integrações / API de Revenda" e gere seu "Token da API".\n` +
+      `3. Cole esse token no campo "Token da API" em Servidor Sigma.`
+    );
   }
+
+  if (hasUnauthorized) {
+    throw new Error(
+      `Acesso não autorizado ao painel Sigma (Erro 401).\n` +
+      `Verifique se o usuário/senha ou o Token da API fornecidos estão corretos e ativos.`
+    );
+  }
+
+  // Se for apenas 404 em tudo, verifica se o usuário digitou o host de streaming em vez do painel
+  if (onlyNotFound) {
+    const isStreamHost = /karen256\.top|\bcdn\b|\bstream\b|\bplay\b/i.test(config.url);
+    if (isStreamHost) {
+      throw new Error(
+        `O endereço "${config.url}" aparenta ser o servidor de streaming/transmissão (DNS), e não o painel de gerenciamento de revenda onde você cria as linhas.\n\n` +
+        `Coloque a URL do painel onde você faz login (ex.: https://aplicativoz342.click) no campo "Endereço do Painel", e mantenha "${config.url}" no campo "DNS de Transmissão".`
+      );
+    }
+    throw new Error(
+      `Nenhum dos endpoints de listagem de clientes respondeu em ${config.url} (todas retornaram 404). Verifique se o endereço do painel de revenda está correto.`
+    );
+  }
+
+  // Prioriza exibir erros que não sejam 404
+  const informativeAttempts = attempts.filter((a) => !a.includes(" -> 404"));
+  const displayAttempts = informativeAttempts.length > 0 ? informativeAttempts.slice(0, 4) : attempts.slice(0, 4);
+
   throw new Error(
-    `Não consegui listar os clientes do painel. Respostas: ${attempts.slice(0, 5).join(" • ") || "nenhuma"}.`,
+    `Não consegui listar os clientes do painel. Respostas: ${displayAttempts.join(" • ") || "nenhuma"}.`,
   );
 }
 

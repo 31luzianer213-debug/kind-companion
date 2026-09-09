@@ -408,14 +408,14 @@ function SigmaPage() {
               <div className="p-2.5 rounded-lg bg-background/60 border border-border/50">
                 <span className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Créditos de Revenda</span>
                 <span className="text-xs sm:text-sm font-bold font-mono text-emerald-400 block mt-0.5">
-                  {testResult.credits != null ? `${testResult.credits} créditos` : "Ativo / Ilimitado"}
+                  {testResult.credits != null ? `${testResult.credits} créditos` : "Não informado"}
                 </span>
               </div>
 
               <div className="p-2.5 rounded-lg bg-background/60 border border-border/50">
                 <span className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Pacotes Detectados</span>
                 <span className="text-xs sm:text-sm font-bold font-mono text-primary block mt-0.5">
-                  {testResult.packagesCount != null ? `${testResult.packagesCount} disponíveis` : "Verificados"}
+                  {testResult.packagesCount && testResult.packagesCount > 0 ? `${testResult.packagesCount} disponíveis` : "Não detectados"}
                 </span>
               </div>
             </div>
@@ -518,16 +518,23 @@ function SigmaPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Token da API (Opcional caso usuário e senha estejam preenchidos)</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold">Token da API (Recomendado para painéis com Cloudflare / Captcha)</Label>
+                {form.sigma_token && (
+                  <Badge variant="outline" className="text-[10px] text-emerald-500 border-emerald-500/30 py-0 font-mono">
+                    Token Ativo
+                  </Badge>
+                )}
+              </div>
               <Input
                 type="text"
-                placeholder="Token de acesso direto (Bearer / API Key) caso seu painel forneça"
+                placeholder="Ex: Chave de API de revenda gerada no painel Sigma"
                 value={form.sigma_token}
                 onChange={(e) => setForm({ ...form, sigma_token: e.target.value })}
                 className="rounded-xl text-sm font-mono"
               />
               <p className="text-[11px] text-muted-foreground">
-                Dica: Se o painel recusar o login com erro 403 (ou se tiver bloqueio de firewall de IP), você pode gerar e colar uma Chave de API direta aqui.
+                <strong className="text-foreground">Dica Importante:</strong> Se o seu painel estiver atrás de proteção Cloudflare (verificação antibot), o login por usuário e senha será bloqueado. Gere o seu <em>Token da API</em> no painel Sigma (em <em>Configurações &gt; API de Revenda / Integrações</em>) e cole aqui para sincronizar com 100% de sucesso.
               </p>
             </div>
 

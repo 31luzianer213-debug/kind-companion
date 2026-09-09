@@ -280,10 +280,18 @@ function Painel() {
         toast.success(`Sigma sincronizado: ${res.created} novos e ${res.updated} atualizados!`);
         queryClient.invalidateQueries();
       } else {
-        toast.error(res.error ?? "Falha ao sincronizar com o Sigma.");
+        toast.error(res.error ?? "Falha ao sincronizar com o Sigma.", {
+          duration: 12000,
+          action: {
+            label: "Configurar",
+            onClick: () => {
+              window.location.href = "/sigma";
+            },
+          },
+        });
       }
     } catch {
-      toast.error("Erro ao sincronizar com o Sigma.");
+      toast.error("Erro ao sincronizar com o Sigma.", { duration: 8000 });
     } finally {
       setSyncingSigma(false);
     }
