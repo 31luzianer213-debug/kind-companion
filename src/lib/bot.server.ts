@@ -1181,6 +1181,16 @@ export async function processBotMessage(
         reply +
         `\n\n_Gostou e quer assinar? Digite *3* para ver nossos planos e garantir seu acesso definitivo!_ 🚀`,
       action: "trial_created",
+      interactive: {
+        type: "buttons",
+        title: "🎉 Teste Liberado!",
+        description: "Seu teste gratuito foi ativado com sucesso! Escolha o próximo passo:",
+        footer: `${serverName} • Suporte 24h`,
+        buttons: [
+          { id: "3", displayText: "🛒 Ver Nossos Planos", type: "reply" },
+          { id: "5", displayText: "💬 Falar com Suporte", type: "reply" },
+        ],
+      },
     };
   }
 
@@ -1267,7 +1277,20 @@ export async function processBotMessage(
         `👉 Digite *SIM* para renovar este usuário acima.\n` +
         `👉 Ou *digite o outro usuário* que você deseja renovar: 👇`;
 
-      return { reply, action: "renew_confirm_prompted" };
+      return {
+        reply,
+        action: "renew_confirm_prompted",
+        interactive: {
+          type: "buttons",
+          title: "💳 Confirmar Renovação",
+          description: `Renovar assinatura de ${c.name} (${c.iptv_username || c.name}) por ${fee}?`,
+          footer: `${serverName} • PIX Automático`,
+          buttons: [
+            { id: "SIM", displayText: "✅ Sim, Renovar Agora", type: "reply" },
+            { id: "0", displayText: "❌ Menu Principal", type: "reply" },
+          ],
+        },
+      };
     }
 
     // Caso B: Mais de 1 linha associada a este WhatsApp
@@ -1288,7 +1311,27 @@ export async function processBotMessage(
         listText +
         `\n👉 Por favor, *digite o Usuário* que você deseja renovar: 👇`;
 
-      return { reply, action: "renew_multiple_prompted" };
+      return {
+        reply,
+        action: "renew_multiple_prompted",
+        interactive: {
+          type: "list",
+          title: "Escolha a Assinatura",
+          description: "Encontramos mais de uma conta vinculada ao seu WhatsApp. Escolha qual deseja renovar:",
+          buttonText: "Selecionar Conta",
+          footerText: `${serverName} • Renovação 24h`,
+          sections: [
+            {
+              title: "Suas Assinaturas",
+              rows: matchingClients.slice(0, 10).map((mc, idx) => ({
+                rowId: mc.iptv_username || mc.name,
+                title: `${idx + 1}. ${mc.iptv_username || mc.name}`,
+                description: `Venc: ${mc.next_due_date || "N/A"} • R$ ${Number(mc.monthly_fee || 35).toFixed(2).replace(".", ",")}`,
+              })),
+            },
+          ],
+        },
+      };
     }
 
     // Caso C: Nenhuma linha encontrada para este WhatsApp -> Pergunta o usuário

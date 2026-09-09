@@ -137,6 +137,7 @@ export async function sendButtonsViaEvolution(
     const formattedButtons = options.buttons.map((b) => ({
       id: String(b.id),
       displayText: b.displayText,
+      text: b.displayText,
       type: b.type || "reply",
       ...(b.copyCode ? { copyCode: b.copyCode } : {}),
       ...(b.url ? { url: b.url } : {}),
@@ -149,7 +150,10 @@ export async function sendButtonsViaEvolution(
       buttons: formattedButtons,
     };
     if (options.title) payload.title = options.title;
-    if (options.footer) payload.footer = options.footer;
+    if (options.footer) {
+      payload.footer = options.footer;
+      payload.footerText = options.footer;
+    }
 
     const res = await fetch(`${base}/message/sendButtons/${instance}`, {
       method: "POST",
@@ -215,6 +219,7 @@ export async function sendListViaEvolution(
       description: options.description,
       buttonText: options.buttonText,
       footerText: options.footerText || "Selecione uma opção acima",
+      footer: options.footerText || "Selecione uma opção acima",
       sections: options.sections,
     };
 

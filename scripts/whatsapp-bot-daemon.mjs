@@ -117,22 +117,35 @@ async function getRecentMessages(instanceName) {
   }
 }
 
+function unwrapMessage(m) {
+  if (!m || typeof m !== "object") return {};
+  if (m.ephemeralMessage?.message) return unwrapMessage(m.ephemeralMessage.message);
+  if (m.viewOnceMessage?.message) return unwrapMessage(m.viewOnceMessage.message);
+  if (m.viewOnceMessageV2?.message) return unwrapMessage(m.viewOnceMessageV2.message);
+  if (m.viewOnceMessageV2Extension?.message) return unwrapMessage(m.viewOnceMessageV2Extension.message);
+  if (m.documentWithCaptionMessage?.message) return unwrapMessage(m.documentWithCaptionMessage.message);
+  return m;
+}
+
 async function forwardToLocalWebhook(instanceName, msg) {
   const remoteJid = msg.key?.remoteJid || "";
   if (!remoteJid || remoteJid.endsWith("@g.us") || remoteJid.includes("@broadcast")) return;
 
+  const mObj = unwrapMessage(msg.message);
+
   let text =
-    msg.message?.conversation ||
-    msg.message?.extendedTextMessage?.text ||
-    msg.message?.buttonsResponseMessage?.selectedButtonId ||
-    msg.message?.buttonsResponseMessage?.selectedDisplayText ||
-    msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId ||
-    msg.message?.listResponseMessage?.title ||
-    msg.message?.templateButtonReplyMessage?.selectedId ||
+    mObj?.conversation ||
+    mObj?.extendedTextMessage?.text ||
+    mObj?.buttonsResponseMessage?.selectedButtonId ||
+    mObj?.buttonsResponseMessage?.selectedDisplayText ||
+    mObj?.listResponseMessage?.singleSelectReply?.selectedRowId ||
+    mObj?.listResponseMessage?.title ||
+    mObj?.templateButtonReplyMessage?.selectedId ||
+    mObj?.interactiveResponseMessage?.body?.text ||
     "";
 
   if (!text) {
-    const nativeFlow = msg.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson;
+    const nativeFlow = mObj?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson;
     if (nativeFlow) {
       try {
         const parsed = JSON.parse(nativeFlow);

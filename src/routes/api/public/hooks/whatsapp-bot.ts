@@ -183,8 +183,19 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
 
         const pushName = item?.pushName || rawData?.pushName || payload?.pushName || "Cliente";
 
+function unwrapMessage(m: any): any {
+  if (!m || typeof m !== "object") return {};
+  if (m.ephemeralMessage?.message) return unwrapMessage(m.ephemeralMessage.message);
+  if (m.viewOnceMessage?.message) return unwrapMessage(m.viewOnceMessage.message);
+  if (m.viewOnceMessageV2?.message) return unwrapMessage(m.viewOnceMessageV2.message);
+  if (m.viewOnceMessageV2Extension?.message) return unwrapMessage(m.viewOnceMessageV2Extension.message);
+  if (m.documentWithCaptionMessage?.message) return unwrapMessage(m.documentWithCaptionMessage.message);
+  return m;
+}
+
         // Extrai o conteúdo do texto enviado pelo cliente (todos os formatos conhecidos)
-        const messageObj = item?.message ?? rawData?.message ?? payload?.message ?? {};
+        const rawMsg = item?.message ?? rawData?.message ?? payload?.message ?? {};
+        const messageObj = unwrapMessage(rawMsg);
         let incomingText = String(
           messageObj?.conversation ||
           messageObj?.extendedTextMessage?.text ||
@@ -193,6 +204,7 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
           messageObj?.listResponseMessage?.singleSelectReply?.selectedRowId ||
           messageObj?.listResponseMessage?.title ||
           messageObj?.templateButtonReplyMessage?.selectedId ||
+          messageObj?.interactiveResponseMessage?.body?.text ||
           item?.body ||
           rawData?.body ||
           payload?.body ||
