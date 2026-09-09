@@ -257,9 +257,18 @@ async function requestJson(
 
 function withAuth(token: string, init: RequestInit = {}): RequestInit {
   const headers = prepareHeaders(init);
-  const trimmed = token.trim();
+  let trimmed = token.trim();
+  if (trimmed.startsWith("Bearer ")) {
+    trimmed = trimmed.slice(7).trim();
+  }
   if (trimmed.startsWith("cookie:")) {
-    headers.set("Cookie", trimmed.slice(7).trim());
+    const cookieVal = trimmed.slice(7).trim();
+    headers.set("Cookie", cookieVal);
+    const xsrfMatch = cookieVal.match(/XSRF-TOKEN=([^;]+)/);
+    if (xsrfMatch && xsrfMatch[1]) {
+      headers.set("X-XSRF-TOKEN", decodeURIComponent(xsrfMatch[1]));
+      headers.set("X-CSRF-TOKEN", decodeURIComponent(xsrfMatch[1]));
+    }
   } else if (trimmed.includes("=") || /PHPSESSID|session|laravel_/i.test(trimmed)) {
     headers.set("Cookie", trimmed);
   } else if (trimmed.startsWith("xtream:")) {
@@ -606,7 +615,8 @@ async function authorizedRequest(
   if (!result.ok && result.status === 401 && canRelogin) {
     try {
       const refreshedToken = await sigmaLogin(config.url, config.username ?? "", config.password ?? "");
-      if (refreshedToken && refreshedToken !== token) {
+      if (refreshedToken) {
+        config.token = refreshedToken;
         result = await requestJson(base, path, withAuth(refreshedToken, init), timeoutMs);
       }
     } catch {
@@ -1101,6 +1111,23 @@ export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCust
   }
 
   if (hasUnauthorized) {
+    // Se falhou com 401 usando o token salvo/fornecido, mas temos usuário e senha, tenta login fresco!
+    if (user && pass) {
+      try {
+        const freshToken = await sigmaLogin(config.url, user, pass);
+        if (freshToken) {
+          config.token = freshToken;
+          return await listSigmaCustomers({ ...config, token: freshToken });
+        }
+      } catch (loginErr) {
+        throw new Error(
+          `Acesso não autorizado ao painel Sigma (Erro 401).\n` +
+          `A tentativa de renovar a sessão com usuário e senha falhou: ${loginErr instanceof Error ? loginErr.message : "credenciais inválidas"}.\n` +
+          `Verifique o usuário/senha ou o Token da API nas Configurações do Servidor Sigma.`
+        );
+      }
+    }
+
     throw new Error(
       `Acesso não autorizado ao painel Sigma (Erro 401).\n` +
       `Verifique se o usuário/senha ou o Token da API fornecidos estão corretos e ativos.`

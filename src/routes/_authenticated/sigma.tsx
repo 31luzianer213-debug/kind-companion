@@ -175,6 +175,7 @@ function SigmaPage() {
           ...prev,
           ...(detectedServer ? { sigma_server_name: detectedServer } : {}),
           ...(detectedDns ? { sigma_streaming_dns: detectedDns } : {}),
+          ...((res as any).token ? { sigma_token: (res as any).token } : {}),
         }));
 
         const serverInfo = detectedServer ? ` Servidor detectado: "${detectedServer}".` : "";
@@ -217,7 +218,14 @@ function SigmaPage() {
   async function handleSync() {
     setSyncing(true);
     try {
-      const res = await syncSigma({ data: {} });
+      const res = await syncSigma({
+        data: {
+          url: form.sigma_url,
+          username: form.sigma_username,
+          password: form.sigma_password,
+          token: form.sigma_token,
+        },
+      });
       if (res.ok) {
         const detectedServer = (res as any).detectedServerName;
         const detectedDns = (res as any).detectedDns;

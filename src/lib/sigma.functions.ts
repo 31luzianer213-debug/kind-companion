@@ -24,13 +24,53 @@ export function extractServerHost(url?: string | null): string {
   }
 }
 
+function getNodeFsAndPath() {
+  try {
+    if (typeof process !== "undefined" && process?.versions?.node) {
+      // Dynamic import in node runtime
+      const fs = require("fs");
+      const path = require("path");
+      return { fs, path };
+    }
+  } catch {}
+  return { fs: null, path: null };
+}
+
+export function readLocalSigmaSettings(userId?: string): any {
+  try {
+    const { fs, path } = getNodeFsAndPath();
+    if (!fs || !path) return null;
+    const safeId = (userId || "default").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const file = path.resolve(process.cwd(), "data", `sigma_settings_${safeId}.json`);
+    if (fs.existsSync(file)) {
+      return JSON.parse(fs.readFileSync(file, "utf-8"));
+    }
+  } catch {}
+  return null;
+}
+
+export function writeLocalSigmaSettings(userId: string | undefined, data: any): void {
+  try {
+    const { fs, path } = getNodeFsAndPath();
+    if (!fs || !path) return;
+    const dir = path.resolve(process.cwd(), "data");
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const safeId = (userId || "default").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const file = path.join(dir, `sigma_settings_${safeId}.json`);
+    fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+  } catch {}
+}
+
 /**
  * Carrega a configuração do Sigma com persistência blindada:
  * 1) Tenta ler de whatsapp_settings
- * 2) Se as colunas sigma_username/sigma_password não existirem no banco,
- *    recupera do user_metadata do Supabase Auth.
+ * 2) Tenta ler de arquivo local JSON (data/sigma_settings_<userId>.json)
+ * 3) Tenta ler de user_metadata / JWT claims
+ * 4) Tenta recuperar de iptv_lists
  */
-async function loadConfig(supabase: any, userId: string): Promise<
+async function loadConfig(supabase: any, userId: string, claims?: any): Promise<
   SigmaConfig & {
     server_name: string;
     server_display_name: string;
@@ -52,25 +92,49 @@ async function loadConfig(supabase: any, userId: string): Promise<
     dbData = null;
   }
 
-  // Tenta ler o fallback gravado no metadata do usuário
-  let userMetaSigma: any = null;
-  try {
-    const { data: authUser } = await supabase.auth.getUser();
-    userMetaSigma = authUser?.user?.user_metadata?.sigma_settings ?? null;
-  } catch {
-    userMetaSigma = null;
+  // 1. Tenta ler direto do arquivo JSON local (persistência infalível no container/servidor)
+  const localSigma = readLocalSigmaSettings(userId);
+
+  // 2. Tenta ler o fallback gravado no metadata do usuário (claims do JWT ou auth.getUser)
+  let userMetaSigma: any = claims?.user_metadata?.sigma_settings ?? null;
+  if (!userMetaSigma) {
+    try {
+      const { getRequest } = await import("@tanstack/react-start/server");
+      const req = getRequest();
+      const authHeader = req?.headers?.get("authorization");
+      const jwt = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+      const { data: authUser } = await supabase.auth.getUser(jwt);
+      userMetaSigma = authUser?.user?.user_metadata?.sigma_settings ?? null;
+    } catch {
+      userMetaSigma = null;
+    }
   }
 
-  const url = (dbData?.sigma_url ?? userMetaSigma?.url ?? "").trim();
-  const server_name = (dbData?.sigma_server_name ?? userMetaSigma?.server_name ?? "").trim();
-  const streaming_dns = (dbData?.sigma_streaming_dns ?? userMetaSigma?.streaming_dns ?? "").trim();
+  // 3. Tenta também recuperar credenciais salvas na tabela iptv_lists se ausentes
+  let listCredentials: any = null;
+  if (!dbData?.sigma_password && !localSigma?.sigma_password && !userMetaSigma?.password) {
+    try {
+      const { data: listRow } = await supabase
+        .from("iptv_lists")
+        .select("server_url, username, password")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      listCredentials = listRow;
+    } catch {}
+  }
+
+  const url = (dbData?.sigma_url ?? localSigma?.sigma_url ?? userMetaSigma?.url ?? listCredentials?.server_url ?? "").trim();
+  const server_name = (dbData?.sigma_server_name ?? localSigma?.sigma_server_name ?? userMetaSigma?.server_name ?? "").trim();
+  const streaming_dns = (dbData?.sigma_streaming_dns ?? localSigma?.sigma_streaming_dns ?? userMetaSigma?.streaming_dns ?? "").trim();
   const server_display_name = server_name || "Servidor Sigma";
-  const username = (dbData?.sigma_username ?? userMetaSigma?.username ?? "").trim();
-  const password = dbData?.sigma_password ?? userMetaSigma?.password ?? "";
-  const token = dbData?.sigma_token ?? userMetaSigma?.token ?? null;
-  const enabled = Boolean(dbData?.sigma_enabled ?? userMetaSigma?.enabled ?? false);
-  const auto_renew = Boolean(dbData?.sigma_auto_renew ?? userMetaSigma?.auto_renew ?? false);
-  const last_sync_at = dbData?.sigma_last_sync_at ?? userMetaSigma?.last_sync_at ?? null;
+  const username = (dbData?.sigma_username ?? localSigma?.sigma_username ?? userMetaSigma?.username ?? listCredentials?.username ?? "").trim();
+  const password = dbData?.sigma_password ?? localSigma?.sigma_password ?? userMetaSigma?.password ?? listCredentials?.password ?? "";
+  const token = dbData?.sigma_token ?? localSigma?.sigma_token ?? userMetaSigma?.token ?? null;
+  const enabled = Boolean(dbData?.sigma_enabled ?? localSigma?.sigma_enabled ?? userMetaSigma?.enabled ?? false);
+  const auto_renew = Boolean(dbData?.sigma_auto_renew ?? localSigma?.sigma_auto_renew ?? userMetaSigma?.auto_renew ?? false);
+  const last_sync_at = dbData?.sigma_last_sync_at ?? localSigma?.last_sync_at ?? userMetaSigma?.last_sync_at ?? null;
 
   return {
     url,
@@ -97,7 +161,7 @@ function hasSigmaAccess(config: { url?: string | null; token?: string | null; us
 
 /**
  * Salva as configurações do Sigma de forma resiliente:
- * Atualiza `whatsapp_settings` E o `user_metadata` do Supabase.
+ * Atualiza `whatsapp_settings`, `iptv_lists` E o `user_metadata` do Supabase.
  */
 export const saveSigmaSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -148,7 +212,24 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
       dbSaved = false;
     }
 
-    // Se falhou por ausência de colunas específicas, tenta salvar as colunas básicas
+    // 2. Se falhou por colunas extras ausentes (ex: sigma_server_name/streaming_dns), tenta com colunas essenciais
+    if (!dbSaved) {
+      try {
+        const essentialPayload: Record<string, any> = {
+          user_id: userId,
+          sigma_url: url,
+          sigma_username: username,
+          sigma_password: password,
+          sigma_token: token,
+          sigma_enabled: enabled,
+          sigma_auto_renew: auto_renew,
+        };
+        const { error } = await supabase.from("whatsapp_settings").upsert(essentialPayload, { onConflict: "user_id" });
+        if (!error) dbSaved = true;
+      } catch {}
+    }
+
+    // 3. Fallback mínimo
     if (!dbSaved) {
       try {
         const basicPayload: Record<string, any> = {
@@ -159,12 +240,37 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
         };
         if (token) basicPayload.sigma_token = token;
         await supabase.from("whatsapp_settings").upsert(basicPayload, { onConflict: "user_id" });
-      } catch {
-        // Prossegue para salvar no user_metadata
-      }
+      } catch {}
     }
 
-    // 2. Salva SEMPRE no user_metadata como garantia infalível
+    // 4. Salva também na tabela iptv_lists como garantia infalível de persistência de credenciais
+    try {
+      if (url && (username || password)) {
+        const { data: existingList } = await supabase
+          .from("iptv_lists")
+          .select("id")
+          .eq("user_id", userId)
+          .limit(1)
+          .maybeSingle();
+
+        if (existingList) {
+          await supabase
+            .from("iptv_lists")
+            .update({ server_url: url, username: username || undefined, password: password || undefined })
+            .eq("id", existingList.id);
+        } else {
+          await supabase.from("iptv_lists").insert({
+            user_id: userId,
+            name: finalServerName || "Servidor Sigma",
+            server_url: url,
+            username: username || "",
+            password: password || "",
+          });
+        }
+      }
+    } catch {}
+
+    // 5. Salva SEMPRE no user_metadata como garantia adicional
     try {
       await supabase.auth.updateUser({
         data: {
@@ -185,6 +291,19 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
       console.error("Falha ao salvar no metadata:", metaErr);
     }
 
+    // 6. Grava localmente em arquivo JSON para garantia infalível no backend
+    writeLocalSigmaSettings(userId, {
+      sigma_url: url,
+      sigma_server_name: finalServerName,
+      sigma_streaming_dns: finalStreamingDns,
+      sigma_username: username,
+      sigma_password: password,
+      sigma_token: token,
+      sigma_enabled: enabled,
+      sigma_auto_renew: auto_renew,
+      updated_at: new Date().toISOString(),
+    });
+
     return { ok: true as const };
   });
 
@@ -194,8 +313,8 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
 export const getSigmaSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const config = await loadConfig(supabase, userId);
+    const { supabase, userId, claims } = context;
+    const config = await loadConfig(supabase, userId, claims);
     return {
       ok: true as const,
       settings: {
@@ -223,8 +342,8 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
   .inputValidator((input: { url?: string; username?: string; password?: string; token?: string }) => input ?? {})
   .handler(async ({ data, context }) => {
     const { sigmaLogin, listSigmaCustomers, fetchSigmaPanelDetails } = await import("./sigma.server");
-    const { supabase, userId } = context;
-    const saved = await loadConfig(supabase, userId);
+    const { supabase, userId, claims } = context;
+    const saved = await loadConfig(supabase, userId, claims);
 
     const url = (data?.url ?? "").trim() || saved.url;
     const username = (data?.username ?? "").trim() || (saved.username ?? "");
@@ -297,42 +416,76 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
         };
       }
 
-      // Persiste os dados testados e validados no banco e no user_metadata
-      const updatePayload: Record<string, any> = {
+      // Persiste os dados testados e validados no banco
+      const fullUpdate: Record<string, any> = {
+        user_id: userId,
         sigma_url: url,
         sigma_token: activeToken,
+        sigma_enabled: true,
       };
-      if (username) updatePayload.sigma_username = username;
-      if (password) updatePayload.sigma_password = password;
-      if (detectedDns) updatePayload.sigma_streaming_dns = detectedDns;
-      if (detectedServerName) updatePayload.sigma_server_name = detectedServerName;
+      if (username) fullUpdate.sigma_username = username;
+      if (password) fullUpdate.sigma_password = password;
+      if (detectedDns) fullUpdate.sigma_streaming_dns = detectedDns;
+      if (detectedServerName) fullUpdate.sigma_server_name = detectedServerName;
 
+      let savedSettings = false;
       try {
-        const { data: wsRow } = await supabase
-          .from("whatsapp_settings")
-          .select("welcome_template")
-          .eq("user_id", userId)
-          .maybeSingle();
-
-        if (wsRow?.welcome_template && !wsRow.welcome_template.includes("{m3u}")) {
-          updatePayload.welcome_template = `${wsRow.welcome_template.trim()}\n\n🔗 *Lista M3U Plus:*\n{m3u}\n\n📺 *Guia de Canais (EPG):*\n{epg}`;
-        }
+        const { error } = await supabase.from("whatsapp_settings").upsert(fullUpdate, { onConflict: "user_id" });
+        if (!error) savedSettings = true;
       } catch {}
 
-      try {
-        const { error } = await supabase.from("whatsapp_settings").upsert({
-          user_id: userId,
-          ...updatePayload,
-          sigma_enabled: true,
-        }, { onConflict: "user_id" });
-        if (error) {
-          await supabase.from("whatsapp_settings").update(updatePayload).eq("user_id", userId);
-        }
-      } catch {
+      if (!savedSettings) {
         try {
-          await supabase.from("whatsapp_settings").update(updatePayload).eq("user_id", userId);
+          const essentialUpdate: Record<string, any> = {
+            user_id: userId,
+            sigma_url: url,
+            sigma_token: activeToken,
+            sigma_username: username || undefined,
+            sigma_password: password || undefined,
+            sigma_enabled: true,
+          };
+          const { error } = await supabase.from("whatsapp_settings").upsert(essentialUpdate, { onConflict: "user_id" });
+          if (!error) savedSettings = true;
         } catch {}
       }
+
+      if (!savedSettings) {
+        try {
+          await supabase.from("whatsapp_settings").upsert({
+            user_id: userId,
+            sigma_url: url,
+            sigma_token: activeToken,
+            sigma_enabled: true,
+          }, { onConflict: "user_id" });
+        } catch {}
+      }
+
+      // Também garante sincronismo na tabela iptv_lists
+      try {
+        if (url && (username || password)) {
+          const { data: existingList } = await supabase
+            .from("iptv_lists")
+            .select("id")
+            .eq("user_id", userId)
+            .limit(1)
+            .maybeSingle();
+
+          if (existingList) {
+            await supabase
+              .from("iptv_lists")
+              .update({ server_url: url, username: username || undefined, password: password || undefined })
+              .eq("id", existingList.id);
+          } else {
+            await supabase.from("iptv_lists").insert({
+              user_id: userId,
+              name: detectedServerName || "Servidor Sigma",
+              server_url: url,
+              username: username || "",
+              password: password || "",
+            });
+          }
+        }
+      } catch {}
 
       try {
         await supabase.auth.updateUser({
@@ -350,9 +503,19 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
             },
           },
         });
-      } catch {
-        // ignora erro de metadata
-      }
+      } catch {}
+
+      writeLocalSigmaSettings(userId, {
+        sigma_url: url,
+        sigma_server_name: detectedServerName || saved.server_name,
+        sigma_streaming_dns: detectedDns || saved.streaming_dns,
+        sigma_username: username || saved.username,
+        sigma_password: password || saved.password,
+        sigma_token: activeToken,
+        sigma_enabled: true,
+        sigma_auto_renew: saved.auto_renew,
+        updated_at: new Date().toISOString(),
+      });
 
       return {
         ok: true as const,
@@ -361,6 +524,7 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
         detectedServerName,
         packagesCount: details.packages.length,
         credits: details.credits,
+        token: activeToken,
       };
     } catch (error) {
       return {
@@ -377,14 +541,15 @@ export async function runSigmaSyncForUser(
   supabase: any,
   userId: string,
   data?: { url?: string; username?: string; password?: string; token?: string },
+  claims?: any,
 ) {
   const { listSigmaCustomers, ensureSigmaToken } = await import("./sigma.server");
-  const saved = await loadConfig(supabase, userId);
+  const saved = await loadConfig(supabase, userId, claims);
 
   const panelConfig: SigmaConfig = {
     url: (data?.url ?? "").trim() || saved.url,
     username: (data?.username ?? "").trim() || saved.username,
-    password: data?.password ?? saved.password,
+    password: data?.password !== undefined && data.password !== "" ? data.password : saved.password,
     token: (data?.token ?? "").trim() || saved.token,
   };
 
@@ -403,11 +568,44 @@ export async function runSigmaSyncForUser(
   let detectedDns: string | null = null;
 
   try {
-    const token = await ensureSigmaToken(panelConfig);
-    const { fetchSigmaPanelDetails } = await import("./sigma.server");
+    let token = await ensureSigmaToken(panelConfig);
+    const { fetchSigmaPanelDetails, listSigmaCustomers, sigmaLogin } = await import("./sigma.server");
     const panelDetails = await fetchSigmaPanelDetails({ ...panelConfig, token });
 
-    customers = await listSigmaCustomers({ ...panelConfig, token });
+    try {
+      customers = await listSigmaCustomers({ ...panelConfig, token });
+    } catch (listErr) {
+      // Se deu erro 401 Unauthorized com o token atual e temos usuário e senha, tenta login fresco!
+      const is401 = listErr instanceof Error && /401|não autorizado|unauthorized/i.test(listErr.message);
+      if (is401 && panelConfig.username && panelConfig.password) {
+        try {
+          const freshToken = await sigmaLogin(panelConfig.url, panelConfig.username, panelConfig.password);
+          if (freshToken) {
+            token = freshToken;
+            customers = await listSigmaCustomers({ ...panelConfig, token: freshToken });
+            // Atualiza o token válido no banco para os próximos syncs!
+            try {
+              await supabase.from("whatsapp_settings").update({ sigma_token: freshToken }).eq("user_id", userId);
+            } catch {}
+            writeLocalSigmaSettings(userId, {
+              sigma_url: panelConfig.url,
+              sigma_username: panelConfig.username,
+              sigma_password: panelConfig.password,
+              sigma_token: freshToken,
+              sigma_streaming_dns: detectedDns || saved.streaming_dns,
+              sigma_server_name: detectedServerName || saved.server_name,
+              updated_at: new Date().toISOString(),
+            });
+          } else {
+            throw listErr;
+          }
+        } catch {
+          throw listErr;
+        }
+      } else {
+        throw listErr;
+      }
+    }
 
     // 1. Detecta o nome oficial do servidor:
     // Prioriza os detalhes retornados pelos endpoints do painel
@@ -605,6 +803,17 @@ export async function runSigmaSyncForUser(
     // continua mesmo se update falhar
   }
 
+  writeLocalSigmaSettings(userId, {
+    sigma_url: panelConfig.url,
+    sigma_username: panelConfig.username,
+    sigma_password: panelConfig.password,
+    sigma_token: token,
+    sigma_streaming_dns: detectedDns || saved.streaming_dns,
+    sigma_server_name: detectedServerName || saved.server_name,
+    last_sync_at: now,
+    updated_at: now,
+  });
+
   return {
     ok: true as const,
     created,
@@ -625,7 +834,7 @@ export const syncSigmaClients = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { url?: string; username?: string; password?: string; token?: string }) => input ?? {})
   .handler(async ({ data, context }) => {
-    return runSigmaSyncForUser(context.supabase, context.userId, data);
+    return runSigmaSyncForUser(context.supabase, context.userId, data, context.claims);
   });
 
 /**
@@ -649,8 +858,8 @@ export const createSigmaClient = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { createSigmaCustomer, ensureSigmaToken } = await import("./sigma.server");
-    const { supabase, userId } = context;
-    const config = await loadConfig(supabase, userId);
+    const { supabase, userId, claims } = context;
+    const config = await loadConfig(supabase, userId, claims);
 
     if (!hasSigmaAccess(config)) {
       return { ok: false as const, error: "Painel Sigma não configurado. Verifique as Configurações." };
@@ -725,8 +934,8 @@ export const updateSigmaClient = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { updateSigmaCustomer, ensureSigmaToken } = await import("./sigma.server");
-    const { supabase, userId } = context;
-    const config = await loadConfig(supabase, userId);
+    const { supabase, userId, claims } = context;
+    const config = await loadConfig(supabase, userId, claims);
 
     const { data: client } = await supabase
       .from("clients")
@@ -798,7 +1007,7 @@ export const deleteSigmaClient = createServerFn({ method: "POST" })
   .inputValidator((input: { clientId: string; deleteFromSigma?: boolean }) => input)
   .handler(async ({ data, context }) => {
     const { deleteSigmaCustomer, ensureSigmaToken } = await import("./sigma.server");
-    const { supabase, userId } = context;
+    const { supabase, userId, claims } = context;
 
     const { data: client } = await supabase
       .from("clients")
@@ -814,7 +1023,7 @@ export const deleteSigmaClient = createServerFn({ method: "POST" })
     let sigmaError: string | null = null;
 
     if (data.deleteFromSigma && (client.sigma_customer_id || client.sigma_username || client.iptv_username)) {
-      const config = await loadConfig(supabase, userId);
+      const config = await loadConfig(supabase, userId, claims);
       if (hasSigmaAccess(config)) {
         try {
           const token = await ensureSigmaToken(config);
@@ -857,9 +1066,9 @@ export const renewSigmaClient = createServerFn({ method: "POST" })
   .inputValidator((input: { clientId: string; months?: number }) => input)
   .handler(async ({ data, context }) => {
     const { renewSigmaCustomer, ensureSigmaToken } = await import("./sigma.server");
-    const { supabase, userId } = context;
+    const { supabase, userId, claims } = context;
 
-    const config = await loadConfig(supabase, userId);
+    const config = await loadConfig(supabase, userId, claims);
     const { data: client } = await supabase
       .from("clients")
       .select("id, next_due_date, sigma_customer_id, sigma_username, iptv_username")
@@ -915,9 +1124,9 @@ export const toggleSigmaClientBlock = createServerFn({ method: "POST" })
   .inputValidator((input: { clientId: string; block: boolean }) => input)
   .handler(async ({ data, context }) => {
     const { toggleSigmaCustomerStatus, ensureSigmaToken } = await import("./sigma.server");
-    const { supabase, userId } = context;
+    const { supabase, userId, claims } = context;
 
-    const config = await loadConfig(supabase, userId);
+    const config = await loadConfig(supabase, userId, claims);
     const { data: client } = await supabase
       .from("clients")
       .select("id, sigma_customer_id, sigma_username, iptv_username, status")
@@ -965,9 +1174,9 @@ export const createSigmaQuickTest = createServerFn({ method: "POST" })
   .inputValidator((input?: { hours?: number; name?: string; phone?: string; packageId?: string | number }) => input ?? {})
   .handler(async ({ data, context }) => {
     const { createSigmaCustomer, ensureSigmaToken } = await import("./sigma.server");
-    const { supabase, userId } = context;
+    const { supabase, userId, claims } = context;
 
-    const config = await loadConfig(supabase, userId);
+    const config = await loadConfig(supabase, userId, claims);
     if (!hasSigmaAccess(config)) {
       return { ok: false as const, error: "Painel Sigma não configurado. Acesse Configurações -> Servidor Sigma." };
     }
