@@ -27,6 +27,12 @@ export type BotProcessResult = {
   reply: string;
   action: string;
   interactive?: BotInteractivePayload;
+  media?: {
+    type: "image";
+    base64: string;
+    caption?: string;
+  };
+  extraMessages?: string[];
 };
 
 export type BotConfigData = {
@@ -637,22 +643,34 @@ async function handlePlanOrderCreation({
   }
 
   if (mpPixResult?.ok && mpPixResult?.qrCode) {
-    // MODO AUTOMÁTICO MERCADO PAGO COM PIX COPIA E COLA
+    // MODO AUTOMÁTICO MERCADO PAGO COM PIX COPIA E COLA & QR CODE FOTO
     const reply =
       `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
       `📦 *Plano:* ${planName}\n` +
       `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
       `⚡ *Forma de Pagamento:* PIX Automático (Mercado Pago)\n\n` +
-      `👇 *PIX COPIA E COLA (Toque no código abaixo para copiar):*\n` +
-      `\`${mpPixResult.qrCode}\`\n\n` +
-      (mpPixResult.ticketUrl ? `🔗 *Link para pagar pelo navegador:*\n${mpPixResult.ticketUrl}\n\n` : "") +
+      `Escaneie a imagem do QR Code abaixo ou utilize o código Copia e Cola enviado a seguir:`;
+
+    const extraMessages: string[] = [
+      // 1. Mensagem dedicada contendo APENAS o código PIX Copia e Cola (facilita cópia com 1 toque)
+      mpPixResult.qrCode,
+      // 2. Orientações de ativação automática
       `✅ *Liberação 100% Automática!*\n` +
       `Assim que você realizar o pagamento no aplicativo do seu banco, o sistema reconhece em poucos segundos e já envia seu Login, Senha e Lista M3U aqui mesmo nesta conversa! 🚀\n\n` +
-      `_Dica: Se já concluiu o PIX e quer checar agora, basta digitar *verificar*._`;
+      `_Dica: Se já concluiu o PIX e quer checar agora, basta digitar *verificar*._`,
+    ];
 
     return {
       reply,
       action: "order_created_mp",
+      media: mpPixResult.qrCodeBase64
+        ? {
+            type: "image",
+            base64: mpPixResult.qrCodeBase64,
+            caption: `📱 *QR CODE PIX — PEDIDO #${order.order_number}*\n💰 Valor: R$ ${amount.toFixed(2).replace(".", ",")}\nAponte a câmera do aplicativo do seu banco para pagar!`,
+          }
+        : undefined,
+      extraMessages,
     };
   }
 
@@ -748,7 +766,7 @@ async function handleRenewOrderCreation({
   }
 
   if (mpPixResult?.ok && mpPixResult?.qrCode) {
-    // MODO AUTOMÁTICO MERCADO PAGO COM PIX COPIA E COLA
+    // MODO AUTOMÁTICO MERCADO PAGO COM PIX COPIA E COLA & QR CODE FOTO
     const reply =
       `💳 *DADOS PARA PAGAMENTO PIX (RENOVAÇÃO)* 📺\n\n` +
       `✅ *Usuário a Renovar:* *${targetUsername}*\n` +
@@ -756,16 +774,28 @@ async function handleRenewOrderCreation({
       `📺 *Servidor:* ${serverName}\n` +
       `💰 *Valor da Mensalidade:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
       `⚡ *Forma de Pagamento:* PIX Automático (Mercado Pago)\n\n` +
-      `👇 *PIX COPIA E COLA (Toque no código abaixo para copiar):*\n` +
-      `\`${mpPixResult.qrCode}\`\n\n` +
-      (mpPixResult.ticketUrl ? `🔗 *Link para pagar pelo navegador:*\n${mpPixResult.ticketUrl}\n\n` : "") +
+      `Escaneie a imagem do QR Code abaixo ou utilize o código Copia e Cola enviado a seguir:`;
+
+    const extraMessages: string[] = [
+      // 1. Mensagem dedicada contendo APENAS o código PIX Copia e Cola (facilita cópia com 1 toque)
+      mpPixResult.qrCode,
+      // 2. Orientações de renovação automática
       `✅ *Liberação 100% Automática!*\n` +
       `Assim que você realizar o pagamento no aplicativo do seu banco, o sistema reconhece em poucos segundos e renova seu acesso imediatamente no servidor! 🚀\n\n` +
-      `_Dica: Se já concluiu o PIX e quer checar agora, basta digitar *verificar*._`;
+      `_Dica: Se já concluiu o PIX e quer checar agora, basta digitar *verificar*._`,
+    ];
 
     return {
       reply,
       action: "renew_pix_mp_sent",
+      media: mpPixResult.qrCodeBase64
+        ? {
+            type: "image",
+            base64: mpPixResult.qrCodeBase64,
+            caption: `📱 *QR CODE PIX — RENOVAÇÃO IPTV*\n👤 Usuário: ${targetUsername}\n💰 Valor: R$ ${amount.toFixed(2).replace(".", ",")}`,
+          }
+        : undefined,
+      extraMessages,
     };
   }
 

@@ -58,6 +58,45 @@ export async function sendViaEvolution(
   return raw.slice(0, 500);
 }
 
+export async function sendMediaViaEvolution(
+  settings: WhatsAppSettings & { user_id?: string },
+  phone: string,
+  mediaOptions: {
+    base64: string;
+    caption?: string;
+    mimetype?: string;
+    fileName?: string;
+  },
+  userId?: string,
+) {
+  const { evolutionConfig } = await import("./evolution.server");
+  const owner = userId ?? settings.user_id;
+  if (!owner) throw new Error("Conta sem WhatsApp conectado.");
+  const { base, key, instance } = evolutionConfig(
+    owner,
+    settings.api_url ?? undefined,
+    settings.api_key ?? undefined,
+  );
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (key) headers["apikey"] = key;
+
+  const res = await fetch(`${base}/message/sendMedia/${instance}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      number: normalizeNumber(phone),
+      mediatype: "image",
+      mimetype: mediaOptions.mimetype || "image/png",
+      caption: mediaOptions.caption || "",
+      media: mediaOptions.base64,
+      fileName: mediaOptions.fileName || "qrcode-pix.png",
+    }),
+  });
+  const raw = await res.text();
+  if (!res.ok) throw new Error(`Falha no envio de mídia (${res.status}): ${raw.slice(0, 300)}`);
+  return raw.slice(0, 500);
+}
+
 export interface ButtonItem {
   id: string;
   displayText: string;

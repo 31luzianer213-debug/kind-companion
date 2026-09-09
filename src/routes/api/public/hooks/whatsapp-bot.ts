@@ -235,10 +235,40 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
             } catch {}
 
             try {
-              const { sendViaEvolution } = await import("@/lib/billing.server");
-              // Envia diretamente para o destino de onde o cliente falou (suporta @lid e número normal)
+              const { sendViaEvolution, sendMediaViaEvolution } = await import("@/lib/billing.server");
+              // 1. Envia texto principal do pedido
               await sendViaEvolution(settings ?? {}, destinationJid, botResult.reply, targetUserId);
-              console.log(`[WhatsApp Bot Webhook] Resposta enviada com sucesso para ${destinationJid}!`);
+
+              // 2. Se houver QR Code em imagem (base64 do Mercado Pago), envia a foto com legenda
+              if (botResult.media?.base64) {
+                try {
+                  await sendMediaViaEvolution(
+                    settings ?? {},
+                    destinationJid,
+                    {
+                      base64: botResult.media.base64,
+                      caption: botResult.media.caption,
+                      mimetype: "image/png",
+                      fileName: "qrcode-pix.png",
+                    },
+                    targetUserId,
+                  );
+                  console.log(`[WhatsApp Bot Webhook] 📸 Foto do QR Code PIX enviada para ${destinationJid}!`);
+                } catch (mediaErr) {
+                  console.warn("[WhatsApp Bot Webhook] Aviso ao enviar QR Code:", mediaErr);
+                }
+              }
+
+              // 3. Se houver mensagens adicionais (ex: código PIX Copia e Cola 100% isolado), envia sequencialmente
+              if (Array.isArray(botResult.extraMessages)) {
+                for (const extra of botResult.extraMessages) {
+                  if (extra && extra.trim()) {
+                    await sendViaEvolution(settings ?? {}, destinationJid, extra, targetUserId);
+                  }
+                }
+              }
+
+              console.log(`[WhatsApp Bot Webhook] Resposta completa enviada com sucesso para ${destinationJid}!`);
             } catch (sendErr) {
               console.error("[WhatsApp Bot Webhook] Erro ao enviar resposta via Evolution:", sendErr);
             }
