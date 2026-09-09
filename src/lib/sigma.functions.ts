@@ -36,6 +36,8 @@ async function loadConfig(supabase: any, userId: string): Promise<LoadedConfig> 
     .select("*")
     .eq("user_id", userId)
     .maybeSingle();
+  if (dbResult.error) throw new Error(`Não foi possível carregar as configurações do Sigma: ${dbResult.error.message}`);
+
   const db = dbResult.data ?? null;
   const authResult = await supabase.auth.getUser();
   const meta = authResult.data?.user?.user_metadata?.sigma_settings ?? null;
@@ -120,7 +122,7 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
     if (!config.url) return { ok: false as const, error: "Informe o endereço do painel Sigma." };
     try {
       const token = config.token?.trim() || await sigmaLogin(config.url, config.username ?? "", config.password ?? "");
-      await listSigmaCustomers(config, token);
+      const customers = await listSigmaCustomers(config, token);
       const details = await fetchSigmaPanelDetails(config, token);
       const result = await context.supabase.from("whatsapp_settings").upsert(
         {
@@ -139,6 +141,7 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
       return {
         ok: true as const,
         error: null,
+        customersCount: customers.length,
         detectedDns: details.dns,
         detectedServerName: details.serverName,
         packagesCount: details.packages.length,
@@ -201,7 +204,12 @@ export async function runSigmaSyncForUser(supabase: any, userId: string, data?: 
       }
     }
 
-    await supabase.from("whatsapp_settings").update({ sigma_last_sync_at: now, ...(details.serverName ? { sigma_server_name: details.serverName } : {}), ...(details.dns ? { sigma_streaming_dns: details.dns } : {}) }).eq("user_id", userId);
+    const settingsUpdate = await supabase
+      .from("whatsapp_settings")
+      .update({ sigma_last_sync_at: now, ...(details.serverName ? { sigma_server_name: details.serverName } : {}), ...(details.dns ? { sigma_streaming_dns: details.dns } : {}) })
+      .eq("user_id", userId);
+    if (settingsUpdate.error) throw new Error(settingsUpdate.error.message);
+
     return { ok: true as const, created, updated, createdNames, detectedServerName: details.serverName, detectedDns: details.dns, error: null };
   } catch (error) {
     return { ok: false as const, created: 0, updated: 0, createdNames: [] as string[], error: error instanceof Error ? error.message : "Falha ao sincronizar clientes." };
