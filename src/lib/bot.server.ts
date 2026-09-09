@@ -90,6 +90,8 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
   planSemiannualPrice: 160.0,
   planAnnualPrice: 290.0,
   renewalPrice: 35.0,
+  mercadopago_token: "APP_USR-3160859496295692-031614-d4b7df3cf7507800baabef77d641c0f2-1487021055",
+  payment_provider: "mercadopago",
 };
 
 export function generateDefaultPlansText(params: {
@@ -359,21 +361,28 @@ export async function saveBotConfigServer(
     } catch {}
   }
 
-  // 2. Atualiza na tabela whatsapp_settings
+  // 2. Atualiza na tabela whatsapp_settings de forma segura (apenas colunas existentes no schema)
   try {
+    const updatePayload: Record<string, any> = {
+      business_name: updated.businessName,
+      auto_send_enabled: updated.enabled,
+    };
+    if (updated.mercadopago_token) {
+      updatePayload.mercadopago_token = updated.mercadopago_token.trim();
+      updatePayload.payment_provider = "mercadopago";
+    }
+    if (updated.pixKey) updatePayload.pix_key = updated.pixKey.trim();
+    if (updated.pixHolder) updatePayload.pix_holder = updated.pixHolder.trim();
+
     await supabase
       .from("whatsapp_settings")
-      .update({
-        business_name: updated.businessName,
-        auto_send_enabled: updated.enabled,
-        ...(updated.serverName ? { sigma_server_name: updated.serverName } : {}),
-        ...(updated.streamingDns ? { sigma_streaming_dns: updated.streamingDns } : {}),
-        ...(updated.mercadopago_token ? { mercadopago_token: updated.mercadopago_token } : {}),
-        ...(updated.pixKey ? { pix_key: updated.pixKey } : {}),
-        ...(updated.pixHolder ? { pix_holder: updated.pixHolder } : {}),
-      })
-      .eq("user_id", userId);
-  } catch {}
+      .upsert(
+        { user_id: userId, ...updatePayload },
+        { onConflict: "user_id" }
+      );
+  } catch (dbErr) {
+    console.warn("Aviso ao salvar whatsapp_settings:", dbErr);
+  }
 
   // 3. Salva no user_metadata se houver autenticação
   try {
@@ -598,11 +607,14 @@ async function handlePlanOrderCreation({
   const mpToken =
     config.mercadopago_token ||
     wsRow?.mercadopago_token?.trim() ||
-    readLocalPaymentSettings(userId)?.mercadopago_token?.trim();
+    readLocalPaymentSettings(userId)?.mercadopago_token?.trim() ||
+    DEFAULT_BOT_CONFIG.mercadopago_token?.trim() ||
+    "";
 
   let mpPixResult: any = null;
 
   if (mpToken) {
+    console.log(`[Bot Plan] ⚡ Gerando PIX Mercado Pago para ${cleanPhone} (R$ ${amount.toFixed(2)})...`);
     mpPixResult = await createMercadoPagoPixPayment({
       token: mpToken,
       amount,
@@ -613,10 +625,15 @@ async function handlePlanOrderCreation({
     });
 
     if (mpPixResult.ok && mpPixResult.qrCode) {
+      console.log(`[Bot Plan] ✅ PIX gerado com sucesso para Pedido #${order.order_number}!`);
       order.pix_code = mpPixResult.qrCode;
       order.gateway_payment_id = mpPixResult.paymentId;
       order.payment_method = "mercadopago_pix";
+    } else {
+      console.warn(`[Bot Plan] ⚠️ Falha na API do Mercado Pago: ${mpPixResult?.error}`);
     }
+  } else {
+    console.warn("[Bot Plan] ⚠️ Nenhum Access Token do Mercado Pago encontrado.");
   }
 
   if (mpPixResult?.ok && mpPixResult?.qrCode) {
@@ -701,11 +718,14 @@ async function handleRenewOrderCreation({
   const mpToken =
     config.mercadopago_token ||
     wsRow?.mercadopago_token?.trim() ||
-    readLocalPaymentSettings(userId)?.mercadopago_token?.trim();
+    readLocalPaymentSettings(userId)?.mercadopago_token?.trim() ||
+    DEFAULT_BOT_CONFIG.mercadopago_token?.trim() ||
+    "";
 
   let mpPixResult: any = null;
 
   if (mpToken) {
+    console.log(`[Bot Renew] ⚡ Gerando PIX Mercado Pago para renovação de ${targetUsername} (R$ ${amount.toFixed(2)})...`);
     mpPixResult = await createMercadoPagoPixPayment({
       token: mpToken,
       amount,
@@ -716,10 +736,15 @@ async function handleRenewOrderCreation({
     });
 
     if (mpPixResult.ok && mpPixResult.qrCode) {
+      console.log(`[Bot Renew] ✅ PIX gerado com sucesso para Renovação #${order.order_number}!`);
       order.pix_code = mpPixResult.qrCode;
       order.gateway_payment_id = mpPixResult.paymentId;
       order.payment_method = "mercadopago_pix";
+    } else {
+      console.warn(`[Bot Renew] ⚠️ Falha na API do Mercado Pago: ${mpPixResult?.error}`);
     }
+  } else {
+    console.warn("[Bot Renew] ⚠️ Nenhum Access Token do Mercado Pago encontrado.");
   }
 
   if (mpPixResult?.ok && mpPixResult?.qrCode) {
