@@ -101,8 +101,8 @@ function BotPage() {
   const [form, setForm] = useState({
     enabled: true,
     businessName: "Alpha IPTV",
-    serverName: "Alpha IPTV",
-    streamingDns: "http://alpha-stream.net",
+    serverName: "Alpha server IPTV",
+    streamingDns: "http://karen256.top",
     testEnabled: true,
     testDurationHours: 4,
     testPackageName: "TESTE LISTA IPTV ALPHA COM TODOS CONTEUDOS COM ADULTOS 🔞",
@@ -110,14 +110,14 @@ function BotPage() {
     planMonthlyPrice: 35.0,
     planQuarterlyPrice: 90.0,
     planSemiannualPrice: 160.0,
-    planAnnualPrice: 280.0,
+    planAnnualPrice: 290.0,
     renewalPrice: 35.0,
     menuGreeting: "",
     plansText: "",
     supportMessage: "",
     pixKey: "",
-    pixHolder: "",
-    mercadopago_token: "",
+    pixHolder: "Alpha IPTV",
+    mercadopago_token: "APP_USR-3160859496295692-031614-d4b7df3cf7507800baabef77d641c0f2-1487021055",
     payment_provider: "mercadopago",
   });
 
@@ -161,8 +161,8 @@ function BotPage() {
       setForm({
         enabled: c.enabled ?? true,
         businessName: c.businessName || "Alpha IPTV",
-        serverName: c.serverName || "Alpha IPTV",
-        streamingDns: c.streamingDns || "http://alpha-stream.net",
+        serverName: c.serverName || "Alpha server IPTV",
+        streamingDns: c.streamingDns || "http://karen256.top",
         testEnabled: c.testEnabled ?? true,
         testDurationHours: Number(c.testDurationHours ?? 4),
         testPackageName:
@@ -171,14 +171,15 @@ function BotPage() {
         planMonthlyPrice: Number(c.planMonthlyPrice ?? 35.0),
         planQuarterlyPrice: Number(c.planQuarterlyPrice ?? 90.0),
         planSemiannualPrice: Number(c.planSemiannualPrice ?? 160.0),
-        planAnnualPrice: Number(c.planAnnualPrice ?? 280.0),
+        planAnnualPrice: Number(c.planAnnualPrice ?? 290.0),
         renewalPrice: Number(c.renewalPrice ?? 35.0),
         menuGreeting: c.menuGreeting || "",
         plansText: c.plansText || "",
         supportMessage: c.supportMessage || "",
         pixKey: c.pixKey || "",
-        pixHolder: c.pixHolder || "",
-        mercadopago_token: c.mercadopago_token || "",
+        pixHolder: c.pixHolder || "Alpha IPTV",
+        mercadopago_token:
+          c.mercadopago_token || "APP_USR-3160859496295692-031614-d4b7df3cf7507800baabef77d641c0f2-1487021055",
         payment_provider: c.payment_provider || "mercadopago",
       });
     }
