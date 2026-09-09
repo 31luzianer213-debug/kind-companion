@@ -265,35 +265,8 @@ function unwrapMessage(m: any): any {
                 sendButtonsViaEvolution,
               } = await import("@/lib/billing.server");
 
-              // 1. Se possuir lista interativa ou botões, dispara com fallback automático
-              if (botResult.interactive?.type === "list") {
-                await sendListViaEvolution(
-                  settings ?? {},
-                  destinationJid,
-                  {
-                    title: botResult.interactive.title,
-                    description: botResult.interactive.description || botResult.reply,
-                    buttonText: botResult.interactive.buttonText,
-                    footerText: botResult.interactive.footerText,
-                    sections: botResult.interactive.sections,
-                    fallbackText: botResult.reply,
-                  },
-                  targetUserId,
-                );
-              } else if (botResult.interactive?.type === "buttons") {
-                await sendButtonsViaEvolution(
-                  settings ?? {},
-                  destinationJid,
-                  {
-                    title: botResult.interactive.title,
-                    description: botResult.interactive.description || botResult.reply,
-                    buttons: botResult.interactive.buttons,
-                    footer: botResult.interactive.footer,
-                    fallbackText: botResult.reply,
-                  },
-                  targetUserId,
-                );
-              } else if (botResult.reply) {
+              // Envia a resposta em texto formatado oficial (100% de entrega no WhatsApp sem bloqueio da Meta)
+              if (botResult.reply) {
                 await sendViaEvolution(settings ?? {}, destinationJid, botResult.reply, targetUserId);
               }
 
