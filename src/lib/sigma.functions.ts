@@ -24,51 +24,11 @@ export function extractServerHost(url?: string | null): string {
   }
 }
 
-function getNodeFsAndPath() {
-  try {
-    if (typeof process !== "undefined" && process?.versions?.node) {
-      // Dynamic import in node runtime
-      const fs = require("fs");
-      const path = require("path");
-      return { fs, path };
-    }
-  } catch {}
-  return { fs: null, path: null };
-}
-
-export function readLocalSigmaSettings(userId?: string): any {
-  try {
-    const { fs, path } = getNodeFsAndPath();
-    if (!fs || !path) return null;
-    const safeId = (userId || "default").replace(/[^a-zA-Z0-9_-]/g, "_");
-    const file = path.resolve(process.cwd(), "data", `sigma_settings_${safeId}.json`);
-    if (fs.existsSync(file)) {
-      return JSON.parse(fs.readFileSync(file, "utf-8"));
-    }
-  } catch {}
-  return null;
-}
-
-export function writeLocalSigmaSettings(userId: string | undefined, data: any): void {
-  try {
-    const { fs, path } = getNodeFsAndPath();
-    if (!fs || !path) return;
-    const dir = path.resolve(process.cwd(), "data");
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    const safeId = (userId || "default").replace(/[^a-zA-Z0-9_-]/g, "_");
-    const file = path.join(dir, `sigma_settings_${safeId}.json`);
-    fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
-  } catch {}
-}
-
 /**
- * Carrega a configuração do Sigma com persistência blindada:
+ * Carrega a configuração do Sigma com persistência resiliente:
  * 1) Tenta ler de whatsapp_settings
- * 2) Tenta ler de arquivo local JSON (data/sigma_settings_<userId>.json)
- * 3) Tenta ler de user_metadata / JWT claims
- * 4) Tenta recuperar de iptv_lists
+ * 2) Tenta ler de user_metadata / JWT claims
+ * 3) Tenta recuperar de iptv_lists
  */
 async function loadConfig(supabase: any, userId: string, claims?: any): Promise<
   SigmaConfig & {
@@ -92,27 +52,20 @@ async function loadConfig(supabase: any, userId: string, claims?: any): Promise<
     dbData = null;
   }
 
-  // 1. Tenta ler direto do arquivo JSON local (persistência infalível no container/servidor)
-  const localSigma = readLocalSigmaSettings(userId);
-
-  // 2. Tenta ler o fallback gravado no metadata do usuário (claims do JWT ou auth.getUser)
+  // 1. Tenta ler o fallback gravado no metadata do usuário (claims do JWT ou auth.getUser)
   let userMetaSigma: any = claims?.user_metadata?.sigma_settings ?? null;
   if (!userMetaSigma) {
     try {
-      const { getRequest } = await import("@tanstack/react-start/server");
-      const req = getRequest();
-      const authHeader = req?.headers?.get("authorization");
-      const jwt = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
-      const { data: authUser } = await supabase.auth.getUser(jwt);
+      const { data: authUser } = await supabase.auth.getUser();
       userMetaSigma = authUser?.user?.user_metadata?.sigma_settings ?? null;
     } catch {
       userMetaSigma = null;
     }
   }
 
-  // 3. Tenta também recuperar credenciais salvas na tabela iptv_lists se ausentes
+  // 2. Tenta também recuperar credenciais salvas na tabela iptv_lists se ausentes
   let listCredentials: any = null;
-  if (!dbData?.sigma_password && !localSigma?.sigma_password && !userMetaSigma?.password) {
+  if (!dbData?.sigma_password && !userMetaSigma?.password) {
     try {
       const { data: listRow } = await supabase
         .from("iptv_lists")
@@ -125,16 +78,16 @@ async function loadConfig(supabase: any, userId: string, claims?: any): Promise<
     } catch {}
   }
 
-  const url = (dbData?.sigma_url ?? localSigma?.sigma_url ?? userMetaSigma?.url ?? listCredentials?.server_url ?? "").trim();
-  const server_name = (dbData?.sigma_server_name ?? localSigma?.sigma_server_name ?? userMetaSigma?.server_name ?? "").trim();
-  const streaming_dns = (dbData?.sigma_streaming_dns ?? localSigma?.sigma_streaming_dns ?? userMetaSigma?.streaming_dns ?? "").trim();
+  const url = (dbData?.sigma_url ?? userMetaSigma?.url ?? listCredentials?.server_url ?? "").trim();
+  const server_name = (dbData?.sigma_server_name ?? userMetaSigma?.server_name ?? "").trim();
+  const streaming_dns = (dbData?.sigma_streaming_dns ?? userMetaSigma?.streaming_dns ?? "").trim();
   const server_display_name = server_name || "Servidor Sigma";
-  const username = (dbData?.sigma_username ?? localSigma?.sigma_username ?? userMetaSigma?.username ?? listCredentials?.username ?? "").trim();
-  const password = dbData?.sigma_password ?? localSigma?.sigma_password ?? userMetaSigma?.password ?? listCredentials?.password ?? "";
-  const token = dbData?.sigma_token ?? localSigma?.sigma_token ?? userMetaSigma?.token ?? null;
-  const enabled = Boolean(dbData?.sigma_enabled ?? localSigma?.sigma_enabled ?? userMetaSigma?.enabled ?? false);
-  const auto_renew = Boolean(dbData?.sigma_auto_renew ?? localSigma?.sigma_auto_renew ?? userMetaSigma?.auto_renew ?? false);
-  const last_sync_at = dbData?.sigma_last_sync_at ?? localSigma?.last_sync_at ?? userMetaSigma?.last_sync_at ?? null;
+  const username = (dbData?.sigma_username ?? userMetaSigma?.username ?? listCredentials?.username ?? "").trim();
+  const password = dbData?.sigma_password ?? userMetaSigma?.password ?? listCredentials?.password ?? "";
+  const token = dbData?.sigma_token ?? userMetaSigma?.token ?? null;
+  const enabled = Boolean(dbData?.sigma_enabled ?? userMetaSigma?.enabled ?? false);
+  const auto_renew = Boolean(dbData?.sigma_auto_renew ?? userMetaSigma?.auto_renew ?? false);
+  const last_sync_at = dbData?.sigma_last_sync_at ?? userMetaSigma?.last_sync_at ?? null;
 
   return {
     url,
@@ -290,19 +243,6 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
     } catch (metaErr) {
       console.error("Falha ao salvar no metadata:", metaErr);
     }
-
-    // 6. Grava localmente em arquivo JSON para garantia infalível no backend
-    writeLocalSigmaSettings(userId, {
-      sigma_url: url,
-      sigma_server_name: finalServerName,
-      sigma_streaming_dns: finalStreamingDns,
-      sigma_username: username,
-      sigma_password: password,
-      sigma_token: token,
-      sigma_enabled: enabled,
-      sigma_auto_renew: auto_renew,
-      updated_at: new Date().toISOString(),
-    });
 
     return { ok: true as const };
   });
@@ -505,18 +445,6 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
         });
       } catch {}
 
-      writeLocalSigmaSettings(userId, {
-        sigma_url: url,
-        sigma_server_name: detectedServerName || saved.server_name,
-        sigma_streaming_dns: detectedDns || saved.streaming_dns,
-        sigma_username: username || saved.username,
-        sigma_password: password || saved.password,
-        sigma_token: activeToken,
-        sigma_enabled: true,
-        sigma_auto_renew: saved.auto_renew,
-        updated_at: new Date().toISOString(),
-      });
-
       return {
         ok: true as const,
         error: null,
@@ -543,35 +471,34 @@ export async function runSigmaSyncForUser(
   data?: { url?: string; username?: string; password?: string; token?: string },
   claims?: any,
 ) {
-  const { listSigmaCustomers, ensureSigmaToken } = await import("./sigma.server");
-  const saved = await loadConfig(supabase, userId, claims);
-
-  const panelConfig: SigmaConfig = {
-    url: (data?.url ?? "").trim() || saved.url,
-    username: (data?.username ?? "").trim() || saved.username,
-    password: data?.password !== undefined && data.password !== "" ? data.password : saved.password,
-    token: (data?.token ?? "").trim() || saved.token,
-  };
-
-  if (!hasSigmaAccess(panelConfig)) {
-    return {
-      ok: false as const,
-      created: 0,
-      updated: 0,
-      createdNames: [] as string[],
-      error: "Painel Sigma não configurado. Em Configurações, preencha o endereço, usuário e senha.",
-    };
-  }
-
-  let customers: any[] = [];
-  let detectedServerName: string | null = null;
-  let detectedDns: string | null = null;
-
   try {
-    let token = await ensureSigmaToken(panelConfig);
-    const { fetchSigmaPanelDetails, listSigmaCustomers, sigmaLogin } = await import("./sigma.server");
-    const panelDetails = await fetchSigmaPanelDetails({ ...panelConfig, token });
+    const { listSigmaCustomers, ensureSigmaToken, fetchSigmaPanelDetails, sigmaLogin } = await import("./sigma.server");
+    const saved = await loadConfig(supabase, userId, claims);
 
+    const panelConfig: SigmaConfig = {
+      url: (data?.url ?? "").trim() || saved.url,
+      username: (data?.username ?? "").trim() || saved.username,
+      password: data?.password !== undefined && data.password !== "" ? data.password : saved.password,
+      token: (data?.token ?? "").trim() || saved.token,
+    };
+
+    if (!hasSigmaAccess(panelConfig)) {
+      return {
+        ok: false as const,
+        created: 0,
+        updated: 0,
+        createdNames: [] as string[],
+        error: "Painel Sigma não configurado. Em Configurações -> Servidor Sigma, preencha o endereço, usuário e senha.",
+      };
+    }
+
+    let token = await ensureSigmaToken(panelConfig);
+    let panelDetails: any = { packages: [], dns: null, serverName: null };
+    try {
+      panelDetails = await fetchSigmaPanelDetails({ ...panelConfig, token });
+    } catch {}
+
+    let customers: any[] = [];
     try {
       customers = await listSigmaCustomers({ ...panelConfig, token });
     } catch (listErr) {
@@ -587,15 +514,6 @@ export async function runSigmaSyncForUser(
             try {
               await supabase.from("whatsapp_settings").update({ sigma_token: freshToken }).eq("user_id", userId);
             } catch {}
-            writeLocalSigmaSettings(userId, {
-              sigma_url: panelConfig.url,
-              sigma_username: panelConfig.username,
-              sigma_password: panelConfig.password,
-              sigma_token: freshToken,
-              sigma_streaming_dns: detectedDns || saved.streaming_dns,
-              sigma_server_name: detectedServerName || saved.server_name,
-              updated_at: new Date().toISOString(),
-            });
           } else {
             throw listErr;
           }
@@ -608,10 +526,7 @@ export async function runSigmaSyncForUser(
     }
 
     // 1. Detecta o nome oficial do servidor:
-    // Prioriza os detalhes retornados pelos endpoints do painel
-    detectedServerName = panelDetails.serverName?.trim() || null;
-
-    // Se o painel não retornou o nome via profile/server-info, extrai das linhas de clientes
+    let detectedServerName = panelDetails.serverName?.trim() || null;
     if (!detectedServerName) {
       for (const c of customers) {
         if (c.serverName && !c.serverName.startsWith("http") && !/\.(click|com|net|org|xyz|st|top|io)\b/i.test(c.serverName)) {
@@ -620,14 +535,12 @@ export async function runSigmaSyncForUser(
         }
       }
     }
-
-    // Se ainda não encontrou, checa se há pacotes disponíveis no painel
-    if (!detectedServerName && panelDetails.packages.length > 0) {
+    if (!detectedServerName && panelDetails.packages && panelDetails.packages.length > 0) {
       detectedServerName = panelDetails.packages[0].trim();
     }
 
     // 2. Detecta o DNS oficial de transmissão:
-    detectedDns = panelDetails.dns?.trim() || null;
+    let detectedDns = panelDetails.dns?.trim() || null;
     if (!detectedDns) {
       for (const c of customers) {
         if (c.m3uUrl) {
@@ -700,131 +613,121 @@ export async function runSigmaSyncForUser(
         });
       } catch {}
     }
+
+    const { data: existing } = await supabase
+      .from("clients")
+      .select("id, sigma_customer_id, iptv_username")
+      .eq("user_id", userId);
+
+    const bySigmaId = new Map<string, any>();
+    const byUsername = new Map<string, any>();
+    for (const row of existing ?? []) {
+      if (row.sigma_customer_id) bySigmaId.set(String(row.sigma_customer_id), row);
+      if (row.iptv_username) byUsername.set(String(row.iptv_username).toLowerCase(), row);
+    }
+
+    const now = new Date().toISOString();
+    let created = 0;
+    let updated = 0;
+    const createdNames: string[] = [];
+    const failedNames: string[] = [];
+
+    for (const customer of customers) {
+      const match =
+        bySigmaId.get(customer.id) ??
+        (customer.username ? byUsername.get(customer.username.toLowerCase()) : undefined);
+
+      const dueDay = customer.dueDate ? Number(customer.dueDate.slice(8, 10)) : null;
+      const localStatus = customer.status === "active" ? "active" : customer.status ? "inactive" : "active";
+
+      const effectiveDns = detectedDns || saved.streaming_dns;
+      const directOrGeneratedM3u =
+        customer.m3uUrl ||
+        (effectiveDns && customer.username && customer.password
+          ? generateM3uUrl(effectiveDns, customer.username, customer.password, "ts")
+          : null);
+
+      const noteParts = [
+        customer.notes?.trim(),
+        customer.packageName ? `Pacote: ${customer.packageName}` : null,
+        customer.serverName ? `Servidor: ${customer.serverName}` : null,
+        directOrGeneratedM3u ? `M3U: ${directOrGeneratedM3u}` : null,
+      ].filter(Boolean);
+      const clientNotes = noteParts.length > 0 ? noteParts.join("\n") : null;
+
+      const base: Record<string, any> = {
+        sigma_customer_id: customer.id,
+        sigma_username: customer.username,
+        sigma_synced_at: now,
+        iptv_username: customer.username,
+        iptv_password: customer.password,
+        ...(clientNotes ? { notes: clientNotes } : {}),
+        ...(customer.screens != null ? { screens: customer.screens } : {}),
+        ...(customer.dueDate ? { next_due_date: customer.dueDate } : {}),
+        ...(dueDay ? { due_day: dueDay } : {}),
+      };
+
+      if (match) {
+        const { error } = await supabase
+          .from("clients")
+          .update({ ...base, status: localStatus })
+          .eq("id", match.id)
+          .eq("user_id", userId);
+
+        if (!error) updated++;
+        else failedNames.push(customer.name || customer.username || "Cliente");
+      } else {
+        const clientName = (customer.name?.trim()) || (customer.username?.trim()) || "Cliente Sigma";
+        const clientPhone = (customer.phone ?? "").replace(/\D/g, "");
+        const { error } = await supabase.from("clients").insert({
+          user_id: userId,
+          name: clientName,
+          phone: clientPhone,
+          status: localStatus,
+          monthly_fee: 35.0,
+          ...base,
+        });
+
+        if (!error) {
+          created++;
+          createdNames.push(clientName);
+        } else {
+          failedNames.push(clientName);
+        }
+      }
+    }
+
+    // Registra a data da última sincronização
+    try {
+      await supabase
+        .from("whatsapp_settings")
+        .update({ sigma_last_sync_at: now })
+        .eq("user_id", userId);
+    } catch {
+      // continua mesmo se update falhar
+    }
+
+    return {
+      ok: true as const,
+      created,
+      updated,
+      createdNames,
+      detectedServerName,
+      detectedDns,
+      error: failedNames.length
+        ? `Falha ao importar ${failedNames.length} cliente(s): ${failedNames.slice(0, 3).join(", ")}`
+        : null,
+    };
   } catch (error) {
+    console.error("Erro em runSigmaSyncForUser:", error);
     return {
       ok: false as const,
       created: 0,
       updated: 0,
       createdNames: [] as string[],
-      error: error instanceof Error ? error.message : "Falha ao consultar o painel Sigma.",
+      error: error instanceof Error ? error.message : "Falha ao sincronizar com o painel Sigma.",
     };
   }
-
-  const { data: existing } = await supabase
-    .from("clients")
-    .select("id, sigma_customer_id, iptv_username")
-    .eq("user_id", userId);
-
-  const bySigmaId = new Map<string, any>();
-  const byUsername = new Map<string, any>();
-  for (const row of existing ?? []) {
-    if (row.sigma_customer_id) bySigmaId.set(String(row.sigma_customer_id), row);
-    if (row.iptv_username) byUsername.set(String(row.iptv_username).toLowerCase(), row);
-  }
-
-  const now = new Date().toISOString();
-  let created = 0;
-  let updated = 0;
-  const createdNames: string[] = [];
-  const failedNames: string[] = [];
-
-  for (const customer of customers) {
-    const match =
-      bySigmaId.get(customer.id) ??
-      (customer.username ? byUsername.get(customer.username.toLowerCase()) : undefined);
-
-    const dueDay = customer.dueDate ? Number(customer.dueDate.slice(8, 10)) : null;
-    const localStatus = customer.status === "active" ? "active" : customer.status ? "inactive" : "active";
-
-    const effectiveDns = detectedDns || saved.streaming_dns;
-    const directOrGeneratedM3u =
-      customer.m3uUrl ||
-      (effectiveDns && customer.username && customer.password
-        ? generateM3uUrl(effectiveDns, customer.username, customer.password, "ts")
-        : null);
-
-    const noteParts = [
-      customer.notes?.trim(),
-      customer.packageName ? `Pacote: ${customer.packageName}` : null,
-      customer.serverName ? `Servidor: ${customer.serverName}` : null,
-      directOrGeneratedM3u ? `M3U: ${directOrGeneratedM3u}` : null,
-    ].filter(Boolean);
-    const clientNotes = noteParts.length > 0 ? noteParts.join("\n") : null;
-
-    const base: Record<string, any> = {
-      sigma_customer_id: customer.id,
-      sigma_username: customer.username,
-      sigma_synced_at: now,
-      iptv_username: customer.username,
-      iptv_password: customer.password,
-      ...(clientNotes ? { notes: clientNotes } : {}),
-      ...(customer.screens != null ? { screens: customer.screens } : {}),
-      ...(customer.dueDate ? { next_due_date: customer.dueDate } : {}),
-      ...(dueDay ? { due_day: dueDay } : {}),
-    };
-
-    if (match) {
-      const { error } = await supabase
-        .from("clients")
-        .update({ ...base, status: localStatus })
-        .eq("id", match.id)
-        .eq("user_id", userId);
-
-      if (!error) updated++;
-      else failedNames.push(customer.name || customer.username || "Cliente");
-    } else {
-      const clientName = (customer.name?.trim()) || (customer.username?.trim()) || "Cliente Sigma";
-      const clientPhone = (customer.phone ?? "").replace(/\D/g, "");
-      const { error } = await supabase.from("clients").insert({
-        user_id: userId,
-        name: clientName,
-        phone: clientPhone,
-        status: localStatus,
-        monthly_fee: 35.0,
-        ...base,
-      });
-
-      if (!error) {
-        created++;
-        createdNames.push(clientName);
-      } else {
-        failedNames.push(clientName);
-      }
-    }
-  }
-
-  // Registra a data da última sincronização
-  try {
-    await supabase
-      .from("whatsapp_settings")
-      .update({ sigma_last_sync_at: now })
-      .eq("user_id", userId);
-  } catch {
-    // continua mesmo se update falhar
-  }
-
-  writeLocalSigmaSettings(userId, {
-    sigma_url: panelConfig.url,
-    sigma_username: panelConfig.username,
-    sigma_password: panelConfig.password,
-    sigma_token: token,
-    sigma_streaming_dns: detectedDns || saved.streaming_dns,
-    sigma_server_name: detectedServerName || saved.server_name,
-    last_sync_at: now,
-    updated_at: now,
-  });
-
-  return {
-    ok: true as const,
-    created,
-    updated,
-    createdNames,
-    detectedServerName,
-    detectedDns,
-    error: failedNames.length
-      ? `Falha ao importar ${failedNames.length} cliente(s): ${failedNames.slice(0, 3).join(", ")}`
-      : null,
-  };
 }
 
 /**

@@ -290,8 +290,9 @@ function Painel() {
           },
         });
       }
-    } catch {
-      toast.error("Erro ao sincronizar com o Sigma.", { duration: 8000 });
+    } catch (err: any) {
+      console.error("Erro no handleSyncSigma:", err);
+      toast.error(err?.message ? `Erro: ${err.message}` : "Erro ao sincronizar com o Sigma.", { duration: 8000 });
     } finally {
       setSyncingSigma(false);
     }
