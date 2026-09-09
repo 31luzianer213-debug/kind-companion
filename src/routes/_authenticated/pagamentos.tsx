@@ -239,24 +239,24 @@ function PagamentosPage() {
               onClick={() => setForm({ ...form, payment_provider: "pix" })}
               className={`cursor-pointer rounded-xl p-4 border transition-all relative ${
                 activeProvider === "pix"
-                  ? "border-emerald-500/80 bg-emerald-500/10 shadow-md ring-2 ring-emerald-500/30"
-                  : "border-border/60 bg-card hover:bg-muted/40 opacity-80 hover:opacity-100"
+                  ? "border-white bg-white/10 shadow-md ring-2 ring-white/20 text-white"
+                  : "border-white/10 bg-zinc-950 hover:bg-white/5 opacity-80 hover:opacity-100"
               }`}
             >
               <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2 font-bold text-sm text-foreground">
-                  <QrCode className="size-4 text-emerald-400" />
+                <div className="flex items-center gap-2 font-bold text-sm text-white">
+                  <QrCode className="size-4 text-white" />
                   Chave PIX Direta
                 </div>
                 {activeProvider === "pix" ? (
-                  <CheckCircle2 className="size-5 text-emerald-400" />
+                  <CheckCircle2 className="size-5 text-white" />
                 ) : (
-                  <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                  <Badge variant="outline" className="text-[10px] text-zinc-400 border-white/10">
                     Sem taxas
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <p className="text-xs text-zinc-400 leading-relaxed">
                 Você recebe direto na sua conta bancária. O cliente manda o comprovante e você confirma com 1 clique.
               </p>
             </div>
@@ -266,24 +266,24 @@ function PagamentosPage() {
               onClick={() => setForm({ ...form, payment_provider: "mercadopago" })}
               className={`cursor-pointer rounded-xl p-4 border transition-all relative ${
                 activeProvider === "mercadopago"
-                  ? "border-sky-500/80 bg-sky-500/10 shadow-md ring-2 ring-sky-500/30"
-                  : "border-border/60 bg-card hover:bg-muted/40 opacity-80 hover:opacity-100"
+                  ? "border-white bg-white/10 shadow-md ring-2 ring-white/20 text-white"
+                  : "border-white/10 bg-zinc-950 hover:bg-white/5 opacity-80 hover:opacity-100"
               }`}
             >
               <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2 font-bold text-sm text-foreground">
-                  <Wallet className="size-4 text-sky-400" />
+                <div className="flex items-center gap-2 font-bold text-sm text-white">
+                  <Wallet className="size-4 text-white" />
                   Mercado Pago
                 </div>
                 {activeProvider === "mercadopago" ? (
-                  <CheckCircle2 className="size-5 text-sky-400" />
+                  <CheckCircle2 className="size-5 text-white" />
                 ) : (
-                  <Badge variant="outline" className="text-[10px] text-sky-400 border-sky-400/30">
+                  <Badge variant="outline" className="text-[10px] text-white border-white/20">
                     Automático
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <p className="text-xs text-zinc-400 leading-relaxed">
                 Renovação 100% automática no Sigma via Webhook assim que o cliente efetuar o pagamento.
               </p>
             </div>
@@ -293,24 +293,24 @@ function PagamentosPage() {
               onClick={() => setForm({ ...form, payment_provider: "asaas" })}
               className={`cursor-pointer rounded-xl p-4 border transition-all relative ${
                 activeProvider === "asaas"
-                  ? "border-primary/80 bg-primary/10 shadow-md ring-2 ring-primary/30"
-                  : "border-border/60 bg-card hover:bg-muted/40 opacity-80 hover:opacity-100"
+                  ? "border-white bg-white/10 shadow-md ring-2 ring-white/20 text-white"
+                  : "border-white/10 bg-zinc-950 hover:bg-white/5 opacity-80 hover:opacity-100"
               }`}
             >
               <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2 font-bold text-sm text-foreground">
-                  <Building className="size-4 text-primary" />
+                <div className="flex items-center gap-2 font-bold text-sm text-white">
+                  <Building className="size-4 text-white" />
                   Asaas
                 </div>
                 {activeProvider === "asaas" ? (
-                  <CheckCircle2 className="size-5 text-primary" />
+                  <CheckCircle2 className="size-5 text-white" />
                 ) : (
-                  <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
+                  <Badge variant="outline" className="text-[10px] text-zinc-400 border-white/10">
                     Boleto/Cartão
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <p className="text-xs text-zinc-400 leading-relaxed">
                 Cobranças bancárias completas (PIX, Boleto e Cartão de Crédito) para empresas.
               </p>
             </div>
@@ -321,20 +321,20 @@ function PagamentosPage() {
         {/* VISÃO CONDICIONAL 1: SOMENTE PIX DIRETO                                            */}
         {/* -------------------------------------------------------------------------------- */}
         {activeProvider === "pix" && (
-          <Card className="surface-card border-emerald-500/30 shadow-sm animate-in fade-in duration-200">
-            <CardHeader className="pb-3 border-b border-border/50">
+          <Card className="surface-card border-white/15 bg-zinc-950 shadow-sm animate-in fade-in duration-200">
+            <CardHeader className="pb-3 border-b border-white/10">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
-                    <QrCode className="size-5 text-emerald-400" />
+                  <CardTitle className="text-base flex items-center gap-2 text-white">
+                    <QrCode className="size-5 text-white" />
                     Dados da sua Chave PIX
                   </CardTitle>
-                  <CardDescription className="mt-1">
+                  <CardDescription className="mt-1 text-zinc-400">
                     Preencha sua chave para que o robô envie diretamente aos clientes pelo WhatsApp.
                   </CardDescription>
                 </div>
                 {form.pix_key ? (
-                  <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs">
+                  <Badge className="bg-white text-black font-extrabold border-0 text-xs">
                     Ativa
                   </Badge>
                 ) : null}
@@ -376,10 +376,10 @@ function PagamentosPage() {
                       <button
                         type="button"
                         onClick={handleCopyPix}
-                        className="absolute right-2.5 text-muted-foreground hover:text-foreground"
+                        className="absolute right-2.5 text-zinc-400 hover:text-white"
                         title="Copiar Chave PIX"
                       >
-                        {copiedPix ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
+                        {copiedPix ? <Check className="size-4 text-white" /> : <Copy className="size-4" />}
                       </button>
                     ) : null}
                   </div>
@@ -396,7 +396,7 @@ function PagamentosPage() {
                     onChange={(e) => setForm({ ...form, pix_holder: e.target.value })}
                     className="rounded-xl text-sm"
                   />
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-[11px] text-zinc-400">
                     Aparece na mensagem para o cliente saber o nome do recebedor antes de transferir.
                   </p>
                 </div>
@@ -410,7 +410,7 @@ function PagamentosPage() {
                     onChange={(e) => setForm({ ...form, payment_link: e.target.value })}
                     className="rounded-xl text-sm font-mono"
                   />
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-[11px] text-zinc-400">
                     Caso queira enviar um link direto do seu banco além da chave PIX.
                   </p>
                 </div>
@@ -418,14 +418,14 @@ function PagamentosPage() {
 
               {/* Preview em Tempo Real */}
               {form.pix_key ? (
-                <div className="mt-3 p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+                <div className="mt-3 p-3.5 rounded-xl bg-zinc-900 border border-white/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
                   <div className="space-y-0.5">
-                    <span className="font-semibold text-emerald-400 flex items-center gap-1.5">
+                    <span className="font-semibold text-white flex items-center gap-1.5">
                       <QrCode className="size-3.5" />
                       Como os clientes verão no WhatsApp:
                     </span>
-                    <p className="font-mono text-muted-foreground text-[11px]">
-                      PIX ({form.pix_key_type?.toUpperCase()}): <strong className="text-foreground">{form.pix_key}</strong>
+                    <p className="font-mono text-zinc-400 text-[11px]">
+                      PIX ({form.pix_key_type?.toUpperCase()}): <strong className="text-white">{form.pix_key}</strong>
                       {form.pix_holder ? ` • Titular: ${form.pix_holder}` : ""}
                     </p>
                   </div>
@@ -434,9 +434,9 @@ function PagamentosPage() {
                     variant="outline"
                     size="sm"
                     onClick={handleCopyPix}
-                    className="h-8 text-xs gap-1.5 shrink-0 self-start sm:self-auto border-emerald-500/30 hover:bg-emerald-500/10"
+                    className="h-8 text-xs gap-1.5 shrink-0 self-start sm:self-auto border-white/20 text-white hover:bg-white/10"
                   >
-                    {copiedPix ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                    {copiedPix ? <Check className="size-3 text-white" /> : <Copy className="size-3" />}
                     {copiedPix ? "Chave Copiada!" : "Testar Cópia"}
                   </Button>
                 </div>
@@ -449,19 +449,19 @@ function PagamentosPage() {
         {/* VISÃO CONDICIONAL 2: SOMENTE MERCADO PAGO                                         */}
         {/* -------------------------------------------------------------------------------- */}
         {activeProvider === "mercadopago" && (
-          <Card className="surface-card border-sky-500/30 shadow-sm animate-in fade-in duration-200">
-            <CardHeader className="pb-3 border-b border-border/50">
+          <Card className="surface-card border-white/15 bg-zinc-950 shadow-sm animate-in fade-in duration-200">
+            <CardHeader className="pb-3 border-b border-white/10">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
-                    <Wallet className="size-5 text-sky-400" />
+                  <CardTitle className="text-base flex items-center gap-2 text-white">
+                    <Wallet className="size-5 text-white" />
                     Mercado Pago (Renovação Automática no Sigma)
                   </CardTitle>
-                  <CardDescription className="mt-1">
+                  <CardDescription className="mt-1 text-zinc-400">
                     Basta colar seu Access Token. O sistema gera cobranças e renova o acesso no Sigma na hora!
                   </CardDescription>
                 </div>
-                <Badge className="bg-sky-500/10 text-sky-400 border-sky-500/30 text-xs">
+                <Badge className="bg-white text-black font-extrabold border-0 text-xs">
                   Automático
                 </Badge>
               </div>
@@ -470,15 +470,15 @@ function PagamentosPage() {
               {/* Campo do Token do Mercado Pago */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold flex items-center gap-1.5">
-                    <Lock className="size-3.5 text-sky-400" />
+                  <Label className="text-xs font-semibold flex items-center gap-1.5 text-white">
+                    <Lock className="size-3.5 text-white" />
                     Access Token de Produção do Mercado Pago *
                   </Label>
                   <a
                     href="https://www.mercadopago.com.br/developers/panel/app"
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                    className="text-xs text-zinc-300 hover:text-white underline flex items-center gap-1 font-medium"
                   >
                     Onde pegar meu Token? <ExternalLink className="size-3" />
                   </a>
@@ -501,7 +501,7 @@ function PagamentosPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowMpToken(!showMpToken)}
-                      className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                      className="h-7 px-2 text-zinc-400 hover:text-white"
                       title={showMpToken ? "Ocultar" : "Mostrar"}
                     >
                       {showMpToken ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
@@ -518,7 +518,7 @@ function PagamentosPage() {
                   size="sm"
                   onClick={handleTestMercadoPago}
                   disabled={testingMp || !form.mercadopago_token}
-                  className="gap-2 font-medium text-xs border-sky-500/30 hover:bg-sky-500/10 text-sky-400"
+                  className="gap-2 font-medium text-xs border-white/20 hover:bg-white/10 text-white"
                 >
                   {testingMp ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5" />}
                   Testar Conexão com Mercado Pago
@@ -528,8 +528,8 @@ function PagamentosPage() {
                   <div
                     className={`p-2 px-3 rounded-lg border text-xs flex items-center gap-2 flex-1 ${
                       mpStatus.ok
-                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                        : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+                        ? "bg-white/10 border-white/30 text-white"
+                        : "bg-zinc-900 border-zinc-700 text-zinc-300"
                     }`}
                   >
                     {mpStatus.ok ? (
@@ -543,12 +543,12 @@ function PagamentosPage() {
               </div>
 
               {/* Passo a Passo: URL do Webhook */}
-              <div className="rounded-xl bg-muted/40 border border-border/60 p-4 space-y-3">
-                <div className="flex items-center gap-2 text-foreground font-semibold text-xs">
-                  <Sparkles className="size-4 text-amber-400" />
+              <div className="rounded-xl bg-zinc-900/50 border border-white/10 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-white font-semibold text-xs">
+                  <Sparkles className="size-4 text-white" />
                   Como ativar a renovação automática no Sigma quando o cliente pagar:
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-zinc-400">
                   No painel do <strong>Mercado Pago Developers</strong>, vá em <strong>Webhooks</strong> e cole o endereço abaixo marcando o evento <strong>Pagamentos (payments)</strong>:
                 </p>
 
@@ -556,21 +556,21 @@ function PagamentosPage() {
                   <Input
                     readOnly
                     value={mpWebhookUrl}
-                    className="font-mono text-xs bg-background/80 rounded-xl"
+                    className="font-mono text-xs bg-black rounded-xl border-white/20 text-white"
                   />
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => handleCopyWebhook(mpWebhookUrl)}
-                    className="shrink-0 text-xs gap-1.5 h-9"
+                    className="shrink-0 text-xs gap-1.5 h-9 border-white/20 text-white hover:bg-white/10"
                   >
-                    {copiedWebhook ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
+                    {copiedWebhook ? <Check className="size-3.5 text-white" /> : <Copy className="size-3.5" />}
                     {copiedWebhook ? "Copiado!" : "Copiar Webhook"}
                   </Button>
                 </div>
-                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                  <span className="text-amber-400">💡</span>
+                <p className="text-[11px] text-zinc-400 flex items-center gap-1.5">
+                  <span className="text-white">💡</span>
                   Nota: Para o Mercado Pago enviar as notificações de pagamento aprovado automaticamente, seu site precisa estar publicado online com HTTPS (caso esteja rodando no localhost, use o link da sua hospedagem / Lovable Cloud).
                 </p>
               </div>
@@ -582,19 +582,19 @@ function PagamentosPage() {
         {/* VISÃO CONDICIONAL 3: SOMENTE ASAAS                                               */}
         {/* -------------------------------------------------------------------------------- */}
         {activeProvider === "asaas" && (
-          <Card className="surface-card border-primary/30 shadow-sm animate-in fade-in duration-200">
-            <CardHeader className="pb-3 border-b border-border/50">
+          <Card className="surface-card border-white/15 bg-zinc-950 shadow-sm animate-in fade-in duration-200">
+            <CardHeader className="pb-3 border-b border-white/10">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
-                    <Building className="size-5 text-primary" />
+                  <CardTitle className="text-base flex items-center gap-2 text-white">
+                    <Building className="size-5 text-white" />
                     Configuração do Asaas
                   </CardTitle>
-                  <CardDescription className="mt-1">
+                  <CardDescription className="mt-1 text-zinc-400">
                     Emita cobranças via Asaas com baixa automática por webhook.
                   </CardDescription>
                 </div>
-                <Badge className="bg-primary/10 text-primary border-primary/30 text-xs">
+                <Badge className="bg-white/10 text-white border-white/20 text-xs">
                   Asaas API
                 </Badge>
               </div>
@@ -602,8 +602,8 @@ function PagamentosPage() {
             <CardContent className="space-y-4 pt-4">
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-1.5 sm:col-span-2">
-                  <Label className="text-xs font-semibold flex items-center gap-1.5">
-                    <Lock className="size-3.5 text-primary" /> Chave de API (Token Asaas) *
+                  <Label className="text-xs font-semibold flex items-center gap-1.5 text-white">
+                    <Lock className="size-3.5 text-white" /> Chave de API (Token Asaas) *
                   </Label>
                   <div className="relative flex items-center">
                     <Input
@@ -622,7 +622,7 @@ function PagamentosPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowAsaasToken(!showAsaasToken)}
-                      className="absolute right-1 size-7 text-muted-foreground hover:text-foreground"
+                      className="absolute right-1 size-7 text-zinc-400 hover:text-white"
                     >
                       {showAsaasToken ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
                     </Button>
@@ -657,7 +657,7 @@ function PagamentosPage() {
                   size="sm"
                   onClick={handleTestAsaas}
                   disabled={testingAsaas || !form.asaas_token}
-                  className="gap-2 font-medium text-xs border-primary/30 hover:bg-primary/10 text-primary"
+                  className="gap-2 font-medium text-xs border-white/20 hover:bg-white/10 text-white"
                 >
                   {testingAsaas ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5" />}
                   Testar Conexão com Asaas
@@ -667,8 +667,8 @@ function PagamentosPage() {
                   <div
                     className={`p-2 px-3 rounded-lg border text-xs flex items-center gap-2 flex-1 ${
                       asaasStatus.ok
-                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                        : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+                        ? "bg-white/10 border-white/30 text-white"
+                        : "bg-zinc-900 border-zinc-700 text-zinc-300"
                     }`}
                   >
                     {asaasStatus.ok ? (
@@ -685,15 +685,15 @@ function PagamentosPage() {
         )}
 
         {/* Rodapé com botão principal de Salvar */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-border/60">
-          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Info className="size-4 text-primary shrink-0" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-white/10">
+          <p className="text-xs text-zinc-400 flex items-center gap-1.5">
+            <Info className="size-4 text-white shrink-0" />
             As alterações são salvas com criptografia e sincronizadas com a régua de cobrança.
           </p>
           <Button
             type="submit"
             disabled={save.isPending}
-            className="gap-2 font-semibold bg-primary text-primary-foreground shadow-md px-6 hover-lift"
+            className="gap-2 font-bold bg-white text-black hover:bg-zinc-200 border-0 shadow-md px-6"
           >
             {save.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
             Salvar Forma de Pagamento

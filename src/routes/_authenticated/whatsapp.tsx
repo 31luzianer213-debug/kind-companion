@@ -44,10 +44,10 @@ export const Route = createFileRoute("/_authenticated/whatsapp")({
 });
 
 const stateLabels: Record<string, { label: string; tone: string }> = {
-  open: { label: "Conectado", tone: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
-  connecting: { label: "Aguardando leitura", tone: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-  close: { label: "Desconectado", tone: "bg-rose-500/15 text-rose-400 border-rose-500/30" },
-  none: { label: "Sem sessão iniciada", tone: "bg-muted text-muted-foreground border-border" },
+  open: { label: "Conectado", tone: "bg-white text-black font-extrabold border border-white" },
+  connecting: { label: "Aguardando leitura", tone: "border border-white/20 bg-white/5 text-zinc-300 font-semibold" },
+  close: { label: "Desconectado", tone: "border border-zinc-700 bg-zinc-900 text-zinc-400" },
+  none: { label: "Sem sessão iniciada", tone: "bg-zinc-900 text-zinc-400 border-zinc-800" },
 };
 
 function WhatsAppPage() {
@@ -175,10 +175,10 @@ function WhatsAppPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <MessageCircle className="size-6 text-emerald-400" /> WhatsApp Conexão & Disparos
+              <MessageCircle className="size-6 text-white" /> WhatsApp Conexão & Disparos
             </h1>
             <Badge variant="outline" className={`text-xs gap-1.5 ${badge.tone}`}>
-              <span className={`size-1.5 rounded-full ${isConnected ? "bg-emerald-400 animate-pulse" : "bg-zinc-500"}`} />
+              <span className={`size-1.5 rounded-full ${isConnected ? "bg-white animate-pulse" : "bg-zinc-500"}`} />
               {badge.label}
             </Badge>
           </div>
@@ -192,10 +192,10 @@ function WhatsAppPage() {
             asChild
             variant="outline"
             size="sm"
-            className="gap-1.5 shadow-sm"
+            className="gap-1.5 shadow-sm border-white/20 text-white hover:bg-white/10"
           >
             <Link to="/mensagens">
-              <Sparkles className="size-3.5 text-primary" />
+              <Sparkles className="size-3.5 text-white" />
               Editar Modelos de Mensagem
             </Link>
           </Button>
@@ -207,7 +207,7 @@ function WhatsAppPage() {
         <Card className="surface-card border-border/60">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <QrCode className="size-4 text-primary" /> Conexão do Aparelho
+              <QrCode className="size-4 text-white" /> Conexão do Aparelho
             </CardTitle>
             <CardDescription>
               Escaneie o QR Code com seu WhatsApp para conectar a conta ao sistema.
@@ -216,7 +216,7 @@ function WhatsAppPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/20 p-3.5">
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl ${isConnected ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"}`}>
+                <div className={`p-2 rounded-xl ${isConnected ? "bg-white/10 text-white border border-white/20" : "bg-zinc-800 text-zinc-300"}`}>
                   <Smartphone className="size-5" />
                 </div>
                 <div>
@@ -233,7 +233,7 @@ function WhatsAppPage() {
                       size="sm"
                       onClick={() => gerarQr(true)}
                       disabled={busy}
-                      className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                      className="gap-1.5 text-xs border-white/20 text-white hover:bg-white/10"
                       title="Remove a conexão atual e gera um novo QR Code"
                     >
                       <QrCode className="size-3.5" />
@@ -244,7 +244,7 @@ function WhatsAppPage() {
                       size="sm"
                       onClick={desconectar}
                       disabled={busy}
-                      className="text-rose-400 hover:text-rose-300 gap-1.5 border-rose-500/30 hover:bg-rose-500/10"
+                      className="text-zinc-400 hover:text-white gap-1.5 border-zinc-700 hover:bg-zinc-800"
                     >
                       <Unplug className="size-3.5" />
                       Desconectar e Remover
@@ -258,7 +258,7 @@ function WhatsAppPage() {
                         size="sm"
                         onClick={desconectar}
                         disabled={busy}
-                        className="text-muted-foreground hover:text-rose-400 gap-1.5"
+                        className="text-muted-foreground hover:text-white gap-1.5"
                         title="Remove a instância atual da VPS"
                       >
                         <Trash2 className="size-3.5" />
@@ -269,9 +269,9 @@ function WhatsAppPage() {
                       size="sm"
                       onClick={() => gerarQr(true)}
                       disabled={busy}
-                      className="gap-1.5 bg-primary text-primary-foreground font-medium"
+                      className="gap-1.5 bg-white text-black hover:bg-zinc-200 font-bold border-0"
                     >
-                      {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Plug className="size-3.5" />}
+                      {busy ? <Loader2 className="size-3.5 animate-spin text-black" /> : <Plug className="size-3.5" />}
                       {qr ? "Gerar Novo QR Code" : "Conectar WhatsApp"}
                     </Button>
                   </>
@@ -279,16 +279,16 @@ function WhatsAppPage() {
               </div>
             </div>
 
-            <div className="flex items-start gap-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-300">
-              <Sparkles className="size-4 shrink-0 text-emerald-400 mt-0.5" />
+            <div className="flex items-start gap-2.5 rounded-xl border border-white/20 bg-white/5 p-3 text-xs text-zinc-300">
+              <Sparkles className="size-4 shrink-0 text-white mt-0.5" />
               <div>
-                <strong className="text-emerald-200">Conexão Inteligente:</strong> Ao escanear o QR Code, sua conta é conectada e o Robô de Atendimento já é ativado de forma 100% automática.
+                <strong className="text-white">Conexão Inteligente:</strong> Ao escanear o QR Code, sua conta é conectada e o Robô de Atendimento já é ativado de forma 100% automática.
               </div>
             </div>
 
             {/* Visualizador do QR Code */}
             {qr && !isConnected ? (
-              <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-primary/40 bg-card p-6 text-center space-y-3">
+              <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/20 bg-card p-6 text-center space-y-3">
                 <div className="p-3 bg-white rounded-2xl shadow-lg">
                   <img
                     src={qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`}
@@ -304,8 +304,8 @@ function WhatsAppPage() {
                 </div>
               </div>
             ) : isConnected ? (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-8 text-center space-y-2">
-                <div className="size-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-white/20 bg-white/5 p-8 text-center space-y-2">
+                <div className="size-12 rounded-full bg-white/10 text-white flex items-center justify-center border border-white/20">
                   <CheckCircle2 className="size-6" />
                 </div>
                 <p className="text-sm font-bold text-foreground">WhatsApp Conectado e Pronto!</p>
@@ -327,7 +327,7 @@ function WhatsAppPage() {
         <Card className="surface-card border-border/60 flex flex-col">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Send className="size-4 text-emerald-400" /> Disparo de Teste
+              <Send className="size-4 text-white" /> Disparo de Teste
             </CardTitle>
             <CardDescription>
               Envie uma mensagem instantânea para o seu próprio número e valide a entrega imediata.
@@ -352,7 +352,7 @@ function WhatsAppPage() {
 
               <div className="rounded-xl border border-border/60 bg-muted/20 p-3 text-xs space-y-1 text-muted-foreground">
                 <p className="font-semibold text-foreground flex items-center gap-1">
-                  <Sparkles className="size-3.5 text-primary" /> Mensagem padrão de validação:
+                  <Sparkles className="size-3.5 text-white" /> Mensagem padrão de validação:
                 </p>
                 <p className="italic">
                   "🚀 Mensagem de Teste do IPTV Manager! Seu WhatsApp está 100% conectado e integrado ao Painel Sigma..."
@@ -362,9 +362,9 @@ function WhatsAppPage() {
               <Button
                 type="submit"
                 disabled={sendingTest || !isConnected}
-                className="w-full gap-1.5 font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="w-full gap-1.5 font-bold bg-white text-black hover:bg-zinc-200 border-0 shadow-sm"
               >
-                {sendingTest ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                {sendingTest ? <Loader2 className="size-4 animate-spin text-black" /> : <Send className="size-4" />}
                 {isConnected ? "Enviar Mensagem de Teste" : "Conecte o WhatsApp para Testar"}
               </Button>
             </form>

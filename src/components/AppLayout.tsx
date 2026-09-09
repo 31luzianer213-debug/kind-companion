@@ -120,10 +120,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <SigmaLogo size="md" />
       <div className="leading-tight">
         <div className="flex items-center gap-1.5">
-          <span className="text-[15px] font-black tracking-tight text-foreground group-hover:text-primary transition-colors">
+          <span className="text-[15px] font-black tracking-tight text-foreground group-hover:text-white transition-colors">
             Painel Sigma
           </span>
-          <span className="rounded-md bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-cyan-400 border border-cyan-500/30">
+          <span className="rounded-md bg-white text-black px-1.5 py-0.5 text-[9px] font-black tracking-wider">
             PRO
           </span>
         </div>
@@ -140,19 +140,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
       className={cn(
         "group flex items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-xs font-medium transition-all",
         isWaConnected
-          ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15"
-          : "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15",
+          ? "border-white/20 bg-white/5 text-white hover:bg-white/10"
+          : "border-white/10 bg-white/[0.02] text-zinc-400 hover:bg-white/5",
       )}
     >
       <div className="flex items-center gap-2">
         <span className="relative flex h-2 w-2">
           {isWaConnected && (
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
           )}
           <span
             className={cn(
               "relative inline-flex h-2 w-2 rounded-full",
-              isWaConnected ? "bg-emerald-500" : "bg-amber-500",
+              isWaConnected ? "bg-white" : "bg-zinc-600",
             )}
           />
         </span>
@@ -190,14 +190,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
             className={cn(
               "group flex items-center gap-3 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all duration-200",
               active
-                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                : "text-muted-foreground hover:bg-accent/80 hover:text-foreground",
+                ? "bg-white text-black font-bold shadow-sm"
+                : "text-zinc-400 hover:bg-white/10 hover:text-white",
             )}
           >
             <Icon
               className={cn(
                 "h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110",
-                active ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground",
+                active ? "text-black" : "text-zinc-400 group-hover:text-white",
               )}
             />
             <span className="flex-1 truncate">{label}</span>
@@ -206,19 +206,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[10px] font-black tracking-wide",
                   badgeKey === "orders"
-                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.3)]"
+                    ? "bg-white text-black font-extrabold border border-white"
                     : isOverdue
-                    ? "bg-destructive/90 text-destructive-foreground animate-pulse"
+                    ? "bg-zinc-800 text-white font-bold border border-white/20"
                     : active
-                    ? "bg-primary-foreground/20 text-primary-foreground"
-                    : "bg-muted text-muted-foreground",
+                    ? "bg-black text-white font-bold"
+                    : "bg-white/10 text-white",
                 )}
               >
                 {badgeCount}
               </span>
             )}
             {active && badgeCount === null && (
-              <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground/90" />
+              <span className="h-1.5 w-1.5 rounded-full bg-black" />
             )}
           </Link>
         );
@@ -232,7 +232,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       <div className="rounded-2xl border border-border/60 bg-card/70 p-3 shadow-sm backdrop-blur-sm">
         <div className="flex items-center gap-2.5">
-          <div className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-xs font-bold text-primary ring-1 ring-primary/20">
+          <div className="grid h-8 w-8 place-items-center rounded-xl bg-white text-xs font-bold text-black ring-1 ring-white/20">
             {(email?.[0] ?? "U").toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">

@@ -195,17 +195,17 @@ function Painel() {
       {
         name: "Recebido",
         valor: totalPaid,
-        fill: "var(--color-primary)",
+        fill: "#ffffff",
       },
       {
         name: "Em Aberto",
         valor: totalPending,
-        fill: "oklch(0.72 0.13 200)",
+        fill: "#a1a1aa",
       },
       {
         name: "Atrasado",
         valor: totalOverdue,
-        fill: "oklch(0.58 0.21 25)",
+        fill: "#52525b",
       },
     ];
   }, [totalPaid, totalPending, totalOverdue]);
@@ -295,13 +295,13 @@ function Painel() {
           <Button
             asChild
             variant="outline"
-            className="rounded-xl border-amber-500/30 text-amber-400 hover:bg-amber-500/10 font-bold gap-2 shadow-sm"
+            className="rounded-xl border-white/20 text-white hover:bg-white/10 font-bold gap-2 shadow-sm"
           >
             <Link to="/pedidos">
               <ShoppingBag className="h-4 w-4" />
               Pedidos & PIX
               {pendingOrders.length > 0 && (
-                <span className="rounded-full bg-amber-500/20 px-1.5 py-0.2 text-[10px] font-black text-amber-400 animate-pulse">
+                <span className="rounded-full bg-white text-black px-1.5 py-0.2 text-[10px] font-black">
                   {pendingOrders.length}
                 </span>
               )}
@@ -321,7 +321,7 @@ function Painel() {
           <Button
             onClick={runBilling}
             disabled={running}
-            className="rounded-xl font-bold gap-2 shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30"
+            className="rounded-xl font-bold gap-2 bg-white text-black hover:bg-zinc-200 border-0 transition-all shadow-sm"
           >
             {running ? <Clock3 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {running ? "Disparando..." : "Rodar Cobranças do Dia"}
@@ -338,7 +338,7 @@ function Painel() {
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Receita Prevista
               </span>
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-white border border-white/20">
                 <Wallet className="h-5 w-5" />
               </span>
             </div>
@@ -347,10 +347,10 @@ function Painel() {
             </p>
             <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
               <span>{activeClients.length} clientes ativos</span>
-              <span className="font-semibold text-primary">Ticket: {formatBRL(ticketMedio)}</span>
+              <span className="font-semibold text-white">Ticket: {formatBRL(ticketMedio)}</span>
             </div>
           </CardContent>
-          <div className="h-1 w-full bg-gradient-to-r from-primary to-chart-2" />
+          <div className="h-1 w-full bg-gradient-to-r from-white to-zinc-600" />
         </Card>
 
         {/* Receita Já Recebida */}
@@ -360,7 +360,7 @@ function Painel() {
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Recebido Este Mês
               </span>
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-500/10 text-emerald-500">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-white border border-white/20">
                 <CheckCircle2 className="h-5 w-5" />
               </span>
             </div>
@@ -369,10 +369,10 @@ function Painel() {
             </p>
             <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
               <span>{paidInvoices.length} faturas quitadas</span>
-              <span className="font-semibold text-emerald-500">Liquidado</span>
+              <span className="font-semibold text-white">Liquidado</span>
             </div>
           </CardContent>
-          <div className="h-1 w-full bg-gradient-to-r from-emerald-500 to-teal-400" />
+          <div className="h-1 w-full bg-gradient-to-r from-white to-zinc-500" />
         </Card>
 
         {/* Em Aberto / Atrasadas */}
@@ -382,7 +382,7 @@ function Painel() {
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Em Aberto / Atraso
               </span>
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-destructive/10 text-destructive">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-zinc-800 text-white border border-white/10">
                 <AlertTriangle className="h-5 w-5" />
               </span>
             </div>
@@ -391,12 +391,12 @@ function Painel() {
             </p>
             <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
               <span>{overdueInvoices.length} faturas vencidas</span>
-              <span className="font-semibold text-destructive">
+              <span className="font-semibold text-zinc-300">
                 {overdueInvoices.length > 0 ? "Cobrança ativa" : "Tudo em dia"}
               </span>
             </div>
           </CardContent>
-          <div className="h-1 w-full bg-gradient-to-r from-destructive to-amber-500" />
+          <div className="h-1 w-full bg-gradient-to-r from-zinc-500 to-zinc-800" />
         </Card>
 
         {/* Painel Sigma & Servidor */}
@@ -406,7 +406,7 @@ function Painel() {
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Painel Sigma
               </span>
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-white border border-white/20">
                 <Server className="h-5 w-5" />
               </span>
             </div>
@@ -415,12 +415,12 @@ function Painel() {
             </p>
             <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
               <span>{sigmaClients.length} linhas vinculadas</span>
-              <Link to="/sigma" className="font-semibold text-primary hover:underline flex items-center gap-0.5">
+              <Link to="/sigma" className="font-semibold text-white hover:underline flex items-center gap-0.5">
                 Servidor <ArrowUpRight className="h-3 w-3" />
               </Link>
             </div>
           </CardContent>
-          <div className="h-1 w-full bg-gradient-to-r from-primary to-indigo-500" />
+          <div className="h-1 w-full bg-gradient-to-r from-white to-zinc-700" />
         </Card>
       </div>
 
@@ -429,13 +429,13 @@ function Painel() {
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/40 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30">
+              <span className="grid h-8 w-8 place-items-center rounded-xl bg-white/10 text-white border border-white/20">
                 <ShoppingBag className="h-4 w-4" />
               </span>
               <CardTitle className="text-lg font-black tracking-tight text-white flex items-center gap-2">
                 Pedidos do Robô & Liberação 1-Clique
                 {pendingOrders.length > 0 && (
-                  <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black animate-pulse">
+                  <Badge className="bg-white text-black border border-white text-[10px] font-black">
                     {pendingOrders.length} aguardando PIX
                   </Badge>
                 )}
@@ -466,19 +466,19 @@ function Painel() {
                 return (
                   <div
                     key={order.id}
-                    className="flex flex-col justify-between rounded-2xl border border-border/70 bg-card/70 p-4 transition-all hover:border-primary/40 hover:bg-card shadow-sm"
+                    className="flex flex-col justify-between rounded-2xl border border-border/70 bg-card/70 p-4 transition-all hover:border-white/40 hover:bg-card shadow-sm"
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-xs font-black text-cyan-400">
+                        <span className="font-mono text-xs font-black text-white">
                           #{order.order_number}
                         </span>
                         {isPending ? (
-                          <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
+                          <Badge className="border border-white/20 bg-white/5 text-zinc-300 text-[9px] font-bold">
                             ⏳ Aguardando
                           </Badge>
                         ) : isApproved ? (
-                          <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] font-bold">
+                          <Badge className="border border-white/30 bg-white/10 text-white text-[9px] font-bold">
                             ✅ Liberado
                           </Badge>
                         ) : (
@@ -509,20 +509,20 @@ function Painel() {
                           size="sm"
                           onClick={() => approveMutation.mutate(order.id)}
                           disabled={approveMutation.isPending}
-                          className="w-full h-8 text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20"
+                          className="w-full h-8 text-xs font-extrabold bg-white text-black hover:bg-zinc-200 border-0 shadow-sm"
                           title="Aprovar e liberar linha no Sigma e WhatsApp agora"
                         >
                           {approveMutation.isPending ? (
                             <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1" />
                           ) : (
-                            <Zap className="h-3.5 w-3.5 fill-white mr-1" />
+                            <Zap className="h-3.5 w-3.5 fill-black text-black mr-1" />
                           )}
                           Liberar Agora
                         </Button>
                       ) : (
-                        <Button asChild size="sm" variant="ghost" className="w-full h-8 text-xs text-muted-foreground hover:text-foreground">
+                        <Button asChild size="sm" variant="ghost" className="w-full h-8 text-xs text-muted-foreground hover:text-white">
                           <Link to="/pedidos">
-                            Ver Detalhes <ChevronRight className="h-3 w-3 ml-1" />
+                            Ver Detalhes <ChevronRight className="h-3.5 w-3.5 ml-1" />
                           </Link>
                         </Button>
                       )}
@@ -598,7 +598,7 @@ function Painel() {
           <CardContent className="flex-1 space-y-3 pt-1">
             {upcomingClients.length === 0 ? (
               <div className="flex h-full min-h-[180px] flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 p-4 text-center">
-                <div className="grid h-10 w-10 place-items-center rounded-full bg-emerald-500/10 text-emerald-500">
+                <div className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white border border-white/20">
                   <Check className="h-5 w-5" />
                 </div>
                 <p className="mt-2 text-sm font-semibold">Tudo tranquilo!</p>
@@ -616,7 +616,7 @@ function Painel() {
                       <div className="flex items-center gap-1.5">
                         <p className="truncate text-sm font-bold">{client.name}</p>
                         {isToday && (
-                          <span className="rounded bg-destructive/15 px-1.5 py-0.2 text-[9px] font-extrabold text-destructive uppercase">
+                          <span className="rounded bg-white text-black px-1.5 py-0.2 text-[9px] font-extrabold uppercase">
                             Hoje
                           </span>
                         )}
@@ -631,7 +631,7 @@ function Painel() {
                       variant="outline"
                       disabled={sendingId === client.id}
                       onClick={() => cobrarClienteRapido(client)}
-                      className="h-8 rounded-lg px-2.5 text-xs font-semibold gap-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                      className="h-8 rounded-lg px-2.5 text-xs font-bold gap-1 border-white/20 text-white hover:bg-white/10"
                     >
                       {sendingId === client.id ? (
                         <Clock3 className="h-3.5 w-3.5 animate-spin" />
@@ -663,7 +663,7 @@ function Painel() {
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
               <CardTitle className="text-base font-bold flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <AlertTriangle className="h-4 w-4 text-white" />
                 Faturas Pendentes & Atrasadas
               </CardTitle>
               <CardDescription>Acompanhe quem ainda não efetuou o pagamento</CardDescription>

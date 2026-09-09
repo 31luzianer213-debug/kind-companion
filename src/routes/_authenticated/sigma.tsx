@@ -280,8 +280,8 @@ function SigmaPage() {
               variant="outline"
               className={
                 isConfigured
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs"
-                  : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30 text-xs"
+                  ? "bg-white text-black font-extrabold border border-white text-xs"
+                  : "bg-zinc-800 text-zinc-400 border-zinc-700 text-xs"
               }
             >
               {isConfigured ? "Conectado ao Servidor" : "Não Configurado"}
@@ -296,10 +296,10 @@ function SigmaPage() {
           <Button
             asChild
             variant="outline"
-            className="gap-1.5 text-xs font-semibold shadow-sm"
+            className="gap-1.5 text-xs font-semibold shadow-sm border-white/20 text-white hover:bg-white/10"
           >
             <Link to="/clientes">
-              <Users className="size-4 text-primary" />
+              <Users className="size-4 text-white" />
               Ver Todas as Linhas
               <ArrowRight className="size-3 text-muted-foreground ml-1" />
             </Link>
@@ -317,7 +317,7 @@ function SigmaPage() {
               <p className="text-base font-bold text-foreground flex items-center gap-1.5">
                 {isConfigured ? (
                   <>
-                    <Wifi className="size-4 text-emerald-400" />
+                    <Wifi className="size-4 text-white" />
                     Online & Ativo
                   </>
                 ) : (
@@ -328,7 +328,7 @@ function SigmaPage() {
                 )}
               </p>
             </div>
-            <div className={`p-2.5 rounded-xl ${isConfigured ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-500/10 text-zinc-400"}`}>
+            <div className={`p-2.5 rounded-xl ${isConfigured ? "bg-white/10 text-white border border-white/20" : "bg-zinc-800 text-zinc-400"}`}>
               <Activity className="size-5" />
             </div>
           </CardContent>
@@ -343,7 +343,7 @@ function SigmaPage() {
                 {sigmaCount ?? 0} ativas
               </p>
             </div>
-            <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+            <div className="p-2.5 rounded-xl bg-white/10 text-white border border-white/20">
               <Users className="size-5" />
             </div>
           </CardContent>
@@ -358,7 +358,7 @@ function SigmaPage() {
                 {serverDisplayName}
               </p>
             </div>
-            <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-400">
+            <div className="p-2.5 rounded-xl bg-white/10 text-white border border-white/20">
               <Server className="size-5" />
             </div>
           </CardContent>
@@ -367,17 +367,17 @@ function SigmaPage() {
 
       {/* Resultado do Teste de Conexão - Fica SEMPRE visível e nunca some */}
       {testResult && testResult.ok && (
-        <Card className="surface-card border-emerald-500/40 bg-emerald-500/5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+        <Card className="surface-card border-white/20 bg-white/5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
           <CardContent className="p-4 sm:p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-500/20 pb-3 mb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/15 pb-3 mb-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400">
+                <div className="p-2 rounded-lg bg-white/10 text-white border border-white/20">
                   <CheckCircle2 className="size-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-bold text-foreground">Conexão com o Servidor Sigma Estabelecida</p>
-                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] py-0 px-2">
+                    <Badge className="bg-white text-black border border-white text-[10px] py-0 px-2 font-bold">
                       Online & Validado
                     </Badge>
                   </div>
@@ -388,7 +388,7 @@ function SigmaPage() {
               </div>
               {testResult.testedAt && (
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono bg-background/60 px-2.5 py-1 rounded-md border border-border/50 self-start sm:self-center">
-                  <Clock className="size-3.5 text-emerald-400" /> Testado às {testResult.testedAt}
+                  <Clock className="size-3.5 text-white" /> Testado às {testResult.testedAt}
                 </div>
               )}
             </div>
@@ -410,14 +410,14 @@ function SigmaPage() {
 
               <div className="p-2.5 rounded-lg bg-background/60 border border-border/50">
                 <span className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Créditos de Revenda</span>
-                <span className="text-xs sm:text-sm font-bold font-mono text-emerald-400 block mt-0.5">
+                <span className="text-xs sm:text-sm font-bold font-mono text-white block mt-0.5">
                   {testResult.credits != null ? `${testResult.credits} créditos` : "Ativo / Ilimitado"}
                 </span>
               </div>
 
               <div className="p-2.5 rounded-lg bg-background/60 border border-border/50">
                 <span className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Pacotes Detectados</span>
-                <span className="text-xs sm:text-sm font-bold font-mono text-sky-400 block mt-0.5">
+                <span className="text-xs sm:text-sm font-bold font-mono text-white block mt-0.5">
                   {testResult.packagesCount != null ? `${testResult.packagesCount} disponíveis` : "Verificados"}
                 </span>
               </div>
@@ -579,9 +579,9 @@ function SigmaPage() {
               <Button
                 type="submit"
                 disabled={saving}
-                className="gap-1.5 font-semibold bg-primary text-primary-foreground text-xs"
+                className="gap-1.5 font-bold bg-white text-black hover:bg-zinc-200 border-0 text-xs shadow-sm"
               >
-                {saving ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
+                {saving ? <Loader2 className="size-3.5 animate-spin text-black" /> : <CheckCircle2 className="size-3.5" />}
                 Salvar Configurações
               </Button>
             </div>
@@ -595,7 +595,7 @@ function SigmaPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base flex items-center gap-2">
-                <RefreshCw className="size-4 text-emerald-400" /> Sincronização em Massa com o Painel
+                <RefreshCw className="size-4 text-white" /> Sincronização em Massa com o Painel
               </CardTitle>
               <CardDescription className="mt-0.5">
                 Puxe todos os clientes da sua revenda Sigma para o sistema ou atualize o status dos vencimentos.
@@ -606,7 +606,7 @@ function SigmaPage() {
         <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <p className="text-xs text-foreground font-semibold flex items-center gap-1.5">
-              <Sparkles className="size-3.5 text-amber-400" /> Auto-Sync em Segundo Plano
+              <Sparkles className="size-3.5 text-white" /> Auto-Sync em Segundo Plano
             </p>
             <p className="text-xs text-muted-foreground leading-relaxed">
               O sistema já verifica automaticamente a cada 60 segundos e toda vez que você volta para a aba do site. 
@@ -618,9 +618,9 @@ function SigmaPage() {
             type="button"
             onClick={handleSync}
             disabled={syncing || !isConfigured}
-            className="shrink-0 gap-2 font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+            className="shrink-0 gap-2 font-bold bg-white text-black hover:bg-zinc-200 border-0 shadow-sm"
           >
-            {syncing ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+            {syncing ? <Loader2 className="size-4 animate-spin text-black" /> : <RefreshCw className="size-4" />}
             Sincronizar Todas as Linhas
           </Button>
         </CardContent>

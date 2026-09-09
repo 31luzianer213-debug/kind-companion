@@ -88,30 +88,30 @@ function WhatsAppSimulator({
   });
 
   return (
-    <div className="rounded-2xl border border-border/80 bg-zinc-950 p-4 text-white shadow-xl">
+    <div className="rounded-2xl border border-white/15 bg-zinc-950 p-4 text-white shadow-xl">
       <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-3">
         <div className="flex items-center gap-2.5">
-          <div className="grid h-8 w-8 place-items-center rounded-full bg-emerald-600 text-xs font-bold text-white shadow-sm">
+          <div className="grid h-8 w-8 place-items-center rounded-full bg-white text-xs font-bold text-black shadow-sm">
             {businessName ? businessName[0]?.toUpperCase() : "R"}
           </div>
           <div>
             <div className="flex items-center gap-1">
               <p className="text-xs font-bold text-white">{businessName || "Minha Revenda"}</p>
-              <CheckCircle2 className="size-3 text-blue-400 fill-blue-400" />
+              <CheckCircle2 className="size-3 text-white fill-white" />
             </div>
-            <p className="text-[10px] text-emerald-400 font-mono">online no WhatsApp</p>
+            <p className="text-[10px] text-zinc-400 font-mono">online no WhatsApp</p>
           </div>
         </div>
-        <Badge variant="outline" className="text-[10px] bg-white/10 text-zinc-300 border-white/10 font-mono">
+        <Badge variant="outline" className="text-[10px] bg-white/10 text-white border-white/20 font-mono">
           Prévia em Tempo Real
         </Badge>
       </div>
 
-      <div className="rounded-2xl bg-[#005c4b] p-3.5 text-xs text-white shadow-md relative max-w-[95%] ml-auto rounded-tr-none">
+      <div className="rounded-2xl bg-zinc-900 border border-white/20 p-3.5 text-xs text-white shadow-md relative max-w-[95%] ml-auto rounded-tr-none">
         <p className="whitespace-pre-wrap leading-relaxed font-sans">{rendered}</p>
-        <div className="flex items-center justify-end gap-1 mt-2 text-[10px] text-white/70">
+        <div className="flex items-center justify-end gap-1 mt-2 text-[10px] text-zinc-400">
           <span>12:45</span>
-          <span className="text-blue-300 font-bold">✓✓</span>
+          <span className="text-white font-bold">✓✓</span>
         </div>
       </div>
     </div>
@@ -208,7 +208,7 @@ function MensagensPage() {
           type="button"
           onClick={() => save.mutate(form)}
           disabled={save.isPending}
-          className="gap-1.5 font-semibold bg-primary text-primary-foreground shadow-sm"
+          className="gap-1.5 font-bold bg-white text-black hover:bg-zinc-200 border-0 shadow-sm"
         >
           {save.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
           Salvar Modelos

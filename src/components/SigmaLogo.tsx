@@ -33,47 +33,47 @@ export function SigmaLogo({
         xmlns="http://www.w3.org/2000/svg"
         className={cn(
           "h-full w-full",
-          showGlow && "filter drop-shadow-[0_0_12px_rgba(6,182,212,0.25)]",
+          showGlow && "filter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]",
         )}
       >
         <defs>
-          {/* Fundo ultra-escuro de alta densidade */}
+          {/* Fundo preto puro de alta densidade */}
           <linearGradient id="sigmaBg" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#0b1120" />
-            <stop offset="50%" stopColor="#060913" />
-            <stop offset="100%" stopColor="#020408" />
+            <stop offset="0%" stopColor="#18181b" />
+            <stop offset="50%" stopColor="#09090b" />
+            <stop offset="100%" stopColor="#000000" />
           </linearGradient>
 
-          {/* Borda metálica em degradê ciano elétrico e índigo */}
+          {/* Borda cromada em degradê branco e prata */}
           <linearGradient id="sigmaBorder" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#38bdf8" />
-            <stop offset="35%" stopColor="#06b6d4" />
-            <stop offset="70%" stopColor="#3b82f6" />
-            <stop offset="100%" stopColor="#6366f1" />
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="40%" stopColor="#d4d4d8" />
+            <stop offset="80%" stopColor="#71717a" />
+            <stop offset="100%" stopColor="#27272a" />
           </linearGradient>
 
           {/* Gradiente do símbolo Sigma principal */}
           <linearGradient id="sigmaGlyph" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#38bdf8" />
-            <stop offset="45%" stopColor="#06b6d4" />
-            <stop offset="100%" stopColor="#2563eb" />
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="60%" stopColor="#f4f4f5" />
+            <stop offset="100%" stopColor="#a1a1aa" />
           </linearGradient>
 
           {/* Gradiente do botão/triângulo de streaming */}
           <linearGradient id="sigmaPlay" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#22d3ee" />
-            <stop offset="100%" stopColor="#0284c7" />
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor="#d4d4d8" />
           </linearGradient>
 
           {/* Reflexo de vidro na parte superior */}
           <linearGradient id="sigmaGlass" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.12" />
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.15" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
           </linearGradient>
 
-          {/* Brilho neon sutil */}
+          {/* Brilho neon sutil branco */}
           <filter id="sigmaNeon" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="1.2" result="blur" />
+            <feGaussianBlur stdDeviation="1.0" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
         </defs>
@@ -90,17 +90,17 @@ export function SigmaLogo({
           strokeWidth="1.5"
         />
 
-        {/* Linhas de circuito/alta fidelidade decorativas */}
+        {/* Linhas de circuito monocromáticas decorativas */}
         <path
           d="M 2.5 16 H 45.5 M 2.5 32 H 45.5"
-          stroke="#38bdf8"
-          strokeOpacity="0.04"
+          stroke="#ffffff"
+          strokeOpacity="0.06"
           strokeWidth="1"
         />
         <path
           d="M 16 2.5 V 45.5 M 32 2.5 V 45.5"
-          stroke="#38bdf8"
-          strokeOpacity="0.04"
+          stroke="#ffffff"
+          strokeOpacity="0.06"
           strokeWidth="1"
         />
 
@@ -124,17 +124,17 @@ export function SigmaLogo({
         <polygon
           points="27,20.2 33.8,24 27,27.8"
           fill="url(#sigmaPlay)"
-          stroke="#060913"
+          stroke="#09090b"
           strokeWidth="0.8"
         />
 
-        {/* Indicador de Sinal IPTV Ativo (Led Verde Neon no canto superior direito) */}
-        <circle cx="37.5" cy="10.5" r="1.8" fill="#22c55e" />
+        {/* Indicador de Sinal IPTV Ativo (Led Branco no canto superior direito) */}
+        <circle cx="37.5" cy="10.5" r="1.8" fill="#ffffff" />
         <circle
           cx="37.5"
           cy="10.5"
           r="3.2"
-          stroke="#22c55e"
+          stroke="#ffffff"
           strokeWidth="0.7"
           strokeOpacity="0.5"
         />

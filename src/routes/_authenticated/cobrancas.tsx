@@ -71,28 +71,28 @@ type InvoiceRow = Tables<"invoices"> & { clients: { name: string; phone: string 
 const labels: Record<string, { label: string; tone: string; badge: string }> = {
   pending: {
     label: "Pendente",
-    tone: "text-amber-400",
-    badge: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+    tone: "text-zinc-300",
+    badge: "border border-white/20 bg-white/5 text-zinc-300",
   },
   overdue: {
     label: "Atrasada",
-    tone: "text-rose-400",
-    badge: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+    tone: "text-zinc-400",
+    badge: "border border-zinc-700 bg-zinc-900 text-zinc-400",
   },
   paid: {
     label: "Paga",
-    tone: "text-emerald-400",
-    badge: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+    tone: "text-white",
+    badge: "border border-white bg-white text-black font-extrabold",
   },
   cancelled: {
     label: "Cancelada",
-    tone: "text-zinc-400",
-    badge: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+    tone: "text-zinc-500",
+    badge: "border border-zinc-800 bg-zinc-950 text-zinc-500",
   },
 };
 
 function getRelativeDueInfo(dueDateStr: string, isPaid: boolean) {
-  if (isPaid) return { text: "Liquidada", badge: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" };
+  if (isPaid) return { text: "Liquidada", badge: "border border-white bg-white text-black font-extrabold" };
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const due = new Date(dueDateStr + "T00:00:00");
@@ -103,24 +103,24 @@ function getRelativeDueInfo(dueDateStr: string, isPaid: boolean) {
     const days = Math.abs(diffDays);
     return {
       text: `Atrasada há ${days} dia${days > 1 ? "s" : ""}`,
-      badge: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+      badge: "border border-zinc-700 bg-zinc-900 text-zinc-300",
     };
   }
   if (diffDays === 0) {
     return {
       text: "Vence hoje!",
-      badge: "bg-amber-500/20 text-amber-300 border-amber-500/30 animate-pulse",
+      badge: "border border-white/40 bg-white/10 text-white font-semibold animate-pulse",
     };
   }
   if (diffDays === 1) {
     return {
       text: "Vence amanhã",
-      badge: "bg-amber-500/10 text-amber-300 border-amber-500/20",
+      badge: "border border-white/20 bg-white/5 text-zinc-300",
     };
   }
   return {
     text: `Vence em ${diffDays} dias`,
-    badge: "bg-sky-500/10 text-sky-300 border-sky-500/20",
+    badge: "border border-white/10 bg-white/5 text-zinc-400",
   };
 }
 
@@ -457,7 +457,7 @@ function Cobrancas() {
       {/* 3 Cards de Métricas Financeiras */}
       <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
         <Card className="surface-card hover-lift overflow-hidden relative border-border/60">
-          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-amber-500 to-yellow-500" />
+          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-white to-zinc-600" />
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">A Receber (Em Aberto)</p>
@@ -466,39 +466,39 @@ function Cobrancas() {
                 {metrics.openCount} fatura{metrics.openCount !== 1 ? "s" : ""} pendente{metrics.openCount !== 1 ? "s" : ""}
               </p>
             </div>
-            <div className="rounded-xl p-2.5 bg-amber-500/10 text-amber-400">
+            <div className="rounded-xl p-2.5 bg-white/10 text-white border border-white/20">
               <Clock className="size-5" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="surface-card hover-lift overflow-hidden relative border-border/60">
-          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-rose-500 to-red-500" />
+          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-zinc-500 to-zinc-800" />
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total em Atraso</p>
-              <p className="text-2xl font-bold mt-1 text-rose-400">{formatBRL(metrics.totalOverdue)}</p>
-              <p className="text-[11px] text-rose-300/80 mt-0.5">
+              <p className="text-2xl font-bold mt-1 text-white">{formatBRL(metrics.totalOverdue)}</p>
+              <p className="text-[11px] text-zinc-400 mt-0.5">
                 {metrics.overdueCount} cliente{metrics.overdueCount !== 1 ? "s" : ""} atrasado{metrics.overdueCount !== 1 ? "s" : ""}
               </p>
             </div>
-            <div className="rounded-xl p-2.5 bg-rose-500/10 text-rose-400">
+            <div className="rounded-xl p-2.5 bg-white/5 text-zinc-400 border border-white/10">
               <AlertTriangle className="size-5" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="surface-card hover-lift overflow-hidden relative border-border/60">
-          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-emerald-500 to-teal-500" />
+          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-white via-zinc-200 to-zinc-400" />
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Liquidado</p>
-              <p className="text-2xl font-bold mt-1 text-emerald-400">{formatBRL(metrics.totalPaid)}</p>
+              <p className="text-2xl font-bold mt-1 text-white">{formatBRL(metrics.totalPaid)}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {metrics.paidCount} pagamento{metrics.paidCount !== 1 ? "s" : ""} confirmado{metrics.paidCount !== 1 ? "s" : ""}
               </p>
             </div>
-            <div className="rounded-xl p-2.5 bg-emerald-500/10 text-emerald-400">
+            <div className="rounded-xl p-2.5 bg-white text-black font-extrabold shadow-sm">
               <CheckCircle2 className="size-5" />
             </div>
           </CardContent>
@@ -533,10 +533,10 @@ function Cobrancas() {
                 <TabsTrigger value="open" className="text-xs">
                   Em aberto ({metrics.openCount})
                 </TabsTrigger>
-                <TabsTrigger value="overdue" className="text-xs text-rose-400">
+                <TabsTrigger value="overdue" className="text-xs">
                   Atrasadas ({metrics.overdueCount})
                 </TabsTrigger>
-                <TabsTrigger value="paid" className="text-xs text-emerald-400">
+                <TabsTrigger value="paid" className="text-xs">
                   Pagas ({metrics.paidCount})
                 </TabsTrigger>
                 <TabsTrigger value="all" className="text-xs">
@@ -598,9 +598,9 @@ function Cobrancas() {
                           href={`https://wa.me/55${invoice.clients.phone.replace(/\D/g, "")}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs text-muted-foreground font-mono inline-flex items-center gap-1 mt-0.5 hover:text-emerald-400"
+                          className="text-xs text-muted-foreground font-mono inline-flex items-center gap-1 mt-0.5 hover:text-white"
                         >
-                          <MessageCircle className="size-3 text-emerald-400" />
+                          <MessageCircle className="size-3 text-white" />
                           {invoice.clients.phone}
                         </a>
                       )}
@@ -633,7 +633,7 @@ function Cobrancas() {
                     {/* Lembretes */}
                     <TableCell>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <MessageCircle className="size-3.5 text-primary" />
+                        <MessageCircle className="size-3.5 text-white" />
                         <span>{invoice.reminders_sent || 0} enviado(s)</span>
                       </div>
                     </TableCell>
@@ -645,14 +645,14 @@ function Cobrancas() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 px-2.5 text-xs font-medium gap-1.5 text-foreground hover:bg-primary/10 hover:text-primary"
+                          className="h-8 px-2.5 text-xs font-medium gap-1.5 border-white/20 text-white hover:bg-white/10"
                           onClick={() => {
                             setPixModalInvoice(invoice);
                             setCopiedPix(false);
                           }}
                           title="Ver QR Code Pix"
                         >
-                          <QrCode className="size-3.5 text-primary" />
+                          <QrCode className="size-3.5 text-white" />
                           Pix
                         </Button>
 
@@ -662,7 +662,7 @@ function Cobrancas() {
                           variant="outline"
                           disabled={sendingId === invoice.id || isPaid}
                           onClick={() => setConfirmRemindInvoice(invoice)}
-                          className="h-8 px-2.5 text-xs font-medium gap-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                          className="h-8 px-2.5 text-xs font-medium gap-1.5 border-white/20 text-white hover:bg-white/10"
                           title="Cobrar via WhatsApp"
                         >
                           {sendingId === invoice.id ? (
@@ -679,7 +679,7 @@ function Cobrancas() {
                             size="sm"
                             disabled={markPaid.isPending}
                             onClick={() => setConfirmPayInvoice(invoice)}
-                            className="h-8 px-2.5 text-xs font-bold gap-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                            className="h-8 px-2.5 text-xs font-bold gap-1 bg-white text-black hover:bg-zinc-200 shadow-sm border-0"
                             title="Confirmar pagamento e renovar no Sigma"
                           >
                             <Check className="size-3.5" /> Dar Baixa
@@ -700,7 +700,7 @@ function Cobrancas() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
-              <QrCode className="size-5 text-primary" />
+              <QrCode className="size-5 text-white" />
               Pagamento via Pix
             </DialogTitle>
             <DialogDescription>
@@ -715,7 +715,7 @@ function Cobrancas() {
                 <p className="text-xs text-muted-foreground">Cliente</p>
                 <p className="font-semibold text-foreground text-sm">{pixModalInvoice.clients?.name}</p>
                 <div className="mt-1 flex items-center justify-center gap-2">
-                  <span className="text-2xl font-bold text-emerald-400 font-mono">
+                  <span className="text-2xl font-bold text-white font-mono">
                     {formatBRL(pixModalInvoice.amount)}
                   </span>
                   <Badge variant="outline" className="text-[11px]">
@@ -755,9 +755,9 @@ function Cobrancas() {
                   <rect x="20" y="57" width="6" height="6" fill="currentColor" />
 
                   {/* Centro */}
-                  <rect x="37" y="37" width="26" height="26" rx="3" fill="#0ea5e9" />
+                  <rect x="37" y="37" width="26" height="26" rx="3" fill="#000000" />
                   <circle cx="50" cy="50" r="7" fill="white" />
-                  <circle cx="50" cy="50" r="3" fill="#0ea5e9" />
+                  <circle cx="50" cy="50" r="3" fill="#000000" />
 
                   <rect x="69" y="37" width="6" height="6" fill="currentColor" />
                   <rect x="79" y="47" width="6" height="6" fill="currentColor" />
@@ -801,9 +801,9 @@ function Cobrancas() {
                         setTimeout(() => setCopiedPix(false), 3000);
                       }
                     }}
-                    className="shrink-0 gap-1.5"
+                    className="shrink-0 gap-1.5 border-white/20 text-white hover:bg-white/10"
                   >
-                    {copiedPix ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
+                    {copiedPix ? <Check className="size-4 text-white" /> : <Copy className="size-4" />}
                     {copiedPix ? "Copiado!" : "Copiar"}
                   </Button>
                 </div>
@@ -814,7 +814,7 @@ function Cobrancas() {
                   type="button"
                   variant="outline"
                   onClick={() => setPixModalInvoice(null)}
-                  className="sm:flex-1"
+                  className="sm:flex-1 border-white/20 text-white hover:bg-white/10"
                 >
                   Fechar
                 </Button>
@@ -824,7 +824,7 @@ function Cobrancas() {
                     lembrar(pixModalInvoice);
                     setPixModalInvoice(null);
                   }}
-                  className="sm:flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 font-medium"
+                  className="sm:flex-1 bg-white text-black hover:bg-zinc-200 gap-1.5 font-bold border-0 shadow-sm"
                 >
                   <Send className="size-4" /> Enviar no WhatsApp
                 </Button>
@@ -839,7 +839,7 @@ function Cobrancas() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base text-foreground">
-              <CheckCircle2 className="size-5 text-emerald-400" />
+              <CheckCircle2 className="size-5 text-white" />
               Confirmar Pagamento & Renovar no Sigma
             </DialogTitle>
             <DialogDescription>
@@ -856,7 +856,7 @@ function Cobrancas() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-muted-foreground">Valor:</span>
-                  <span className="font-bold text-emerald-400 font-mono">{formatBRL(confirmPayInvoice.amount)}</span>
+                  <span className="font-bold text-white font-mono">{formatBRL(confirmPayInvoice.amount)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-muted-foreground">Vencimento Atual:</span>
@@ -864,11 +864,11 @@ function Cobrancas() {
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 space-y-1">
-                <p className="font-semibold flex items-center gap-1.5">
-                  <ShieldCheck className="size-4 text-emerald-400" /> O que acontecerá ao confirmar:
+              <div className="p-3 rounded-xl bg-zinc-900 border border-white/20 text-xs text-zinc-300 space-y-1">
+                <p className="font-semibold flex items-center gap-1.5 text-white">
+                  <ShieldCheck className="size-4 text-white" /> O que acontecerá ao confirmar:
                 </p>
-                <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-muted-foreground">
+                <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-zinc-400">
                   <li>A fatura será marcada como <strong>Paga</strong> com a data de hoje.</li>
                   <li>O vencimento do cliente avançará <strong>+30 dias</strong> automaticamente.</li>
                   <li>A assinatura será <strong>renovada diretamente no Painel Sigma</strong>.</li>
@@ -884,13 +884,14 @@ function Cobrancas() {
               size="sm"
               onClick={() => setConfirmPayInvoice(null)}
               disabled={markPaid.isPending}
+              className="border-white/20 text-white hover:bg-white/10"
             >
               Cancelar
             </Button>
             <Button
               type="button"
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5"
+              className="bg-white text-black hover:bg-zinc-200 font-bold gap-1.5 border-0 shadow-sm"
               disabled={markPaid.isPending || !confirmPayInvoice}
               onClick={() => {
                 if (confirmPayInvoice) {
@@ -911,7 +912,7 @@ function Cobrancas() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base text-foreground">
-              <Send className="size-5 text-emerald-400" />
+              <Send className="size-5 text-white" />
               Reenviar Cobrança via WhatsApp
             </DialogTitle>
             <DialogDescription>
@@ -928,7 +929,7 @@ function Cobrancas() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-muted-foreground">WhatsApp:</span>
-                  <span className="font-mono text-xs text-emerald-400">{confirmRemindInvoice.clients?.phone}</span>
+                  <span className="font-mono text-xs text-white">{confirmRemindInvoice.clients?.phone}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-muted-foreground">Valor:</span>
@@ -953,13 +954,14 @@ function Cobrancas() {
               size="sm"
               onClick={() => setConfirmRemindInvoice(null)}
               disabled={Boolean(sendingId)}
+              className="border-white/20 text-white hover:bg-white/10"
             >
               Cancelar
             </Button>
             <Button
               type="button"
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5"
+              className="bg-white text-black hover:bg-zinc-200 font-bold gap-1.5 border-0 shadow-sm"
               disabled={Boolean(sendingId) || !confirmRemindInvoice}
               onClick={() => {
                 if (confirmRemindInvoice) {

@@ -258,10 +258,10 @@ function PedidosPage() {
             <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
               Pedidos & Liberação de Acesso
             </h1>
-            <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 gap-1 text-xs font-semibold">
-              <Zap className="h-3 w-3 fill-emerald-400" /> Liberação 1-Clique
+            <Badge className="border border-white/30 bg-white/10 text-white gap-1 text-xs font-semibold">
+              <Zap className="h-3 w-3 fill-white text-white" /> Liberação 1-Clique
             </Badge>
-            <Badge className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 gap-1 text-xs">
+            <Badge className="border border-white/20 bg-white/5 text-zinc-300 gap-1 text-xs">
               <RefreshCw className="h-3 w-3" /> Tempo Real
             </Badge>
           </div>
@@ -276,16 +276,16 @@ function PedidosPage() {
             size="sm"
             onClick={() => refetch()}
             disabled={isRefetching}
-            className="gap-2 border-border/70"
+            className="gap-2 border-white/20 text-white hover:bg-white/10"
           >
-            <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin text-primary" : ""}`} />
+            <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin text-white" : ""}`} />
             <span className="hidden sm:inline">Atualizar</span>
           </Button>
 
           <Button
             size="sm"
             onClick={() => setNewOrderModalOpen(true)}
-            className="gap-2 bg-gradient-to-r from-primary to-cyan-600 font-semibold shadow-lg shadow-primary/20"
+            className="gap-2 bg-white text-black hover:bg-zinc-200 font-bold border-0 shadow-sm"
           >
             <Plus className="h-4 w-4" />
             Novo Pedido Manual
@@ -301,16 +301,16 @@ function PedidosPage() {
               Aguardando PIX (Pendentes)
             </CardTitle>
             <div className="relative">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-500 border border-amber-500/30">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white border border-white/20">
                 <Clock className="h-5 w-5" />
               </div>
               {pendingOrders.length > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-[9px] font-black text-white animate-ping" />
+                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white text-[9px] font-black text-black animate-ping" />
               )}
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-black text-amber-500">
+            <div className="text-2xl font-black text-white">
               {pendingOrders.length}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -327,12 +327,12 @@ function PedidosPage() {
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Acessos Liberados
             </CardTitle>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white border border-white/20">
               <CheckCircle2 className="h-5 w-5" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-black text-emerald-500">
+            <div className="text-2xl font-black text-white">
               {approvedOrders.length}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -346,12 +346,12 @@ function PedidosPage() {
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Faturamento Aprovado
             </CardTitle>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white border border-white/20">
               <DollarSign className="h-5 w-5" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-black text-cyan-400">
+            <div className="text-2xl font-black text-white">
               R$ {totalApprovedRevenue.toFixed(2).replace(".", ",")}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -365,7 +365,7 @@ function PedidosPage() {
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Total de Pedidos
             </CardTitle>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary border border-primary/30">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white border border-white/20">
               <ShoppingBag className="h-5 w-5" />
             </div>
           </CardHeader>
@@ -386,17 +386,17 @@ function PedidosPage() {
         <div className="flex items-center gap-1.5 rounded-xl border border-border/80 bg-card p-1 shadow-sm overflow-x-auto">
           <button
             onClick={() => setActiveTab("pending")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === "pending"
-                ? "bg-amber-500 text-white shadow"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-white text-black shadow"
+                : "text-zinc-400 hover:text-white"
             }`}
           >
             <Clock className="h-3.5 w-3.5" />
             Pendentes
             {pendingOrders.length > 0 && (
               <span className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-                activeTab === "pending" ? "bg-black/20 text-white" : "bg-amber-500/20 text-amber-500"
+                activeTab === "pending" ? "bg-black text-white" : "bg-white/10 text-white"
               }`}>
                 {pendingOrders.length}
               </span>
@@ -405,16 +405,16 @@ function PedidosPage() {
 
           <button
             onClick={() => setActiveTab("approved")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === "approved"
-                ? "bg-emerald-600 text-white shadow"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-white text-black shadow"
+                : "text-zinc-400 hover:text-white"
             }`}
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
             Liberados
             <span className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-              activeTab === "approved" ? "bg-black/20 text-white" : "bg-muted text-muted-foreground"
+              activeTab === "approved" ? "bg-black text-white" : "bg-white/10 text-white"
             }`}>
               {approvedOrders.length}
             </span>
@@ -422,22 +422,27 @@ function PedidosPage() {
 
           <button
             onClick={() => setActiveTab("all")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === "all"
-                ? "bg-primary text-primary-foreground shadow"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-white text-black shadow"
+                : "text-zinc-400 hover:text-white"
             }`}
           >
             <ShoppingBag className="h-3.5 w-3.5" />
-            Todos ({totalOrders})
+            Todos
+            <span className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+              activeTab === "all" ? "bg-black text-white" : "bg-white/10 text-white"
+            }`}>
+              {totalOrders}
+            </span>
           </button>
 
           <button
             onClick={() => setActiveTab("cancelled")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === "cancelled"
-                ? "bg-slate-700 text-white shadow"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-zinc-800 text-white shadow border border-white/20"
+                : "text-zinc-400 hover:text-white"
             }`}
           >
             <XCircle className="h-3.5 w-3.5" />
@@ -499,9 +504,9 @@ function PedidosPage() {
                 key={order.id}
                 className={`overflow-hidden transition-all duration-200 border ${
                   isPending
-                    ? "border-amber-500/40 bg-gradient-to-r from-amber-500/5 via-card to-card hover:border-amber-500/70"
+                    ? "border-white/20 bg-card hover:border-white/40"
                     : isApproved
-                    ? "border-emerald-500/30 bg-card hover:border-emerald-500/50"
+                    ? "border-white/15 bg-card hover:border-white/30"
                     : "border-border/60 bg-card/60 opacity-80"
                 }`}
               >
@@ -512,9 +517,9 @@ function PedidosPage() {
                       <div
                         className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl font-black text-sm border shadow-sm ${
                           isPending
-                            ? "bg-amber-500/15 text-amber-500 border-amber-500/30"
+                            ? "bg-white/10 text-white border-white/20"
                             : isApproved
-                            ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30"
+                            ? "bg-white text-black border-white"
                             : "bg-muted text-muted-foreground border-border"
                         }`}
                       >
@@ -529,12 +534,12 @@ function PedidosPage() {
 
                           {/* Status Badge */}
                           {isPending && (
-                            <Badge className="bg-amber-500/15 text-amber-500 border border-amber-500/30 text-[10px] font-black uppercase tracking-wider animate-pulse">
+                            <Badge className="border border-white/20 bg-white/5 text-zinc-300 text-[10px] font-bold uppercase tracking-wider">
                               ⏳ Aguardando PIX
                             </Badge>
                           )}
                           {isApproved && (
-                            <Badge className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider">
+                            <Badge className="border border-white/30 bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider">
                               ✅ Acesso Liberado
                             </Badge>
                           )}
@@ -545,7 +550,7 @@ function PedidosPage() {
                           )}
 
                           {/* Tipo de Pedido */}
-                          <Badge variant="secondary" className="text-[10px] font-medium">
+                          <Badge variant="secondary" className="text-[10px] font-medium border border-border/50">
                             {order.type === "renewal" ? "🔄 Renovação" : "⭐ Novo Acesso"}
                           </Badge>
                         </div>
@@ -554,7 +559,7 @@ function PedidosPage() {
                         <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                           <button
                             onClick={() => handleOpenWhatsApp(order.customer_phone, order.customer_name)}
-                            className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                            className="inline-flex items-center gap-1 font-semibold text-zinc-300 hover:text-white hover:underline"
                           >
                             <MessageCircle className="h-3.5 w-3.5" />
                             {order.customer_phone}
@@ -572,7 +577,7 @@ function PedidosPage() {
                           </span>
 
                           {order.target_username && (
-                            <span className="inline-flex items-center gap-1 font-mono text-cyan-500 font-semibold">
+                            <span className="inline-flex items-center gap-1 font-mono text-zinc-300 font-semibold">
                               Login: {order.target_username}
                             </span>
                           )}
@@ -587,7 +592,7 @@ function PedidosPage() {
                           Plano & Telas
                         </span>
                         <div className="mt-0.5 flex items-center gap-1.5">
-                          <Tv className="h-4 w-4 text-cyan-400" />
+                          <Tv className="h-4 w-4 text-white" />
                           <span className="text-xs font-semibold text-foreground">
                             {order.plan_name}
                           </span>
@@ -607,11 +612,7 @@ function PedidosPage() {
                           </span>
                           <Badge
                             variant="outline"
-                            className={`text-[9px] font-bold ${
-                              isMercadoPago
-                                ? "border-sky-500/40 text-sky-400 bg-sky-500/10"
-                                : "border-amber-500/40 text-amber-400 bg-amber-500/10"
-                            }`}
+                            className="border-white/20 text-white bg-white/5 text-[9px] font-bold"
                           >
                             {isMercadoPago ? "⚡ Mercado Pago" : "📋 PIX Manual"}
                           </Badge>
@@ -627,7 +628,7 @@ function PedidosPage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => copyToClipboard(order.pix_code!, "Código PIX Copia e Cola")}
-                                className="gap-1 text-xs border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
+                                className="gap-1 text-xs border-white/20 text-white hover:bg-white/10"
                                 title="Copiar código PIX para testar ou enviar"
                               >
                                 <Copy className="h-3.5 w-3.5" />
@@ -641,10 +642,10 @@ function PedidosPage() {
                                 setSelectedOrder(order);
                                 setReleaseModalOpen(true);
                               }}
-                              className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 font-bold text-white shadow-md shadow-emerald-600/30 transition-all hover:scale-[1.02]"
+                              className="gap-2 bg-white text-black hover:bg-zinc-200 font-extrabold border-0 shadow-sm transition-all hover:scale-[1.02]"
                               title="Aprovar este pedido e liberar acesso no Sigma e WhatsApp sem esperar o cliente pagar"
                             >
-                              <Zap className="h-4 w-4 fill-white" />
+                              <Zap className="h-4 w-4 fill-black text-black" />
                               ⚡ Liberar Acesso Agora
                             </Button>
 
@@ -656,7 +657,7 @@ function PedidosPage() {
                                   cancelMutation.mutate(order.id);
                                 }
                               }}
-                              className="text-xs text-muted-foreground hover:text-destructive"
+                              className="text-xs text-muted-foreground hover:text-white"
                             >
                               Cancelar
                             </Button>
@@ -678,7 +679,7 @@ function PedidosPage() {
                                   });
                                   setCredentialsModalOpen(true);
                                 }}
-                                className="gap-1.5 text-xs border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
+                                className="gap-1.5 text-xs border-white/20 text-white hover:bg-white/10"
                               >
                                 <ShieldCheck className="h-3.5 w-3.5" />
                                 Ver Acessos
@@ -718,8 +719,8 @@ function PedidosPage() {
       <Dialog open={releaseModalOpen} onOpenChange={setReleaseModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-emerald-500">
-              <Zap className="h-5 w-5 fill-emerald-500" />
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-white">
+              <Zap className="h-5 w-5 fill-white text-white" />
               Liberar Acesso do Pedido #{selectedOrder?.order_number}
             </DialogTitle>
             <DialogDescription>
@@ -744,11 +745,11 @@ function PedidosPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Plano:</span>
-                  <span className="font-bold text-cyan-400">{selectedOrder.plan_name}</span>
+                  <span className="font-bold text-white">{selectedOrder.plan_name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Valor PIX:</span>
-                  <span className="font-bold text-emerald-500">
+                  <span className="font-bold text-white">
                     R$ {Number(selectedOrder.amount).toFixed(2).replace(".", ",")}
                   </span>
                 </div>
@@ -759,7 +760,7 @@ function PedidosPage() {
                       size="sm"
                       variant="ghost"
                       onClick={() => copyToClipboard(selectedOrder.pix_code!, "Código PIX Copia e Cola")}
-                      className="h-7 text-xs gap-1 text-primary hover:bg-primary/10"
+                      className="h-7 text-xs gap-1 text-white hover:bg-white/10"
                     >
                       <Copy className="h-3 w-3" /> Copiar Código PIX
                     </Button>
@@ -767,8 +768,8 @@ function PedidosPage() {
                 )}
               </div>
 
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs space-y-1.5 text-emerald-700 dark:text-emerald-300">
-                <div className="flex items-center gap-1.5 font-bold">
+              <div className="rounded-xl border border-white/20 bg-white/5 p-3 text-xs space-y-1.5 text-zinc-300">
+                <div className="flex items-center gap-1.5 font-bold text-white">
                   <CheckCircle2 className="h-4 w-4" />
                   Ao clicar em Aprovar Agora:
                 </div>
@@ -791,16 +792,16 @@ function PedidosPage() {
             <Button
               onClick={() => selectedOrder && approveMutation.mutate(selectedOrder.id)}
               disabled={approveMutation.isPending}
-              className="gap-2 bg-emerald-600 hover:bg-emerald-500 font-bold text-white shadow-md shadow-emerald-600/30"
+              className="gap-2 bg-white text-black hover:bg-zinc-200 font-bold border-0 shadow-sm"
             >
               {approveMutation.isPending ? (
                 <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <RefreshCw className="h-4 w-4 animate-spin text-black" />
                   Criando no Sigma & Enviando WhatsApp...
                 </>
               ) : (
                 <>
-                  <Zap className="h-4 w-4 fill-white" />
+                  <Zap className="h-4 w-4 fill-black text-black" />
                   Aprovar & Liberar Agora
                 </>
               )}
@@ -813,8 +814,8 @@ function PedidosPage() {
       <Dialog open={credentialsModalOpen} onOpenChange={setCredentialsModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-emerald-500">
-              <Sparkles className="h-5 w-5 text-emerald-500" />
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-white">
+              <Sparkles className="h-5 w-5 text-white" />
               Acesso Liberado com Sucesso!
             </DialogTitle>
             <DialogDescription>
@@ -824,7 +825,7 @@ function PedidosPage() {
 
           {releasedCredentials && (
             <div className="space-y-3 py-2 text-sm">
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 space-y-2 font-mono">
+              <div className="rounded-xl border border-white/20 bg-white/5 p-3.5 space-y-2 font-mono">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">Usuário:</span>
                   <div className="flex items-center gap-2">

@@ -141,25 +141,25 @@ function ConfiguracoesPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Link
             to="/sigma"
-            className="group flex flex-col justify-between p-4 rounded-2xl border border-border/60 bg-card hover:border-primary/50 hover:shadow-md transition-all"
+            className="group flex flex-col justify-between p-4 rounded-2xl border border-white/10 bg-zinc-950 hover:border-white/30 hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <div className="p-2 rounded-xl bg-white/10 text-white border border-white/20">
                 <Server className="size-4" />
               </div>
-              <Badge variant="outline" className={hasSigma ? "text-emerald-400 border-emerald-500/30 text-[10px]" : "text-amber-400 border-amber-500/30 text-[10px]"}>
+              <Badge variant="outline" className={hasSigma ? "text-white border-white/30 bg-white/10 text-[10px]" : "text-zinc-400 border-white/10 bg-white/5 text-[10px]"}>
                 {hasSigma ? "Configurado" : "Pendente"}
               </Badge>
             </div>
             <div>
-              <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+              <p className="text-sm font-bold text-white group-hover:text-zinc-300 transition-colors">
                 Painel Sigma
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-[11px] text-zinc-400 mt-0.5">
                 Servidores, credenciais e renovação automática
               </p>
             </div>
-            <div className="flex items-center justify-end text-xs font-semibold text-primary mt-3">
+            <div className="flex items-center justify-end text-xs font-semibold text-white mt-3">
               <span>Gerenciar</span>
               <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
             </div>
@@ -167,25 +167,25 @@ function ConfiguracoesPage() {
 
           <Link
             to="/whatsapp"
-            className="group flex flex-col justify-between p-4 rounded-2xl border border-border/60 bg-card hover:border-emerald-500/50 hover:shadow-md transition-all"
+            className="group flex flex-col justify-between p-4 rounded-2xl border border-white/10 bg-zinc-950 hover:border-white/30 hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+              <div className="p-2 rounded-xl bg-white/10 text-white border border-white/20">
                 <MessageCircle className="size-4" />
               </div>
-              <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 text-[10px]">
+              <Badge variant="outline" className="text-white border-white/30 bg-white/10 text-[10px]">
                 Conexão
               </Badge>
             </div>
             <div>
-              <p className="text-sm font-bold text-foreground group-hover:text-emerald-400 transition-colors">
+              <p className="text-sm font-bold text-white group-hover:text-zinc-300 transition-colors">
                 WhatsApp
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-[11px] text-zinc-400 mt-0.5">
                 QR Code, conexão e disparo de teste
               </p>
             </div>
-            <div className="flex items-center justify-end text-xs font-semibold text-emerald-400 mt-3">
+            <div className="flex items-center justify-end text-xs font-semibold text-white mt-3">
               <span>Gerenciar</span>
               <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
             </div>
@@ -193,25 +193,25 @@ function ConfiguracoesPage() {
 
           <Link
             to="/pagamentos"
-            className="group flex flex-col justify-between p-4 rounded-2xl border border-border/60 bg-card hover:border-sky-500/50 hover:shadow-md transition-all"
+            className="group flex flex-col justify-between p-4 rounded-2xl border border-white/10 bg-zinc-950 hover:border-white/30 hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400">
+              <div className="p-2 rounded-xl bg-white/10 text-white border border-white/20">
                 <CreditCard className="size-4" />
               </div>
-              <Badge variant="outline" className={hasPix ? "text-emerald-400 border-emerald-500/30 text-[10px]" : "text-zinc-400 border-border text-[10px]"}>
+              <Badge variant="outline" className={hasPix ? "text-white border-white/30 bg-white/10 text-[10px]" : "text-zinc-400 border-white/10 bg-white/5 text-[10px]"}>
                 {hasPix ? "PIX Ativo" : "Configurar"}
               </Badge>
             </div>
             <div>
-              <p className="text-sm font-bold text-foreground group-hover:text-sky-400 transition-colors">
+              <p className="text-sm font-bold text-white group-hover:text-zinc-300 transition-colors">
                 Pagamentos
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-[11px] text-zinc-400 mt-0.5">
                 Chave PIX, Mercado Pago e Asaas
               </p>
             </div>
-            <div className="flex items-center justify-end text-xs font-semibold text-sky-400 mt-3">
+            <div className="flex items-center justify-end text-xs font-semibold text-white mt-3">
               <span>Gerenciar</span>
               <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
             </div>
@@ -219,25 +219,25 @@ function ConfiguracoesPage() {
 
           <Link
             to="/mensagens"
-            className="group flex flex-col justify-between p-4 rounded-2xl border border-border/60 bg-card hover:border-purple-500/50 hover:shadow-md transition-all"
+            className="group flex flex-col justify-between p-4 rounded-2xl border border-white/10 bg-zinc-950 hover:border-white/30 hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
+              <div className="p-2 rounded-xl bg-white/10 text-white border border-white/20">
                 <Sparkles className="size-4" />
               </div>
-              <Badge variant="outline" className="text-purple-400 border-purple-500/30 text-[10px]">
+              <Badge variant="outline" className="text-white border-white/30 bg-white/10 text-[10px]">
                 Modelos
               </Badge>
             </div>
             <div>
-              <p className="text-sm font-bold text-foreground group-hover:text-purple-400 transition-colors">
+              <p className="text-sm font-bold text-white group-hover:text-zinc-300 transition-colors">
                 Mensagens
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-[11px] text-zinc-400 mt-0.5">
                 Textos do robô e simulador WhatsApp
               </p>
             </div>
-            <div className="flex items-center justify-end text-xs font-semibold text-purple-400 mt-3">
+            <div className="flex items-center justify-end text-xs font-semibold text-white mt-3">
               <span>Gerenciar</span>
               <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
             </div>

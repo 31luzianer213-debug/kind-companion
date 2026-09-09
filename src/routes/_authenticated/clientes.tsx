@@ -182,35 +182,35 @@ function getRelativeDueInfo(dueDateStr: string | null) {
     const days = Math.abs(diffDays);
     return {
       text: `Vencido há ${days} dia${days > 1 ? "s" : ""}`,
-      tone: "text-rose-400 font-semibold",
-      badge: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+      tone: "text-zinc-400 font-semibold",
+      badge: "border border-zinc-700 bg-zinc-900 text-zinc-400",
     };
   }
   if (diffDays === 0) {
     return {
       text: "Vence hoje!",
-      tone: "text-amber-400 font-bold",
-      badge: "bg-amber-500/20 text-amber-300 border-amber-500/30 animate-pulse",
+      tone: "text-white font-bold",
+      badge: "border border-white/40 bg-white/10 text-white font-semibold animate-pulse",
     };
   }
   if (diffDays === 1) {
     return {
       text: "Vence amanhã",
-      tone: "text-amber-300",
-      badge: "bg-amber-500/10 text-amber-300 border-amber-500/20",
+      tone: "text-zinc-300",
+      badge: "border border-white/20 bg-white/5 text-zinc-300",
     };
   }
   if (diffDays <= 5) {
     return {
       text: `Vence em ${diffDays} dias`,
-      tone: "text-sky-300",
-      badge: "bg-sky-500/10 text-sky-300 border-sky-500/20",
+      tone: "text-zinc-300",
+      badge: "border border-white/10 bg-white/5 text-zinc-300",
     };
   }
   return {
     text: formatDate(dueDateStr),
-    tone: "text-emerald-400",
-    badge: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
+    tone: "text-white",
+    badge: "border border-white/20 bg-white/10 text-white",
   };
 }
 
@@ -734,8 +734,8 @@ function Clientes() {
               {stats.total} clientes
             </Badge>
             {isSigmaConfigured ? (
-              <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs gap-1 font-normal">
-                <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <Badge className="bg-white/10 text-white border-white/20 text-xs gap-1 font-normal">
+                <span className="size-1.5 rounded-full bg-white animate-pulse" />
                 {sigmaServerName}
               </Badge>
             ) : null}
@@ -752,9 +752,9 @@ function Clientes() {
               size="sm"
               onClick={sincronizar}
               disabled={syncing}
-              className="gap-1.5 shadow-sm text-xs"
+              className="gap-1.5 shadow-sm text-xs border-white/20 text-white hover:bg-white/10"
             >
-              {syncing ? <Loader2 className="size-3.5 animate-spin text-primary" /> : <RefreshCw className="size-3.5 text-primary" />}
+              {syncing ? <Loader2 className="size-3.5 animate-spin text-white" /> : <RefreshCw className="size-3.5 text-white" />}
               Sincronizar Servidor
             </Button>
           ) : null}
@@ -763,7 +763,7 @@ function Clientes() {
             variant="outline"
             size="sm"
             onClick={exportarCSV}
-            className="gap-1.5 shadow-sm text-xs"
+            className="gap-1.5 shadow-sm text-xs border-white/20 text-white hover:bg-white/10"
           >
             <Download className="size-3.5" />
             CSV
@@ -775,7 +775,7 @@ function Clientes() {
               setForm(empty);
               setOpen(true);
             }}
-            className="gap-1.5 shadow-sm bg-primary text-primary-foreground font-semibold text-xs hover-lift"
+            className="gap-1.5 shadow-sm bg-white text-black hover:bg-zinc-200 font-bold border-0 text-xs"
           >
             <Plus className="size-3.5" />
             Novo Cliente / Linha
@@ -794,7 +794,7 @@ function Clientes() {
                 {stats.inSigma} no servidor Sigma
               </p>
             </div>
-            <div className="rounded-xl p-2.5 bg-blue-500/10 text-blue-400">
+            <div className="rounded-xl p-2.5 bg-white/10 text-white border border-white/20">
               <Users className="size-5" />
             </div>
           </CardContent>
@@ -804,12 +804,12 @@ function Clientes() {
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Linhas Ativas</p>
-              <p className="text-2xl font-bold mt-1 text-emerald-400">{stats.active}</p>
+              <p className="text-2xl font-bold mt-1 text-white">{stats.active}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% da base
               </p>
             </div>
-            <div className="rounded-xl p-2.5 bg-emerald-500/10 text-emerald-400">
+            <div className="rounded-xl p-2.5 bg-white text-black font-extrabold shadow-sm">
               <CheckCircle2 className="size-5" />
             </div>
           </CardContent>
@@ -819,12 +819,12 @@ function Clientes() {
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Em Atraso</p>
-              <p className="text-2xl font-bold mt-1 text-rose-400">{stats.overdue}</p>
-              <p className="text-[11px] text-rose-300/80 mt-0.5">
+              <p className="text-2xl font-bold mt-1 text-white">{stats.overdue}</p>
+              <p className="text-[11px] text-zinc-400 mt-0.5">
                 Requerem cobrança
               </p>
             </div>
-            <div className="rounded-xl p-2.5 bg-rose-500/10 text-rose-400">
+            <div className="rounded-xl p-2.5 bg-white/5 text-zinc-400 border border-white/10">
               <AlertTriangle className="size-5" />
             </div>
           </CardContent>
@@ -834,12 +834,12 @@ function Clientes() {
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Vencem Hoje</p>
-              <p className="text-2xl font-bold mt-1 text-amber-400">{stats.todayDue}</p>
+              <p className="text-2xl font-bold mt-1 text-white">{stats.todayDue}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 Vencimento do dia
               </p>
             </div>
-            <div className="rounded-xl p-2.5 bg-amber-500/10 text-amber-400">
+            <div className="rounded-xl p-2.5 bg-white/10 text-white border border-white/20">
               <Clock className="size-5" />
             </div>
           </CardContent>
@@ -874,13 +874,13 @@ function Clientes() {
                 <TabsTrigger value="all" className="text-xs">
                   Todos ({stats.total})
                 </TabsTrigger>
-                <TabsTrigger value="active" className="text-xs text-emerald-400">
+                <TabsTrigger value="active" className="text-xs">
                   Ativos ({stats.active})
                 </TabsTrigger>
-                <TabsTrigger value="overdue" className="text-xs text-rose-400">
+                <TabsTrigger value="overdue" className="text-xs">
                   Atraso ({stats.overdue})
                 </TabsTrigger>
-                <TabsTrigger value="today" className="text-xs text-amber-400">
+                <TabsTrigger value="today" className="text-xs">
                   Hoje ({stats.todayDue})
                 </TabsTrigger>
                 <TabsTrigger value="blocked" className="text-xs">
@@ -956,10 +956,10 @@ function Clientes() {
                         <div
                           className={`size-9 rounded-full flex items-center justify-center font-bold text-xs shadow-sm border ${
                             client.status === "active"
-                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                              ? "bg-white text-black font-extrabold border-white"
                               : client.status === "blocked"
-                              ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
-                              : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30"
+                              ? "bg-zinc-900 text-zinc-400 border-zinc-700"
+                              : "bg-zinc-950 text-zinc-500 border-zinc-800"
                           }`}
                         >
                           {getInitials(client.name)}
@@ -976,9 +976,9 @@ function Clientes() {
                             href={`https://wa.me/55${cleanPhoneDigits(client.phone)}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-400 transition-colors font-mono mt-0.5"
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-white transition-colors font-mono mt-0.5"
                           >
-                            <MessageCircle className="size-3 text-emerald-400" />
+                            <MessageCircle className="size-3 text-white" />
                             {formatPhoneInput(client.phone)}
                           </a>
                         ) : null}
@@ -988,7 +988,7 @@ function Clientes() {
                       <TableCell>
                         {client.iptv_username ? (
                           <div className="font-mono text-xs text-foreground flex items-center gap-1.5">
-                            <KeyRound className="size-3.5 text-primary shrink-0" />
+                            <KeyRound className="size-3.5 text-white shrink-0" />
                             <span>{client.iptv_username}</span>
                           </div>
                         ) : (
@@ -998,7 +998,7 @@ function Clientes() {
                           <Tv className="size-3" />
                           <span>{client.screens || 1} tela{(client.screens || 1) > 1 ? "s" : ""}</span>
                           {client.sigma_customer_id ? (
-                            <span className="text-emerald-400 font-mono text-[10px]">
+                            <span className="text-zinc-400 font-mono text-[10px]">
                               • ID: {String(client.sigma_customer_id).slice(0, 10)}
                             </span>
                           ) : null}
@@ -1029,10 +1029,10 @@ function Clientes() {
                           variant="outline"
                           className={
                             client.status === "active"
-                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs"
+                              ? "border-white bg-white text-black font-extrabold text-xs"
                               : client.status === "blocked"
-                              ? "bg-rose-500/10 text-rose-400 border-rose-500/30 text-xs"
-                              : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30 text-xs"
+                              ? "border-zinc-700 bg-zinc-900 text-zinc-400 text-xs"
+                              : "border-zinc-800 bg-zinc-950 text-zinc-500 text-xs"
                           }
                         >
                           {client.status === "active" ? "Ativo" : client.status === "blocked" ? "Bloqueado" : "Inativo"}
@@ -1046,11 +1046,11 @@ function Clientes() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 px-2.5 text-xs font-medium gap-1 text-muted-foreground hover:text-foreground"
+                            className="h-8 px-2.5 text-xs font-medium gap-1 text-white border-white/20 hover:bg-white/10"
                             title="Copiar dados de acesso"
                             onClick={() => copiarDadosAcesso(client)}
                           >
-                            {isCopied ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
+                            {isCopied ? <Check className="size-3.5 text-white" /> : <Copy className="size-3.5" />}
                             Copiar
                           </Button>
 
@@ -1059,7 +1059,7 @@ function Clientes() {
                             variant="outline"
                             size="sm"
                             disabled={isBusy}
-                            className="h-8 px-2.5 text-xs font-medium gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border-emerald-500/20"
+                            className="h-8 px-2.5 text-xs font-medium gap-1 border-white/20 text-white hover:bg-white/10"
                             title="Renovar 30 dias no painel Sigma"
                             onClick={() => setConfirmRenewClient(client)}
                           >
@@ -1072,7 +1072,7 @@ function Clientes() {
                             variant="outline"
                             size="sm"
                             disabled={isBusy}
-                            className="h-8 px-2.5 text-xs font-medium gap-1 text-primary hover:bg-primary/10 border-primary/20"
+                            className="h-8 px-2.5 text-xs font-medium gap-1 border-white/20 text-white hover:bg-white/10"
                             title="Cobrar via WhatsApp"
                             onClick={() => setConfirmRemindClient(client)}
                           >
@@ -1093,7 +1093,7 @@ function Clientes() {
                                 <Pencil className="size-4" />
                                 Editar dados
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setViewAccessClient(client)} className="gap-2 text-cyan-400 font-medium">
+                              <DropdownMenuItem onClick={() => setViewAccessClient(client)} className="gap-2 text-white font-medium">
                                 <Tv className="size-4" />
                                 Ver Acesso & Listas M3U
                               </DropdownMenuItem>
@@ -1101,14 +1101,14 @@ function Clientes() {
                                 <Smartphone className="size-4" />
                                 Enviar dados de acesso
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setConfirmRenewClient(client)} className="gap-2 text-emerald-400">
+                              <DropdownMenuItem onClick={() => setConfirmRenewClient(client)} className="gap-2 text-white">
                                 <CalendarPlus className="size-4" />
                                 Renovar +30 dias
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() => alternarBloqueio(client)}
-                                className={`gap-2 ${client.status === "blocked" ? "text-emerald-400" : "text-amber-400"}`}
+                                className="gap-2 text-white"
                               >
                                 <Ban className="size-4" />
                                 {client.status === "blocked" ? "Desbloquear no Servidor" : "Bloquear no Servidor"}
@@ -1122,7 +1122,7 @@ function Clientes() {
                                     hasSigma: Boolean(client.sigma_customer_id),
                                   })
                                 }
-                                className="gap-2 text-rose-400 focus:text-rose-400"
+                                className="gap-2 text-zinc-400 focus:text-white"
                               >
                                 <Trash2 className="size-4" />
                                 Excluir cliente
@@ -1152,10 +1152,10 @@ function Clientes() {
                       <div
                         className={`size-10 rounded-full flex items-center justify-center font-bold text-xs shadow-sm border ${
                           client.status === "active"
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                            ? "bg-white text-black font-extrabold border-white"
                             : client.status === "blocked"
-                            ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
-                            : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30"
+                            ? "bg-zinc-900 text-zinc-400 border-zinc-700"
+                            : "bg-zinc-950 text-zinc-500 border-zinc-800"
                         }`}
                       >
                         {getInitials(client.name)}
@@ -1166,9 +1166,9 @@ function Clientes() {
                           href={`https://wa.me/55${cleanPhoneDigits(client.phone)}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs text-muted-foreground hover:text-emerald-400 font-mono inline-flex items-center gap-1 mt-0.5"
+                          className="text-xs text-muted-foreground hover:text-white font-mono inline-flex items-center gap-1 mt-0.5"
                         >
-                          <MessageCircle className="size-3 text-emerald-400" />
+                          <MessageCircle className="size-3 text-white" />
                           {formatPhoneInput(client.phone)}
                         </a>
                       </div>
@@ -1178,10 +1178,10 @@ function Clientes() {
                       variant="outline"
                       className={
                         client.status === "active"
-                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[11px]"
+                          ? "border-white bg-white text-black font-extrabold text-[11px]"
                           : client.status === "blocked"
-                          ? "bg-rose-500/10 text-rose-400 border-rose-500/30 text-[11px]"
-                          : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30 text-[11px]"
+                          ? "border-zinc-700 bg-zinc-900 text-zinc-400 text-[11px]"
+                          : "border-zinc-800 bg-zinc-950 text-zinc-500 text-[11px]"
                       }
                     >
                       {client.status === "active" ? "Ativo" : client.status === "blocked" ? "Bloqueado" : "Inativo"}
@@ -1208,15 +1208,15 @@ function Clientes() {
                       <button
                         type="button"
                         onClick={() => setViewAccessClient(client)}
-                        className="flex items-center gap-1 bg-muted/40 hover:bg-cyan-500/10 hover:text-cyan-400 px-2 py-0.5 rounded-md transition-colors text-left"
+                        className="flex items-center gap-1 bg-muted/40 hover:bg-white/10 hover:text-white px-2 py-0.5 rounded-md transition-colors text-left"
                         title="Ver credenciais IPTV e links M3U"
                       >
-                        <KeyRound className="size-3 text-primary" />
+                        <KeyRound className="size-3 text-white" />
                         <span>{client.iptv_username}</span>
-                        <Tv className="size-2.5 ml-0.5 text-cyan-400" />
+                        <Tv className="size-2.5 ml-0.5 text-white" />
                       </button>
                       {client.sigma_customer_id ? (
-                        <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md text-[11px]">
+                        <span className="text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md text-[11px]">
                           Sigma ID: {String(client.sigma_customer_id).slice(0, 8)}
                         </span>
                       ) : null}
@@ -1228,10 +1228,10 @@ function Clientes() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs gap-1 px-1 text-muted-foreground"
+                      className="h-8 text-xs gap-1 px-1 border-white/20 text-white hover:bg-white/10"
                       onClick={() => copiarDadosAcesso(client)}
                     >
-                      {isCopied ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                      {isCopied ? <Check className="size-3 text-white" /> : <Copy className="size-3" />}
                       Acesso
                     </Button>
 
@@ -1239,7 +1239,7 @@ function Clientes() {
                       variant="outline"
                       size="sm"
                       disabled={isBusy}
-                      className="h-8 text-xs gap-1 px-1 text-emerald-400 border-emerald-500/30"
+                      className="h-8 text-xs gap-1 px-1 border-white/20 text-white hover:bg-white/10"
                       onClick={() => setConfirmRenewClient(client)}
                     >
                       {isBusy ? <Loader2 className="size-3 animate-spin" /> : <CalendarPlus className="size-3" />}
@@ -1249,7 +1249,8 @@ function Clientes() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs gap-1 px-1 text-primary border-primary/30"
+                      disabled={isBusy}
+                      className="h-8 text-xs gap-1 px-1 border-white/20 text-white hover:bg-white/10"
                       onClick={() => setConfirmRemindClient(client)}
                     >
                       <MessageCircle className="size-3" />
@@ -1483,7 +1484,7 @@ function Clientes() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base text-foreground">
-              <CalendarPlus className="size-5 text-emerald-400" />
+              <CalendarPlus className="size-5 text-white" />
               Confirmar Renovação de Assinatura
             </DialogTitle>
             <DialogDescription>
@@ -1501,7 +1502,7 @@ function Clientes() {
                 {confirmRenewClient.iptv_username && (
                   <div className="flex justify-between">
                     <span className="text-xs text-muted-foreground">Usuário IPTV / Sigma:</span>
-                    <span className="font-mono text-xs text-primary">{confirmRenewClient.iptv_username}</span>
+                    <span className="font-mono text-xs text-white">{confirmRenewClient.iptv_username}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
@@ -1514,11 +1515,11 @@ function Clientes() {
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 space-y-1">
-                <p className="font-semibold flex items-center gap-1.5">
-                  <ShieldCheck className="size-4 text-emerald-400" /> O que acontecerá:
+              <div className="p-3 rounded-xl bg-zinc-900 border border-white/20 text-xs text-zinc-300 space-y-1">
+                <p className="font-semibold flex items-center gap-1.5 text-white">
+                  <ShieldCheck className="size-4 text-white" /> O que acontecerá:
                 </p>
-                <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-muted-foreground">
+                <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-zinc-400">
                   <li>O vencimento avançará <strong>+30 dias</strong> no sistema.</li>
                   <li>Se vinculado, a conta será <strong>renovada diretamente no Painel Sigma</strong>.</li>
                 </ul>
@@ -1532,13 +1533,14 @@ function Clientes() {
               variant="outline"
               size="sm"
               onClick={() => setConfirmRenewClient(null)}
+              className="border-white/20 text-white hover:bg-white/10"
             >
               Cancelar
             </Button>
             <Button
               type="button"
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5"
+              className="bg-white text-black hover:bg-zinc-200 font-bold gap-1.5 border-0 shadow-sm"
               disabled={!confirmRenewClient}
               onClick={() => {
                 if (confirmRenewClient) {
@@ -1560,7 +1562,7 @@ function Clientes() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base text-foreground">
-              <MessageCircle className="size-5 text-emerald-400" />
+              <MessageCircle className="size-5 text-white" />
               Enviar Cobrança via WhatsApp
             </DialogTitle>
             <DialogDescription>
@@ -1577,7 +1579,7 @@ function Clientes() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-muted-foreground">WhatsApp:</span>
-                  <span className="font-mono text-xs text-emerald-400">{confirmRemindClient.phone}</span>
+                  <span className="font-mono text-xs text-white">{confirmRemindClient.phone}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-muted-foreground">Mensalidade:</span>
@@ -1601,13 +1603,14 @@ function Clientes() {
               variant="outline"
               size="sm"
               onClick={() => setConfirmRemindClient(null)}
+              className="border-white/20 text-white hover:bg-white/10"
             >
               Cancelar
             </Button>
             <Button
               type="button"
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5"
+              className="bg-white text-black hover:bg-zinc-200 font-bold gap-1.5 border-0 shadow-sm"
               disabled={!confirmRemindClient}
               onClick={() => {
                 if (confirmRemindClient) {
@@ -1637,7 +1640,7 @@ function Clientes() {
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base text-foreground">
-              <Tv className="size-5 text-cyan-400" />
+              <Tv className="size-5 text-white" />
               Dados de Acesso IPTV & Listas M3U
             </DialogTitle>
             <DialogDescription className="text-xs">
@@ -1660,9 +1663,9 @@ function Clientes() {
             return (
               <div className="space-y-4 py-1 text-xs">
                 {/* Dica de Segurança e Controle */}
-                <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/10 p-3 text-[11px] text-cyan-200">
-                  <p className="font-semibold text-cyan-100 flex items-center gap-1.5 mb-0.5">
-                    <ShieldCheck className="size-3.5 text-cyan-400" /> Transmissão Direta & Sem Links Externos
+                <div className="rounded-xl border border-white/20 bg-zinc-900 p-3 text-[11px] text-zinc-300">
+                  <p className="font-semibold text-white flex items-center gap-1.5 mb-0.5">
+                    <ShieldCheck className="size-3.5 text-white" /> Transmissão Direta & Sem Links Externos
                   </p>
                   O link do painel administrativo não é exposto. Nenhum link de renovação do painel externo é enviado ao cliente — o controle financeiro e as renovações são gerenciadas 100% pelo seu sistema.
                 </div>
@@ -1670,7 +1673,7 @@ function Clientes() {
                 {/* Bloco 1: Conexão Xtream Codes API (IPTV Smarters, XCIPTV, TiviMate) */}
                 <div className="rounded-xl border border-border/70 bg-muted/30 p-3 space-y-2.5">
                   <p className="font-bold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <Server className="size-3.5 text-primary" /> Conexão Xtream Codes (Apps IPTV)
+                    <Server className="size-3.5 text-white" /> Conexão Xtream Codes (Apps IPTV)
                   </p>
 
                   <div className="space-y-2">
@@ -1678,17 +1681,17 @@ function Clientes() {
                       <span className="text-[10px] text-muted-foreground font-semibold">Nome do Servidor:</span>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <div className="flex-1 rounded-lg bg-background border px-2.5 py-1.5 text-xs text-foreground font-semibold truncate flex items-center gap-1.5">
-                          <span className="size-2 rounded-full bg-emerald-400 inline-block" />
+                          <span className="size-2 rounded-full bg-white inline-block" />
                           {serverLabel}
                         </div>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="h-8 px-2.5 text-xs gap-1"
+                          className="h-8 px-2.5 text-xs gap-1 border-white/20 text-white hover:bg-white/10"
                           onClick={() => copyText(serverLabel, "Nome do Servidor")}
                         >
-                          {copiedField === "Nome do Servidor" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          {copiedField === "Nome do Servidor" ? <Check className="size-3 text-white" /> : <Copy className="size-3" />}
                           Copiar
                         </Button>
                       </div>
@@ -1704,10 +1707,10 @@ function Clientes() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="h-8 px-2.5 text-xs gap-1"
+                          className="h-8 px-2.5 text-xs gap-1 border-white/20 text-white hover:bg-white/10"
                           onClick={() => copyText(cleanDns, "Servidor/DNS")}
                         >
-                          {copiedField === "Servidor/DNS" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          {copiedField === "Servidor/DNS" ? <Check className="size-3 text-white" /> : <Copy className="size-3" />}
                           Copiar
                         </Button>
                       </div>
@@ -1723,10 +1726,10 @@ function Clientes() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="h-8 px-2.5 text-xs gap-1"
+                          className="h-8 px-2.5 text-xs gap-1 border-white/20 text-white hover:bg-white/10"
                           onClick={() => copyText(user, "Usuário")}
                         >
-                          {copiedField === "Usuário" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          {copiedField === "Usuário" ? <Check className="size-3 text-white" /> : <Copy className="size-3" />}
                           Copiar
                         </Button>
                       </div>
@@ -1752,10 +1755,10 @@ function Clientes() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="h-8 px-2.5 text-xs gap-1"
+                          className="h-8 px-2.5 text-xs gap-1 border-white/20 text-white hover:bg-white/10"
                           onClick={() => copyText(pass, "Senha")}
                         >
-                          {copiedField === "Senha" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          {copiedField === "Senha" ? <Check className="size-3 text-white" /> : <Copy className="size-3" />}
                           Copiar
                         </Button>
                       </div>
@@ -1766,7 +1769,7 @@ function Clientes() {
                 {/* Bloco 2: Listas M3U & EPG */}
                 <div className="rounded-xl border border-border/70 bg-muted/30 p-3 space-y-2.5">
                   <p className="font-bold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <Globe className="size-3.5 text-cyan-400" /> Links de Streaming (M3U & EPG)
+                    <Globe className="size-3.5 text-white" /> Links de Streaming (M3U & EPG)
                   </p>
 
                   <div className="space-y-2">
@@ -1781,10 +1784,10 @@ function Clientes() {
                           variant="outline"
                           size="sm"
                           disabled={!m3uTs}
-                          className="h-8 px-2.5 text-xs gap-1"
+                          className="h-8 px-2.5 text-xs gap-1 border-white/20 text-white hover:bg-white/10"
                           onClick={() => copyText(m3uTs, "Lista M3U TS")}
                         >
-                          {copiedField === "Lista M3U TS" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          {copiedField === "Lista M3U TS" ? <Check className="size-3 text-white" /> : <Copy className="size-3" />}
                           Copiar
                         </Button>
                       </div>
@@ -1801,10 +1804,10 @@ function Clientes() {
                           variant="outline"
                           size="sm"
                           disabled={!m3uHls}
-                          className="h-8 px-2.5 text-xs gap-1"
+                          className="h-8 px-2.5 text-xs gap-1 border-white/20 text-white hover:bg-white/10"
                           onClick={() => copyText(m3uHls, "Lista M3U HLS")}
                         >
-                          {copiedField === "Lista M3U HLS" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          {copiedField === "Lista M3U HLS" ? <Check className="size-3 text-white" /> : <Copy className="size-3" />}
                           Copiar
                         </Button>
                       </div>
@@ -1821,10 +1824,10 @@ function Clientes() {
                           variant="outline"
                           size="sm"
                           disabled={!epg}
-                          className="h-8 px-2.5 text-xs gap-1"
+                          className="h-8 px-2.5 text-xs gap-1 border-white/20 text-white hover:bg-white/10"
                           onClick={() => copyText(epg, "Link EPG")}
                         >
-                          {copiedField === "Link EPG" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          {copiedField === "Link EPG" ? <Check className="size-3 text-white" /> : <Copy className="size-3" />}
                           Copiar
                         </Button>
                       </div>
@@ -1854,7 +1857,7 @@ function Clientes() {
               onClick={() => {
                 if (viewAccessClient) copiarDadosAcesso(viewAccessClient);
               }}
-              className="gap-1.5 text-xs font-semibold"
+              className="gap-1.5 text-xs font-semibold border-white/20 text-white hover:bg-white/10"
             >
               <Copy className="size-3.5" />
               Copiar Mensagem WhatsApp Completa
@@ -1868,7 +1871,7 @@ function Clientes() {
                   setViewAccessClient(null);
                 }
               }}
-              className="gap-1.5 text-xs font-semibold bg-primary text-primary-foreground"
+              className="gap-1.5 text-xs font-bold bg-white text-black hover:bg-zinc-200 border-0 shadow-sm"
             >
               {actionBusyId ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
               Enviar no WhatsApp do Cliente
@@ -1887,7 +1890,7 @@ function Clientes() {
                 Tem certeza que deseja remover o cliente <strong>{clientToDelete?.name}</strong> do sistema?
               </p>
               {clientToDelete?.hasSigma ? (
-                <div className="flex items-start space-x-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 mt-2">
+                <div className="flex items-start space-x-3 rounded-lg border border-white/20 bg-zinc-900 p-3 mt-2">
                   <Checkbox
                     id="deleteSigma"
                     checked={deleteFromSigma}
@@ -1916,7 +1919,7 @@ function Clientes() {
                 e.preventDefault();
                 executarExclusao();
               }}
-              className="bg-rose-600 hover:bg-rose-700 text-white font-medium"
+              className="bg-white text-black hover:bg-zinc-200 font-bold border-0 shadow-sm"
             >
               {deleting ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
               Confirmar Exclusão
