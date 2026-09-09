@@ -136,8 +136,10 @@ export async function sendButtonsViaEvolution(
   try {
     const formattedButtons = options.buttons.map((b) => ({
       id: String(b.id),
+      buttonId: String(b.id),
       displayText: b.displayText,
       text: b.displayText,
+      buttonText: { displayText: b.displayText },
       type: b.type || "reply",
       ...(b.copyCode ? { copyCode: b.copyCode } : {}),
       ...(b.url ? { url: b.url } : {}),
@@ -147,6 +149,7 @@ export async function sendButtonsViaEvolution(
     const payload: any = {
       number: normalizeNumber(phone),
       description: options.description,
+      text: options.description,
       buttons: formattedButtons,
     };
     if (options.title) payload.title = options.title;
