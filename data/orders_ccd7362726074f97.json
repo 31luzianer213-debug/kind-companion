@@ -215,21 +215,5 @@
     "payment_method": "pix",
     "created_at": "2026-09-08T22:46:17.240Z",
     "updated_at": "2026-09-08T22:46:17.240Z"
-  },
-  {
-    "id": "ord_1788900576855_3308w",
-    "user_id": "ccd73627-2607-4f97-bf96-b333469e38d7",
-    "order_number": 1002,
-    "customer_name": "Cliente WhatsApp",
-    "customer_phone": "5511999998888",
-    "plan_name": "Plano Mensal (1 Mês - 1 Tela)",
-    "amount": 35,
-    "duration_months": 1,
-    "screens": 1,
-    "status": "pending",
-    "type": "new_access",
-    "payment_method": "pix",
-    "created_at": "2026-09-08T20:49:36.855Z",
-    "updated_at": "2026-09-08T20:49:36.856Z"
   }
 ]
