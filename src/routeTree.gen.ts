@@ -10,8 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
-import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedBotRouteImport } from './routes/_authenticated/bot'
 import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticated/clientes'
 import { Route as AuthenticatedCobrancasRouteImport } from './routes/_authenticated/cobrancas'
@@ -21,88 +19,80 @@ import { Route as AuthenticatedMensagensRouteImport } from './routes/_authentica
 import { Route as AuthenticatedPagamentosRouteImport } from './routes/_authenticated/pagamentos'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedPedidosRouteImport } from './routes/_authenticated/pedidos'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedSigmaRouteImport } from './routes/_authenticated/sigma'
 import { Route as AuthenticatedWhatsappRouteImport } from './routes/_authenticated/whatsapp'
-import { Route as ApiPublicOrdersRouteImport } from './routes/api/public/orders'
 import { Route as ApiPublicHooksAsaasRouteImport } from './routes/api/public/hooks/asaas'
 import { Route as ApiPublicHooksCobrancaDiariaRouteImport } from './routes/api/public/hooks/cobranca-diaria'
 import { Route as ApiPublicHooksMercadopagoRouteImport } from './routes/api/public/hooks/mercadopago'
 import { Route as ApiPublicHooksSigmaSyncRouteImport } from './routes/api/public/hooks/sigma-sync'
 import { Route as ApiPublicHooksWhatsappBotRouteImport } from './routes/api/public/hooks/whatsapp-bot'
+import { Route as ApiPublicOrdersRouteImport } from './routes/api/public/orders'
+import { Route as AuthRouteImport } from './routes/auth'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedBotRoute = AuthenticatedBotRouteImport.update({
-  id: '/bot',
+  id: '/_authenticated/bot',
   path: '/bot',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedClientesRoute = AuthenticatedClientesRouteImport.update({
-  id: '/clientes',
+  id: '/_authenticated/clientes',
   path: '/clientes',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedCobrancasRoute = AuthenticatedCobrancasRouteImport.update({
-  id: '/cobrancas',
+  id: '/_authenticated/cobrancas',
   path: '/cobrancas',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedConfiguracoesRoute =
-  AuthenticatedConfiguracoesRouteImport.update({
-    id: '/configuracoes',
-    path: '/configuracoes',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
+const AuthenticatedConfiguracoesRoute = AuthenticatedConfiguracoesRouteImport.update({
+  id: '/_authenticated/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedListasRoute = AuthenticatedListasRouteImport.update({
-  id: '/listas',
+  id: '/_authenticated/listas',
   path: '/listas',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedMensagensRoute = AuthenticatedMensagensRouteImport.update({
-  id: '/mensagens',
+  id: '/_authenticated/mensagens',
   path: '/mensagens',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedPagamentosRoute = AuthenticatedPagamentosRouteImport.update({
-  id: '/pagamentos',
+  id: '/_authenticated/pagamentos',
   path: '/pagamentos',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
-  id: '/painel',
+  id: '/_authenticated/painel',
   path: '/painel',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedPedidosRoute = AuthenticatedPedidosRouteImport.update({
-  id: '/pedidos',
+  id: '/_authenticated/pedidos',
   path: '/pedidos',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated/route',
+  path: '/route',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedSigmaRoute = AuthenticatedSigmaRouteImport.update({
-  id: '/sigma',
+  id: '/_authenticated/sigma',
   path: '/sigma',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedWhatsappRoute = AuthenticatedWhatsappRouteImport.update({
-  id: '/whatsapp',
+  id: '/_authenticated/whatsapp',
   path: '/whatsapp',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const ApiPublicOrdersRoute = ApiPublicOrdersRouteImport.update({
-  id: '/api/public/orders',
-  path: '/api/public/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicHooksAsaasRoute = ApiPublicHooksAsaasRouteImport.update({
@@ -110,33 +100,39 @@ const ApiPublicHooksAsaasRoute = ApiPublicHooksAsaasRouteImport.update({
   path: '/api/public/hooks/asaas',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicHooksCobrancaDiariaRoute =
-  ApiPublicHooksCobrancaDiariaRouteImport.update({
-    id: '/api/public/hooks/cobranca-diaria',
-    path: '/api/public/hooks/cobranca-diaria',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksMercadopagoRoute =
-  ApiPublicHooksMercadopagoRouteImport.update({
-    id: '/api/public/hooks/mercadopago',
-    path: '/api/public/hooks/mercadopago',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const ApiPublicHooksCobrancaDiariaRoute = ApiPublicHooksCobrancaDiariaRouteImport.update({
+  id: '/api/public/hooks/cobranca-diaria',
+  path: '/api/public/hooks/cobranca-diaria',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicHooksMercadopagoRoute = ApiPublicHooksMercadopagoRouteImport.update({
+  id: '/api/public/hooks/mercadopago',
+  path: '/api/public/hooks/mercadopago',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksSigmaSyncRoute = ApiPublicHooksSigmaSyncRouteImport.update({
   id: '/api/public/hooks/sigma-sync',
   path: '/api/public/hooks/sigma-sync',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicHooksWhatsappBotRoute =
-  ApiPublicHooksWhatsappBotRouteImport.update({
-    id: '/api/public/hooks/whatsapp-bot',
-    path: '/api/public/hooks/whatsapp-bot',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const ApiPublicHooksWhatsappBotRoute = ApiPublicHooksWhatsappBotRouteImport.update({
+  id: '/api/public/hooks/whatsapp-bot',
+  path: '/api/public/hooks/whatsapp-bot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicOrdersRoute = ApiPublicOrdersRouteImport.update({
+  id: '/api/public/orders',
+  path: '/api/public/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
   '/bot': typeof AuthenticatedBotRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/cobrancas': typeof AuthenticatedCobrancasRoute
@@ -146,18 +142,19 @@ export interface FileRoutesByFullPath {
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos': typeof AuthenticatedPedidosRoute
+  '/route': typeof AuthenticatedRouteRoute
   '/sigma': typeof AuthenticatedSigmaRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
-  '/api/public/orders': typeof ApiPublicOrdersRoute
   '/api/public/hooks/asaas': typeof ApiPublicHooksAsaasRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
+  '/api/public/orders': typeof ApiPublicOrdersRoute
+  '/auth': typeof AuthRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
   '/bot': typeof AuthenticatedBotRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/cobrancas': typeof AuthenticatedCobrancasRoute
@@ -167,20 +164,20 @@ export interface FileRoutesByTo {
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos': typeof AuthenticatedPedidosRoute
+  '/route': typeof AuthenticatedRouteRoute
   '/sigma': typeof AuthenticatedSigmaRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
-  '/api/public/orders': typeof ApiPublicOrdersRoute
   '/api/public/hooks/asaas': typeof ApiPublicHooksAsaasRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
+  '/api/public/orders': typeof ApiPublicOrdersRoute
+  '/auth': typeof AuthRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
-  '/auth': typeof AuthRoute
   '/_authenticated/bot': typeof AuthenticatedBotRoute
   '/_authenticated/clientes': typeof AuthenticatedClientesRoute
   '/_authenticated/cobrancas': typeof AuthenticatedCobrancasRoute
@@ -190,92 +187,46 @@ export interface FileRoutesById {
   '/_authenticated/pagamentos': typeof AuthenticatedPagamentosRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/pedidos': typeof AuthenticatedPedidosRoute
+  '/_authenticated/route': typeof AuthenticatedRouteRoute
   '/_authenticated/sigma': typeof AuthenticatedSigmaRoute
   '/_authenticated/whatsapp': typeof AuthenticatedWhatsappRoute
-  '/api/public/orders': typeof ApiPublicOrdersRoute
   '/api/public/hooks/asaas': typeof ApiPublicHooksAsaasRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
+  '/api/public/orders': typeof ApiPublicOrdersRoute
+  '/auth': typeof AuthRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/auth'
-    | '/bot'
-    | '/clientes'
-    | '/cobrancas'
-    | '/configuracoes'
-    | '/listas'
-    | '/mensagens'
-    | '/pagamentos'
-    | '/painel'
-    | '/pedidos'
-    | '/sigma'
-    | '/whatsapp'
-    | '/api/public/orders'
-    | '/api/public/hooks/asaas'
-    | '/api/public/hooks/cobranca-diaria'
-    | '/api/public/hooks/mercadopago'
-    | '/api/public/hooks/sigma-sync'
-    | '/api/public/hooks/whatsapp-bot'
+  fullPaths: '/' | '/bot' | '/clientes' | '/cobrancas' | '/configuracoes' | '/listas' | '/mensagens' | '/pagamentos' | '/painel' | '/pedidos' | '/route' | '/sigma' | '/whatsapp' | '/api/public/hooks/asaas' | '/api/public/hooks/cobranca-diaria' | '/api/public/hooks/mercadopago' | '/api/public/hooks/sigma-sync' | '/api/public/hooks/whatsapp-bot' | '/api/public/orders' | '/auth'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/auth'
-    | '/bot'
-    | '/clientes'
-    | '/cobrancas'
-    | '/configuracoes'
-    | '/listas'
-    | '/mensagens'
-    | '/pagamentos'
-    | '/painel'
-    | '/pedidos'
-    | '/sigma'
-    | '/whatsapp'
-    | '/api/public/orders'
-    | '/api/public/hooks/asaas'
-    | '/api/public/hooks/cobranca-diaria'
-    | '/api/public/hooks/mercadopago'
-    | '/api/public/hooks/sigma-sync'
-    | '/api/public/hooks/whatsapp-bot'
-  id:
-    | '__root__'
-    | '/'
-    | '/_authenticated'
-    | '/auth'
-    | '/_authenticated/bot'
-    | '/_authenticated/clientes'
-    | '/_authenticated/cobrancas'
-    | '/_authenticated/configuracoes'
-    | '/_authenticated/listas'
-    | '/_authenticated/mensagens'
-    | '/_authenticated/pagamentos'
-    | '/_authenticated/painel'
-    | '/_authenticated/pedidos'
-    | '/_authenticated/sigma'
-    | '/_authenticated/whatsapp'
-    | '/api/public/orders'
-    | '/api/public/hooks/asaas'
-    | '/api/public/hooks/cobranca-diaria'
-    | '/api/public/hooks/mercadopago'
-    | '/api/public/hooks/sigma-sync'
-    | '/api/public/hooks/whatsapp-bot'
+  to: '/' | '/bot' | '/clientes' | '/cobrancas' | '/configuracoes' | '/listas' | '/mensagens' | '/pagamentos' | '/painel' | '/pedidos' | '/route' | '/sigma' | '/whatsapp' | '/api/public/hooks/asaas' | '/api/public/hooks/cobranca-diaria' | '/api/public/hooks/mercadopago' | '/api/public/hooks/sigma-sync' | '/api/public/hooks/whatsapp-bot' | '/api/public/orders' | '/auth'
+  id: '__root__' | '/' | '/_authenticated/bot' | '/_authenticated/clientes' | '/_authenticated/cobrancas' | '/_authenticated/configuracoes' | '/_authenticated/listas' | '/_authenticated/mensagens' | '/_authenticated/pagamentos' | '/_authenticated/painel' | '/_authenticated/pedidos' | '/_authenticated/route' | '/_authenticated/sigma' | '/_authenticated/whatsapp' | '/api/public/hooks/asaas' | '/api/public/hooks/cobranca-diaria' | '/api/public/hooks/mercadopago' | '/api/public/hooks/sigma-sync' | '/api/public/hooks/whatsapp-bot' | '/api/public/orders' | '/auth'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
-  AuthRoute: typeof AuthRoute
-  ApiPublicOrdersRoute: typeof ApiPublicOrdersRoute
+  AuthenticatedBotRoute: typeof AuthenticatedBotRoute
+  AuthenticatedClientesRoute: typeof AuthenticatedClientesRoute
+  AuthenticatedCobrancasRoute: typeof AuthenticatedCobrancasRoute
+  AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
+  AuthenticatedListasRoute: typeof AuthenticatedListasRoute
+  AuthenticatedMensagensRoute: typeof AuthenticatedMensagensRoute
+  AuthenticatedPagamentosRoute: typeof AuthenticatedPagamentosRoute
+  AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
+  AuthenticatedPedidosRoute: typeof AuthenticatedPedidosRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRoute
+  AuthenticatedSigmaRoute: typeof AuthenticatedSigmaRoute
+  AuthenticatedWhatsappRoute: typeof AuthenticatedWhatsappRoute
   ApiPublicHooksAsaasRoute: typeof ApiPublicHooksAsaasRoute
   ApiPublicHooksCobrancaDiariaRoute: typeof ApiPublicHooksCobrancaDiariaRoute
   ApiPublicHooksMercadopagoRoute: typeof ApiPublicHooksMercadopagoRoute
   ApiPublicHooksSigmaSyncRoute: typeof ApiPublicHooksSigmaSyncRoute
   ApiPublicHooksWhatsappBotRoute: typeof ApiPublicHooksWhatsappBotRoute
+  ApiPublicOrdersRoute: typeof ApiPublicOrdersRoute
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -287,11 +238,130 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
+    '/bot': {
+      id: '/_authenticated/bot'
+      path: '/bot'
+      fullPath: '/bot'
+      preLoaderRoute: typeof AuthenticatedBotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clientes': {
+      id: '/_authenticated/clientes'
+      path: '/clientes'
+      fullPath: '/clientes'
+      preLoaderRoute: typeof AuthenticatedClientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cobrancas': {
+      id: '/_authenticated/cobrancas'
+      path: '/cobrancas'
+      fullPath: '/cobrancas'
+      preLoaderRoute: typeof AuthenticatedCobrancasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configuracoes': {
+      id: '/_authenticated/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/listas': {
+      id: '/_authenticated/listas'
+      path: '/listas'
+      fullPath: '/listas'
+      preLoaderRoute: typeof AuthenticatedListasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mensagens': {
+      id: '/_authenticated/mensagens'
+      path: '/mensagens'
+      fullPath: '/mensagens'
+      preLoaderRoute: typeof AuthenticatedMensagensRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pagamentos': {
+      id: '/_authenticated/pagamentos'
+      path: '/pagamentos'
+      fullPath: '/pagamentos'
+      preLoaderRoute: typeof AuthenticatedPagamentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/painel': {
+      id: '/_authenticated/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof AuthenticatedPainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pedidos': {
+      id: '/_authenticated/pedidos'
+      path: '/pedidos'
+      fullPath: '/pedidos'
+      preLoaderRoute: typeof AuthenticatedPedidosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/route': {
+      id: '/_authenticated/route'
+      path: '/route'
+      fullPath: '/route'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sigma': {
+      id: '/_authenticated/sigma'
+      path: '/sigma'
+      fullPath: '/sigma'
+      preLoaderRoute: typeof AuthenticatedSigmaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/whatsapp': {
+      id: '/_authenticated/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/whatsapp'
+      preLoaderRoute: typeof AuthenticatedWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/asaas': {
+      id: '/api/public/hooks/asaas'
+      path: '/asaas'
+      fullPath: '/api/public/hooks/asaas'
+      preLoaderRoute: typeof ApiPublicHooksAsaasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/cobranca-diaria': {
+      id: '/api/public/hooks/cobranca-diaria'
+      path: '/cobranca-diaria'
+      fullPath: '/api/public/hooks/cobranca-diaria'
+      preLoaderRoute: typeof ApiPublicHooksCobrancaDiariaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/mercadopago': {
+      id: '/api/public/hooks/mercadopago'
+      path: '/mercadopago'
+      fullPath: '/api/public/hooks/mercadopago'
+      preLoaderRoute: typeof ApiPublicHooksMercadopagoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/sigma-sync': {
+      id: '/api/public/hooks/sigma-sync'
+      path: '/sigma-sync'
+      fullPath: '/api/public/hooks/sigma-sync'
+      preLoaderRoute: typeof ApiPublicHooksSigmaSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/whatsapp-bot': {
+      id: '/api/public/hooks/whatsapp-bot'
+      path: '/whatsapp-bot'
+      fullPath: '/api/public/hooks/whatsapp-bot'
+      preLoaderRoute: typeof ApiPublicHooksWhatsappBotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/orders': {
+      id: '/api/public/orders'
+      path: '/orders'
+      fullPath: '/api/public/orders'
+      preLoaderRoute: typeof ApiPublicOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -301,143 +371,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/bot': {
-      id: '/_authenticated/bot'
-      path: '/bot'
-      fullPath: '/bot'
-      preLoaderRoute: typeof AuthenticatedBotRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/clientes': {
-      id: '/_authenticated/clientes'
-      path: '/clientes'
-      fullPath: '/clientes'
-      preLoaderRoute: typeof AuthenticatedClientesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/cobrancas': {
-      id: '/_authenticated/cobrancas'
-      path: '/cobrancas'
-      fullPath: '/cobrancas'
-      preLoaderRoute: typeof AuthenticatedCobrancasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/configuracoes': {
-      id: '/_authenticated/configuracoes'
-      path: '/configuracoes'
-      fullPath: '/configuracoes'
-      preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/listas': {
-      id: '/_authenticated/listas'
-      path: '/listas'
-      fullPath: '/listas'
-      preLoaderRoute: typeof AuthenticatedListasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/mensagens': {
-      id: '/_authenticated/mensagens'
-      path: '/mensagens'
-      fullPath: '/mensagens'
-      preLoaderRoute: typeof AuthenticatedMensagensRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/pagamentos': {
-      id: '/_authenticated/pagamentos'
-      path: '/pagamentos'
-      fullPath: '/pagamentos'
-      preLoaderRoute: typeof AuthenticatedPagamentosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/painel': {
-      id: '/_authenticated/painel'
-      path: '/painel'
-      fullPath: '/painel'
-      preLoaderRoute: typeof AuthenticatedPainelRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/pedidos': {
-      id: '/_authenticated/pedidos'
-      path: '/pedidos'
-      fullPath: '/pedidos'
-      preLoaderRoute: typeof AuthenticatedPedidosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/sigma': {
-      id: '/_authenticated/sigma'
-      path: '/sigma'
-      fullPath: '/sigma'
-      preLoaderRoute: typeof AuthenticatedSigmaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/whatsapp': {
-      id: '/_authenticated/whatsapp'
-      path: '/whatsapp'
-      fullPath: '/whatsapp'
-      preLoaderRoute: typeof AuthenticatedWhatsappRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/api/public/orders': {
-      id: '/api/public/orders'
-      path: '/api/public/orders'
-      fullPath: '/api/public/orders'
-      preLoaderRoute: typeof ApiPublicOrdersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/asaas': {
-      id: '/api/public/hooks/asaas'
-      path: '/api/public/hooks/asaas'
-      fullPath: '/api/public/hooks/asaas'
-      preLoaderRoute: typeof ApiPublicHooksAsaasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/cobranca-diaria': {
-      id: '/api/public/hooks/cobranca-diaria'
-      path: '/api/public/hooks/cobranca-diaria'
-      fullPath: '/api/public/hooks/cobranca-diaria'
-      preLoaderRoute: typeof ApiPublicHooksCobrancaDiariaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/mercadopago': {
-      id: '/api/public/hooks/mercadopago'
-      path: '/api/public/hooks/mercadopago'
-      fullPath: '/api/public/hooks/mercadopago'
-      preLoaderRoute: typeof ApiPublicHooksMercadopagoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/sigma-sync': {
-      id: '/api/public/hooks/sigma-sync'
-      path: '/api/public/hooks/sigma-sync'
-      fullPath: '/api/public/hooks/sigma-sync'
-      preLoaderRoute: typeof ApiPublicHooksSigmaSyncRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/whatsapp-bot': {
-      id: '/api/public/hooks/whatsapp-bot'
-      path: '/api/public/hooks/whatsapp-bot'
-      fullPath: '/api/public/hooks/whatsapp-bot'
-      preLoaderRoute: typeof ApiPublicHooksWhatsappBotRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
-interface AuthenticatedRouteRouteChildren {
-  AuthenticatedBotRoute: typeof AuthenticatedBotRoute
-  AuthenticatedClientesRoute: typeof AuthenticatedClientesRoute
-  AuthenticatedCobrancasRoute: typeof AuthenticatedCobrancasRoute
-  AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
-  AuthenticatedListasRoute: typeof AuthenticatedListasRoute
-  AuthenticatedMensagensRoute: typeof AuthenticatedMensagensRoute
-  AuthenticatedPagamentosRoute: typeof AuthenticatedPagamentosRoute
-  AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
-  AuthenticatedPedidosRoute: typeof AuthenticatedPedidosRoute
-  AuthenticatedSigmaRoute: typeof AuthenticatedSigmaRoute
-  AuthenticatedWhatsappRoute: typeof AuthenticatedWhatsappRoute
-}
-
-const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AuthenticatedBotRoute: AuthenticatedBotRoute,
   AuthenticatedClientesRoute: AuthenticatedClientesRoute,
   AuthenticatedCobrancasRoute: AuthenticatedCobrancasRoute,
@@ -447,23 +385,16 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPagamentosRoute: AuthenticatedPagamentosRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedPedidosRoute: AuthenticatedPedidosRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRoute,
   AuthenticatedSigmaRoute: AuthenticatedSigmaRoute,
   AuthenticatedWhatsappRoute: AuthenticatedWhatsappRoute,
-}
-
-const AuthenticatedRouteRouteWithChildren =
-  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
-
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
-  AuthRoute: AuthRoute,
-  ApiPublicOrdersRoute: ApiPublicOrdersRoute,
   ApiPublicHooksAsaasRoute: ApiPublicHooksAsaasRoute,
   ApiPublicHooksCobrancaDiariaRoute: ApiPublicHooksCobrancaDiariaRoute,
   ApiPublicHooksMercadopagoRoute: ApiPublicHooksMercadopagoRoute,
   ApiPublicHooksSigmaSyncRoute: ApiPublicHooksSigmaSyncRoute,
   ApiPublicHooksWhatsappBotRoute: ApiPublicHooksWhatsappBotRoute,
+  ApiPublicOrdersRoute: ApiPublicOrdersRoute,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
