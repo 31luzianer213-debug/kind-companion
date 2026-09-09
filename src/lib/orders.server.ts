@@ -27,43 +27,93 @@ export type OrderItem = {
   updated_at: string;
 };
 
-function getOrdersFilePath(userId?: string): string {
-  const safeId = (userId || "default").replace(/[^a-zA-Z0-9_-]/g, "_");
-  const canonicalId = (userId || "default").replace(/^iptv_/i, "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 16) || "default";
+export function getCanonicalUserId(userId?: string): string {
+  if (!userId || userId === "default") return "default";
+  const clean = userId.replace(/^iptv_/i, "").replace(/[^a-zA-Z0-9]/g, "");
+  return clean.slice(0, 16) || "default";
+}
+
+export function getOrdersFilePath(userId?: string): string {
+  const canonicalId = getCanonicalUserId(userId);
   const dir = path.resolve(process.cwd(), "data");
   if (!fs.existsSync(dir)) {
     try {
       fs.mkdirSync(dir, { recursive: true });
     } catch {}
   }
-  const canonicalPath = path.join(dir, `orders_${canonicalId}.json`);
-  if (fs.existsSync(canonicalPath)) return canonicalPath;
-
-  const safePath = path.join(dir, `orders_${safeId}.json`);
-  if (fs.existsSync(safePath)) return safePath;
-
-  return canonicalPath;
+  return path.join(dir, `orders_${canonicalId}.json`);
 }
 
-function readLocalOrders(userId?: string): OrderItem[] {
+export function readLocalOrders(userId?: string): OrderItem[] {
+  const canonicalId = getCanonicalUserId(userId);
+  const dir = path.resolve(process.cwd(), "data");
+  if (!fs.existsSync(dir)) return [];
+
+  const ordersMap = new Map<string, OrderItem>();
+
   try {
-    const file = getOrdersFilePath(userId);
-    if (fs.existsSync(file)) {
-      const raw = fs.readFileSync(file, "utf-8");
-      const list = JSON.parse(raw);
-      return Array.isArray(list) ? list : [];
+    const files = fs.readdirSync(dir);
+    for (const f of files) {
+      if (!f.startsWith("orders_") || !f.endsWith(".json")) continue;
+      // Lê e consolida arquivos de pedidos para que pedidos gerados pelo bot ou pelo painel apareçam unificados
+      const isMatch =
+        canonicalId === "default" ||
+        f.includes(canonicalId) ||
+        files.filter((x) => x.startsWith("orders_") && x.endsWith(".json")).length <= 3;
+      if (!isMatch) continue;
+
+      try {
+        const raw = fs.readFileSync(path.join(dir, f), "utf-8");
+        const content = JSON.parse(raw);
+        if (Array.isArray(content)) {
+          for (const item of content) {
+            if (item && item.id) {
+              const existing = ordersMap.get(item.id);
+              if (
+                !existing ||
+                new Date(item.updated_at || item.created_at).getTime() >=
+                  new Date(existing.updated_at || existing.created_at).getTime()
+              ) {
+                ordersMap.set(item.id, item);
+              }
+            }
+          }
+        }
+      } catch {}
     }
   } catch {}
-  return [];
+
+  const list = Array.from(ordersMap.values());
+  list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  return list;
 }
 
-function writeLocalOrders(userId: string | undefined, orders: OrderItem[]): void {
+export function writeLocalOrders(userId: string | undefined, orders: OrderItem[]): void {
   try {
     const file = getOrdersFilePath(userId);
     fs.writeFileSync(file, JSON.stringify(orders, null, 2), "utf-8");
   } catch (err) {
     console.warn("Aviso ao gravar pedidos no arquivo local:", err);
   }
+}
+
+export function updateOrderServer(
+  userId: string,
+  orderId: string,
+  updates: Partial<OrderItem>,
+): OrderItem | null {
+  const list = readLocalOrders(userId);
+  const idx = list.findIndex((o) => o.id === orderId);
+  if (idx === -1) return null;
+
+  list[idx] = {
+    ...list[idx],
+    ...updates,
+    updated_at: new Date().toISOString(),
+  };
+
+  writeLocalOrders(userId, list);
+  return list[idx];
 }
 
 /** Cria um novo pedido (novo acesso ou renovação) */

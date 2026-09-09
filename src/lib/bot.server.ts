@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { generateM3uUrl, generateEpgUrl, extractCleanIptvDns } from "./format";
 import type { SigmaConfig } from "./sigma.panel";
-import { createOrderServer, listOrdersServer, approveAndReleaseOrderServer } from "./orders.server";
+import { createOrderServer, listOrdersServer, approveAndReleaseOrderServer, updateOrderServer } from "./orders.server";
 import { createMercadoPagoPixPayment } from "./mercadopago.server";
 import type { ButtonItem, ListSection } from "./billing.server";
 
@@ -635,6 +635,11 @@ async function handlePlanOrderCreation({
       order.pix_code = mpPixResult.qrCode;
       order.gateway_payment_id = mpPixResult.paymentId;
       order.payment_method = "mercadopago_pix";
+      updateOrderServer(userId, order.id, {
+        pix_code: mpPixResult.qrCode,
+        gateway_payment_id: mpPixResult.paymentId,
+        payment_method: "mercadopago_pix",
+      });
     } else {
       console.warn(`[Bot Plan] ⚠️ Falha na API do Mercado Pago: ${mpPixResult?.error}`);
     }
@@ -758,6 +763,11 @@ async function handleRenewOrderCreation({
       order.pix_code = mpPixResult.qrCode;
       order.gateway_payment_id = mpPixResult.paymentId;
       order.payment_method = "mercadopago_pix";
+      updateOrderServer(userId, order.id, {
+        pix_code: mpPixResult.qrCode,
+        gateway_payment_id: mpPixResult.paymentId,
+        payment_method: "mercadopago_pix",
+      });
     } else {
       console.warn(`[Bot Renew] ⚠️ Falha na API do Mercado Pago: ${mpPixResult?.error}`);
     }
