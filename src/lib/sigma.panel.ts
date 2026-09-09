@@ -1,5 +1,3 @@
-import type { SigmaConfig } from "./sigma.panel";
-
 export type SigmaCustomer = {
   id: string | number;
   name?: string;
@@ -36,61 +34,125 @@ export type SigmaConfig = {
   password?: string;
 };
 
+type SigmaResponse = {
+  status: number;
+  payload: unknown;
+};
+
 function cleanUrl(value: string) {
-  return value.trim().replace(/\/$/, "");
+  return value.trim().replace(/\/+$/, "");
 }
 
-function safeError(status: number) {
-  if (status === 401 || status === 403) return new Error("O painel Sigma recusou a autenticação (403). Verifique usuário, senha, token e restrições de IP/firewall.");
+function describeHttpError(status: number) {
+  if (status === 401 || status === 403) {
+    return new Error("O painel Sigma recusou a autenticação (403). O teste de conexão pode ter validado o login, mas esta rota pode exigir outro caminho ou permissão de revendedor.");
+  }
   if (status === 404) return new Error("O painel Sigma não encontrou esta rota (404).");
   return new Error(`O painel Sigma respondeu com erro ${status}.`);
 }
 
 function getHeaders(config: SigmaConfig, token?: string) {
-  const headers: Record<string, string> = { Accept: "application/json", "Content-Type": "application/json" };
-  const effectiveToken = token || config.token?.trim();
-  if (effectiveToken) headers.Authorization = effectiveToken.toLowerCase().startsWith("bearer ") ? effectiveToken : `Bearer ${effectiveToken}`;
+  const headers: Record<string, string> = {
+    Accept: "application/json, text/plain, */*",
+    "Content-Type": "application/json",
+  };
+  const effectiveToken = token?.trim() || config.token?.trim();
+  if (effectiveToken) {
+    headers.Authorization = effectiveToken.toLowerCase().startsWith("bearer ")
+      ? effectiveToken
+      : `Bearer ${effectiveToken}`;
+  }
   return headers;
 }
 
-async function request(config: SigmaConfig, endpoint: string, init: RequestInit = {}, token?: string) {
-  const response = await fetch(`${cleanUrl(config.url)}${endpoint}`, { ...init, headers: { ...getHeaders(config, token), ...(init.headers ?? {}) } });
+async function request(config: SigmaConfig, endpoint: string, init: RequestInit = {}, token?: string): Promise<SigmaResponse> {
+  const response = await fetch(`${cleanUrl(config.url)}${endpoint}`, {
+    ...init,
+    headers: { ...getHeaders(config, token), ...(init.headers ?? {}) },
+  });
   const text = await response.text();
-  if (!response.ok) throw safeError(response.status);
-  try { return text ? JSON.parse(text) : null; } catch { return text; }
+  let payload: unknown = null;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch {
+    payload = text;
+  }
+  return { status: response.status, payload };
 }
 
-function unwrapList(payload: any): any[] {
+function payloadError(status: number, payload: unknown) {
+  if (status === 401 || status === 403) return describeHttpError(status);
+  if (status === 404) return describeHttpError(status);
+  if (typeof payload === "object" && payload && "message" in payload && typeof payload.message === "string") {
+    return new Error(payload.message);
+  }
+  return describeHttpError(status);
+}
+
+function unwrapList(payload: unknown): unknown[] {
   if (Array.isArray(payload)) return payload;
-  for (const key of ["customers", "clients", "data", "results", "items"]) if (Array.isArray(payload?.[key])) return payload[key];
+  if (!payload || typeof payload !== "object") return [];
+  const source = payload as Record<string, unknown>;
+  for (const key of ["customers", "clients", "users", "data", "results", "items"]) {
+    if (Array.isArray(source[key])) return source[key];
+    if (source[key] && typeof source[key] === "object") {
+      const nested = unwrapList(source[key]);
+      if (nested.length) return nested;
+    }
+  }
   return [];
 }
 
-function normalizeCustomer(row: any): SigmaCustomer {
+function asRecord(value: unknown): Record<string, any> {
+  return value && typeof value === "object" ? (value as Record<string, any>) : {};
+}
+
+function normalizeCustomer(row: unknown): SigmaCustomer {
+  const item = asRecord(row);
   return {
-    id: row.id ?? row.customer_id ?? row.customerId ?? row.username,
-    name: row.name ?? row.customer_name ?? row.full_name,
-    username: row.username ?? row.user,
-    password: row.password ?? row.pass,
-    phone: row.phone ?? row.whatsapp,
-    email: row.email,
-    status: row.status ?? row.state,
-    dueDate: row.dueDate ?? row.due_date ?? row.expiration_date ?? row.expires_at,
-    screens: Number(row.screens ?? row.connections ?? row.connections_count ?? 1),
-    notes: row.notes,
-    packageName: row.packageName ?? row.package_name ?? row.package?.name,
-    serverName: row.serverName ?? row.server_name,
-    dns: row.dns ?? row.host,
-    m3uUrl: row.m3uUrl ?? row.m3u_url ?? row.m3u,
+    id: item.id ?? item.customer_id ?? item.customerId ?? item.user_id ?? item.username,
+    name: item.name ?? item.customer_name ?? item.full_name ?? item.display_name,
+    username: item.username ?? item.user ?? item.login,
+    password: item.password ?? item.pass,
+    phone: item.phone ?? item.whatsapp ?? item.mobile,
+    email: item.email,
+    status: item.status ?? item.state ?? item.enabled,
+    dueDate: item.dueDate ?? item.due_date ?? item.expiration_date ?? item.expires_at,
+    screens: Number(item.screens ?? item.connections ?? item.connections_count ?? 1),
+    notes: item.notes,
+    packageName: item.packageName ?? item.package_name ?? asRecord(item.package).name,
+    serverName: item.serverName ?? item.server_name,
+    dns: item.dns ?? item.streaming_dns ?? item.host,
+    m3uUrl: item.m3uUrl ?? item.m3u_url ?? item.m3u,
   };
+}
+
+function isActiveStatus(status?: string) {
+  if (typeof status !== "string") return true;
+  return ["active", "enabled", "online", "1", "true"].includes(status.toLowerCase());
 }
 
 export async function sigmaLogin(url: string, username: string, password: string): Promise<string> {
   const config: SigmaConfig = { url, username, password };
-  const result = await request(config, "/api/login", { method: "POST", body: JSON.stringify({ username, password }) });
-  const token = result?.token ?? result?.access_token ?? result?.data?.token ?? result?.data?.access_token;
-  if (!token) throw new Error("O painel Sigma não devolveu um token de autenticação válido.");
-  return String(token);
+  const paths = ["/api/login", "/api/auth/login", "/login"];
+  let lastError: Error | null = null;
+  for (const path of paths) {
+    const response = await request(config, path, {
+      method: "POST",
+      body: JSON.stringify({ username, user: username, password }),
+    });
+    if (response.status === 404) continue;
+    if (response.status < 200 || response.status >= 300) {
+      lastError = payloadError(response.status, response.payload);
+      continue;
+    }
+    const data = asRecord(response.payload);
+    const nested = asRecord(data.data);
+    const token = data.token ?? data.access_token ?? data.auth_token ?? nested.token ?? nested.access_token;
+    if (token) return String(token);
+    lastError = new Error("O painel Sigma respondeu, mas não devolveu um token de autenticação válido.");
+  }
+  throw lastError ?? new Error("Não foi possível localizar a rota de login do painel Sigma.");
 }
 
 export async function ensureSigmaToken(config: SigmaConfig): Promise<string> {
@@ -99,58 +161,85 @@ export async function ensureSigmaToken(config: SigmaConfig): Promise<string> {
   throw new Error("Configure o token ou o usuário e a senha do painel Sigma.");
 }
 
-export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCustomer[]> {
-  const token = await ensureSigmaToken(config);
-  for (const endpoint of ["/api/customers", "/api/reseller-api/v1/customers", "/api/resellers/customers"]) {
-    try {
-      const payload = await request(config, endpoint, { method: "GET" }, token);
-      const rows = unwrapList(payload);
-      if (rows.length || Array.isArray(payload)) return rows.map(normalizeCustomer).filter((item) => item.id != null);
-    } catch (error) {
-      if (error instanceof Error && /403|autenticação/.test(error.message)) throw error;
+export async function listSigmaCustomers(config: SigmaConfig, existingToken?: string): Promise<SigmaCustomer[]> {
+  const token = existingToken?.trim() || await ensureSigmaToken(config);
+  const endpoints = [
+    "/api/reseller-api/v1/customers",
+    "/api/resellers/customers",
+    "/api/customers",
+    "/api/clients",
+  ];
+  const errors: string[] = [];
+  for (const endpoint of endpoints) {
+    const response = await request(config, endpoint, { method: "GET" }, token);
+    if (response.status >= 200 && response.status < 300) {
+      const rows = unwrapList(response.payload).map(normalizeCustomer).filter((item) => item.id != null);
+      return rows;
     }
+    if (response.status !== 404) errors.push(`${endpoint} -> ${payloadError(response.status, response.payload).message}`);
   }
-  throw new Error("Não foi possível listar os clientes no painel Sigma. A rota de clientes disponível nesta instalação não retornou dados.");
+  throw new Error(`Não consegui listar os clientes do painel Sigma. ${errors.join(" • ") || "Nenhuma rota de clientes respondeu."}`);
 }
 
-export async function fetchSigmaPanelDetails(config: SigmaConfig) {
-  const token = await ensureSigmaToken(config);
+export async function fetchSigmaPanelDetails(config: SigmaConfig, existingToken?: string) {
+  const token = existingToken?.trim() || await ensureSigmaToken(config);
   let serverName: string | null = null;
   let dns: string | null = null;
   const packages: string[] = [];
   let credits: number | null = null;
   for (const endpoint of ["/api/profile", "/api/reseller", "/api/packages"]) {
-    try {
-      const payload = await request(config, endpoint, { method: "GET" }, token);
-      const data = payload?.data ?? payload;
-      serverName ||= data?.server_name ?? data?.serverName ?? data?.name ?? null;
-      dns ||= data?.dns ?? data?.streaming_dns ?? data?.host ?? null;
-      credits ??= data?.credits == null ? null : Number(data.credits);
-      for (const item of unwrapList(payload)) if (typeof item === "string") packages.push(item); else if (item?.name) packages.push(String(item.name));
-    } catch (error) {
-      if (error instanceof Error && /403|autenticação/.test(error.message)) throw error;
+    const response = await request(config, endpoint, { method: "GET" }, token);
+    if (response.status === 404) continue;
+    if (response.status < 200 || response.status >= 300) continue;
+    const data = asRecord(asRecord(response.payload).data ?? response.payload);
+    serverName ||= data.server_name ?? data.serverName ?? data.name ?? null;
+    dns ||= data.dns ?? data.streaming_dns ?? data.host ?? null;
+    if (credits == null && data.credits != null) credits = Number(data.credits);
+    for (const item of unwrapList(response.payload)) {
+      const name = typeof item === "string" ? item : asRecord(item).name;
+      if (name) packages.push(String(name));
     }
   }
   return { serverName, dns, packages, credits };
 }
 
 export async function createSigmaCustomer(config: SigmaConfig, input: CreateSigmaCustomerInput) {
-  const payload = await request(config, "/api/customers", { method: "POST", body: JSON.stringify(input) }, await ensureSigmaToken(config));
-  return normalizeCustomer(payload?.customer ?? payload?.data ?? payload);
+  const token = await ensureSigmaToken(config);
+  const response = await request(config, "/api/customers", { method: "POST", body: JSON.stringify(input) }, token);
+  if (response.status < 200 || response.status >= 300) throw payloadError(response.status, response.payload);
+  return normalizeCustomer(asRecord(response.payload).customer ?? asRecord(response.payload).data ?? response.payload);
 }
 
 export async function updateSigmaCustomer(config: SigmaConfig, ref: { id?: string | number; username?: string }, input: Partial<CreateSigmaCustomerInput> & { status?: string }) {
-  return request(config, `/api/customers/${encodeURIComponent(String(ref.id ?? ref.username))}`, { method: "PUT", body: JSON.stringify(input) }, await ensureSigmaToken(config));
+  const token = await ensureSigmaToken(config);
+  const id = encodeURIComponent(String(ref.id ?? ref.username));
+  const response = await request(config, `/api/customers/${id}`, { method: "PUT", body: JSON.stringify(input) }, token);
+  if (response.status < 200 || response.status >= 300) throw payloadError(response.status, response.payload);
+  return response.payload;
 }
 
 export async function deleteSigmaCustomer(config: SigmaConfig, ref: { id?: string | number; username?: string }) {
-  return request(config, `/api/customers/${encodeURIComponent(String(ref.id ?? ref.username))}`, { method: "DELETE" }, await ensureSigmaToken(config));
+  const token = await ensureSigmaToken(config);
+  const id = encodeURIComponent(String(ref.id ?? ref.username));
+  const response = await request(config, `/api/customers/${id}`, { method: "DELETE" }, token);
+  if (response.status < 200 || response.status >= 300) throw payloadError(response.status, response.payload);
+  return response.payload;
 }
 
 export async function renewSigmaCustomer(config: SigmaConfig, ref: { id?: string | number; username?: string }, months: number) {
-  return request(config, `/api/customers/${encodeURIComponent(String(ref.id ?? ref.username))}/renew`, { method: "POST", body: JSON.stringify({ months }) }, await ensureSigmaToken(config));
+  const token = await ensureSigmaToken(config);
+  const id = encodeURIComponent(String(ref.id ?? ref.username));
+  const response = await request(config, `/api/customers/${id}/renew`, { method: "POST", body: JSON.stringify({ months }) }, token);
+  if (response.status < 200 || response.status >= 300) throw payloadError(response.status, response.payload);
+  return response.payload;
 }
 
 export async function toggleSigmaCustomerStatus(config: SigmaConfig, ref: { id?: string | number; username?: string }, status: string) {
-  return request(config, `/api/customers/${encodeURIComponent(String(ref.id ?? ref.username))}/status`, { method: "PATCH", body: JSON.stringify({ status }) }, await ensureSigmaToken(config));
+  const token = await ensureSigmaToken(config);
+  const id = encodeURIComponent(String(ref.id ?? ref.username));
+  const response = await request(config, `/api/customers/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }, token);
+  if (response.status < 200 || response.status >= 300) throw payloadError(response.status, response.payload);
+  return response.payload;
 }
+
+export { isActiveStatus };
