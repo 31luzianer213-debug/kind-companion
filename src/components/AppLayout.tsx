@@ -243,8 +243,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                       "rounded-md px-1.5 py-0.5 text-[10px] font-bold font-mono tracking-tight",
                       badgeType === "orders"
                         ? active
-                          ? "bg-amber-400 text-black font-black"
-                          : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                          ? "bg-amber-400 text-black font-black animate-pulse"
+                          : "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 animate-pulse font-extrabold"
                         : badgeType === "overdue"
                         ? active
                           ? "bg-rose-400 text-black font-black"

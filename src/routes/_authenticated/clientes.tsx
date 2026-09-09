@@ -14,6 +14,7 @@ import {
   renewSigmaClient,
   toggleSigmaClientBlock,
   getSigmaSettings,
+  createSigmaQuickTest,
 } from "@/lib/sigma.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -259,6 +260,15 @@ function Clientes() {
   const renewSigma = useServerFn(renewSigmaClient);
   const toggleBlock = useServerFn(toggleSigmaClientBlock);
   const getSigma = useServerFn(getSigmaSettings);
+  const quickTest = useServerFn(createSigmaQuickTest);
+
+  // Modal de Teste Rápido no Sigma
+  const [testModalOpen, setTestModalOpen] = useState(false);
+  const [generatingTest, setGeneratingTest] = useState(false);
+  const [testCredentials, setTestCredentials] = useState<any | null>(null);
+  const [testHours, setTestHours] = useState(4);
+  const [testClientName, setTestClientName] = useState("");
+  const [testClientPhone, setTestClientPhone] = useState("");
 
   const [open, setOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -674,6 +684,78 @@ function Clientes() {
     toast.info("Credenciais geradas!");
   }
 
+  function exportarClientesCSV() {
+    if (!clients || clients.length === 0) {
+      toast.error("Nenhum cliente cadastrado para exportar.");
+      return;
+    }
+
+    const headers = [
+      "ID",
+      "Nome",
+      "Telefone",
+      "Email",
+      "Usuário IPTV",
+      "Senha IPTV",
+      "Telas",
+      "Valor Mensal",
+      "Dia Vencimento",
+      "Próximo Vencimento",
+      "Status",
+      "Notas",
+    ];
+
+    const rows = clients.map((c) => [
+      c.id,
+      `"${(c.name || "").replace(/"/g, '""')}"`,
+      `"${c.phone || ""}"`,
+      `"${c.email || ""}"`,
+      `"${c.iptv_username || ""}"`,
+      `"${c.iptv_password || ""}"`,
+      c.screens ?? 1,
+      Number(c.monthly_fee || 0).toFixed(2),
+      c.due_day ?? 10,
+      c.next_due_date || "",
+      c.status === "active" ? "Ativo" : c.status === "blocked" ? "Bloqueado" : "Inativo",
+      `"${(c.notes || "").replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(";"), ...rows.map((r) => r.join(";"))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `clientes_backup_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast.success("Planilha de clientes exportada com sucesso!");
+  }
+
+  async function handleGerarTeste() {
+    setGeneratingTest(true);
+    try {
+      const res = await quickTest({
+        data: {
+          hours: testHours,
+          name: testClientName.trim() || undefined,
+          phone: cleanPhoneDigits(testClientPhone) || undefined,
+        },
+      });
+
+      if (res.ok && res.credentials) {
+        setTestCredentials(res.credentials);
+        toast.success(`Teste de ${testHours}h gerado com sucesso!`);
+      } else {
+        toast.error((res as any).error || "Falha ao gerar teste no painel Sigma.");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao gerar teste.");
+    } finally {
+      setGeneratingTest(false);
+    }
+  }
+
   function copiarDadosAcesso(client: ClientRow) {
     const serverLabel = getClientServerLabel(client);
     const directM3u = extractM3uFromNotes(client.notes);
@@ -824,6 +906,22 @@ function Clientes() {
             </Button>
           ) : null}
 
+          {/* Botão Gerar Teste Rápido */}
+          {isSigmaConfigured ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setTestCredentials(null);
+                setTestModalOpen(true);
+              }}
+              className="gap-1.5 shadow-sm text-xs border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
+            >
+              <Sparkles className="size-3.5 text-amber-500" />
+              Gerar Teste (4h)
+            </Button>
+          ) : null}
+
           <Button
             variant="outline"
             size="sm"
@@ -847,6 +945,130 @@ function Clientes() {
           </Button>
         </div>
       </div>
+
+      {/* Modal de Geração de Teste Rápido */}
+      <Dialog open={testModalOpen} onOpenChange={setTestModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="size-5 text-amber-500" />
+              Gerador de Teste Grátis — {sigmaServerName}
+            </DialogTitle>
+            <DialogDescription>
+              Crie uma linha temporária de teste com 1 clique para enviar a um cliente potencial.
+            </DialogDescription>
+          </DialogHeader>
+
+          {!testCredentials ? (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Duração do Teste</Label>
+                  <Select value={String(testHours)} onValueChange={(val) => setTestHours(Number(val))}>
+                    <SelectTrigger className="rounded-md">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2">2 Horas</SelectItem>
+                      <SelectItem value="4">4 Horas (Padrão)</SelectItem>
+                      <SelectItem value="6">6 Horas</SelectItem>
+                      <SelectItem value="12">12 Horas</SelectItem>
+                      <SelectItem value="24">24 Horas (1 Dia)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Nome (Opcional)</Label>
+                  <Input
+                    placeholder="Ex: João da Silva"
+                    value={testClientName}
+                    onChange={(e) => setTestClientName(e.target.value)}
+                    className="rounded-md"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Telefone WhatsApp (Opcional)</Label>
+                <Input
+                  placeholder="(11) 99999-9999"
+                  value={testClientPhone}
+                  onChange={(e) => setTestClientPhone(formatPhoneInput(e.target.value))}
+                  className="rounded-md"
+                />
+              </div>
+
+              <Button
+                onClick={handleGerarTeste}
+                disabled={generatingTest}
+                className="w-full gap-2 font-bold bg-amber-500 hover:bg-amber-600 text-black shadow-md mt-2"
+              >
+                {generatingTest ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                Criar Linha de Teste Agora
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-400 font-medium flex items-center gap-2">
+                <CheckCircle2 className="size-4 shrink-0" />
+                Linha de teste criada com validade de {testCredentials.hours} horas!
+              </div>
+
+              <div className="space-y-2 text-xs font-mono bg-muted/40 p-3 rounded-lg border border-border/50">
+                <div className="flex justify-between items-center py-1 border-b border-border/30">
+                  <span className="text-muted-foreground font-sans">Usuário:</span>
+                  <span className="font-bold text-foreground select-all">{testCredentials.username}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-border/30">
+                  <span className="text-muted-foreground font-sans">Senha:</span>
+                  <span className="font-bold text-foreground select-all">{testCredentials.password}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-border/30">
+                  <span className="text-muted-foreground font-sans">Servidor / DNS:</span>
+                  <span className="text-primary truncate max-w-[200px] select-all">{testCredentials.serverUrl || sigmaServerUrl}</span>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const text = `📺 *SEU TESTE GRÁTIS DE IPTV (${testCredentials.hours}h)*\n\n👤 *Usuário:* ${testCredentials.username}\n🔑 *Senha:* ${testCredentials.password}\n🌐 *Servidor:* ${testCredentials.serverUrl || sigmaServerUrl}\n\n🔗 *Lista M3U:*\n${testCredentials.m3uUrl}\n\nAproveite sua programação!`;
+                    navigator.clipboard.writeText(text);
+                    toast.success("Dados do teste copiados para a área de transferência!");
+                  }}
+                  className="w-full gap-1.5"
+                >
+                  <Copy className="size-4" /> Copiar Mensagem
+                </Button>
+
+                {testClientPhone ? (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const text = encodeURIComponent(
+                        `📺 *SEU TESTE GRÁTIS DE IPTV (${testCredentials.hours}h)*\n\n👤 *Usuário:* ${testCredentials.username}\n🔑 *Senha:* ${testCredentials.password}\n🌐 *Servidor:* ${testCredentials.serverUrl || sigmaServerUrl}\n\n🔗 *Lista M3U:*\n${testCredentials.m3uUrl}\n\nAproveite sua programação!`
+                      );
+                      window.open(`https://wa.me/55${cleanPhoneDigits(testClientPhone)}?text=${text}`, "_blank");
+                    }}
+                    className="w-full gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <Send className="size-4" /> Enviar WhatsApp
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setTestModalOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 4 Cards de Métricas */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">

@@ -929,3 +929,70 @@ export const toggleSigmaClientBlock = createServerFn({ method: "POST" })
 
     return { ok: true as const, status: newStatus };
   });
+
+/**
+ * Cria uma linha de teste rápido no painel Sigma (duração de X horas).
+ */
+export const createSigmaQuickTest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input?: { hours?: number; name?: string; phone?: string; packageId?: string | number }) => input ?? {})
+  .handler(async ({ data, context }) => {
+    const { createSigmaCustomer, ensureSigmaToken } = await import("./sigma.server");
+    const { supabase, userId } = context;
+
+    const config = await loadConfig(supabase, userId);
+    if (!hasSigmaAccess(config)) {
+      return { ok: false as const, error: "Painel Sigma não configurado. Acesse Configurações -> Servidor Sigma." };
+    }
+
+    const hours = data?.hours ?? 4;
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    const testUsername = `teste_${rand}`;
+    const testPassword = String(Math.floor(100000 + Math.random() * 900000));
+    const testName = (data?.name ?? "").trim() || `Teste Grátis (${hours}h)`;
+
+    const expiresDate = new Date();
+    expiresDate.setHours(expiresDate.getHours() + hours);
+    const dueDateStr = expiresDate.toISOString();
+
+    try {
+      const token = await ensureSigmaToken(config);
+      const created = await createSigmaCustomer(
+        { ...config, token },
+        {
+          name: testName,
+          username: testUsername,
+          password: testPassword,
+          ...(data?.phone ? { phone: data.phone.replace(/\D/g, "") } : {}),
+          screens: 1,
+          dueDate: dueDateStr,
+          notes: `Teste Grátis de ${hours}h gerado em ${new Date().toLocaleString("pt-BR")}`,
+          ...(data?.packageId ? { packageId: data.packageId } : {}),
+        }
+      );
+
+      const effectiveDns = config.streaming_dns || config.url || "";
+      const m3uUrl = generateM3uUrl(effectiveDns, testUsername, testPassword, "ts");
+      const epgUrl = generateEpgUrl(effectiveDns, testUsername, testPassword);
+
+      return {
+        ok: true as const,
+        credentials: {
+          name: testName,
+          username: created.username || testUsername,
+          password: created.password || testPassword,
+          serverUrl: effectiveDns,
+          serverName: config.server_name || "Servidor Principal",
+          hours,
+          expiresAt: dueDateStr,
+          m3uUrl,
+          epgUrl,
+        },
+      };
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: error instanceof Error ? error.message : "Erro ao gerar teste no Sigma.",
+      };
+    }
+  });

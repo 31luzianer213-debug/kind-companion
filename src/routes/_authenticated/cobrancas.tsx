@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -50,6 +50,8 @@ import {
   ArrowUpRight,
   ShieldCheck,
   Smartphone,
+  Download,
+  ShieldAlert,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/cobrancas")({
@@ -154,6 +156,16 @@ function Cobrancas() {
   const [newAmount, setNewAmount] = useState("35.00");
   const [newDueDate, setNewDueDate] = useState(() => new Date().toISOString().split("T")[0] ?? "");
   const [creatingInvoice, setCreatingInvoice] = useState(false);
+
+  // Disparo em lote com proteção Anti-Ban
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchCurrent, setBatchCurrent] = useState(0);
+  const [batchTotal, setBatchTotal] = useState(0);
+  const [batchSuccess, setBatchSuccess] = useState(0);
+  const [batchCurrentClient, setBatchCurrentClient] = useState("");
+  const [batchCountdown, setBatchCountdown] = useState(0);
+  const cancelBatchRef = useRef(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["invoices"],
@@ -325,6 +337,115 @@ function Cobrancas() {
     }
   }
 
+  function exportarCobrancasCSV() {
+    if (!allInvoices || allInvoices.length === 0) {
+      toast.error("Nenhuma cobrança para exportar.");
+      return;
+    }
+
+    const headers = ["ID", "Cliente", "Telefone", "Valor", "Vencimento", "Status", "Data Pagamento"];
+    const rows = allInvoices.map((inv) => [
+      inv.id,
+      `"${(inv.clients?.name || "").replace(/"/g, '""')}"`,
+      `"${inv.clients?.phone || ""}"`,
+      Number(inv.amount || 0).toFixed(2),
+      inv.due_date || "",
+      inv.status === "paid" ? "Pago" : inv.status === "overdue" ? "Atrasada" : "Pendente",
+      inv.paid_at ? inv.paid_at.slice(0, 10) : "",
+    ]);
+
+    const csv = "\uFEFF" + [headers.join(";"), ...rows.map((r) => r.join(";"))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `relatorio_cobrancas_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast.success("Planilha de cobranças exportada com sucesso!");
+  }
+
+  async function iniciarDisparoLoteAntiBan(somenteAtrasadas: boolean = false) {
+    const alvos = allInvoices.filter((inv) => {
+      if (!inv.clients?.phone) return false;
+      if (somenteAtrasadas) return inv.status === "overdue";
+      return inv.status === "pending" || inv.status === "overdue";
+    });
+
+    if (alvos.length === 0) {
+      toast.info("Nenhuma fatura com telefone cadastrado para lembrar.");
+      return;
+    }
+
+    cancelBatchRef.current = false;
+    setBatchTotal(alvos.length);
+    setBatchCurrent(0);
+    setBatchSuccess(0);
+    setBatchRunning(true);
+    setBatchModalOpen(true);
+
+    let enviados = 0;
+
+    for (let i = 0; i < alvos.length; i++) {
+      if (cancelBatchRef.current) {
+        toast.info("Envio em lote cancelado.");
+        break;
+      }
+
+      const inv = alvos[i]!;
+      setBatchCurrent(i + 1);
+      setBatchCurrentClient(inv.clients?.name || "Cliente");
+
+      try {
+        const template =
+          (inv.status === "overdue" && settings?.overdue_template
+            ? settings.overdue_template
+            : settings?.message_template) || "";
+
+        const body = renderTemplate(template, {
+          cliente: inv.clients?.name || "",
+          valor: formatBRL(inv.amount),
+          vencimento: formatDate(inv.due_date),
+          pix: (inv as any).pix_code ?? settings?.pix_key ?? "",
+          link: (inv as any).payment_link ?? settings?.payment_link ?? "",
+          empresa: settings?.business_name ?? "",
+        });
+
+        const res = await send({
+          data: {
+            phone: inv.clients!.phone,
+            body,
+            invoiceId: inv.id,
+            clientId: inv.client_id,
+          },
+        });
+
+        if (res.ok) {
+          enviados++;
+          setBatchSuccess(enviados);
+        }
+      } catch (err) {
+        console.warn("Erro no envio em lote:", err);
+      }
+
+      // Delay Anti-Ban aleatório entre 8 e 14 segundos (exceto no último)
+      if (i < alvos.length - 1 && !cancelBatchRef.current) {
+        const delay = Math.floor(Math.random() * 6) + 8; // 8s a 13s
+        for (let s = delay; s > 0; s--) {
+          if (cancelBatchRef.current) break;
+          setBatchCountdown(s);
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+        setBatchCountdown(0);
+      }
+    }
+
+    setBatchRunning(false);
+    queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    toast.success(`Disparo concluído: ${enviados} lembretes entregues com intervalo de segurança!`);
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Top Header */}
@@ -344,6 +465,31 @@ function Cobrancas() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Exportar CSV */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportarCobrancasCSV}
+            className="gap-1.5 shadow-sm hover-lift"
+          >
+            <Download className="size-4" />
+            Exportar CSV
+          </Button>
+
+          {/* Lembrar Atrasadas com Proteção Anti-Ban */}
+          {metrics.overdueCount > 0 ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => iniciarDisparoLoteAntiBan(true)}
+              disabled={batchRunning}
+              className="gap-1.5 shadow-sm hover-lift border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
+            >
+              <ShieldAlert className="size-4" />
+              Lembrar Atrasadas ({metrics.overdueCount})
+            </Button>
+          ) : null}
+
           {/* Modal Nova Cobrança */}
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
@@ -429,7 +575,7 @@ function Cobrancas() {
           <Button
             size="sm"
             onClick={run}
-            disabled={running}
+            disabled={running || batchRunning}
             className="gap-1.5 shadow-md hover-lift bg-primary text-primary-foreground font-medium"
           >
             {running ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
@@ -437,6 +583,124 @@ function Cobrancas() {
           </Button>
         </div>
       </div>
+
+      {/* Modal de Progresso do Envio em Lote Anti-Ban */}
+      <Dialog open={batchModalOpen} onOpenChange={(val) => !batchRunning && setBatchModalOpen(val)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <ShieldAlert className="size-5 text-primary" />
+              Disparo de Lembretes com Proteção Anti-Ban
+            </DialogTitle>
+            <DialogDescription>
+              Mensagens sendo enviadas com intervalo humano aleatório (8s - 14s) para proteger sua linha do WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Progresso:</span>
+              <span className="font-semibold text-foreground font-mono">
+                {batchCurrent} de {batchTotal} ({batchSuccess} entregues)
+              </span>
+            </div>
+
+            {/* Barra de progresso */}
+            <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
+              <div
+                className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                style={{ width: `${batchTotal > 0 ? (batchCurrent / batchTotal) * 100 : 0}%` }}
+              />
+            </div>
+
+            {batchRunning ? (
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/50 text-xs space-y-1 text-center">
+                <p className="font-medium text-foreground">
+                  Enviando para: <span className="text-primary">{batchCurrentClient}</span>
+                </p>
+                {batchCountdown > 0 ? (
+                  <p className="text-muted-foreground flex items-center justify-center gap-1">
+                    <Clock className="size-3.5 text-amber-500 animate-pulse" />
+                    Intervalo de segurança: próximo envio em <strong>{batchCountdown}s</strong>...
+                  </p>
+                ) : (
+                  <p className="text-emerald-500 flex items-center justify-center gap-1">
+                    <Loader2 className="size-3.5 animate-spin" /> Transmitindo mensagem...
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs text-center font-medium flex items-center justify-center gap-1.5">
+                <CheckCircle2 className="size-4" /> Lote de cobranças concluído com sucesso!
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            {batchRunning ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  cancelBatchRef.current = true;
+                  toast.info("Parando disparo...");
+                }}
+                className="w-full"
+              >
+                Pausar e Cancelar Lote
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => setBatchModalOpen(false)} className="w-full">
+                Fechar
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Card da Automação de Cobrança Diária (Cron Job) */}
+      <Card className="surface-card border-primary/20 bg-primary/5">
+        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5">
+              <Clock className="size-5" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-foreground">
+                  Gatilho de Cobrança Diária Automática (Cron Job)
+                </h4>
+                <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
+                  Totalmente Autônomo
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Agende esta URL em serviços gratuitos como <strong>cron-job.org</strong> para rodar todo dia às 08:30. O sistema gera faturas e envia os lembretes do WhatsApp no piloto automático.
+              </p>
+              <div className="flex items-center gap-2 pt-1">
+                <Input
+                  readOnly
+                  value={typeof window !== "undefined" ? `${window.location.origin}/api/public/hooks/cobranca-diaria?secret=cron_iptv_seguro` : "/api/public/hooks/cobranca-diaria?secret=cron_iptv_seguro"}
+                  className="font-mono text-xs bg-background/80 h-7 max-w-lg"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const url = `${window.location.origin}/api/public/hooks/cobranca-diaria?secret=cron_iptv_seguro`;
+                    navigator.clipboard.writeText(url);
+                    toast.success("URL da Cobrança Diária copiada!");
+                  }}
+                  className="h-7 text-xs gap-1 shrink-0"
+                >
+                  <Copy className="size-3" />
+                  Copiar Link
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Banner Explicativo: Por que o Painel de Cobranças existe? */}
       <Card className="surface-card border-primary/25 bg-primary/5">

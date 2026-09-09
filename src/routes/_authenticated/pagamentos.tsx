@@ -684,6 +684,91 @@ function PagamentosPage() {
           </Card>
         )}
 
+        {/* Card Informativo de Webhook para Automação Total (Mercado Pago e Asaas) */}
+        <Card className="surface-card border-primary/20 bg-primary/5 shadow-sm">
+          <CardHeader className="pb-2 border-b border-border/40">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap className="size-5 text-primary" />
+                <CardTitle className="text-base text-foreground">
+                  Webhooks para Confirmação Automática (Pix 100% Autônomo)
+                </CardTitle>
+              </div>
+              <Badge variant="outline" className="border-primary/30 text-primary text-xs font-semibold">
+                Tempo Real
+              </Badge>
+            </div>
+            <CardDescription>
+              Cadastre estas URLs nos seus portais do Mercado Pago e Asaas para liquidar faturas e renovar linhas no Sigma imediatamente quando o cliente pagar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-4 text-xs">
+            {/* Mercado Pago Webhook */}
+            <div className="space-y-1.5 p-3 rounded-lg bg-background/60 border border-border/50">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Wallet className="size-3.5 text-sky-400" />
+                  URL do Webhook Mercado Pago
+                </span>
+                <span className="text-[11px] text-muted-foreground">Eventos: Pagamentos (payment)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={typeof window !== "undefined" ? `${window.location.origin}/api/public/hooks/mercadopago` : "/api/public/hooks/mercadopago"}
+                  className="font-mono text-xs bg-muted/40 h-8"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const url = `${window.location.origin}/api/public/hooks/mercadopago`;
+                    navigator.clipboard.writeText(url);
+                    toast.success("URL do Webhook Mercado Pago copiada!");
+                  }}
+                  className="h-8 gap-1 shrink-0"
+                >
+                  <Copy className="size-3.5" />
+                  Copiar
+                </Button>
+              </div>
+            </div>
+
+            {/* Asaas Webhook */}
+            <div className="space-y-1.5 p-3 rounded-lg bg-background/60 border border-border/50">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Building className="size-3.5 text-primary" />
+                  URL do Webhook Asaas
+                </span>
+                <span className="text-[11px] text-muted-foreground">Eventos: Pagamento Recebido / Confirmado</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={typeof window !== "undefined" ? `${window.location.origin}/api/public/hooks/asaas` : "/api/public/hooks/asaas"}
+                  className="font-mono text-xs bg-muted/40 h-8"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const url = `${window.location.origin}/api/public/hooks/asaas`;
+                    navigator.clipboard.writeText(url);
+                    toast.success("URL do Webhook Asaas copiada!");
+                  }}
+                  className="h-8 gap-1 shrink-0"
+                >
+                  <Copy className="size-3.5" />
+                  Copiar
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Rodapé com botão principal de Salvar */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-border/50">
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
