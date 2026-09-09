@@ -11,9 +11,11 @@
     "screens": 1,
     "status": "pending",
     "type": "new_access",
-    "payment_method": "pix",
+    "payment_method": "mercadopago_pix",
     "created_at": "2026-09-09T02:02:03.827Z",
-    "updated_at": "2026-09-09T02:02:03.827Z"
+    "updated_at": "2026-09-09T02:02:06.095Z",
+    "pix_code": "00020126450014br.gov.bcb.pix0123caricia3031@hotmail.com520400005303986540535.005802BR5925OLIVEIRACARICIA20230922116009Sao Paulo62250521mpqrinter178033059622630475A2",
+    "gateway_payment_id": "178033059622"
   },
   {
     "id": "ord_1788918593898_gz9ry",
