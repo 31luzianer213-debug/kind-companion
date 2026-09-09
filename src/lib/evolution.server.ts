@@ -1,17 +1,24 @@
-/** Acesso à Evolution API usando as credenciais globais do servidor. */
+/** Acesso à Evolution API usando as credenciais do servidor e padrão BOMSABORR. */
+import { evolutionBaseUrl } from "./evolution-url";
+import { DEFAULT_EVOLUTION_INSTANCE, getInstanceToken, evolutionFetch } from "./evolution.functions";
 
-export function instanceNameFor(userId: string) {
-  return `iptv_${userId.replace(/-/g, "").slice(0, 16)}`;
+export function instanceNameFor(userId?: string) {
+  const envInst = process.env["EVOLUTION_INSTANCE"]?.trim();
+  if (envInst && envInst.length > 3 && !envInst.includes("COLE_A")) {
+    return envInst;
+  }
+  return DEFAULT_EVOLUTION_INSTANCE;
 }
 
-export function evolutionConfig(userId: string, customBase?: string, customKey?: string) {
+export function evolutionConfig(userId?: string, customBase?: string, customKey?: string, customInstance?: string) {
   const envBase = customBase?.trim() || process.env["EVOLUTION_API_URL"]?.trim();
-  const base = (envBase && envBase.length > 0 ? envBase : "https://cobrancas-whatsapp.shop").replace(/\/+$/, "");
+  const base = evolutionBaseUrl(envBase && envBase.length > 0 ? envBase : "https://cobrancas-whatsapp.shop");
   const key =
     customKey?.trim() ||
     process.env["EVOLUTION_API_KEY"]?.trim() ||
     "evolutionApiGlobalTokenSecure2026";
-  return { base, key, instance: instanceNameFor(userId) };
+  const instance = customInstance?.trim() || instanceNameFor(userId);
+  return { base, key, instance };
 }
 
 async function call(
@@ -19,7 +26,7 @@ async function call(
   init: RequestInit & { base: string; key: string },
 ): Promise<{ status: number; json: any; raw: string }> {
   const { base, key, ...rest } = init;
-  const res = await fetch(`${base}${path}`, {
+  const res = await fetch(`${evolutionBaseUrl(base)}${path}`, {
     ...rest,
     headers: { "Content-Type": "application/json", apikey: key, ...(rest.headers ?? {}) },
   });
@@ -34,21 +41,28 @@ async function call(
 }
 
 /** open | connecting | close | none */
-export async function fetchState(userId: string) {
+export async function fetchState(userId?: string) {
   const { base, key, instance } = evolutionConfig(userId);
-  const { status, json } = await call(`/instance/connectionState/${instance}`, {
+  let token: string | null = null;
+  try {
+    token = await getInstanceToken(instance);
+  } catch {}
+
+  const reqKey = token || key;
+  const { status, json } = await call(`/instance/connectionState/${encodeURIComponent(instance)}`, {
     method: "GET",
     base,
-    key,
+    key: reqKey,
   });
+
   if (status === 404) return "none" as const;
-  const state = json?.instance?.state ?? json?.state ?? "close";
-  return state as "open" | "connecting" | "close";
+  const state = json?.instance?.state ?? json?.state ?? json?.status ?? "close";
+  return (String(state).toLowerCase() === "open" ? "open" : state) as "open" | "connecting" | "close" | "none";
 }
 
 function extractQr(json: any) {
   const base64 = json?.qrcode?.base64 ?? json?.base64 ?? null;
-  const code = json?.qrcode?.code ?? json?.code ?? null;
+  const code = json?.qrcode?.code ?? json?.code ?? json?.pairingCode ?? null;
   return { base64, code };
 }
 
@@ -79,26 +93,50 @@ export async function ensureInstanceWebhook(userId: string, publicAppUrl: string
   }
 }
 
-/** Cria uma instância 100% nova do zero e devolve o QR Code limpo para leitura. */
-export async function connectInstance(userId: string, publicAppUrl?: string, forceNew = true) {
+/** Conecta de forma não destrutiva, garantindo que a instância exista e gerando QR Code quando necessário. */
+export async function connectInstance(userId?: string, publicAppUrl?: string, forceNew = false) {
   const { base, key, instance } = evolutionConfig(userId);
 
-  // Se forceNew for true (padrão ao clicar para gerar QR Code), remove qualquer resquício ou instância anterior
-  if (forceNew) {
-    try {
-      await call(`/instance/logout/${instance}`, { method: "DELETE", base, key }).catch(() => {});
-    } catch {}
-    try {
-      await call(`/instance/delete/${instance}`, { method: "DELETE", base, key }).catch(() => {});
-    } catch {}
-  } else {
-    const state = await fetchState(userId);
-    if (state === "open") {
-      return { state: "open" as const, qr: null };
-    }
+  let token: string | null = null;
+  try {
+    token = await getInstanceToken(instance);
+  } catch {}
+
+  // Se a instância já estiver aberta e conectada, retorna imediatamente
+  const currentState = await fetchState(userId);
+  if (currentState === "open" && !forceNew) {
+    return { state: "open" as const, qr: null };
   }
 
-  // Cria a instância 100% nova do zero
+  // Busca lista de instâncias para saber se existe
+  const list = await evolutionFetch("/instance/fetchInstances", { method: "GET" }).catch(() => null);
+  const arr = Array.isArray(list)
+    ? list
+    : list && typeof list === "object"
+      ? ((list as Record<string, unknown>)["instances"] ?? (list as Record<string, unknown>)["data"])
+      : null;
+  const found = Array.isArray(arr)
+    ? (arr.find(
+        (item) => item && typeof item === "object" && (item as Record<string, unknown>)["name"] === instance,
+      ) as Record<string, unknown> | undefined)
+    : undefined;
+
+  if (found) {
+    const status = String(found["connectionStatus"] ?? "").toLowerCase();
+    if (status === "open" && !forceNew) {
+      return { state: "open" as const, qr: null };
+    }
+    const instToken = (typeof found["token"] === "string" && (found["token"] as string).trim()) ? (found["token"] as string).trim() : token;
+    const connected = await call(`/instance/connect/${encodeURIComponent(instance)}`, {
+      method: "GET",
+      base,
+      key: instToken || key,
+    });
+    const qr = extractQr(connected.json);
+    return { state: "connecting" as const, qr };
+  }
+
+  // Cria apenas se a instância ainda não existir
   const created = await call(`/instance/create`, {
     method: "POST",
     base,
@@ -110,54 +148,50 @@ export async function connectInstance(userId: string, publicAppUrl?: string, for
     }),
   });
 
-  // Configura opções recomendadas na instância nova
-  try {
-    await call(`/settings/set/${instance}`, {
-      method: "POST",
-      base,
-      key,
-      body: JSON.stringify({
-        rejectCall: false,
-        msgCall: "",
-        groupsIgnore: true,
-        alwaysOnline: true,
-        readMessages: true,
-        readStatus: false,
-        syncFullHistory: false,
-      }),
-    });
-  } catch {}
-
   const qr = extractQr(created.json);
   if (qr.base64) {
     return { state: "connecting" as const, qr };
   }
 
   // Fallback para connect se qrcode não veio direto no create
-  const connected = await call(`/instance/connect/${instance}`, { method: "GET", base, key });
+  const connected = await call(`/instance/connect/${encodeURIComponent(instance)}`, {
+    method: "GET",
+    base,
+    key,
+  });
   return { state: "connecting" as const, qr: extractQr(connected.json) };
 }
 
-/** Remove completamente a instância da VPS (desconecta e deleta sessões, caches e histórico). */
-export async function deleteInstance(userId: string) {
+/** Desconecta e limpa a sessão usando o token correto. */
+export async function deleteInstance(userId?: string) {
   const { base, key, instance } = evolutionConfig(userId);
+  let token: string | null = null;
   try {
-    await call(`/instance/logout/${instance}`, { method: "DELETE", base, key }).catch(() => {});
+    token = await getInstanceToken(instance);
+  } catch {}
+
+  const reqKey = token || key;
+  try {
+    await call(`/instance/logout/${encodeURIComponent(instance)}`, { method: "DELETE", base, key: reqKey }).catch(() => {});
   } catch {}
   try {
-    await call(`/instance/delete/${instance}`, { method: "DELETE", base, key }).catch(() => {});
+    await call(`/instance/delete/${encodeURIComponent(instance)}`, { method: "DELETE", base, key }).catch(() => {});
   } catch {}
-  lastWebhookSync.delete(userId);
+  if (userId) lastWebhookSync.delete(userId);
   return true;
 }
 
-export async function logoutInstance(userId: string) {
+export async function logoutInstance(userId?: string) {
   return deleteInstance(userId);
 }
 
 /** Configura o webhook da instância diretamente na Evolution API na VPS */
 export async function setInstanceWebhook(userId: string, webhookUrl: string) {
   const { base, key, instance } = evolutionConfig(userId);
+  let token: string | null = null;
+  try {
+    token = await getInstanceToken(instance);
+  } catch {}
 
   const payload = {
     webhook: {
@@ -169,10 +203,10 @@ export async function setInstanceWebhook(userId: string, webhookUrl: string) {
     },
   };
 
-  const res = await call(`/webhook/set/${instance}`, {
+  const res = await call(`/webhook/set/${encodeURIComponent(instance)}`, {
     method: "POST",
     base,
-    key,
+    key: token || key,
     body: JSON.stringify(payload),
   });
 
@@ -182,4 +216,3 @@ export async function setInstanceWebhook(userId: string, webhookUrl: string) {
 
   throw new Error(`Evolution API retornou status ${res.status}: ${res.raw.slice(0, 150)}`);
 }
-

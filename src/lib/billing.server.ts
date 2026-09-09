@@ -23,12 +23,17 @@ export function normalizeNumber(phone: string) {
   if (trimmed.endsWith("@lid") || trimmed.endsWith("@s.whatsapp.net")) {
     return trimmed;
   }
-  const digits = trimmed.replace(/\D/g, "");
-  // Se for LID (14 ou 15 dígitos sem código do país 55) ou explicitamente contiver @lid
+  let digits = trimmed.replace(/\D/g, "").replace(/^0+/, "");
+  // Se for LID (14 ou 15 dígitos sem código do país 55)
   if (trimmed.includes("@lid") || (digits.length >= 14 && !digits.startsWith("55"))) {
     return `${digits}@lid`;
   }
-  return digits.length <= 11 ? `55${digits}` : digits;
+  // remove DDI duplicado / prefixo de operadora
+  if (digits.length > 13 && digits.startsWith("55")) digits = digits.slice(-13);
+  if (!digits.startsWith("55") && digits.length >= 10 && digits.length <= 11) {
+    digits = `55${digits}`;
+  }
+  return digits;
 }
 
 export async function sendViaEvolution(
@@ -38,23 +43,36 @@ export async function sendViaEvolution(
   userId?: string,
 ) {
   const { evolutionConfig } = await import("./evolution.server");
+  const { getInstanceToken } = await import("./evolution.functions");
+  const { evolutionBaseUrl } = await import("./evolution-url");
+
   const owner = userId ?? settings.user_id;
-  if (!owner) throw new Error("Conta sem WhatsApp conectado.");
   const { base, key, instance } = evolutionConfig(
     owner,
     settings.api_url ?? undefined,
     settings.api_key ?? undefined,
+    settings.instance_name ?? undefined,
   );
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (key) headers["apikey"] = key;
 
-  const res = await fetch(`${base}/message/sendText/${instance}`, {
+  let token: string | null = null;
+  try {
+    token = await getInstanceToken(instance);
+  } catch {}
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const reqKey = token || key;
+  if (reqKey) headers["apikey"] = reqKey;
+
+  const res = await fetch(`${evolutionBaseUrl(base)}/message/sendText/${encodeURIComponent(instance)}`, {
     method: "POST",
     headers,
     body: JSON.stringify({ number: normalizeNumber(phone), text, textMessage: { text } }),
   });
   const raw = await res.text();
-  if (!res.ok) throw new Error(`Falha no envio (${res.status}): ${raw.slice(0, 300)}`);
+  if (!res.ok) {
+    console.error(`[Billing WhatsApp] Falha no envio (${res.status}): ${raw.slice(0, 300)}`);
+    throw new Error(`Falha no envio (${res.status}): ${raw.slice(0, 300)}`);
+  }
   return raw.slice(0, 500);
 }
 
@@ -70,17 +88,27 @@ export async function sendMediaViaEvolution(
   userId?: string,
 ) {
   const { evolutionConfig } = await import("./evolution.server");
+  const { getInstanceToken } = await import("./evolution.functions");
+  const { evolutionBaseUrl } = await import("./evolution-url");
+
   const owner = userId ?? settings.user_id;
-  if (!owner) throw new Error("Conta sem WhatsApp conectado.");
   const { base, key, instance } = evolutionConfig(
     owner,
     settings.api_url ?? undefined,
     settings.api_key ?? undefined,
+    settings.instance_name ?? undefined,
   );
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (key) headers["apikey"] = key;
 
-  const res = await fetch(`${base}/message/sendMedia/${instance}`, {
+  let token: string | null = null;
+  try {
+    token = await getInstanceToken(instance);
+  } catch {}
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const reqKey = token || key;
+  if (reqKey) headers["apikey"] = reqKey;
+
+  const res = await fetch(`${evolutionBaseUrl(base)}/message/sendMedia/${encodeURIComponent(instance)}`, {
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -93,7 +121,10 @@ export async function sendMediaViaEvolution(
     }),
   });
   const raw = await res.text();
-  if (!res.ok) throw new Error(`Falha no envio de mídia (${res.status}): ${raw.slice(0, 300)}`);
+  if (!res.ok) {
+    console.error(`[Billing WhatsApp Media] Falha no envio (${res.status}): ${raw.slice(0, 300)}`);
+    throw new Error(`Falha no envio de mídia (${res.status}): ${raw.slice(0, 300)}`);
+  }
   return raw.slice(0, 500);
 }
 

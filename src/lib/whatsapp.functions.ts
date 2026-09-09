@@ -12,11 +12,15 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: SendInput) => input)
   .handler(async ({ data, context }) => {
-    const { sendViaEvolution } = await import("./billing.server");
+    const { sendWhatsapp } = await import("./whatsapp.server");
     const { supabase, userId } = context;
 
     try {
-      await sendViaEvolution({}, data.phone, data.body, userId);
+      const res = await sendWhatsapp(data.phone, data.body);
+      if (!res.ok) {
+        throw new Error(res.error || "Falha ao enviar");
+      }
+
       await supabase.from("message_logs").insert({
         user_id: userId,
         client_id: data.clientId ?? null,
@@ -84,12 +88,13 @@ export const getWhatsAppStatus = createServerFn({ method: "POST" })
     }
   });
 
-/** Cria/abre a sessão e devolve o QR Code, já vinculando o Webhook automaticamente na Evolution API. */
+/** Cria/abre a sessão e devolve o QR Code, idêntico à lógica do BOMSABORR. */
 export const connectWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input?: { origin?: string; forceNew?: boolean }) => input)
   .handler(async ({ data, context }) => {
-    const { connectInstance } = await import("./evolution.server");
+    const { ensureAndConnectEvolution } = await import("./evolution.functions");
+    const { ensureInstanceWebhook } = await import("./evolution.server");
     const { getRequest } = await import("@tanstack/react-start/server");
 
     let publicUrl = data?.origin;
@@ -105,11 +110,15 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
     }
 
     try {
-      const result = await connectInstance(context.userId, publicUrl, data?.forceNew ?? true);
+      const result = await ensureAndConnectEvolution();
+      if (result.status === "open" && publicUrl) {
+        ensureInstanceWebhook(context.userId, publicUrl).catch(() => {});
+      }
       return {
         ok: true as const,
-        state: result.state,
-        qr: result.qr?.base64 ?? null,
+        state: result.status,
+        qr: result.base64 ?? null,
+        code: result.code ?? null,
         error: null,
       };
     } catch (error) {
@@ -117,12 +126,13 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
         ok: false as const,
         state: "close" as const,
         qr: null,
+        code: null,
         error: error instanceof Error ? error.message : "Não foi possível gerar o QR Code.",
       };
     }
   });
 
-/** Desconecta o número conectado e remove a instância completamente da VPS. */
+/** Desconecta o número conectado. */
 export const disconnectWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

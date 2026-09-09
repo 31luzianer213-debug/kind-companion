@@ -1,83 +1,127 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
-  connectWhatsApp,
-  disconnectWhatsApp,
-  getWhatsAppStatus,
-  sendWhatsAppMessage,
-} from "@/lib/whatsapp.functions";
+  ensureAndConnectEvolution,
+  getEvolutionConfigStatus,
+  getEvolutionConnectionState,
+  logoutEvolutionInstance,
+  restartEvolutionInstance,
+  sendEvolutionTestMessage,
+} from "@/lib/evolution.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/format";
 import {
   MessageCircle,
   QrCode,
-  Plug,
-  Unplug,
+  LogOut,
   RefreshCw,
   Send,
-  CheckCircle2,
-  AlertCircle,
   Smartphone,
   Sparkles,
   ExternalLink,
-  Loader2,
   Clock,
-  Trash2,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/whatsapp")({
   head: () => ({
     meta: [
       { title: "WhatsApp — Conexão & Disparador" },
-      { name: "description", content: "Conecte seu WhatsApp pelo QR Code, teste envios e acompanhe o status da conexão da sua revenda." },
+      {
+        name: "description",
+        content: "Conecte seu WhatsApp pelo QR Code, teste envios e acompanhe o status da conexão da sua revenda.",
+      },
     ],
   }),
   component: WhatsAppPage,
 });
 
-const stateLabels: Record<string, { label: string; tone: string }> = {
-  open: { label: "Conectado", tone: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
-  connecting: { label: "Aguardando leitura", tone: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-  close: { label: "Desconectado", tone: "bg-rose-500/15 text-rose-400 border-rose-500/30" },
-  none: { label: "Sem sessão iniciada", tone: "bg-muted text-muted-foreground border-border" },
-};
+function statusInfo(status: string) {
+  const s = String(status ?? "").toLowerCase();
+  if (s === "open") {
+    return {
+      label: "Conectado",
+      color: "bg-emerald-500",
+      tone: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+      desc: "Pronto para enviar cobranças, faturas e dados de acesso",
+    };
+  }
+  if (s === "connecting") {
+    return {
+      label: "Aguardando leitura",
+      color: "bg-amber-500",
+      tone: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+      desc: "Escaneie o QR Code no seu celular em Aparelhos Conectados",
+    };
+  }
+  return {
+    label: "Desconectado",
+    color: "bg-rose-500",
+    tone: "bg-rose-500/15 text-rose-400 border-rose-500/30",
+    desc: "Gere o QR Code para conectar seu número de atendimento",
+  };
+}
+
+function normalizeBase64(b64: string | null): string | null {
+  if (!b64) return null;
+  const s = b64.trim();
+  if (!s) return null;
+  return s.startsWith("data:") ? s : `data:image/png;base64,${s}`;
+}
 
 function WhatsAppPage() {
-  const queryClient = useQueryClient();
-  const send = useServerFn(sendWhatsAppMessage);
-  const status = useServerFn(getWhatsAppStatus);
-  const connect = useServerFn(connectWhatsApp);
-  const disconnect = useServerFn(disconnectWhatsApp);
-
-  const [qr, setQr] = useState<string | null>(null);
-  const [testPhone, setTestPhone] = useState("");
-  const [busy, setBusy] = useState(false);
+  const qc = useQueryClient();
+  const [qr, setQr] = useState<{ base64: string | null; code: string | null } | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const [testNumber, setTestNumber] = useState("");
+  const [testText, setTestText] = useState(
+    "🚀 *Mensagem de Teste do IPTV Manager!*\n\nSeu WhatsApp está 100% conectado e integrado ao Painel Sigma e Cobranças automáticas. ✅",
+  );
   const [sendingTest, setSendingTest] = useState(false);
 
-  // Status da Sessão WhatsApp
-  const session = useQuery({
-    queryKey: ["whatsapp-status"],
-    queryFn: async () => {
-      try {
-        const res = await status({});
-        return res;
-      } catch (err) {
-        console.warn("Aviso ao carregar status do WhatsApp:", err);
-        return { ok: true, state: "none" };
-      }
-    },
-    refetchInterval: 5000,
+  // Carrega status da configuração da Evolution
+  const config = useQuery({
+    queryKey: ["evolution", "config"],
+    queryFn: () => getEvolutionConfigStatus(),
+  });
+  const instance = config.data?.defaultInstance ?? "";
+
+  // Consulta o estado da conexão em tempo real (2.5s se tiver QR aberto, 6s em repouso)
+  const connState = useQuery({
+    queryKey: ["evolution", "connState", instance],
+    queryFn: () => getEvolutionConnectionState({ data: { instance } }),
+    enabled: !!instance,
+    refetchInterval: qr ? 2500 : 6000,
+    retry: 0,
   });
 
-  // Histórico Recente de Disparos
+  const raw = connState.data as
+    | ({ state?: string; status?: string; instance?: { state?: string } } & Record<string, unknown>)
+    | undefined;
+  const status = raw?.state ?? raw?.status ?? raw?.instance?.state ?? "unknown";
+  const info = statusInfo(status);
+  const connected = String(status).toLowerCase() === "open";
+
+  // Fecha o QR automaticamente quando o WhatsApp conecta
+  useEffect(() => {
+    if (connected && qr) {
+      setQr(null);
+      setQrError(null);
+      toast.success("WhatsApp conectado com sucesso!");
+    }
+  }, [connected, qr]);
+
+  // Histórico Recente de Disparos do Supabase
   const { data: logsData } = useQuery({
     queryKey: ["whatsapp-recent-logs"],
     queryFn: async () => {
@@ -91,86 +135,79 @@ function WhatsAppPage() {
     refetchInterval: 15000,
   });
 
-  const state = session.data?.state ?? "none";
-  const badge = stateLabels[state] ?? stateLabels["none"]!;
-  const isConnected = state === "open";
+  function refresh() {
+    qc.invalidateQueries({ queryKey: ["evolution"] });
+    qc.invalidateQueries({ queryKey: ["layout-whatsapp-status"] });
+  }
 
-  useEffect(() => {
-    if (isConnected) setQr(null);
-  }, [isConnected]);
-
-  async function gerarQr(forceNew = true) {
-    setBusy(true);
+  async function handleConnect() {
+    setQrLoading(true);
     setQr(null);
+    setQrError(null);
     try {
-      const result = await connect({
-        data: {
-          origin: typeof window !== "undefined" ? window.location.origin : undefined,
-          forceNew,
-        },
-      });
-      if (!result.ok) {
-        toast.error(result.error ?? "Não foi possível gerar o QR Code.");
-        return;
-      }
-      if (result.qr) {
-        setQr(result.qr);
-        toast.info("Nova instância limpa criada! Escaneie o QR Code no seu celular.");
-      } else if (result.state === "open" && !forceNew) {
-        toast.success("Seu WhatsApp já está conectado!");
-        setQr(null);
+      const res = await ensureAndConnectEvolution();
+      const b64 = normalizeBase64(res.base64 ?? null);
+      if (b64 || res.code) {
+        setQr({ base64: b64, code: res.code ?? null });
+        toast.success(res.created ? "Conexão criada! Escaneie o QR Code." : "QR Code gerado! Escaneie em até 45s.");
+      } else if (String(res.status).toLowerCase() === "open") {
+        toast.message("Já está conectado — não precisa de QR Code.");
       } else {
-        toast.error("A sessão não devolveu um QR Code. Tente novamente.");
+        setQrError("A Evolution não devolveu QR Code. Clique em Reiniciar e tente de novo.");
+        toast.message("Sem QR Code agora. Tente Reiniciar.");
       }
-      session.refetch();
+      refresh();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao gerar QR Code";
+      setQrError(msg);
+      toast.error(msg);
     } finally {
-      setBusy(false);
+      setQrLoading(false);
     }
   }
 
-  async function desconectar() {
-    setBusy(true);
+  async function handleLogout() {
+    if (!instance || !confirm("Desconectar o WhatsApp? Será preciso escanear o QR Code novamente.")) return;
     try {
-      const result = await disconnect({});
-      if (result.ok) {
-        toast.success("WhatsApp desconectado e instância removida completamente da Evolution API.");
-        setQr(null);
-      } else {
-        toast.error(result.error ?? "Não foi possível desconectar.");
-      }
-      session.refetch();
-    } finally {
-      setBusy(false);
+      await logoutEvolutionInstance({ data: { instance } });
+      setQr(null);
+      setQrError(null);
+      toast.success("WhatsApp desconectado.");
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao desconectar");
     }
   }
 
-  async function enviarTeste(e: React.FormEvent) {
+  async function handleRestart() {
+    if (!instance) return;
+    setQrError(null);
+    try {
+      await restartEvolutionInstance({ data: { instance } });
+      toast.success("Reiniciando instância... aguarde 5s e clique em Gerar QR Code.");
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao reiniciar");
+    }
+  }
+
+  async function handleTest(e: React.FormEvent) {
     e.preventDefault();
-    if (!testPhone.trim()) {
-      toast.error("Informe um número de WhatsApp para o teste.");
-      return;
-    }
-    const cleanPhone = testPhone.replace(/\D/g, "");
-    if (cleanPhone.length < 10) {
-      toast.error("Digite um telefone válido com DDD (ex: 11999998888).");
+    if (!instance) return;
+    const cleanNumber = testNumber.replace(/\D/g, "");
+    if (cleanNumber.length < 10) {
+      toast.error("Informe o número com DDD (ex: 55 11 99999-8888).");
       return;
     }
 
     setSendingTest(true);
     try {
-      const result = await send({
-        data: {
-          phone: cleanPhone,
-          body: "🚀 *Mensagem de Teste do IPTV Manager!*\n\nSeu WhatsApp está 100% conectado e integrado ao Painel Sigma e Cobranças automáticas. ✅",
-        },
-      });
-      if (result.ok) {
-        toast.success("Mensagem de teste enviada com sucesso!");
-        queryClient.invalidateQueries({ queryKey: ["whatsapp-recent-logs"] });
-        setTestPhone("");
-      } else {
-        toast.error(result.error ?? "Falha ao enviar mensagem de teste.");
-      }
+      await sendEvolutionTestMessage({ data: { instance, number: testNumber, text: testText } });
+      toast.success("Mensagem de teste enviada! Confira o WhatsApp.");
+      qc.invalidateQueries({ queryKey: ["whatsapp-recent-logs"] });
+      setTestNumber("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao enviar mensagem de teste");
     } finally {
       setSendingTest(false);
     }
@@ -185,9 +222,9 @@ function WhatsAppPage() {
             <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
               <MessageCircle className="size-6 text-emerald-500" /> WhatsApp Conexão & Disparos
             </h1>
-            <Badge variant="outline" className={`text-xs gap-1.5 ${badge.tone}`}>
-              <span className={`size-1.5 rounded-full ${isConnected ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground"}`} />
-              {badge.label}
+            <Badge variant="outline" className={`text-xs gap-1.5 ${info.tone}`}>
+              <span className={`size-1.5 rounded-full ${connected ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground"}`} />
+              {info.label}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -196,136 +233,119 @@ function WhatsAppPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="gap-1.5 shadow-sm"
-          >
+          <Button asChild variant="outline" size="sm" className="gap-1.5 shadow-sm">
             <Link to="/mensagens">
               <Sparkles className="size-3.5 text-primary" />
               Editar Modelos de Mensagem
             </Link>
           </Button>
+          <Button variant="secondary" size="sm" className="gap-1.5 shadow-sm" onClick={refresh}>
+            <RefreshCw className="size-3.5" /> Atualizar
+          </Button>
         </div>
       </div>
 
+      {/* Grid Principal: Conexão e Teste */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Card 1: Pareamento & QR Code */}
         <Card className="surface-card border-border/60">
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <QrCode className="size-4 text-primary" /> Conexão do Aparelho
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <QrCode className="size-4 text-primary" /> Conexão do Aparelho
+              </CardTitle>
+              {connState.isFetching && <span className="text-[11px] text-muted-foreground animate-pulse">sincronizando...</span>}
+            </div>
             <CardDescription>
-              Escaneie o QR Code com seu WhatsApp para conectar a conta ao sistema.
+              Conexão única e estável do sistema: <span className="font-mono font-semibold text-foreground">{instance || "Carregando..."}</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/20 p-3.5">
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl border ${isConnected ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" : "bg-muted text-muted-foreground border-border"}`}>
+                <div className={`p-2 rounded-xl border ${connected ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" : "bg-muted text-muted-foreground border-border"}`}>
                   <Smartphone className="size-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Status do WhatsApp</p>
-                  <p className="text-xs text-muted-foreground">{badge.label}</p>
+                  <p className="text-sm font-semibold text-foreground">Status da Sessão</p>
+                  <p className="text-xs text-muted-foreground">{info.desc}</p>
                 </div>
               </div>
-
-              <div className="flex items-center gap-2">
-                {isConnected ? (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => gerarQr(true)}
-                      disabled={busy}
-                      className="gap-1.5 text-xs"
-                      title="Remove a conexão atual e gera um novo QR Code"
-                    >
-                      <QrCode className="size-3.5 text-primary" />
-                      Trocar Aparelho
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={desconectar}
-                      disabled={busy}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 border-destructive/30"
-                    >
-                      <Unplug className="size-3.5" />
-                      Desconectar
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    {(qr || state === "connecting" || state === "close") && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={desconectar}
-                        disabled={busy}
-                        className="text-muted-foreground hover:text-destructive gap-1.5"
-                        title="Remove a instância atual da VPS"
-                      >
-                        <Trash2 className="size-3.5" />
-                        Remover Sessão
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      onClick={() => gerarQr(true)}
-                      disabled={busy}
-                      className="gap-1.5 font-semibold bg-primary text-primary-foreground shadow-sm hover-lift"
-                    >
-                      {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Plug className="size-3.5" />}
-                      {qr ? "Gerar Novo QR Code" : "Conectar WhatsApp"}
-                    </Button>
-                  </>
-                )}
-              </div>
             </div>
 
-            <div className="flex items-start gap-2.5 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-foreground">
-              <Sparkles className="size-4 shrink-0 text-primary mt-0.5" />
-              <div>
-                <strong className="text-primary">Conexão Inteligente:</strong> Ao escanear o QR Code, sua conta é conectada e o Robô de Atendimento já é ativado de forma 100% automática.
-              </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button onClick={handleConnect} disabled={qrLoading} className="rounded-xl font-semibold gap-1.5">
+                {qrLoading ? <Loader2 className="size-4 animate-spin" /> : <QrCode className="size-4" />}
+                {qrLoading ? "Gerando..." : connected ? "Gerar Novo QR Code" : "Gerar QR Code"}
+              </Button>
+              <Button variant="secondary" onClick={handleRestart} className="rounded-xl font-semibold gap-1.5">
+                <RefreshCw className="size-4" /> Reiniciar
+              </Button>
+              <Button variant="outline" onClick={handleLogout} className="rounded-xl font-semibold text-destructive hover:bg-destructive/10 gap-1.5">
+                <LogOut className="size-4" /> Desconectar
+              </Button>
             </div>
+
+            {qrError && (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-500">
+                <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                <span className="break-words">{qrError}</span>
+              </div>
+            )}
 
             {/* Visualizador do QR Code */}
-            {qr && !isConnected ? (
+            {(qr || qrLoading) && !connected && (
               <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border/60 bg-card p-6 text-center space-y-3">
-                <div className="p-3 bg-white rounded-2xl shadow-lg">
-                  <img
-                    src={qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`}
-                    alt="QR Code WhatsApp"
-                    className="size-56 object-contain"
-                  />
-                </div>
-                <div className="space-y-1 max-w-xs">
-                  <p className="text-xs font-semibold text-foreground">Abra o WhatsApp no seu celular:</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Menu ou Configurações &gt; Aparelhos Conectados &gt; Conectar Aparelho.
-                  </p>
-                </div>
+                {qrLoading ? (
+                  <div className="py-10 text-center space-y-2">
+                    <Loader2 className="size-8 animate-spin mx-auto text-primary" />
+                    <p className="text-sm text-muted-foreground">Gerando QR Code limpo...</p>
+                  </div>
+                ) : qr?.base64 ? (
+                  <div className="space-y-3 text-center">
+                    <div className="p-3 bg-white rounded-2xl shadow-lg inline-block">
+                      <img
+                        src={qr.base64}
+                        alt="QR Code do WhatsApp"
+                        className="size-56 object-contain"
+                      />
+                    </div>
+                    <div className="space-y-1 max-w-xs">
+                      <p className="text-xs font-semibold text-foreground">Abra o WhatsApp no celular:</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Configurações &gt; Aparelhos Conectados &gt; Conectar Aparelho (expira em ~45s)
+                      </p>
+                    </div>
+                    <Button variant="secondary" size="sm" className="rounded-xl" onClick={handleConnect}>
+                      <RefreshCw className="size-3.5" /> Novo QR Code
+                    </Button>
+                  </div>
+                ) : qr?.code ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Código de pareamento:</p>
+                    <p className="font-mono text-base font-bold bg-muted p-2 rounded-lg">{qr.code}</p>
+                  </div>
+                ) : null}
               </div>
-            ) : isConnected ? (
+            )}
+
+            {connected && !qr && (
               <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-8 text-center space-y-2">
                 <div className="size-12 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
                   <CheckCircle2 className="size-6 text-emerald-400" />
                 </div>
-                <p className="text-sm font-bold text-foreground">WhatsApp Conectado e Pronto!</p>
+                <p className="text-sm font-bold text-foreground">WhatsApp Conectado e Operando!</p>
                 <p className="text-xs text-muted-foreground max-w-sm">
-                  Seu número está pareado. Todas as cobranças, faturas e dados de acesso serão enviados automaticamente por este canal.
+                  Seu número está pronto para disparos automáticos de cobranças PIX, renovações e suporte via Robô.
                 </p>
               </div>
-            ) : (
+            )}
+
+            {!connected && !qr && !qrLoading && (
               <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 p-8 text-center space-y-2 text-muted-foreground">
                 <Smartphone className="size-8 opacity-40" />
                 <p className="text-xs font-medium">Nenhum QR Code ativo no momento.</p>
-                <p className="text-[11px]">Clique em "Conectar WhatsApp" acima para gerar o código.</p>
+                <p className="text-[11px]">Clique no botão "Gerar QR Code" acima para conectar seu WhatsApp.</p>
               </div>
             )}
           </CardContent>
@@ -338,50 +358,52 @@ function WhatsAppPage() {
               <Send className="size-4 text-primary" /> Disparo de Teste
             </CardTitle>
             <CardDescription>
-              Envie uma mensagem instantânea para o seu próprio número e valide a entrega imediata.
+              Valide o envio instantâneo para qualquer número de WhatsApp cadastrado.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
-            <form onSubmit={enviarTeste} className="space-y-4">
+            <form onSubmit={handleTest} className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Número de WhatsApp de Teste</Label>
+                <p className="text-xs font-semibold">Número do WhatsApp (com DDD)</p>
                 <Input
                   type="text"
-                  placeholder="(11) 99999-8888"
-                  value={testPhone}
-                  onChange={(e) => setTestPhone(e.target.value)}
+                  placeholder="55 11 99999-8888"
+                  value={testNumber}
+                  onChange={(e) => setTestNumber(e.target.value)}
                   className="rounded-xl font-mono text-sm"
                   required
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Insira com DDD. Se for internacional, inclua o código do país.
+                  Insira 55 + DDD + 8 ou 9 dígitos. Exemplo: 5593991614242.
                 </p>
               </div>
 
-              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 text-xs space-y-1 text-muted-foreground">
-                <p className="font-semibold text-foreground flex items-center gap-1">
-                  <Sparkles className="size-3.5 text-primary" /> Mensagem padrão de validação:
-                </p>
-                <p className="italic">
-                  "🚀 Mensagem de Teste do IPTV Manager! Seu WhatsApp está 100% conectado e integrado ao Painel Sigma..."
-                </p>
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold">Mensagem do Teste</p>
+                <Textarea
+                  rows={4}
+                  value={testText}
+                  onChange={(e) => setTestText(e.target.value)}
+                  className="rounded-xl text-xs font-sans resize-none"
+                  required
+                />
               </div>
 
               <Button
                 type="submit"
-                disabled={sendingTest || !isConnected}
-                className="w-full gap-1.5 font-semibold bg-primary text-primary-foreground shadow-sm hover-lift"
+                disabled={sendingTest || !connected}
+                className="w-full gap-1.5 font-semibold bg-primary text-primary-foreground shadow-sm rounded-xl"
               >
                 {sendingTest ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-                {isConnected ? "Enviar Mensagem de Teste" : "Conecte o WhatsApp para Testar"}
+                {connected ? "Enviar Mensagem de Teste" : "Conecte o WhatsApp para Enviar Teste"}
               </Button>
             </form>
 
             <div className="pt-4 border-t border-border/60">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Quer mudar o texto das cobranças?</span>
+                <span>Quer alterar o texto das mensagens automáticas?</span>
                 <Link to="/mensagens" className="text-primary font-semibold hover:underline flex items-center gap-1">
-                  Configurar modelos <ExternalLink className="size-3" />
+                  Modelos de Mensagem <ExternalLink className="size-3" />
                 </Link>
               </div>
             </div>
@@ -397,7 +419,7 @@ function WhatsAppPage() {
               <Clock className="size-4 text-primary" /> Registro Recente de Disparos
             </CardTitle>
             <CardDescription>
-              Histórico das últimas mensagens enviadas pelo robô e cobranças manuais.
+              Histórico das últimas mensagens enviadas pelo robô, cobranças automáticas e testes.
             </CardDescription>
           </div>
           <Badge variant="secondary" className="font-mono text-xs">
@@ -430,7 +452,7 @@ function WhatsAppPage() {
                     </p>
                   </div>
                   <Badge
-                    variant={log.status === "sent" ? "success" : "destructive"}
+                    variant={log.status === "sent" ? "default" : "destructive"}
                     className="shrink-0 text-[10px] font-bold"
                   >
                     {log.status === "sent" ? "Enviado" : "Falhou"}
