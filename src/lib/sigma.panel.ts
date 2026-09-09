@@ -274,6 +274,9 @@ function withAuth(token: string, init: RequestInit = {}): RequestInit {
     if (!headers.has("Authorization")) {
       headers.set("Authorization", `Bearer ${trimmed}`);
     }
+    headers.set("x-api-key", trimmed);
+    headers.set("api-key", trimmed);
+    headers.set("token", trimmed);
   }
   return { ...init, headers };
 }
@@ -479,23 +482,28 @@ export async function sigmaLogin(url: string, username: string, password: string
     }
   }
 
-  // Tenta autenticação de revenda estilo Xtream UI via /panel_api.php
-  try {
-    const xtreamRes = await requestJson(
-      base,
-      `/panel_api.php?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`,
-      { method: "GET" },
-      LOGIN_TIMEOUT_MS,
-    );
-    if (xtreamRes.ok && xtreamRes.payload) {
-      const auth = xtreamRes.payload?.user_info?.auth;
-      const status = xtreamRes.payload?.user_info?.status;
-      if (auth === 1 || String(status).toLowerCase() === "active") {
-        return `xtream:${user}:${pass}`;
+  // Tenta autenticação de revenda estilo Xtream UI via /panel_api.php ou /player_api.php
+  for (const xtreamCheckPath of [
+    `/panel_api.php?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`,
+    `/player_api.php?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`,
+  ]) {
+    try {
+      const xtreamRes = await requestJson(
+        base,
+        xtreamCheckPath,
+        { method: "GET" },
+        LOGIN_TIMEOUT_MS,
+      );
+      if (xtreamRes.ok && xtreamRes.payload) {
+        const auth = xtreamRes.payload?.user_info?.auth;
+        const status = xtreamRes.payload?.user_info?.status;
+        if (auth === 1 || String(status).toLowerCase() === "active") {
+          return `xtream:${user}:${pass}`;
+        }
       }
+    } catch {
+      // Segue para os erros abaixo
     }
-  } catch {
-    // Segue para os erros abaixo
   }
 
   const notFound = attempts.filter((a) => /404|405/.test(a)).length;
@@ -528,7 +536,7 @@ export async function ensureSigmaToken(config: SigmaConfig): Promise<string> {
   throw new Error("Informe o usuário e a senha do painel Sigma.");
 }
 
-/** Faz uma chamada autenticada; se receber 401, tenta refazer login uma vez. */
+/** Faz uma chamada autenticada; se receber 401, tenta refazer login uma vez sem quebrar o fluxo. */
 async function authorizedRequest(
   config: SigmaConfig,
   path: string,
@@ -536,15 +544,54 @@ async function authorizedRequest(
   timeoutMs = REQUEST_TIMEOUT_MS,
 ): Promise<HttpResult> {
   const base = normalizeBaseUrl(config.url);
-  let token =
-    config.token?.trim() ||
-    (await sigmaLogin(config.url, config.username ?? "", config.password ?? ""));
-  let result = await requestJson(base, path, withAuth(token, init), timeoutMs);
+  let token = config.token?.trim();
+  if (!token && config.username?.trim() && config.password?.trim()) {
+    try {
+      token = await sigmaLogin(config.url, config.username, config.password);
+    } catch (err) {
+      return {
+        ok: false,
+        status: 401,
+        payload: null,
+        text: err instanceof Error ? err.message : "Falha na autenticação",
+        headers: new Headers(),
+      };
+    }
+  }
+  if (!token) {
+    return {
+      ok: false,
+      status: 401,
+      payload: null,
+      text: "Credenciais ou token não informados",
+      headers: new Headers(),
+    };
+  }
 
-  const canRelogin = Boolean(config.username?.trim() && config.password?.trim());
-  if (!result.ok && (result.status === 401 || result.status === 403) && canRelogin) {
-    token = await sigmaLogin(config.url, config.username ?? "", config.password ?? "");
+  let result: HttpResult;
+  try {
     result = await requestJson(base, path, withAuth(token, init), timeoutMs);
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      payload: null,
+      text: err instanceof Error ? err.message : "Erro de conexão",
+      headers: new Headers(),
+    };
+  }
+
+  // Apenas em caso de 401 Unauthorized (token expirado), tenta re-autenticar uma vez se tiver usuário/senha
+  const canRelogin = Boolean(config.username?.trim() && config.password?.trim());
+  if (!result.ok && result.status === 401 && canRelogin) {
+    try {
+      const refreshedToken = await sigmaLogin(config.url, config.username ?? "", config.password ?? "");
+      if (refreshedToken && refreshedToken !== token) {
+        result = await requestJson(base, path, withAuth(refreshedToken, init), timeoutMs);
+      }
+    } catch {
+      // Mantém a resposta 401 original sem quebrar o fluxo com throw
+    }
   }
   return result;
 }
@@ -565,10 +612,30 @@ function pickField(obj: any, aliases: string[]): any {
 function extractRows(payload: any): any[] {
   if (Array.isArray(payload)) return payload;
   if (payload && typeof payload === "object") {
-    for (const key of ["data", "customers", "clients", "users", "items", "results", "list", "rows"]) {
+    for (const key of ["data", "customers", "clients", "users", "lines", "items", "results", "list", "rows", "subscribers"]) {
       const value = payload[key];
       if (Array.isArray(value)) return value;
       if (Array.isArray(value?.data)) return value.data;
+      if (value && typeof value === "object") {
+        const innerList = Object.values(value);
+        if (
+          innerList.length > 0 &&
+          typeof innerList[0] === "object" &&
+          innerList[0] !== null &&
+          ("username" in (innerList[0] as any) || "id" in (innerList[0] as any) || "user" in (innerList[0] as any))
+        ) {
+          return innerList;
+        }
+      }
+    }
+    const values = Object.values(payload);
+    if (
+      values.length > 0 &&
+      typeof values[0] === "object" &&
+      values[0] !== null &&
+      ("username" in (values[0] as any) || "id" in (values[0] as any) || "user" in (values[0] as any) || "name" in (values[0] as any))
+    ) {
+      return values;
     }
     for (const value of Object.values(payload)) {
       if (Array.isArray(value)) return value;
@@ -585,6 +652,11 @@ function parseDate(value: any): string | null {
     return null;
   }
   const text = String(value).trim();
+  if (/^\d{9,13}$/.test(text)) {
+    const num = Number(text);
+    const fromSeconds = new Date(num > 1_000_000_000_000 ? num : num * 1000);
+    if (!Number.isNaN(fromSeconds.getTime())) return fromSeconds.toISOString().slice(0, 10);
+  }
   const br = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(text);
   if (br) return `${br[3]}-${(br[2] ?? "").padStart(2, "0")}-${(br[1] ?? "").padStart(2, "0")}`;
   const normalized = /^\d{4}-\d{2}-\d{2}$/.test(text) ? `${text}T12:00:00` : text;
@@ -755,8 +827,6 @@ function extractStreamingDnsFromRaw(raw: any): string | null {
 }
 
 function mapCustomer(raw: any): SigmaCustomer | null {
-  const id = pickField(raw, ["id", "uuid", "customer_id", "client_id", "user_id", "uid"]);
-  if (id === null) return null;
   const screensValue = Number(
     pickField(raw, ["connections", "screens", "max_connections", "connection_limit", "devices"]) ?? 0,
   );
@@ -825,22 +895,27 @@ function mapCustomer(raw: any): SigmaCustomer | null {
   // 4. Notas adicionais gravadas na linha
   const rawNotes = pickField(raw, ["notes", "note", "obs", "observacao", "observacoes", "comment", "description"]);
 
+  const id = pickField(raw, ["id", "uuid", "customer_id", "client_id", "user_id", "uid", "member_id", "line_id"]);
+  const username = String(pickField(raw, ["username", "user", "login", "uname", "iptv_username"]) ?? "");
+  const finalId = id !== null ? String(id) : (username || null);
+  if (!finalId && !username) return null;
+
   return {
-    id: String(id),
+    id: finalId ?? username,
     name: String(
-      pickField(raw, ["name", "full_name", "customer_name", "display_name", "note", "username"]) ??
+      pickField(raw, ["name", "full_name", "customer_name", "display_name", "note", "admin_notes", "username"]) ??
         "Cliente do painel",
     ),
     phone: pickField(raw, ["whatsapp", "phone", "telephone", "mobile", "contact"]),
     email: pickField(raw, ["email", "mail"]),
-    username: String(pickField(raw, ["username", "user", "login", "uname", "iptv_username"]) ?? ""),
+    username: username,
     password: String(pickField(raw, ["password", "pass", "passwd", "iptv_password"]) ?? ""),
     screens: Number.isFinite(screensValue) && screensValue > 0 ? screensValue : null,
     dueDate: parseDate(
       pickField(raw, ["expiration_date", "expiry_date", "expiration", "exp_date", "due_date", "expires_at", "expires", "valid_until"]),
     ),
-    status: normalizeStatus(pickField(raw, ["status", "state", "is_active", "isActive"])),
-    packageId: pickField(raw, ["package_id", "packageId", "plan_id", "plan"]),
+    status: normalizeStatus(pickField(raw, ["status", "state", "is_active", "isActive", "enabled"])),
+    packageId: pickField(raw, ["package_id", "packageId", "plan_id", "plan", "bouquet"]),
     packageName: rawPackageName ? String(rawPackageName).trim() : null,
     serverName: rawServerName ? String(rawServerName).trim() : null,
     dns: rawDns ? normalizeIptvDns(String(rawDns).trim()) : null,
@@ -853,22 +928,70 @@ function mapCustomer(raw: any): SigmaCustomer | null {
 // Métodos de Gerenciamento do Painel Sigma
 // ============================================================
 
-const LIST_ENDPOINTS = [
-  "/api/customers",
-  "/api/reseller-api/v1/customers",
-  "/api/resellers/customers",
-  "/api/clients",
-  "/api/users",
-  "/api/user/list",
-  "/api/subscribers",
-  "/api/subresellers",
-  "/api/members",
-];
-
-/** Lista todos os clientes cadastrados no painel Sigma. */
+/** Lista todos os clientes cadastrados no painel Sigma ou Xtream Codes. */
 export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCustomer[]> {
   const attempts: string[] = [];
-  for (const endpoint of LIST_ENDPOINTS) {
+
+  let user = (config.username ?? "").trim();
+  let pass = config.password ?? "";
+  if (!user && config.token?.startsWith("xtream:")) {
+    const parts = config.token.slice(7).split(":");
+    user = parts[0] ?? "";
+    pass = parts.slice(1).join(":");
+  }
+
+  const candidateEndpoints: string[] = [];
+
+  // Se tiver usuário e senha, tenta os endpoints de revenda do Xtream UI / Xtream Codes
+  if (user && pass) {
+    const u = encodeURIComponent(user);
+    const p = encodeURIComponent(pass);
+    candidateEndpoints.push(
+      `/panel_api.php?username=${u}&password=${p}&action=get_lines`,
+      `/panel_api.php?username=${u}&password=${p}&action=get_users`,
+      `/panel_api.php?username=${u}&password=${p}&action=user_list`,
+      `/panel_api.php?username=${u}&password=${p}&action=manage_users`,
+      `/player_api.php?username=${u}&password=${p}&action=get_lines`,
+      `/player_api.php?username=${u}&password=${p}&action=get_users`,
+    );
+  }
+
+  // Endpoints REST de clientes e linhas do Painel Sigma / XUI
+  candidateEndpoints.push(
+    "/api/customers",
+    "/api/lines",
+    "/api/reseller/lines",
+    "/api/reseller/customers",
+    "/api/reseller/clients",
+    "/api/resellers/lines",
+    "/api/resellers/customers",
+    "/api/reseller-api/v1/customers",
+    "/api/reseller-api/v1/lines",
+    "/api/v1/lines",
+    "/api/v1/customers",
+    "/api/v1/reseller/lines",
+    "/api/v1/reseller/customers",
+    "/api/clients",
+    "/api/users",
+    "/api/user/list",
+    "/api/user/lines",
+    "/api/subscribers",
+    "/api/subresellers",
+    "/api/members",
+  );
+
+  const rawToken = config.token?.trim();
+  if (rawToken && !rawToken.startsWith("xtream:") && !rawToken.startsWith("cookie:")) {
+    const encToken = encodeURIComponent(rawToken);
+    candidateEndpoints.push(
+      `/api/customers?token=${encToken}`,
+      `/api/customers?api_token=${encToken}`,
+      `/api/lines?token=${encToken}`,
+      `/api/lines?api_token=${encToken}`,
+    );
+  }
+
+  for (const endpoint of candidateEndpoints) {
     let result: HttpResult;
     try {
       result = await authorizedRequest(config, endpoint, { method: "GET" });
@@ -890,6 +1013,7 @@ export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCust
             "customers" in result.payload ||
             "clients" in result.payload ||
             "users" in result.payload ||
+            "lines" in result.payload ||
             "items" in result.payload ||
             "rows" in result.payload));
       if (isValidListPayload) {
@@ -934,7 +1058,7 @@ export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCust
     throw new Error("Usuário ou senha do painel Sigma sem permissão para listar clientes.");
   }
   throw new Error(
-    `Não consegui listar os clientes do painel. Respostas: ${attempts.slice(0, 4).join(" • ") || "nenhuma"}.`,
+    `Não consegui listar os clientes do painel. Respostas: ${attempts.slice(0, 5).join(" • ") || "nenhuma"}.`,
   );
 }
 
