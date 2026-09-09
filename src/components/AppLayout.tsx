@@ -64,19 +64,31 @@ export function AppLayout({ children }: { children: ReactNode }) {
     queryKey: ["sidebar-counts"],
     queryFn: async () => {
       let pendingOrdersCount = 0;
+      let loadedFromApi = false;
+      let deletedIds = new Set<string>();
+      try {
+        const raw = typeof window !== "undefined" ? localStorage.getItem("iptv_deleted_orders") : null;
+        if (raw) {
+          const arr = JSON.parse(raw);
+          if (Array.isArray(arr)) arr.forEach((id: string) => deletedIds.add(id));
+        }
+      } catch {}
+
       try {
         const res = await fetch("/api/public/orders?status=pending");
         if (res.ok) {
           const json = await res.json();
           if (Array.isArray(json?.orders)) {
-            pendingOrdersCount = json.orders.length;
+            const valid = json.orders.filter((o: any) => !deletedIds.has(o.id));
+            pendingOrdersCount = valid.length;
+            loadedFromApi = true;
           }
         }
       } catch {}
 
-      if (pendingOrdersCount === 0 && Array.isArray(defaultOrdersSeed)) {
+      if (!loadedFromApi && Array.isArray(defaultOrdersSeed)) {
         pendingOrdersCount = (defaultOrdersSeed as any[]).filter(
-          (o) => o.status === "pending",
+          (o) => o.status === "pending" && !deletedIds.has(o.id),
         ).length;
       }
 

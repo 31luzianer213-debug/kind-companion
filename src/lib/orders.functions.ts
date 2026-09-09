@@ -4,6 +4,8 @@ import {
   listOrdersServer,
   approveAndReleaseOrderServer,
   cancelOrderServer,
+  deleteOrderServer,
+  bulkDeleteOrdersServer,
   type OrderItem,
 } from "./orders.server";
 
@@ -113,5 +115,51 @@ export const createManualOrder = createServerFn({ method: "POST" })
     const { createOrderServer } = await import("./orders.server");
     const order = await createOrderServer(userId, data);
     return { ok: true as const, order };
+  });
+
+/** Exclui permanentemente um pedido */
+export const deleteOrder = createServerFn({ method: "POST" })
+  .inputValidator((input: { orderId: string }) => input)
+  .handler(async ({ data }) => {
+    let userId = "default";
+    try {
+      const { getRequest } = await import("@tanstack/react-start/server");
+      const request = getRequest();
+      const authHeader = request?.headers?.get("authorization");
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        const token = authHeader.replace("Bearer ", "");
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: claimsData } = await supabaseAdmin.auth.getClaims(token);
+        if (claimsData?.claims?.sub) {
+          userId = claimsData.claims.sub;
+        }
+      }
+    } catch {}
+
+    const result = await deleteOrderServer(userId, data.orderId);
+    return result;
+  });
+
+/** Exclui múltiplos pedidos de uma vez */
+export const bulkDeleteOrders = createServerFn({ method: "POST" })
+  .inputValidator((input: { orderIds: string[] }) => input)
+  .handler(async ({ data }) => {
+    let userId = "default";
+    try {
+      const { getRequest } = await import("@tanstack/react-start/server");
+      const request = getRequest();
+      const authHeader = request?.headers?.get("authorization");
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        const token = authHeader.replace("Bearer ", "");
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: claimsData } = await supabaseAdmin.auth.getClaims(token);
+        if (claimsData?.claims?.sub) {
+          userId = claimsData.claims.sub;
+        }
+      }
+    } catch {}
+
+    const result = await bulkDeleteOrdersServer(userId, data.orderIds);
+    return result;
   });
 

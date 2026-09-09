@@ -46,14 +46,48 @@ export function getOrdersFilePath(userId?: string): string {
   return path.join(dir, `orders_${canonicalId}.json`);
 }
 
+export function getDeletedOrderIds(): Set<string> {
+  const set = new Set<string>();
+  try {
+    const dir = path.resolve(process.cwd(), "data");
+    const filePath = path.join(dir, "deleted_order_ids.json");
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, "utf-8");
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        for (const id of list) {
+          if (typeof id === "string") set.add(id);
+        }
+      }
+    }
+  } catch {}
+  return set;
+}
+
+export function markOrdersAsDeleted(orderIds: string[]): void {
+  try {
+    const dir = path.resolve(process.cwd(), "data");
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const set = getDeletedOrderIds();
+    for (const id of orderIds) {
+      if (id) set.add(id);
+    }
+    const filePath = path.join(dir, "deleted_order_ids.json");
+    fs.writeFileSync(filePath, JSON.stringify(Array.from(set), null, 2), "utf-8");
+  } catch {}
+}
+
 export function readLocalOrders(userId?: string): OrderItem[] {
   const ordersMap = new Map<string, OrderItem>();
+  const deletedIds = getDeletedOrderIds();
 
   // 1. Inicializa com os pedidos pré-compilados (garante funcionamento no Lovable Cloud / Edge Workers)
   try {
     if (Array.isArray(defaultOrdersData)) {
       for (const item of defaultOrdersData as OrderItem[]) {
-        if (item && item.id) {
+        if (item && item.id && !deletedIds.has(item.id)) {
           ordersMap.set(item.id, item);
         }
       }
@@ -72,7 +106,7 @@ export function readLocalOrders(userId?: string): OrderItem[] {
           const content = JSON.parse(raw);
           if (Array.isArray(content)) {
             for (const item of content) {
-              if (item && item.id) {
+              if (item && item.id && !deletedIds.has(item.id)) {
                 const existing = ordersMap.get(item.id);
                 if (
                   !existing ||
@@ -89,7 +123,7 @@ export function readLocalOrders(userId?: string): OrderItem[] {
     }
   } catch {}
 
-  const list = Array.from(ordersMap.values());
+  const list = Array.from(ordersMap.values()).filter((o) => !deletedIds.has(o.id));
   list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   return list;
 }
@@ -256,15 +290,20 @@ export async function listOrdersServer(
 
     const { data: dbOrders } = await query;
     if (dbOrders && dbOrders.length > 0) {
-      // Merge sem duplicatas (preferindo status mais recente)
+      const deletedIds = getDeletedOrderIds();
+      // Merge sem duplicatas (preferindo status mais recente e ignorando pedidos excluídos)
       const map = new Map<string, OrderItem>();
-      for (const item of localList) map.set(item.id, item);
+      for (const item of localList) {
+        if (!deletedIds.has(item.id)) map.set(item.id, item);
+      }
       for (const item of dbOrders) {
-        map.set(item.id, {
-          ...(map.get(item.id) || {}),
-          ...item,
-          amount: Number(item.amount),
-        } as OrderItem);
+        if (item && item.id && !deletedIds.has(item.id)) {
+          map.set(item.id, {
+            ...(map.get(item.id) || {}),
+            ...item,
+            amount: Number(item.amount),
+          } as OrderItem);
+        }
       }
       const combined = Array.from(map.values()).sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -531,4 +570,94 @@ export async function cancelOrderServer(
   } catch {}
 
   return { ok: true, message: "Pedido cancelado com sucesso." };
+}
+
+/** Exclui permanentemente um pedido do sistema */
+export async function deleteOrderServer(
+  userId: string,
+  orderId: string,
+): Promise<{ ok: boolean; message: string }> {
+  // 1. Registra tombstone para que o pedido nunca mais seja reimportado ou revivido
+  markOrdersAsDeleted([orderId]);
+
+  // 2. Remove da lista local e regrava os arquivos
+  const list = readLocalOrders(userId);
+  const updatedList = list.filter((o) => o.id !== orderId);
+  writeLocalOrders(userId, updatedList);
+
+  // 3. Remove também dos arquivos de dados diretamente no disco
+  try {
+    const dir = path.resolve(process.cwd(), "data");
+    if (fs.existsSync(dir)) {
+      const files = fs.readdirSync(dir);
+      for (const f of files) {
+        if (!f.startsWith("orders_") || !f.endsWith(".json")) continue;
+        try {
+          const filePath = path.join(dir, f);
+          const raw = fs.readFileSync(filePath, "utf-8");
+          const content = JSON.parse(raw);
+          if (Array.isArray(content)) {
+            const filtered = content.filter((item: any) => item && item.id !== orderId);
+            fs.writeFileSync(filePath, JSON.stringify(filtered, null, 2), "utf-8");
+          }
+        } catch {}
+      }
+    }
+  } catch {}
+
+  // 4. Exclui do banco Supabase se existir
+  try {
+    await supabaseAdmin.from("orders").delete().eq("id", orderId);
+  } catch (err) {
+    console.warn("[deleteOrderServer] Erro ao deletar no Supabase:", err);
+  }
+
+  return { ok: true, message: "Pedido excluído com sucesso!" };
+}
+
+/** Exclui múltiplos pedidos de uma vez (ou limpa todos os cancelados) */
+export async function bulkDeleteOrdersServer(
+  userId: string,
+  orderIds: string[],
+): Promise<{ ok: boolean; message: string; count: number }> {
+  if (!orderIds || orderIds.length === 0) {
+    return { ok: true, message: "Nenhum pedido para excluir.", count: 0 };
+  }
+
+  // 1. Registra todos no tombstone
+  markOrdersAsDeleted(orderIds);
+
+  const idSet = new Set(orderIds);
+  const list = readLocalOrders(userId);
+  const updatedList = list.filter((o) => !idSet.has(o.id));
+  writeLocalOrders(userId, updatedList);
+
+  // 2. Remove de todos os arquivos em data/
+  try {
+    const dir = path.resolve(process.cwd(), "data");
+    if (fs.existsSync(dir)) {
+      const files = fs.readdirSync(dir);
+      for (const f of files) {
+        if (!f.startsWith("orders_") || !f.endsWith(".json")) continue;
+        try {
+          const filePath = path.join(dir, f);
+          const raw = fs.readFileSync(filePath, "utf-8");
+          const content = JSON.parse(raw);
+          if (Array.isArray(content)) {
+            const filtered = content.filter((item: any) => item && !idSet.has(item.id));
+            fs.writeFileSync(filePath, JSON.stringify(filtered, null, 2), "utf-8");
+          }
+        } catch {}
+      }
+    }
+  } catch {}
+
+  // 3. Exclui do banco de dados
+  try {
+    for (const id of orderIds) {
+      await supabaseAdmin.from("orders").delete().eq("id", id);
+    }
+  } catch {}
+
+  return { ok: true, message: `${orderIds.length} pedidos excluídos permanentemente.`, count: orderIds.length };
 }

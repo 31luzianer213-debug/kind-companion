@@ -6,6 +6,8 @@ import {
   getOrdersList,
   approveOrder,
   cancelOrder,
+  deleteOrder,
+  bulkDeleteOrders,
   createManualOrder,
   type OrderItem,
 } from "@/lib/orders.functions";
@@ -43,9 +45,43 @@ import {
   Smartphone,
   ShieldCheck,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 
 import defaultOrdersSeed from "../../../data/orders_default.json";
+
+function getClientDeletedIds(): Set<string> {
+  const set = new Set<string>();
+  if (typeof window === "undefined") return set;
+  try {
+    const raw = localStorage.getItem("iptv_deleted_orders");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        for (const id of parsed) set.add(id);
+      }
+    }
+  } catch {}
+  return set;
+}
+
+function saveClientDeletedId(orderId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const set = getClientDeletedIds();
+    set.add(orderId);
+    localStorage.setItem("iptv_deleted_orders", JSON.stringify(Array.from(set)));
+  } catch {}
+}
+
+function saveClientBulkDeletedIds(orderIds: string[]) {
+  if (typeof window === "undefined") return;
+  try {
+    const set = getClientDeletedIds();
+    for (const id of orderIds) set.add(id);
+    localStorage.setItem("iptv_deleted_orders", JSON.stringify(Array.from(set)));
+  } catch {}
+}
 
 export const Route = createFileRoute("/_authenticated/pedidos")({
   component: PedidosPage,
@@ -56,6 +92,8 @@ function PedidosPage() {
   const getOrdersFn = useServerFn(getOrdersList);
   const approveFn = useServerFn(approveOrder);
   const cancelFn = useServerFn(cancelOrder);
+  const deleteFn = useServerFn(deleteOrder);
+  const bulkDeleteFn = useServerFn(bulkDeleteOrders);
   const createOrderFn = useServerFn(createManualOrder);
 
   const [activeTab, setActiveTab] = useState<string>("pending");
@@ -88,12 +126,17 @@ function PedidosPage() {
   // Query para listar os pedidos em tempo real (atualiza a cada 3s)
   const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ["orders-list"],
-    initialData: (defaultOrdersSeed as unknown as OrderItem[]) || [],
+    initialData: () => {
+      const deletedIds = getClientDeletedIds();
+      return ((defaultOrdersSeed as unknown as OrderItem[]) || []).filter((o) => !deletedIds.has(o.id));
+    },
     queryFn: async () => {
+      const deletedIds = getClientDeletedIds();
+
       try {
         const res = await getOrdersFn({ data: {} });
         if (res?.orders && res.orders.length > 0) {
-          return res.orders;
+          return res.orders.filter((o) => !deletedIds.has(o.id));
         }
       } catch (err) {
         console.warn("Aviso ao carregar lista via serverFn:", err);
@@ -105,7 +148,7 @@ function PedidosPage() {
         if (res.ok) {
           const json = await res.json();
           if (Array.isArray(json?.orders) && json.orders.length > 0) {
-            return json.orders;
+            return json.orders.filter((o: OrderItem) => !deletedIds.has(o.id));
           }
         }
       } catch (err) {
@@ -114,7 +157,7 @@ function PedidosPage() {
 
       // Fallback garantido pré-compilado no bundle (Lovable Cloud / Edge Workers)
       if (Array.isArray(defaultOrdersSeed) && defaultOrdersSeed.length > 0) {
-        return defaultOrdersSeed as unknown as OrderItem[];
+        return (defaultOrdersSeed as unknown as OrderItem[]).filter((o) => !deletedIds.has(o.id));
       }
 
       return [];
@@ -134,6 +177,7 @@ function PedidosPage() {
         toast.success(res.message);
         queryClient.invalidateQueries({ queryKey: ["orders-list"] });
         queryClient.invalidateQueries({ queryKey: ["sidebar-counts"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
         setReleaseModalOpen(false);
 
         if (res.username && res.order) {
@@ -164,12 +208,67 @@ function PedidosPage() {
         toast.success(res.message);
         queryClient.invalidateQueries({ queryKey: ["orders-list"] });
         queryClient.invalidateQueries({ queryKey: ["sidebar-counts"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
       } else {
         toast.error(res.message || "Erro ao cancelar pedido.");
       }
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Falha no cancelamento.");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      // 1. Grava no tombstone do localStorage para nunca reaparecer mesmo com recarregamento
+      saveClientDeletedId(orderId);
+
+      // 2. Atualização otimista imediata na UI
+      queryClient.setQueryData(["orders-list"], (old: OrderItem[] | undefined) => {
+        return (old || []).filter((o) => o.id !== orderId);
+      });
+
+      // 3. Executa deleção no backend
+      try {
+        await deleteFn({ data: { orderId } });
+      } catch {}
+
+      try {
+        await fetch(`/api/public/orders?id=${encodeURIComponent(orderId)}`, { method: "DELETE" });
+      } catch {}
+
+      return { ok: true };
+    },
+    onSuccess: () => {
+      toast.success("Pedido excluído com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["orders-list"] });
+      queryClient.invalidateQueries({ queryKey: ["sidebar-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Falha ao excluir pedido.");
+    },
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (orderIds: string[]) => {
+      saveClientBulkDeletedIds(orderIds);
+      const idSet = new Set(orderIds);
+      queryClient.setQueryData(["orders-list"], (old: OrderItem[] | undefined) => {
+        return (old || []).filter((o) => !idSet.has(o.id));
+      });
+
+      try {
+        await bulkDeleteFn({ data: { orderIds } });
+      } catch {}
+
+      return { ok: true, count: orderIds.length };
+    },
+    onSuccess: (_, vars) => {
+      toast.success(`${vars.length} pedidos excluídos permanentemente!`);
+      queryClient.invalidateQueries({ queryKey: ["orders-list"] });
+      queryClient.invalidateQueries({ queryKey: ["sidebar-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
     },
   });
 
@@ -450,15 +549,37 @@ function PedidosPage() {
           </button>
         </div>
 
-        {/* Campo de Busca */}
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por cliente, zap, nº..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 text-xs bg-card"
-          />
+        {/* Controles da Direita: Busca e Limpeza */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {orders.some((o) => o.status === "cancelled") && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const cancelledIds = orders.filter((o) => o.status === "cancelled").map((o) => o.id);
+                if (confirm(`Deseja realmente apagar todos os ${cancelledIds.length} pedidos cancelados permanentemente?`)) {
+                  bulkDeleteMutation.mutate(cancelledIds);
+                }
+              }}
+              disabled={bulkDeleteMutation.isPending}
+              className="gap-1.5 text-xs border-white/20 text-zinc-300 hover:text-white hover:bg-white/10 whitespace-nowrap"
+              title="Excluir todos os pedidos cancelados de uma vez"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Limpar Cancelados ({orders.filter((o) => o.status === "cancelled").length})
+            </Button>
+          )}
+
+          {/* Campo de Busca */}
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por cliente, zap, nº..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 text-xs bg-card"
+            />
+          </div>
         </div>
       </div>
 
@@ -697,6 +818,23 @@ function PedidosPage() {
                             </Button>
                           </div>
                         )}
+
+                        {/* Botão de Exclusão Definitiva (Disponível em qualquer status) */}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            if (confirm(`Deseja realmente excluir o pedido #${order.order_number} permanentemente?`)) {
+                              deleteMutation.mutate(order.id);
+                            }
+                          }}
+                          disabled={deleteMutation.isPending}
+                          className="gap-1 text-xs text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+                          title="Excluir este pedido definitivamente do sistema"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Excluir</span>
+                        </Button>
                       </div>
                     </div>
                   </div>

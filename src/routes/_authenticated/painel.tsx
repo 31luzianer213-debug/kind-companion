@@ -50,6 +50,21 @@ import {
   Legend,
 } from "recharts";
 
+function getClientDeletedIds(): Set<string> {
+  const set = new Set<string>();
+  if (typeof window === "undefined") return set;
+  try {
+    const raw = localStorage.getItem("iptv_deleted_orders");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        for (const id of parsed) set.add(id);
+      }
+    }
+  } catch {}
+  return set;
+}
+
 export const Route = createFileRoute("/_authenticated/painel")({
   head: () => ({
     meta: [
@@ -98,18 +113,19 @@ function Painel() {
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-v2"],
     queryFn: async () => {
+      const deletedIds = getClientDeletedIds();
       let ordersList: OrderItem[] = [];
       try {
         const oRes = await fetch("/api/public/orders");
         if (oRes.ok) {
           const json = await oRes.json();
           if (Array.isArray(json?.orders) && json.orders.length > 0) {
-            ordersList = json.orders;
+            ordersList = json.orders.filter((o: OrderItem) => !deletedIds.has(o.id));
           }
         }
       } catch {}
       if (ordersList.length === 0 && Array.isArray(defaultOrdersSeed)) {
-        ordersList = defaultOrdersSeed as unknown as OrderItem[];
+        ordersList = (defaultOrdersSeed as unknown as OrderItem[]).filter((o) => !deletedIds.has(o.id));
       }
 
       const [clients, invoices, logs, settings, sigmaRes] = await Promise.all([
@@ -136,7 +152,9 @@ function Painel() {
   const clients = data?.clients ?? [];
   const invoices = data?.invoices ?? [];
   const logs = data?.logs ?? [];
-  const orders = (data?.orders ?? (defaultOrdersSeed as unknown as OrderItem[])) ?? [];
+  const deletedIds = getClientDeletedIds();
+  const rawOrders = (data?.orders ?? (defaultOrdersSeed as unknown as OrderItem[])) ?? [];
+  const orders = rawOrders.filter((o) => !deletedIds.has(o.id));
   const pendingOrders = orders.filter((o) => o.status === "pending");
   const sigmaSettings = data?.sigma;
 
