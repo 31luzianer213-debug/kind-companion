@@ -658,50 +658,6 @@ function Cobrancas() {
         </DialogContent>
       </Dialog>
 
-      {/* Card da Automação de Cobrança Diária (Cron Job) */}
-      <Card className="surface-card border-primary/20 bg-primary/5">
-        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5">
-              <Clock className="size-5" />
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-semibold text-foreground">
-                  Gatilho de Cobrança Diária Automática (Cron Job)
-                </h4>
-                <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
-                  Totalmente Autônomo
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Agende esta URL em serviços gratuitos como <strong>cron-job.org</strong> para rodar todo dia às 08:30. O sistema gera faturas e envia os lembretes do WhatsApp no piloto automático.
-              </p>
-              <div className="flex items-center gap-2 pt-1">
-                <Input
-                  readOnly
-                  value={typeof window !== "undefined" ? `${window.location.origin}/api/public/hooks/cobranca-diaria?secret=cron_iptv_seguro` : "/api/public/hooks/cobranca-diaria?secret=cron_iptv_seguro"}
-                  className="font-mono text-xs bg-background/80 h-7 max-w-lg"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const url = `${window.location.origin}/api/public/hooks/cobranca-diaria?secret=cron_iptv_seguro`;
-                    navigator.clipboard.writeText(url);
-                    toast.success("URL da Cobrança Diária copiada!");
-                  }}
-                  className="h-7 text-xs gap-1 shrink-0"
-                >
-                  <Copy className="size-3" />
-                  Copiar Link
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Banner Explicativo: Por que o Painel de Cobranças existe? */}
       <Card className="surface-card border-primary/25 bg-primary/5">
         <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
