@@ -51,6 +51,20 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago")({
           }
 
           if (settingsList.length === 0) {
+            try {
+              const { readLocalPaymentSettings, DEFAULT_BOT_CONFIG } = await import("@/lib/bot.server");
+              const local = readLocalPaymentSettings(uidParam || "ccd7362726074f97") || readLocalPaymentSettings("default");
+              const token = local?.mercadopago_token || DEFAULT_BOT_CONFIG.mercadopago_token;
+              if (token) {
+                settingsList = [{
+                  user_id: uidParam || local?.user_id || "ccd7362726074f97",
+                  mercadopago_token: token,
+                }];
+              }
+            } catch {}
+          }
+
+          if (settingsList.length === 0) {
             return Response.json({ ok: false, error: "Nenhuma credencial do Mercado Pago configurada." }, { status: 200 });
           }
 
