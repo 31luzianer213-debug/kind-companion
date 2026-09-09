@@ -763,10 +763,10 @@ function BotPage() {
           </div>
 
           {/* Smartphone Mockup */}
-          <div className="rounded-3xl border-4 border-border/80 bg-background/95 p-3 shadow-2xl overflow-hidden flex flex-col h-[760px]">
+          <div className="rounded-xl border-2 border-border/80 bg-background/95 p-3 shadow-lg overflow-hidden flex flex-col h-[760px]">
             {/* Header do WhatsApp */}
-            <div className="bg-card text-foreground p-3 rounded-2xl flex items-center gap-3 border border-border/60 shadow-sm shrink-0">
-              <div className="size-9 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-sm shadow-inner">
+            <div className="bg-card text-foreground p-3 rounded-lg flex items-center gap-3 border border-border/60 shadow-sm shrink-0">
+              <div className="size-9 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-sm shadow-inner">
                 🤖
               </div>
               <div className="leading-tight flex-1">
@@ -788,7 +788,7 @@ function BotPage() {
                   className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
                 >
                   <div
-                    className={`max-w-[90%] p-3 rounded-2xl whitespace-pre-wrap leading-relaxed shadow-sm text-xs ${
+                    className={`max-w-[90%] p-3 rounded-lg whitespace-pre-wrap leading-relaxed shadow-sm text-xs ${
                       msg.sender === "user"
                         ? "bg-primary text-primary-foreground rounded-tr-xs font-medium"
                         : "bg-card text-foreground border border-border/60 rounded-tl-xs"

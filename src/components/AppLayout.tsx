@@ -170,7 +170,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <Link
       to="/whatsapp"
       className={cn(
-        "group flex items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-xs font-medium transition-all",
+        "group flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-all",
         isWaConnected
           ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15"
           : "border-border bg-card/60 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
@@ -224,15 +224,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 key={to}
                 to={to}
                 className={cn(
-                  "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
+                  "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
                   active
-                    ? "bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20"
+                    ? "bg-primary text-primary-foreground font-semibold shadow-sm"
                     : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
                 )}
               >
                 <Icon
                   className={cn(
-                    "h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110",
+                    "h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-105",
                     active ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground",
                   )}
                 />
@@ -240,7 +240,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 {badgeCount !== null && (
                   <span
                     className={cn(
-                      "rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide",
+                      "rounded-md px-1.5 py-0.5 text-[10px] font-bold font-mono tracking-tight",
                       badgeType === "orders"
                         ? active
                           ? "bg-amber-400 text-black font-black"
@@ -272,9 +272,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="mt-auto space-y-3 pt-6 border-t border-border/40">
       {whatsappBadge}
 
-      <div className="rounded-2xl border border-border/60 bg-card/70 p-3 shadow-sm backdrop-blur-sm">
+      <div className="rounded-lg border border-border/60 bg-card/70 p-3 shadow-sm backdrop-blur-sm">
         <div className="flex items-center gap-2.5">
-          <div className="grid h-8 w-8 place-items-center rounded-xl bg-primary text-xs font-bold text-primary-foreground ring-1 ring-primary/25 shadow-sm">
+          <div className="grid h-8 w-8 place-items-center rounded-md bg-primary text-xs font-bold text-primary-foreground ring-1 ring-primary/25 shadow-sm">
             {(email?.[0] ?? "U").toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
@@ -291,7 +291,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <Button
           variant="ghost"
           size="sm"
-          className="rounded-xl text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          className="rounded-md text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           onClick={signOut}
         >
           <LogOut className="mr-1.5 h-3.5 w-3.5" /> Sair
@@ -316,7 +316,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             size="icon"
             onClick={() => setOpen((v) => !v)}
             aria-label="Menu"
-            className="h-9 w-9 rounded-xl border-border"
+            className="h-9 w-9 rounded-md border-border"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>

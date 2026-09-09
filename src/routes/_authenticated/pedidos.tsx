@@ -585,13 +585,13 @@ function PedidosPage() {
 
       {/* Lista de Pedidos */}
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 py-16 text-center">
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/80 py-16 text-center">
           <RefreshCw className="h-8 w-8 animate-spin text-primary" />
           <p className="mt-3 text-sm text-muted-foreground font-medium">Carregando pedidos...</p>
         </div>
       ) : filteredOrders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-16 text-center bg-card/30">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground">
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16 text-center bg-card/30">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
             <ShoppingBag className="h-6 w-6" />
           </div>
           <h3 className="mt-4 text-base font-bold text-foreground">
@@ -636,7 +636,7 @@ function PedidosPage() {
                     {/* Bloco 1: Identificação e Cliente */}
                     <div className="flex items-start gap-3.5">
                       <div
-                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl font-black text-sm border shadow-sm ${
+                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg font-black text-sm border shadow-sm ${
                           isPending
                             ? "bg-amber-500/10 text-amber-500 border-amber-500/25"
                             : isApproved

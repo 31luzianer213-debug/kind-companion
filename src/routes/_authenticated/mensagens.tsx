@@ -88,10 +88,10 @@ function WhatsAppSimulator({
   });
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card p-4 text-foreground shadow-xl">
+    <div className="rounded-lg border border-border/60 bg-card p-4 text-foreground shadow-sm">
       <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-3">
         <div className="flex items-center gap-2.5">
-          <div className="grid h-8 w-8 place-items-center rounded-full bg-emerald-500/15 text-xs font-bold text-emerald-400 border border-emerald-500/30 shadow-sm">
+          <div className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-500/15 text-xs font-bold text-emerald-400 border border-emerald-500/30 shadow-sm">
             {businessName ? businessName[0]?.toUpperCase() : "R"}
           </div>
           <div>
@@ -107,7 +107,7 @@ function WhatsAppSimulator({
         </Badge>
       </div>
 
-      <div className="rounded-2xl bg-muted/40 border border-border/60 p-3.5 text-xs text-foreground shadow-md relative max-w-[95%] ml-auto rounded-tr-none">
+      <div className="rounded-lg bg-muted/40 border border-border/60 p-3.5 text-xs text-foreground shadow-sm relative max-w-[95%] ml-auto rounded-tr-none">
         <p className="whitespace-pre-wrap leading-relaxed font-sans">{rendered}</p>
         <div className="flex items-center justify-end gap-1 mt-2 text-[10px] text-muted-foreground">
           <span>12:45</span>
@@ -313,7 +313,7 @@ function MensagensPage() {
               pixKey={data?.pix_key || ""}
             />
 
-            <div className="mt-4 p-4 rounded-2xl border border-border/60 bg-muted/20 text-xs space-y-2 text-muted-foreground">
+            <div className="mt-4 p-4 rounded-lg border border-border/60 bg-muted/20 text-xs space-y-2 text-muted-foreground">
               <p className="font-semibold text-foreground flex items-center gap-1.5">
                 <Server className="size-3.5 text-primary" /> Integração IPTV & Listas:
               </p>

@@ -151,20 +151,23 @@ const empty: ClientForm = {
   create_in_sigma: true,
 };
 
-function formatPhoneInput(value: string) {
-  const digits = value.replace(/\D/g, "");
+function formatPhoneInput(value?: string | null) {
+  if (!value) return "";
+  const digits = String(value).replace(/\D/g, "");
   if (digits.length <= 2) return digits;
   if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
   if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
 }
 
-function cleanPhoneDigits(phone: string) {
-  return phone.replace(/\D/g, "");
+function cleanPhoneDigits(phone?: string | null) {
+  if (!phone) return "";
+  return String(phone).replace(/\D/g, "");
 }
 
-function getInitials(name: string) {
-  const parts = name.trim().split(/\s+/);
+function getInitials(name?: string | null) {
+  if (!name) return "CL";
+  const parts = String(name).trim().split(/\s+/);
   if (parts.length === 0 || !parts[0]) return "CL";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + (parts[parts.length - 1][0] ?? "")).toUpperCase();
@@ -287,9 +290,15 @@ function Clientes() {
   const sigmaConfigQuery = useQuery({
     queryKey: ["sigma-settings"],
     queryFn: async () => {
-      const res = await getSigma({});
-      return res.ok ? res.settings : null;
+      try {
+        const res = await getSigma({});
+        return res?.ok ? res.settings : null;
+      } catch {
+        return null;
+      }
     },
+    retry: 0,
+    staleTime: 60000,
   });
 
   const clients = data ?? [];
@@ -313,13 +322,14 @@ function Clientes() {
     sigmaConfigQuery.data?.sigma_url ||
     "";
 
-  function getClientServerLabel(client: ClientRow): string {
+  function getClientServerLabel(client?: ClientRow | null): string {
+    if (!client) return sigmaServerName;
     if (client.notes) {
-      const matchServer = client.notes.match(/(?:Servidor|Server):\s*([^|\n,]+)/i);
+      const matchServer = String(client.notes).match(/(?:Servidor|Server):\s*([^|\n,]+)/i);
       if (matchServer?.[1]?.trim() && !isRawDomain(matchServer[1].trim())) {
         return matchServer[1].trim();
       }
-      const matchPack = client.notes.match(/(?:Pacote|Plano|Package):\s*([^|\n,]+)/i);
+      const matchPack = String(client.notes).match(/(?:Pacote|Plano|Package):\s*([^|\n,]+)/i);
       if (matchPack?.[1]?.trim()) return matchPack[1].trim();
     }
     return sigmaServerName;
@@ -329,18 +339,20 @@ function Clientes() {
 
   // Estatísticas
   const stats = useMemo(() => {
-    let total = clients.length;
+    let total = (clients || []).length;
     let active = 0;
     let overdue = 0;
     let todayDue = 0;
     let inSigma = 0;
 
-    for (const c of clients) {
+    for (const c of clients || []) {
+      if (!c) continue;
       if (c.status === "active") active++;
       if (c.sigma_customer_id) inSigma++;
       if (c.status === "active" && c.next_due_date) {
-        if (c.next_due_date < todayStr) overdue++;
-        else if (c.next_due_date === todayStr) todayDue++;
+        const d = String(c.next_due_date);
+        if (d < todayStr) overdue++;
+        else if (d === todayStr) todayDue++;
       }
     }
 
@@ -349,14 +361,20 @@ function Clientes() {
 
   // Lista filtrada
   const filteredClients = useMemo(() => {
-    return clients.filter((c) => {
-      const term = search.toLowerCase();
+    return (clients || []).filter((c) => {
+      if (!c) return false;
+      const term = (search || "").toLowerCase().trim();
+      const name = String(c.name || "").toLowerCase();
+      const phone = String(c.phone || "");
+      const username = String(c.iptv_username || "").toLowerCase();
+      const email = String(c.email || "").toLowerCase();
+
       const matchesSearch =
         !term ||
-        c.name.toLowerCase().includes(term) ||
-        c.phone.includes(term) ||
-        (c.iptv_username && c.iptv_username.toLowerCase().includes(term)) ||
-        (c.email && c.email.toLowerCase().includes(term));
+        name.includes(term) ||
+        phone.includes(term) ||
+        username.includes(term) ||
+        email.includes(term);
 
       if (!matchesSearch) return false;
 
@@ -364,10 +382,10 @@ function Clientes() {
       if (filterTab === "active") return c.status === "active";
       if (filterTab === "blocked") return c.status === "blocked" || c.status === "inactive";
       if (filterTab === "overdue") {
-        return c.status === "active" && c.next_due_date && c.next_due_date < todayStr;
+        return c.status === "active" && Boolean(c.next_due_date) && String(c.next_due_date) < todayStr;
       }
       if (filterTab === "today") {
-        return c.next_due_date === todayStr;
+        return String(c.next_due_date) === todayStr;
       }
       return true;
     });
@@ -806,7 +824,7 @@ function Clientes() {
                 {stats.inSigma} no servidor Sigma
               </p>
             </div>
-            <div className="rounded-xl p-2.5 bg-white/10 text-white border border-white/20">
+            <div className="rounded-lg p-2.5 bg-white/10 text-white border border-white/20">
               <Users className="size-5" />
             </div>
           </CardContent>
@@ -821,7 +839,7 @@ function Clientes() {
                 {stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% da base
               </p>
             </div>
-            <div className="rounded-xl p-2.5 bg-white text-black font-extrabold shadow-sm">
+            <div className="rounded-lg p-2.5 bg-white text-black font-extrabold shadow-sm">
               <CheckCircle2 className="size-5" />
             </div>
           </CardContent>
@@ -836,7 +854,7 @@ function Clientes() {
                 Requerem cobrança
               </p>
             </div>
-            <div className="rounded-xl p-2.5 bg-white/5 text-zinc-400 border border-white/10">
+            <div className="rounded-lg p-2.5 bg-white/5 text-zinc-400 border border-white/10">
               <AlertTriangle className="size-5" />
             </div>
           </CardContent>
@@ -851,7 +869,7 @@ function Clientes() {
                 Vencimento do dia
               </p>
             </div>
-            <div className="rounded-xl p-2.5 bg-white/10 text-white border border-white/20">
+            <div className="rounded-lg p-2.5 bg-white/10 text-white border border-white/20">
               <Clock className="size-5" />
             </div>
           </CardContent>
@@ -868,7 +886,7 @@ function Clientes() {
                 placeholder="Buscar por nome, WhatsApp ou usuário IPTV..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 pr-8 rounded-xl bg-background/60 text-sm"
+                className="pl-9 pr-8 rounded-lg bg-background/60 text-sm"
               />
               {search ? (
                 <button
@@ -912,7 +930,7 @@ function Clientes() {
         </div>
       ) : filteredClients.length === 0 ? (
         <Card className="surface-card border-dashed p-12 text-center">
-          <div className="mx-auto size-12 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground mb-3">
+          <div className="mx-auto size-12 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground mb-3">
             <Users className="size-6" />
           </div>
           <h3 className="font-semibold text-lg text-foreground">Nenhum cliente encontrado</h3>
@@ -942,7 +960,7 @@ function Clientes() {
       ) : (
         <>
           {/* Tabela Desktop */}
-          <div className="hidden md:block rounded-xl border border-border/60 bg-card overflow-hidden shadow-sm">
+          <div className="hidden md:block rounded-lg border border-border/60 bg-card overflow-hidden shadow-sm">
             <Table>
               <TableHeader className="bg-muted/40">
                 <TableRow>
@@ -966,7 +984,7 @@ function Clientes() {
                       {/* Avatar */}
                       <TableCell className="pl-4">
                         <div
-                          className={`size-9 rounded-full flex items-center justify-center font-bold text-xs shadow-sm border ${
+                          className={`size-9 rounded-lg flex items-center justify-center font-bold text-xs shadow-sm border ${
                             client.status === "active"
                               ? "bg-primary/10 text-primary border-primary/25 font-bold"
                               : client.status === "blocked"
@@ -1156,7 +1174,7 @@ function Clientes() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5">
                       <div
-                        className={`size-10 rounded-full flex items-center justify-center font-bold text-xs shadow-sm border ${
+                        className={`size-10 rounded-lg flex items-center justify-center font-bold text-xs shadow-sm border ${
                           client.status === "active"
                             ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
                             : client.status === "blocked"
@@ -1302,7 +1320,7 @@ function Clientes() {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   required
-                  className="rounded-xl text-sm"
+                  className="text-sm"
                 />
               </div>
 
@@ -1315,7 +1333,7 @@ function Clientes() {
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: formatPhoneInput(e.target.value) })}
                     required
-                    className="rounded-xl text-sm font-mono"
+                    className="text-sm font-mono"
                   />
                 </div>
 
@@ -1326,7 +1344,7 @@ function Clientes() {
                     placeholder="cliente@email.com"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="rounded-xl text-sm"
+                    className="text-sm"
                   />
                 </div>
               </div>
@@ -1341,7 +1359,7 @@ function Clientes() {
                     value={form.monthly_fee}
                     onChange={(e) => setForm({ ...form, monthly_fee: e.target.value })}
                     required
-                    className="rounded-xl text-sm font-mono"
+                    className="text-sm font-mono"
                   />
                 </div>
 
@@ -1356,7 +1374,7 @@ function Clientes() {
                       setForm({ ...form, next_due_date: val, due_day: day });
                     }}
                     required
-                    className="rounded-xl text-sm"
+                    className="text-sm"
                   />
                 </div>
               </div>
@@ -1390,7 +1408,7 @@ function Clientes() {
                     value={form.iptv_username}
                     onChange={(e) => setForm({ ...form, iptv_username: e.target.value })}
                     required
-                    className="rounded-xl text-sm font-mono"
+                    className="text-sm font-mono"
                   />
                 </div>
 
@@ -1402,7 +1420,7 @@ function Clientes() {
                     value={form.iptv_password}
                     onChange={(e) => setForm({ ...form, iptv_password: e.target.value })}
                     required
-                    className="rounded-xl text-sm font-mono"
+                    className="text-sm font-mono"
                   />
                 </div>
               </div>
@@ -1414,7 +1432,7 @@ function Clientes() {
                     value={form.screens}
                     onValueChange={(val) => setForm({ ...form, screens: val })}
                   >
-                    <SelectTrigger className="rounded-xl">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1433,7 +1451,7 @@ function Clientes() {
                     value={form.status}
                     onValueChange={(val) => setForm({ ...form, status: val })}
                   >
-                    <SelectTrigger className="rounded-xl">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1452,7 +1470,7 @@ function Clientes() {
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   rows={2}
-                  className="rounded-xl text-xs resize-none"
+                  className="text-xs resize-none"
                 />
               </div>
             </div>
@@ -1494,7 +1512,7 @@ function Clientes() {
 
           {confirmRenewClient && (
             <div className="space-y-3 py-2 text-sm">
-              <div className="p-3 rounded-xl bg-muted/40 border border-border/60 space-y-1.5">
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60 space-y-1.5">
                 <div className="flex justify-between">
                   <span className="text-xs text-muted-foreground">Cliente:</span>
                   <strong className="text-foreground">{confirmRenewClient.name}</strong>
@@ -1515,7 +1533,7 @@ function Clientes() {
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-zinc-900 border border-white/20 text-xs text-zinc-300 space-y-1">
+              <div className="p-3 rounded-lg bg-zinc-900 border border-white/20 text-xs text-zinc-300 space-y-1">
                 <p className="font-semibold flex items-center gap-1.5 text-white">
                   <ShieldCheck className="size-4 text-white" /> O que acontecerá:
                 </p>
@@ -1572,7 +1590,7 @@ function Clientes() {
 
           {confirmRemindClient && (
             <div className="space-y-3 py-2 text-sm">
-              <div className="p-3 rounded-xl bg-muted/40 border border-border/60 space-y-1.5">
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60 space-y-1.5">
                 <div className="flex justify-between">
                   <span className="text-xs text-muted-foreground">Destinatário:</span>
                   <strong className="text-foreground">{confirmRemindClient.name}</strong>
@@ -1663,7 +1681,7 @@ function Clientes() {
             return (
               <div className="space-y-4 py-1 text-xs">
                 {/* Dica de Segurança e Controle */}
-                <div className="rounded-xl border border-white/20 bg-zinc-900 p-3 text-[11px] text-zinc-300">
+                <div className="rounded-lg border border-white/20 bg-zinc-900 p-3 text-[11px] text-zinc-300">
                   <p className="font-semibold text-white flex items-center gap-1.5 mb-0.5">
                     <ShieldCheck className="size-3.5 text-white" /> Transmissão Direta & Sem Links Externos
                   </p>
@@ -1671,7 +1689,7 @@ function Clientes() {
                 </div>
 
                 {/* Bloco 1: Conexão Xtream Codes API (IPTV Smarters, XCIPTV, TiviMate) */}
-                <div className="rounded-xl border border-border/70 bg-muted/30 p-3 space-y-2.5">
+                <div className="rounded-lg border border-border/70 bg-muted/30 p-3 space-y-2.5">
                   <p className="font-bold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
                     <Server className="size-3.5 text-white" /> Conexão Xtream Codes (Apps IPTV)
                   </p>
@@ -1767,7 +1785,7 @@ function Clientes() {
                 </div>
 
                 {/* Bloco 2: Listas M3U & EPG */}
-                <div className="rounded-xl border border-border/70 bg-muted/30 p-3 space-y-2.5">
+                <div className="rounded-lg border border-border/70 bg-muted/30 p-3 space-y-2.5">
                   <p className="font-bold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
                     <Globe className="size-3.5 text-white" /> Links de Streaming (M3U & EPG)
                   </p>
@@ -1837,11 +1855,11 @@ function Clientes() {
 
                 {/* Detalhes da Conta */}
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-xl bg-muted/40 border p-2.5">
+                  <div className="rounded-lg bg-muted/40 border p-2.5">
                     <span className="text-[10px] text-muted-foreground block">Telas Simultâneas:</span>
                     <strong className="text-foreground">{viewAccessClient.screens ?? 1} Tela(s)</strong>
                   </div>
-                  <div className="rounded-xl bg-muted/40 border p-2.5">
+                  <div className="rounded-lg bg-muted/40 border p-2.5">
                     <span className="text-[10px] text-muted-foreground block">Vencimento:</span>
                     <strong className="text-foreground">{formatDate(viewAccessClient.next_due_date)}</strong>
                   </div>

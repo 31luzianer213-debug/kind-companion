@@ -11,7 +11,6 @@ import defaultOrdersSeed from "../../../data/orders_default.json";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { formatBRL, formatDate, formatDateTime } from "@/lib/format";
 import {
   Send,
@@ -21,23 +20,16 @@ import {
   ArrowUpRight,
   Clock3,
   MessageSquare,
-  Sparkles,
   TrendingUp,
   Plus,
   RefreshCw,
   CheckCircle2,
   Calendar,
-  Layers,
-  Smartphone,
-  Check,
   ChevronRight,
   Server,
   Zap,
   ShoppingBag,
-  Copy,
-  MessageCircle,
-  Tv,
-  ExternalLink,
+  Check,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -47,7 +39,6 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  Legend,
 } from "recharts";
 
 function getClientDeletedIds(): Set<string> {
@@ -110,7 +101,7 @@ function Painel() {
     },
   });
 
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ["dashboard-v2"],
     queryFn: async () => {
       const deletedIds = getClientDeletedIds();
@@ -133,7 +124,7 @@ function Painel() {
         supabase.from("invoices").select("*, clients(name, phone)").order("due_date", { ascending: true }),
         supabase.from("message_logs").select("*, clients(name)").order("created_at", { ascending: false }).limit(6),
         supabase.from("whatsapp_settings").select("*").maybeSingle(),
-        getSigma({}),
+        getSigma({}).catch(() => ({ ok: false, settings: null })),
       ]);
 
       return {
@@ -141,7 +132,7 @@ function Painel() {
         invoices: invoices.data ?? [],
         logs: logs.data ?? [],
         settings: settings.data,
-        sigma: sigmaRes.ok ? sigmaRes.settings : null,
+        sigma: sigmaRes?.ok ? sigmaRes.settings : null,
         orders: ordersList,
       };
     },
@@ -207,7 +198,7 @@ function Painel() {
       .slice(0, 5);
   }, [clients, todayStr]);
 
-  // Chart data: Monthly comparison or status distribution
+  // Chart data: Monthly comparison
   const chartData = useMemo(() => {
     return [
       {
@@ -281,52 +272,55 @@ function Painel() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-300">
       {/* Top Header com Quick Actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/50 pb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/50 pb-5">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Painel Sigma Operacional
-            </span>
-            <span className="text-xs text-muted-foreground">• Atualizado em tempo real</span>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Visão Geral
+            </h1>
+            <Badge variant="outline" className="text-xs gap-1.5 rounded-md border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
+              <span className="size-1.5 rounded-full bg-emerald-500" />
+              Painel Sigma
+            </Badge>
           </div>
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-foreground sm:text-4xl">
-            Visão Geral
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Acompanhe o faturamento, controle a inadimplência e sincronize linhas do Painel Sigma em piloto automático.
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Acompanhe o faturamento, controle faturas em aberto e sincronize linhas do servidor.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
+            size="sm"
             onClick={handleSyncSigma}
             disabled={syncingSigma}
-            className="rounded-xl border-border font-semibold gap-2 shadow-sm hover:border-primary/50"
+            className="rounded-lg border-border font-medium gap-1.5 shadow-sm text-xs"
           >
-            {syncingSigma ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <RefreshCw className="h-4 w-4 text-primary" />}
-            Sincronizar Sigma
+            <RefreshCw className={`size-3.5 text-primary ${syncingSigma ? "animate-spin" : ""}`} />
+            Sincronizar
           </Button>
 
           <Button
             asChild
             variant="outline"
-            className="rounded-xl border-border font-semibold gap-2 shadow-sm hover:border-primary/50"
+            size="sm"
+            className="rounded-lg border-border font-medium gap-1.5 shadow-sm text-xs"
           >
             <Link to="/clientes" search={{ novo: "1" } as any}>
-              <Plus className="h-4 w-4 text-primary" /> Novo Cliente
+              <Plus className="size-3.5 text-primary" /> Novo Cliente
             </Link>
           </Button>
 
           <Button
+            size="sm"
             onClick={runBilling}
             disabled={running}
-            className="rounded-xl font-bold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/25 transition-all"
+            className="rounded-lg font-semibold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm text-xs"
           >
-            {running ? <Clock3 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            {running ? "Disparando..." : "Rodar Cobranças do Dia"}
+            {running ? <Clock3 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+            {running ? "Processando..." : "Rodar Cobranças"}
           </Button>
         </div>
       </div>
@@ -334,130 +328,132 @@ function Painel() {
       {/* 4 Cards Principais de Indicadores Financeiros */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Receita Mensal Prevista */}
-        <Card className="surface-card hover-lift relative overflow-hidden">
-          <CardContent className="p-5">
+        <Card className="surface-card rounded-lg overflow-hidden border-border/70 hover:border-border transition-colors">
+          <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Receita Prevista
               </span>
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                <Wallet className="h-5 w-5" />
+              <span className="grid size-8 place-items-center rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                <Wallet className="size-4" />
               </span>
             </div>
-            <p className="mt-3 text-3xl font-extrabold text-foreground truncate">
-              {formatBRL(totalMonthlyFee)}
-            </p>
-            <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-              <span>{activeClients.length} clientes ativos</span>
-              <span className="font-semibold text-foreground">Ticket: {formatBRL(ticketMedio)}</span>
+            <div>
+              <p className="text-2xl font-bold tracking-tight text-foreground truncate">
+                {formatBRL(totalMonthlyFee)}
+              </p>
+              <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                <span>{activeClients.length} ativos</span>
+                <span className="font-medium text-foreground">Ticket: {formatBRL(ticketMedio)}</span>
+              </div>
             </div>
           </CardContent>
-          <div className="h-1 w-full bg-gradient-to-r from-blue-500 to-indigo-600" />
         </Card>
 
         {/* Receita Já Recebida */}
-        <Card className="surface-card hover-lift relative overflow-hidden">
-          <CardContent className="p-5">
+        <Card className="surface-card rounded-lg overflow-hidden border-border/70 hover:border-border transition-colors">
+          <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                Recebido Este Mês
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Recebido no Mês
               </span>
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                <CheckCircle2 className="h-5 w-5" />
+              <span className="grid size-8 place-items-center rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                <CheckCircle2 className="size-4" />
               </span>
             </div>
-            <p className="mt-3 text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 truncate">
-              {formatBRL(totalPaid)}
-            </p>
-            <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-              <span>{paidInvoices.length} faturas quitadas</span>
-              <span className="font-semibold text-emerald-500">Liquidado</span>
+            <div>
+              <p className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 truncate">
+                {formatBRL(totalPaid)}
+              </p>
+              <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                <span>{paidInvoices.length} faturas quitadas</span>
+                <span className="font-semibold text-emerald-500 text-[11px]">Liquidado</span>
+              </div>
             </div>
           </CardContent>
-          <div className="h-1 w-full bg-gradient-to-r from-emerald-500 to-teal-600" />
         </Card>
 
         {/* Em Aberto / Atrasadas */}
-        <Card className="surface-card hover-lift relative overflow-hidden">
-          <CardContent className="p-5">
+        <Card className="surface-card rounded-lg overflow-hidden border-border/70 hover:border-border transition-colors">
+          <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Em Aberto / Atraso
               </span>
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                <AlertTriangle className="h-5 w-5" />
+              <span className="grid size-8 place-items-center rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                <AlertTriangle className="size-4" />
               </span>
             </div>
-            <p className="mt-3 text-3xl font-extrabold text-foreground truncate">
-              {formatBRL(totalPending)}
-            </p>
-            <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-              <span>{overdueInvoices.length} faturas vencidas</span>
-              <span className="font-semibold text-amber-500">
-                {overdueInvoices.length > 0 ? "Cobrança ativa" : "Tudo em dia"}
-              </span>
+            <div>
+              <p className="text-2xl font-bold tracking-tight text-foreground truncate">
+                {formatBRL(totalPending)}
+              </p>
+              <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                <span>{overdueInvoices.length} vencidas</span>
+                <span className={`font-semibold text-[11px] ${overdueInvoices.length > 0 ? "text-amber-500" : "text-muted-foreground"}`}>
+                  {overdueInvoices.length > 0 ? "Cobrança ativa" : "Tudo em dia"}
+                </span>
+              </div>
             </div>
           </CardContent>
-          <div className="h-1 w-full bg-gradient-to-r from-amber-500 to-rose-600" />
         </Card>
 
         {/* Painel Sigma & Servidor */}
-        <Card className="surface-card hover-lift relative overflow-hidden">
-          <CardContent className="p-5">
+        <Card className="surface-card rounded-lg overflow-hidden border-border/70 hover:border-border transition-colors">
+          <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                Painel Sigma
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Servidor Sigma
               </span>
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-sky-500/10 text-sky-500 border border-sky-500/20">
-                <Server className="h-5 w-5" />
+              <span className="grid size-8 place-items-center rounded-md bg-sky-500/10 text-sky-500 border border-sky-500/20">
+                <Server className="size-4" />
               </span>
             </div>
-            <p className="mt-3 text-xl font-extrabold text-foreground truncate" title={serverDisplayName}>
-              {serverDisplayName}
-            </p>
-            <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-              <span>{sigmaClients.length} linhas vinculadas</span>
-              <Link to="/sigma" className="font-semibold text-primary hover:underline flex items-center gap-0.5">
-                Servidor <ArrowUpRight className="h-3 w-3" />
-              </Link>
+            <div>
+              <p className="text-lg font-bold tracking-tight text-foreground truncate" title={serverDisplayName}>
+                {serverDisplayName}
+              </p>
+              <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                <span>{sigmaClients.length} linhas vinculadas</span>
+                <Link to="/sigma" className="font-semibold text-primary hover:underline flex items-center gap-0.5 text-[11px]">
+                  Configurar <ArrowUpRight className="size-3" />
+                </Link>
+              </div>
             </div>
           </CardContent>
-          <div className="h-1 w-full bg-gradient-to-r from-sky-500 to-blue-600" />
         </Card>
       </div>
 
       {/* Widget Especial: Pedidos Recentes & Liberação 1-Clique */}
-      <Card className="surface-elevated overflow-hidden border-border bg-card shadow-lg">
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/60 pb-4">
+      <Card className="surface-card rounded-lg overflow-hidden border-border/70 shadow-sm">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/60 pb-3.5 pt-4 px-4 sm:px-5">
           <div>
             <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-                <ShoppingBag className="h-4 w-4" />
+              <span className="grid size-7 place-items-center rounded-md bg-primary/10 text-primary">
+                <ShoppingBag className="size-4" />
               </span>
-              <CardTitle className="text-lg font-black tracking-tight text-foreground flex items-center gap-2">
-                Pedidos do Robô & Liberação 1-Clique
+              <CardTitle className="text-base font-bold tracking-tight text-foreground flex items-center gap-2">
+                Pedidos do Robô WhatsApp
                 {pendingOrders.length > 0 && (
-                  <Badge variant="warning" className="text-[10px] font-bold">
+                  <Badge variant="warning" className="text-[10px] font-semibold rounded-md">
                     {pendingOrders.length} aguardando PIX
                   </Badge>
                 )}
               </CardTitle>
             </div>
-            <CardDescription className="mt-1 text-xs text-muted-foreground">
-              Pedidos gerados pelo auto-atendimento do WhatsApp. Libere no Sigma e WhatsApp com 1 clique.
+            <CardDescription className="mt-0.5 text-xs text-muted-foreground">
+              Aprovação e entrega imediata de credenciais no Sigma e WhatsApp.
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
-            <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs rounded-xl font-semibold">
-              <Link to="/pedidos">
-                Ver todos os pedidos ({orders.length}) <ChevronRight className="h-3.5 w-3.5" />
-              </Link>
-            </Button>
-          </div>
+          <Button asChild size="sm" variant="ghost" className="gap-1 text-xs rounded-md h-8 text-muted-foreground hover:text-foreground">
+            <Link to="/pedidos">
+              Ver todos ({orders.length}) <ChevronRight className="size-3.5" />
+            </Link>
+          </Button>
         </CardHeader>
         <CardContent className="p-4 sm:p-5">
           {orders.length === 0 ? (
-            <div className="py-8 text-center text-xs text-muted-foreground">
+            <div className="py-6 text-center text-xs text-muted-foreground">
               Nenhum pedido gerado até o momento.
             </div>
           ) : (
@@ -468,63 +464,64 @@ function Painel() {
                 return (
                   <div
                     key={order.id}
-                    className="flex flex-col justify-between rounded-2xl border border-border/80 bg-card/60 p-4 transition-all hover:border-primary/40 hover:bg-card shadow-sm"
+                    className="flex flex-col justify-between rounded-lg border border-border/70 bg-card p-3.5 transition-colors hover:border-border shadow-none"
                   >
-                    <div>
+                    <div className="space-y-2">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-xs font-bold text-foreground">
+                        <span className="font-mono text-xs font-semibold text-foreground">
                           #{order.order_number}
                         </span>
                         {isPending ? (
-                          <Badge variant="warning" className="text-[10px]">
-                            ⏳ Aguardando PIX
+                          <Badge variant="warning" className="text-[10px] rounded-md px-1.5 py-0">
+                            Aguardando PIX
                           </Badge>
                         ) : isApproved ? (
-                          <Badge variant="success" className="text-[10px]">
-                            ✅ Liberado
+                          <Badge variant="success" className="text-[10px] rounded-md px-1.5 py-0">
+                            Liberado
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="text-[9px]">Cancelado</Badge>
+                          <Badge variant="outline" className="text-[10px] rounded-md px-1.5 py-0">Cancelado</Badge>
                         )}
                       </div>
 
-                      <p className="mt-2 text-sm font-bold text-foreground truncate">
-                        {order.customer_name}
-                      </p>
-                      <p className="text-xs text-muted-foreground font-mono">
-                        {order.customer_phone}
-                      </p>
+                      <div>
+                        <p className="text-sm font-bold text-foreground truncate">
+                          {order.customer_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {order.customer_phone}
+                        </p>
+                      </div>
 
-                      <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-2 text-xs">
-                        <span className="text-muted-foreground truncate max-w-[130px]" title={order.plan_name}>
+                      <div className="flex items-center justify-between border-t border-border/40 pt-2 text-xs">
+                        <span className="text-muted-foreground truncate max-w-[120px]" title={order.plan_name}>
                           {order.plan_name}
                         </span>
-                        <span className="font-black text-foreground">
+                        <span className="font-bold text-foreground">
                           R$ {Number(order.amount).toFixed(2).replace(".", ",")}
                         </span>
                       </div>
                     </div>
 
-                    <div className="mt-3 pt-2 border-t border-border/40 flex items-center gap-2">
+                    <div className="mt-3 pt-2 border-t border-border/40">
                       {isPending ? (
                         <Button
                           size="sm"
                           onClick={() => approveMutation.mutate(order.id)}
                           disabled={approveMutation.isPending}
-                          className="w-full h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-500/20"
-                          title="Aprovar e liberar linha no Sigma e WhatsApp agora"
+                          className="w-full h-8 text-xs font-semibold rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                         >
                           {approveMutation.isPending ? (
-                            <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1" />
+                            <RefreshCw className="size-3.5 animate-spin mr-1.5" />
                           ) : (
-                            <Zap className="h-3.5 w-3.5 fill-white text-white mr-1" />
+                            <Zap className="size-3.5 fill-white text-white mr-1.5" />
                           )}
                           Liberar Agora
                         </Button>
                       ) : (
-                        <Button asChild size="sm" variant="ghost" className="w-full h-8 text-xs text-muted-foreground hover:text-foreground">
+                        <Button asChild size="sm" variant="outline" className="w-full h-8 text-xs rounded-md text-muted-foreground hover:text-foreground">
                           <Link to="/pedidos">
-                            Ver Detalhes <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                            Ver Pedido <ChevronRight className="size-3 ml-1" />
                           </Link>
                         </Button>
                       )}
@@ -540,21 +537,21 @@ function Painel() {
       {/* Seção Central: Gráfico Financeiro + Clientes Vencendo Hoje */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Gráfico Analítico (Ocupa 2 colunas) */}
-        <Card className="surface-elevated lg:col-span-2 overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <Card className="surface-card rounded-lg lg:col-span-2 overflow-hidden border-border/70">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
             <div>
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
+                <TrendingUp className="size-4 text-primary" />
                 Balanço Financeiro de Faturas
               </CardTitle>
-              <CardDescription>Distribuição de valores: Recebidos vs Em Aberto vs Atrasados</CardDescription>
+              <CardDescription className="text-xs">Distribuição de faturas recebidas, em aberto e em atraso</CardDescription>
             </div>
-            <Badge variant="outline" className="font-mono text-xs">
+            <Badge variant="outline" className="font-mono text-xs rounded-md">
               R$ {formatBRL(totalPaid + totalPending)}
             </Badge>
           </CardHeader>
-          <CardContent className="pt-4">
-            <div className="h-[260px] w-full">
+          <CardContent className="pt-4 px-4 sm:px-5">
+            <div className="h-[240px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.15} vertical={false} />
@@ -570,12 +567,12 @@ function Painel() {
                     contentStyle={{
                       backgroundColor: "var(--color-card)",
                       borderColor: "var(--color-border)",
-                      borderRadius: "12px",
+                      borderRadius: "8px",
                       fontSize: "12px",
-                      boxShadow: "0 10px 30px -10px rgba(0,0,0,0.3)",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                     }}
                   />
-                  <Bar dataKey="valor" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="valor" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -583,28 +580,28 @@ function Painel() {
         </Card>
 
         {/* Card: Clientes Vencendo Hoje / Próximos 3 Dias */}
-        <Card className="surface-elevated overflow-hidden flex flex-col">
-          <CardHeader className="pb-3">
+        <Card className="surface-card rounded-lg overflow-hidden flex flex-col border-border/70">
+          <CardHeader className="pb-2 pt-4 px-4 sm:px-5">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                Vencimentos Próximos
+              <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
+                <Calendar className="size-4 text-primary" />
+                Vencimentos Imediatos
               </CardTitle>
-              <Badge variant="secondary" className="rounded-full text-[11px]">
-                {upcomingClients.length} urgentes
+              <Badge variant="secondary" className="rounded-md text-[11px] font-medium">
+                {upcomingClients.length} próximos
               </Badge>
             </div>
-            <CardDescription>Clientes que vencem hoje ou nos próximos 3 dias</CardDescription>
+            <CardDescription className="text-xs">Clientes com vencimento hoje ou nos próximos 3 dias</CardDescription>
           </CardHeader>
 
-          <CardContent className="flex-1 space-y-3 pt-1">
+          <CardContent className="flex-1 space-y-2.5 pt-2 px-4 sm:px-5">
             {upcomingClients.length === 0 ? (
-              <div className="flex h-full min-h-[180px] flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 p-4 text-center">
-                <div className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white border border-white/20">
-                  <Check className="h-5 w-5" />
+              <div className="flex h-full min-h-[160px] flex-col items-center justify-center rounded-lg border border-dashed border-border/60 p-4 text-center">
+                <div className="grid size-8 place-items-center rounded-md bg-muted text-muted-foreground mb-2">
+                  <Check className="size-4" />
                 </div>
-                <p className="mt-2 text-sm font-semibold">Tudo tranquilo!</p>
-                <p className="text-xs text-muted-foreground">Nenhum cliente vencendo nos próximos dias.</p>
+                <p className="text-xs font-semibold text-foreground">Tudo em dia!</p>
+                <p className="text-[11px] text-muted-foreground">Nenhum cliente vencendo nos próximos dias.</p>
               </div>
             ) : (
               upcomingClients.map((client) => {
@@ -612,18 +609,18 @@ function Painel() {
                 return (
                   <div
                     key={client.id}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/60 p-3 transition-colors hover:bg-muted/40"
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/20 p-2.5 transition-colors hover:bg-muted/40"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <p className="truncate text-sm font-bold">{client.name}</p>
+                        <p className="truncate text-xs font-semibold text-foreground">{client.name}</p>
                         {isToday && (
-                          <span className="rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-1.5 py-0.5 text-[9px] font-bold uppercase">
+                          <span className="rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-1 py-0.2 text-[9px] font-bold uppercase">
                             Hoje
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[11px] text-muted-foreground">
                         {formatBRL(client.monthly_fee)} • {formatDate(client.next_due_date)}
                       </p>
                     </div>
@@ -633,12 +630,12 @@ function Painel() {
                       variant="outline"
                       disabled={sendingId === client.id}
                       onClick={() => cobrarClienteRapido(client)}
-                      className="h-8 rounded-lg px-2.5 text-xs font-semibold gap-1 border-border text-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
+                      className="h-7 rounded-md px-2 text-xs font-medium gap-1 border-border"
                     >
                       {sendingId === client.id ? (
-                        <Clock3 className="h-3.5 w-3.5 animate-spin text-primary" />
+                        <Clock3 className="size-3 animate-spin text-primary" />
                       ) : (
-                        <Send className="h-3.5 w-3.5" />
+                        <Send className="size-3" />
                       )}
                       Cobrar
                     </Button>
@@ -648,10 +645,10 @@ function Painel() {
             )}
           </CardContent>
 
-          <div className="border-t border-border/50 p-3 bg-muted/20">
-            <Button asChild variant="ghost" size="sm" className="w-full justify-between text-xs text-muted-foreground hover:text-foreground">
+          <div className="border-t border-border/50 p-2.5 bg-muted/10">
+            <Button asChild variant="ghost" size="sm" className="w-full justify-between text-xs text-muted-foreground hover:text-foreground h-7">
               <Link to="/cobrancas">
-                Ver todas as cobranças <ChevronRight className="h-3.5 w-3.5" />
+                Ver todas as cobranças <ChevronRight className="size-3" />
               </Link>
             </Button>
           </div>
@@ -661,43 +658,43 @@ function Painel() {
       {/* Seção Inferior: Últimas Faturas + Histórico de Mensagens WhatsApp */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Faturas em Aberto */}
-        <Card className="surface-elevated overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <Card className="surface-card rounded-lg overflow-hidden border-border/70">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
             <div>
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
+                <AlertTriangle className="size-4 text-amber-500" />
                 Faturas Pendentes & Atrasadas
               </CardTitle>
-              <CardDescription>Acompanhe quem ainda não efetuou o pagamento</CardDescription>
+              <CardDescription className="text-xs">Acompanhamento das cobranças emitidas</CardDescription>
             </div>
-            <Button asChild variant="ghost" size="sm" className="text-xs">
+            <Button asChild variant="ghost" size="sm" className="text-xs h-7">
               <Link to="/cobrancas">Gerenciar</Link>
             </Button>
           </CardHeader>
 
-          <CardContent className="space-y-2.5 pt-1">
+          <CardContent className="space-y-2 pt-1 px-4 sm:px-5 pb-4">
             {pendingInvoices.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border/60 p-8 text-center">
-                <p className="text-sm font-semibold">Nenhuma fatura em aberto</p>
-                <p className="text-xs text-muted-foreground mt-1">Todos os pagamentos estão em dia!</p>
+              <div className="rounded-lg border border-dashed border-border/60 p-6 text-center">
+                <p className="text-xs font-semibold text-foreground">Nenhuma fatura em aberto</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Todos os pagamentos estão em dia!</p>
               </div>
             ) : (
-              pendingInvoices.slice(0, 6).map((invoice) => (
+              pendingInvoices.slice(0, 5).map((invoice) => (
                 <div
                   key={invoice.id}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm hover:bg-muted/30 transition-colors"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-muted/20 p-2.5 hover:bg-muted/30 transition-colors"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold">
+                    <p className="truncate text-xs font-semibold text-foreground">
                       {(invoice as unknown as { clients: { name: string } | null }).clients?.name ?? "Cliente"}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] text-muted-foreground">
                       Vencimento: {formatDate(invoice.due_date)} • {formatBRL(invoice.amount)}
                     </p>
                   </div>
                   <Badge
                     variant={invoice.status === "overdue" ? "destructive" : "warning"}
-                    className="shrink-0 rounded-full font-semibold text-xs"
+                    className="shrink-0 rounded-md font-medium text-[11px]"
                   >
                     {invoice.status === "overdue" ? "Atrasada" : "Pendente"}
                   </Badge>
@@ -708,50 +705,50 @@ function Painel() {
         </Card>
 
         {/* Histórico do Robô WhatsApp */}
-        <Card className="surface-elevated overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <Card className="surface-card rounded-lg overflow-hidden border-border/70">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
             <div>
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
+                <MessageSquare className="size-4 text-primary" />
                 Últimos Disparos de WhatsApp
               </CardTitle>
-              <CardDescription>Mensagens de cobrança e boas-vindas enviadas</CardDescription>
+              <CardDescription className="text-xs">Cobranças, boas-vindas e lembretes automáticos</CardDescription>
             </div>
-            <Button asChild variant="ghost" size="sm" className="text-xs">
-              <Link to="/configuracoes">Ajustes</Link>
+            <Button asChild variant="ghost" size="sm" className="text-xs h-7">
+              <Link to="/whatsapp">Conexão</Link>
             </Button>
           </CardHeader>
 
-          <CardContent className="space-y-2.5 pt-1">
+          <CardContent className="space-y-2 pt-1 px-4 sm:px-5 pb-4">
             {logs.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border/60 p-8 text-center">
-                <p className="text-sm font-semibold">Nenhum disparo registrado</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Assim que o robô enviar mensagens, o histórico aparecerá aqui.
+              <div className="rounded-lg border border-dashed border-border/60 p-6 text-center">
+                <p className="text-xs font-semibold text-foreground">Nenhum disparo registrado</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  O histórico aparecerá aqui após os disparos do robô.
                 </p>
               </div>
             ) : (
-              logs.map((log) => (
+              logs.slice(0, 5).map((log) => (
                 <div
                   key={log.id}
-                  className="flex items-start justify-between gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm"
+                  className="flex items-start justify-between gap-3 rounded-lg border border-border/50 bg-muted/20 p-2.5"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate text-xs font-bold text-foreground">
+                      <span className="truncate text-xs font-semibold text-foreground">
                         {(log as unknown as { clients: { name: string } | null }).clients?.name ?? log.phone}
                       </span>
                       <span className="text-[10px] text-muted-foreground font-mono">
                         {log.created_at ? formatDateTime(log.created_at) : ""}
                       </span>
                     </div>
-                    <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                    <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                       {log.body}
                     </p>
                   </div>
                   <Badge
                     variant={log.status === "sent" ? "default" : "destructive"}
-                    className="shrink-0 rounded-full text-[10px] font-bold"
+                    className="shrink-0 rounded-md text-[10px] font-semibold"
                   >
                     {log.status === "sent" ? "Enviado" : "Falhou"}
                   </Badge>

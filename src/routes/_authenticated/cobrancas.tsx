@@ -561,7 +561,7 @@ function Cobrancas() {
         </div>
       ) : filteredInvoices.length === 0 ? (
         <Card className="surface-card border-dashed p-12 text-center">
-          <div className="mx-auto size-12 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground mb-3">
+          <div className="mx-auto size-12 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground mb-3">
             <Wallet className="size-6" />
           </div>
           <h3 className="font-semibold text-lg text-foreground">Nenhuma fatura encontrada</h3>
@@ -572,7 +572,7 @@ function Cobrancas() {
           </p>
         </Card>
       ) : (
-        <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-sm">
+        <div className="rounded-lg border border-border/60 bg-card overflow-hidden shadow-sm">
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow>
@@ -730,7 +730,7 @@ function Cobrancas() {
               </div>
 
               {/* Simulação Visual de QR Code com Design Moderno */}
-              <div className="mx-auto size-52 p-3 bg-white rounded-2xl shadow-md border border-border/40 flex flex-col items-center justify-center relative group">
+              <div className="mx-auto size-52 p-3 bg-white rounded-lg shadow-md border border-border/40 flex flex-col items-center justify-center relative group">
                 <svg
                   className="size-full text-zinc-900"
                   viewBox="0 0 100 100"

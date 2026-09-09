@@ -48,7 +48,7 @@
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.5rem;
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
@@ -168,7 +168,7 @@
 @utility surface-card {
   background: var(--color-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.25);
   transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
 }
@@ -176,7 +176,7 @@
 @utility surface-elevated {
   background: var(--color-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-lg);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.35);
 }
 

@@ -287,7 +287,7 @@ function WhatsAppPage() {
             </div>
 
             {qrError && (
-              <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-500">
+              <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-500">
                 <AlertCircle className="size-4 shrink-0 mt-0.5" />
                 <span className="break-words">{qrError}</span>
               </div>
@@ -295,7 +295,7 @@ function WhatsAppPage() {
 
             {/* Visualizador do QR Code */}
             {(qr || qrLoading) && !connected && (
-              <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border/60 bg-card p-6 text-center space-y-3">
+              <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/60 bg-card p-6 text-center space-y-3">
                 {qrLoading ? (
                   <div className="py-10 text-center space-y-2">
                     <Loader2 className="size-8 animate-spin mx-auto text-primary" />
@@ -303,7 +303,7 @@ function WhatsAppPage() {
                   </div>
                 ) : qr?.base64 ? (
                   <div className="space-y-3 text-center">
-                    <div className="p-3 bg-white rounded-2xl shadow-lg inline-block">
+                    <div className="p-3 bg-white rounded-lg shadow-lg inline-block">
                       <img
                         src={qr.base64}
                         alt="QR Code do WhatsApp"
@@ -316,7 +316,7 @@ function WhatsAppPage() {
                         Configurações &gt; Aparelhos Conectados &gt; Conectar Aparelho (expira em ~45s)
                       </p>
                     </div>
-                    <Button variant="secondary" size="sm" className="rounded-xl" onClick={handleConnect}>
+                    <Button variant="secondary" size="sm" className="rounded-lg" onClick={handleConnect}>
                       <RefreshCw className="size-3.5" /> Novo QR Code
                     </Button>
                   </div>
@@ -330,8 +330,8 @@ function WhatsAppPage() {
             )}
 
             {connected && !qr && (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-8 text-center space-y-2">
-                <div className="size-12 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+              <div className="flex flex-col items-center justify-center rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-8 text-center space-y-2">
+                <div className="size-12 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
                   <CheckCircle2 className="size-6 text-emerald-400" />
                 </div>
                 <p className="text-sm font-bold text-foreground">WhatsApp Conectado e Operando!</p>
@@ -342,7 +342,7 @@ function WhatsAppPage() {
             )}
 
             {!connected && !qr && !qrLoading && (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 p-8 text-center space-y-2 text-muted-foreground">
+              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/60 p-8 text-center space-y-2 text-muted-foreground">
                 <Smartphone className="size-8 opacity-40" />
                 <p className="text-xs font-medium">Nenhum QR Code ativo no momento.</p>
                 <p className="text-[11px]">Clique no botão "Gerar QR Code" acima para conectar seu WhatsApp.</p>

@@ -142,10 +142,10 @@ function ConfiguracoesPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <Link
             to="/sigma"
-            className="group flex flex-col justify-between p-4 rounded-2xl border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
+            className="group flex flex-col justify-between p-4 rounded-lg border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
+              <div className="p-2 rounded-md bg-primary/10 text-primary border border-primary/20">
                 <Server className="size-4" />
               </div>
               <Badge variant={hasSigma ? "success" : "secondary"} className="text-[10px]">
@@ -168,10 +168,10 @@ function ConfiguracoesPage() {
 
           <Link
             to="/whatsapp"
-            className="group flex flex-col justify-between p-4 rounded-2xl border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
+            className="group flex flex-col justify-between p-4 rounded-lg border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+              <div className="p-2 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                 <MessageCircle className="size-4" />
               </div>
               <Badge variant="success" className="text-[10px]">
@@ -194,10 +194,10 @@ function ConfiguracoesPage() {
 
           <Link
             to="/bot"
-            className="group flex flex-col justify-between p-4 rounded-2xl border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
+            className="group flex flex-col justify-between p-4 rounded-lg border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+              <div className="p-2 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20">
                 <Bot className="size-4" />
               </div>
               <Badge variant="outline" className="border-purple-500/30 text-purple-400 bg-purple-500/10 text-[10px]">
@@ -220,10 +220,10 @@ function ConfiguracoesPage() {
 
           <Link
             to="/pagamentos"
-            className="group flex flex-col justify-between p-4 rounded-2xl border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
+            className="group flex flex-col justify-between p-4 rounded-lg border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+              <div className="p-2 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                 <CreditCard className="size-4" />
               </div>
               <Badge variant={hasPix ? "success" : "secondary"} className="text-[10px]">
@@ -246,10 +246,10 @@ function ConfiguracoesPage() {
 
           <Link
             to="/mensagens"
-            className="group flex flex-col justify-between p-4 rounded-2xl border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
+            className="group flex flex-col justify-between p-4 rounded-lg border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <div className="p-2 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
                 <Sparkles className="size-4" />
               </div>
               <Badge variant="outline" className="text-[10px]">
