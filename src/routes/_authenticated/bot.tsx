@@ -117,7 +117,7 @@ function BotPage() {
     supportMessage: "",
     pixKey: "",
     pixHolder: "Alpha IPTV",
-    mercadopago_token: "",
+    mercadopago_token: "APP_USR-3160859496295692-031614-d4b7df3cf7507800baabef77d641c0f2-1487021055",
     payment_provider: "mercadopago",
   });
 
@@ -178,7 +178,8 @@ function BotPage() {
         supportMessage: c.supportMessage || "",
         pixKey: c.pixKey || "",
         pixHolder: c.pixHolder || "Alpha IPTV",
-        mercadopago_token: c.mercadopago_token || "",
+        mercadopago_token:
+          c.mercadopago_token || "APP_USR-3160859496295692-031614-d4b7df3cf7507800baabef77d641c0f2-1487021055",
         payment_provider: c.payment_provider || "mercadopago",
       });
     }
