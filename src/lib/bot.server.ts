@@ -96,7 +96,7 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
   planSemiannualPrice: 160.0,
   planAnnualPrice: 290.0,
   renewalPrice: 35.0,
-  mercadopago_token: "APP_USR-3160859496295692-031614-d4b7df3cf7507800baabef77d641c0f2-1487021055",
+  mercadopago_token: process.env.MERCADOPAGO_ACCESS_TOKEN || "",
   payment_provider: "mercadopago",
 };
 

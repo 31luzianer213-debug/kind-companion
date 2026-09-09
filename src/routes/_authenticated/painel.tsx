@@ -213,17 +213,17 @@ function Painel() {
       {
         name: "Recebido",
         valor: totalPaid,
-        fill: "#ffffff",
+        fill: "#10b981",
       },
       {
         name: "Em Aberto",
         valor: totalPending,
-        fill: "#a1a1aa",
+        fill: "#f59e0b",
       },
       {
         name: "Atrasado",
         valor: totalOverdue,
-        fill: "#52525b",
+        fill: "#f43f5e",
       },
     ];
   }, [totalPaid, totalPending, totalOverdue]);
@@ -286,8 +286,8 @@ function Painel() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/50 pb-6">
         <div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" /> Painel Sigma Operacional
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Painel Sigma Operacional
             </span>
             <span className="text-xs text-muted-foreground">• Atualizado em tempo real</span>
           </div>
@@ -304,7 +304,7 @@ function Painel() {
             variant="outline"
             onClick={handleSyncSigma}
             disabled={syncingSigma}
-            className="rounded-xl border-border/80 font-semibold gap-2 shadow-sm"
+            className="rounded-xl border-border font-semibold gap-2 shadow-sm hover:border-primary/50"
           >
             {syncingSigma ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <RefreshCw className="h-4 w-4 text-primary" />}
             Sincronizar Sigma
@@ -313,33 +313,17 @@ function Painel() {
           <Button
             asChild
             variant="outline"
-            className="rounded-xl border-white/20 text-white hover:bg-white/10 font-bold gap-2 shadow-sm"
+            className="rounded-xl border-border font-semibold gap-2 shadow-sm hover:border-primary/50"
           >
-            <Link to="/pedidos">
-              <ShoppingBag className="h-4 w-4" />
-              Pedidos & PIX
-              {pendingOrders.length > 0 && (
-                <span className="rounded-full bg-white text-black px-1.5 py-0.2 text-[10px] font-black">
-                  {pendingOrders.length}
-                </span>
-              )}
-            </Link>
-          </Button>
-
-          <Button
-            asChild
-            variant="outline"
-            className="rounded-xl border-border/80 font-semibold gap-2 shadow-sm"
-          >
-            <Link to="/clientes">
-              <Plus className="h-4 w-4" /> Novo Cliente
+            <Link to="/clientes" search={{ novo: "1" } as any}>
+              <Plus className="h-4 w-4 text-primary" /> Novo Cliente
             </Link>
           </Button>
 
           <Button
             onClick={runBilling}
             disabled={running}
-            className="rounded-xl font-bold gap-2 bg-white text-black hover:bg-zinc-200 border-0 transition-all shadow-sm"
+            className="rounded-xl font-bold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/25 transition-all"
           >
             {running ? <Clock3 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {running ? "Disparando..." : "Rodar Cobranças do Dia"}
@@ -356,7 +340,7 @@ function Painel() {
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Receita Prevista
               </span>
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-white border border-white/20">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
                 <Wallet className="h-5 w-5" />
               </span>
             </div>
@@ -365,10 +349,10 @@ function Painel() {
             </p>
             <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
               <span>{activeClients.length} clientes ativos</span>
-              <span className="font-semibold text-white">Ticket: {formatBRL(ticketMedio)}</span>
+              <span className="font-semibold text-foreground">Ticket: {formatBRL(ticketMedio)}</span>
             </div>
           </CardContent>
-          <div className="h-1 w-full bg-gradient-to-r from-white to-zinc-600" />
+          <div className="h-1 w-full bg-gradient-to-r from-blue-500 to-indigo-600" />
         </Card>
 
         {/* Receita Já Recebida */}
@@ -378,19 +362,19 @@ function Painel() {
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Recebido Este Mês
               </span>
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-white border border-white/20">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                 <CheckCircle2 className="h-5 w-5" />
               </span>
             </div>
-            <p className="mt-3 text-3xl font-extrabold text-foreground truncate">
+            <p className="mt-3 text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 truncate">
               {formatBRL(totalPaid)}
             </p>
             <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
               <span>{paidInvoices.length} faturas quitadas</span>
-              <span className="font-semibold text-white">Liquidado</span>
+              <span className="font-semibold text-emerald-500">Liquidado</span>
             </div>
           </CardContent>
-          <div className="h-1 w-full bg-gradient-to-r from-white to-zinc-500" />
+          <div className="h-1 w-full bg-gradient-to-r from-emerald-500 to-teal-600" />
         </Card>
 
         {/* Em Aberto / Atrasadas */}
@@ -400,7 +384,7 @@ function Painel() {
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Em Aberto / Atraso
               </span>
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-zinc-800 text-white border border-white/10">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
                 <AlertTriangle className="h-5 w-5" />
               </span>
             </div>
@@ -409,12 +393,12 @@ function Painel() {
             </p>
             <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
               <span>{overdueInvoices.length} faturas vencidas</span>
-              <span className="font-semibold text-zinc-300">
+              <span className="font-semibold text-amber-500">
                 {overdueInvoices.length > 0 ? "Cobrança ativa" : "Tudo em dia"}
               </span>
             </div>
           </CardContent>
-          <div className="h-1 w-full bg-gradient-to-r from-zinc-500 to-zinc-800" />
+          <div className="h-1 w-full bg-gradient-to-r from-amber-500 to-rose-600" />
         </Card>
 
         {/* Painel Sigma & Servidor */}
@@ -424,7 +408,7 @@ function Painel() {
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Painel Sigma
               </span>
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-white border border-white/20">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-sky-500/10 text-sky-500 border border-sky-500/20">
                 <Server className="h-5 w-5" />
               </span>
             </div>
@@ -433,38 +417,38 @@ function Painel() {
             </p>
             <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
               <span>{sigmaClients.length} linhas vinculadas</span>
-              <Link to="/sigma" className="font-semibold text-white hover:underline flex items-center gap-0.5">
+              <Link to="/sigma" className="font-semibold text-primary hover:underline flex items-center gap-0.5">
                 Servidor <ArrowUpRight className="h-3 w-3" />
               </Link>
             </div>
           </CardContent>
-          <div className="h-1 w-full bg-gradient-to-r from-white to-zinc-700" />
+          <div className="h-1 w-full bg-gradient-to-r from-sky-500 to-blue-600" />
         </Card>
       </div>
 
       {/* Widget Especial: Pedidos Recentes & Liberação 1-Clique */}
-      <Card className="surface-elevated overflow-hidden border-border/80 bg-gradient-to-br from-card via-card/90 to-card/60 shadow-xl">
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/40 pb-4">
+      <Card className="surface-elevated overflow-hidden border-border bg-card shadow-lg">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/60 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-xl bg-white/10 text-white border border-white/20">
+              <span className="grid h-8 w-8 place-items-center rounded-xl bg-primary/10 text-primary border border-primary/20">
                 <ShoppingBag className="h-4 w-4" />
               </span>
-              <CardTitle className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+              <CardTitle className="text-lg font-black tracking-tight text-foreground flex items-center gap-2">
                 Pedidos do Robô & Liberação 1-Clique
                 {pendingOrders.length > 0 && (
-                  <Badge className="bg-white text-black border border-white text-[10px] font-black">
+                  <Badge variant="warning" className="text-[10px] font-bold">
                     {pendingOrders.length} aguardando PIX
                   </Badge>
                 )}
               </CardTitle>
             </div>
             <CardDescription className="mt-1 text-xs text-muted-foreground">
-              Pedidos gerados pelo auto-atendimento do WhatsApp. Libere no Sigma e WhatsApp sem precisar esperar o cliente pagar.
+              Pedidos gerados pelo auto-atendimento do WhatsApp. Libere no Sigma e WhatsApp com 1 clique.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs rounded-xl border-border/80 font-bold">
+            <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs rounded-xl font-semibold">
               <Link to="/pedidos">
                 Ver todos os pedidos ({orders.length}) <ChevronRight className="h-3.5 w-3.5" />
               </Link>
@@ -484,19 +468,19 @@ function Painel() {
                 return (
                   <div
                     key={order.id}
-                    className="flex flex-col justify-between rounded-2xl border border-border/70 bg-card/70 p-4 transition-all hover:border-white/40 hover:bg-card shadow-sm"
+                    className="flex flex-col justify-between rounded-2xl border border-border/80 bg-card/60 p-4 transition-all hover:border-primary/40 hover:bg-card shadow-sm"
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-xs font-black text-white">
+                        <span className="font-mono text-xs font-bold text-foreground">
                           #{order.order_number}
                         </span>
                         {isPending ? (
-                          <Badge className="border border-white/20 bg-white/5 text-zinc-300 text-[9px] font-bold">
-                            ⏳ Aguardando
+                          <Badge variant="warning" className="text-[10px]">
+                            ⏳ Aguardando PIX
                           </Badge>
                         ) : isApproved ? (
-                          <Badge className="border border-white/30 bg-white/10 text-white text-[9px] font-bold">
+                          <Badge variant="success" className="text-[10px]">
                             ✅ Liberado
                           </Badge>
                         ) : (
@@ -504,7 +488,7 @@ function Painel() {
                         )}
                       </div>
 
-                      <p className="mt-2 text-sm font-extrabold text-white truncate">
+                      <p className="mt-2 text-sm font-bold text-foreground truncate">
                         {order.customer_name}
                       </p>
                       <p className="text-xs text-muted-foreground font-mono">
@@ -515,30 +499,30 @@ function Painel() {
                         <span className="text-muted-foreground truncate max-w-[130px]" title={order.plan_name}>
                           {order.plan_name}
                         </span>
-                        <span className="font-black text-white">
+                        <span className="font-black text-foreground">
                           R$ {Number(order.amount).toFixed(2).replace(".", ",")}
                         </span>
                       </div>
                     </div>
 
-                    <div className="mt-3 pt-2 border-t border-border/30 flex items-center gap-2">
+                    <div className="mt-3 pt-2 border-t border-border/40 flex items-center gap-2">
                       {isPending ? (
                         <Button
                           size="sm"
                           onClick={() => approveMutation.mutate(order.id)}
                           disabled={approveMutation.isPending}
-                          className="w-full h-8 text-xs font-extrabold bg-white text-black hover:bg-zinc-200 border-0 shadow-sm"
+                          className="w-full h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-500/20"
                           title="Aprovar e liberar linha no Sigma e WhatsApp agora"
                         >
                           {approveMutation.isPending ? (
                             <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1" />
                           ) : (
-                            <Zap className="h-3.5 w-3.5 fill-black text-black mr-1" />
+                            <Zap className="h-3.5 w-3.5 fill-white text-white mr-1" />
                           )}
                           Liberar Agora
                         </Button>
                       ) : (
-                        <Button asChild size="sm" variant="ghost" className="w-full h-8 text-xs text-muted-foreground hover:text-white">
+                        <Button asChild size="sm" variant="ghost" className="w-full h-8 text-xs text-muted-foreground hover:text-foreground">
                           <Link to="/pedidos">
                             Ver Detalhes <ChevronRight className="h-3.5 w-3.5 ml-1" />
                           </Link>
@@ -634,7 +618,7 @@ function Painel() {
                       <div className="flex items-center gap-1.5">
                         <p className="truncate text-sm font-bold">{client.name}</p>
                         {isToday && (
-                          <span className="rounded bg-white text-black px-1.5 py-0.2 text-[9px] font-extrabold uppercase">
+                          <span className="rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-1.5 py-0.5 text-[9px] font-bold uppercase">
                             Hoje
                           </span>
                         )}
@@ -649,10 +633,10 @@ function Painel() {
                       variant="outline"
                       disabled={sendingId === client.id}
                       onClick={() => cobrarClienteRapido(client)}
-                      className="h-8 rounded-lg px-2.5 text-xs font-bold gap-1 border-white/20 text-white hover:bg-white/10"
+                      className="h-8 rounded-lg px-2.5 text-xs font-semibold gap-1 border-border text-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
                     >
                       {sendingId === client.id ? (
-                        <Clock3 className="h-3.5 w-3.5 animate-spin" />
+                        <Clock3 className="h-3.5 w-3.5 animate-spin text-primary" />
                       ) : (
                         <Send className="h-3.5 w-3.5" />
                       )}
@@ -681,7 +665,7 @@ function Painel() {
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
               <CardTitle className="text-base font-bold flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-white" />
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
                 Faturas Pendentes & Atrasadas
               </CardTitle>
               <CardDescription>Acompanhe quem ainda não efetuou o pagamento</CardDescription>
@@ -712,7 +696,7 @@ function Painel() {
                     </p>
                   </div>
                   <Badge
-                    variant={invoice.status === "overdue" ? "destructive" : "secondary"}
+                    variant={invoice.status === "overdue" ? "destructive" : "warning"}
                     className="shrink-0 rounded-full font-semibold text-xs"
                   >
                     {invoice.status === "overdue" ? "Atrasada" : "Pendente"}

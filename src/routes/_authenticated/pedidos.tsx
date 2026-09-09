@@ -357,10 +357,10 @@ function PedidosPage() {
             <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
               Pedidos & Liberação de Acesso
             </h1>
-            <Badge className="border border-white/30 bg-white/10 text-white gap-1 text-xs font-semibold">
-              <Zap className="h-3 w-3 fill-white text-white" /> Liberação 1-Clique
+            <Badge variant="success" className="gap-1 text-xs font-semibold">
+              <Zap className="h-3 w-3 fill-emerald-500 text-emerald-500" /> Liberação 1-Clique
             </Badge>
-            <Badge className="border border-white/20 bg-white/5 text-zinc-300 gap-1 text-xs">
+            <Badge variant="outline" className="gap-1 text-xs text-muted-foreground">
               <RefreshCw className="h-3 w-3" /> Tempo Real
             </Badge>
           </div>
@@ -375,16 +375,16 @@ function PedidosPage() {
             size="sm"
             onClick={() => refetch()}
             disabled={isRefetching}
-            className="gap-2 border-white/20 text-white hover:bg-white/10"
+            className="gap-2 border-border text-foreground hover:border-primary/40 hover:text-primary"
           >
-            <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin text-white" : ""}`} />
+            <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin text-primary" : ""}`} />
             <span className="hidden sm:inline">Atualizar</span>
           </Button>
 
           <Button
             size="sm"
             onClick={() => setNewOrderModalOpen(true)}
-            className="gap-2 bg-white text-black hover:bg-zinc-200 font-bold border-0 shadow-sm"
+            className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-md shadow-primary/25"
           >
             <Plus className="h-4 w-4" />
             Novo Pedido Manual
@@ -394,22 +394,22 @@ function PedidosPage() {
 
       {/* Cards de Métricas */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border/60 bg-gradient-to-br from-card to-card/50 shadow-sm">
+        <Card className="surface-card hover-lift">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Aguardando PIX (Pendentes)
             </CardTitle>
             <div className="relative">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white border border-white/20">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/25">
                 <Clock className="h-5 w-5" />
               </div>
               {pendingOrders.length > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white text-[9px] font-black text-black animate-ping" />
+                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-[9px] font-black text-white animate-ping" />
               )}
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-black text-white">
+            <div className="text-2xl font-black text-amber-500">
               {pendingOrders.length}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -421,17 +421,17 @@ function PedidosPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-gradient-to-br from-card to-card/50 shadow-sm">
+        <Card className="surface-card hover-lift">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Acessos Liberados
             </CardTitle>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white border border-white/20">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/25">
               <CheckCircle2 className="h-5 w-5" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-black text-white">
+            <div className="text-2xl font-black text-emerald-500">
               {approvedOrders.length}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -440,17 +440,17 @@ function PedidosPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-gradient-to-br from-card to-card/50 shadow-sm">
+        <Card className="surface-card hover-lift">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Faturamento Aprovado
             </CardTitle>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white border border-white/20">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/25">
               <DollarSign className="h-5 w-5" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-black text-white">
+            <div className="text-2xl font-black text-foreground">
               R$ {totalApprovedRevenue.toFixed(2).replace(".", ",")}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -459,12 +459,12 @@ function PedidosPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-gradient-to-br from-card to-card/50 shadow-sm">
+        <Card className="surface-card hover-lift">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Total de Pedidos
             </CardTitle>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white border border-white/20">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500 border border-purple-500/25">
               <ShoppingBag className="h-5 w-5" />
             </div>
           </CardHeader>
@@ -482,20 +482,20 @@ function PedidosPage() {
       {/* Controles de Filtros e Busca */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Abas de Filtro */}
-        <div className="flex items-center gap-1.5 rounded-xl border border-border/80 bg-card p-1 shadow-sm overflow-x-auto">
+        <div className="flex items-center gap-1.5 rounded-xl border border-border bg-card p-1 shadow-sm overflow-x-auto">
           <button
             onClick={() => setActiveTab("pending")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap ${
               activeTab === "pending"
-                ? "bg-white text-black shadow"
-                : "text-zinc-400 hover:text-white"
+                ? "bg-amber-500 text-white font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <Clock className="h-3.5 w-3.5" />
             Pendentes
             {pendingOrders.length > 0 && (
               <span className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-                activeTab === "pending" ? "bg-black text-white" : "bg-white/10 text-white"
+                activeTab === "pending" ? "bg-white text-amber-600" : "bg-amber-500/15 text-amber-500"
               }`}>
                 {pendingOrders.length}
               </span>
@@ -504,16 +504,16 @@ function PedidosPage() {
 
           <button
             onClick={() => setActiveTab("approved")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap ${
               activeTab === "approved"
-                ? "bg-white text-black shadow"
-                : "text-zinc-400 hover:text-white"
+                ? "bg-emerald-600 text-white font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
             Liberados
             <span className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-              activeTab === "approved" ? "bg-black text-white" : "bg-white/10 text-white"
+              activeTab === "approved" ? "bg-white text-emerald-600" : "bg-emerald-500/15 text-emerald-500"
             }`}>
               {approvedOrders.length}
             </span>
@@ -521,16 +521,16 @@ function PedidosPage() {
 
           <button
             onClick={() => setActiveTab("all")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap ${
               activeTab === "all"
-                ? "bg-white text-black shadow"
-                : "text-zinc-400 hover:text-white"
+                ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <ShoppingBag className="h-3.5 w-3.5" />
             Todos
             <span className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-              activeTab === "all" ? "bg-black text-white" : "bg-white/10 text-white"
+              activeTab === "all" ? "bg-primary-foreground text-primary" : "bg-muted text-muted-foreground"
             }`}>
               {totalOrders}
             </span>
@@ -538,10 +538,10 @@ function PedidosPage() {
 
           <button
             onClick={() => setActiveTab("cancelled")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap ${
               activeTab === "cancelled"
-                ? "bg-zinc-800 text-white shadow border border-white/20"
-                : "text-zinc-400 hover:text-white"
+                ? "bg-muted text-foreground font-bold shadow-sm border border-border"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <XCircle className="h-3.5 w-3.5" />
@@ -562,7 +562,7 @@ function PedidosPage() {
                 }
               }}
               disabled={bulkDeleteMutation.isPending}
-              className="gap-1.5 text-xs border-white/20 text-zinc-300 hover:text-white hover:bg-white/10 whitespace-nowrap"
+              className="gap-1.5 text-xs border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 whitespace-nowrap"
               title="Excluir todos os pedidos cancelados de uma vez"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -590,7 +590,7 @@ function PedidosPage() {
           <p className="mt-3 text-sm text-muted-foreground font-medium">Carregando pedidos...</p>
         </div>
       ) : filteredOrders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 py-16 text-center bg-card/30">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-16 text-center bg-card/30">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground">
             <ShoppingBag className="h-6 w-6" />
           </div>
@@ -625,9 +625,9 @@ function PedidosPage() {
                 key={order.id}
                 className={`overflow-hidden transition-all duration-200 border ${
                   isPending
-                    ? "border-white/20 bg-card hover:border-white/40"
+                    ? "border-amber-500/30 bg-card hover:border-amber-500/50 shadow-sm"
                     : isApproved
-                    ? "border-white/15 bg-card hover:border-white/30"
+                    ? "border-border bg-card hover:border-primary/40 shadow-sm"
                     : "border-border/60 bg-card/60 opacity-80"
                 }`}
               >
@@ -638,9 +638,9 @@ function PedidosPage() {
                       <div
                         className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl font-black text-sm border shadow-sm ${
                           isPending
-                            ? "bg-white/10 text-white border-white/20"
+                            ? "bg-amber-500/10 text-amber-500 border-amber-500/25"
                             : isApproved
-                            ? "bg-white text-black border-white"
+                            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/25"
                             : "bg-muted text-muted-foreground border-border"
                         }`}
                       >
@@ -655,12 +655,12 @@ function PedidosPage() {
 
                           {/* Status Badge */}
                           {isPending && (
-                            <Badge className="border border-white/20 bg-white/5 text-zinc-300 text-[10px] font-bold uppercase tracking-wider">
+                            <Badge variant="warning" className="text-[10px] font-bold">
                               ⏳ Aguardando PIX
                             </Badge>
                           )}
                           {isApproved && (
-                            <Badge className="border border-white/30 bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider">
+                            <Badge variant="success" className="text-[10px] font-bold">
                               ✅ Acesso Liberado
                             </Badge>
                           )}
@@ -680,9 +680,9 @@ function PedidosPage() {
                         <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                           <button
                             onClick={() => handleOpenWhatsApp(order.customer_phone, order.customer_name)}
-                            className="inline-flex items-center gap-1 font-semibold text-zinc-300 hover:text-white hover:underline"
+                            className="inline-flex items-center gap-1 font-semibold text-foreground hover:text-primary hover:underline"
                           >
-                            <MessageCircle className="h-3.5 w-3.5" />
+                            <MessageCircle className="h-3.5 w-3.5 text-emerald-500" />
                             {order.customer_phone}
                             <ExternalLink className="h-2.5 w-2.5 opacity-70" />
                           </button>
@@ -698,7 +698,7 @@ function PedidosPage() {
                           </span>
 
                           {order.target_username && (
-                            <span className="inline-flex items-center gap-1 font-mono text-zinc-300 font-semibold">
+                            <span className="inline-flex items-center gap-1 font-mono text-foreground font-semibold">
                               Login: {order.target_username}
                             </span>
                           )}
@@ -713,7 +713,7 @@ function PedidosPage() {
                           Plano & Telas
                         </span>
                         <div className="mt-0.5 flex items-center gap-1.5">
-                          <Tv className="h-4 w-4 text-white" />
+                          <Tv className="h-4 w-4 text-primary" />
                           <span className="text-xs font-semibold text-foreground">
                             {order.plan_name}
                           </span>
@@ -733,7 +733,7 @@ function PedidosPage() {
                           </span>
                           <Badge
                             variant="outline"
-                            className="border-white/20 text-white bg-white/5 text-[9px] font-bold"
+                            className="border-border text-foreground bg-muted/40 text-[9px] font-bold"
                           >
                             {isMercadoPago ? "⚡ Mercado Pago" : "📋 PIX Manual"}
                           </Badge>
@@ -749,7 +749,7 @@ function PedidosPage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => copyToClipboard(order.pix_code!, "Código PIX Copia e Cola")}
-                                className="gap-1 text-xs border-white/20 text-white hover:bg-white/10"
+                                className="gap-1 text-xs border-border text-foreground hover:border-primary/40 hover:text-primary"
                                 title="Copiar código PIX para testar ou enviar"
                               >
                                 <Copy className="h-3.5 w-3.5" />
@@ -763,10 +763,10 @@ function PedidosPage() {
                                 setSelectedOrder(order);
                                 setReleaseModalOpen(true);
                               }}
-                              className="gap-2 bg-white text-black hover:bg-zinc-200 font-extrabold border-0 shadow-sm transition-all hover:scale-[1.02]"
+                              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold border-0 shadow-md shadow-emerald-600/25 transition-all hover:scale-[1.02]"
                               title="Aprovar este pedido e liberar acesso no Sigma e WhatsApp sem esperar o cliente pagar"
                             >
-                              <Zap className="h-4 w-4 fill-black text-black" />
+                              <Zap className="h-4 w-4 fill-white text-white" />
                               ⚡ Liberar Acesso Agora
                             </Button>
 
@@ -778,7 +778,7 @@ function PedidosPage() {
                                   cancelMutation.mutate(order.id);
                                 }
                               }}
-                              className="text-xs text-muted-foreground hover:text-white"
+                              className="text-xs text-muted-foreground hover:text-destructive"
                             >
                               Cancelar
                             </Button>
@@ -800,7 +800,7 @@ function PedidosPage() {
                                   });
                                   setCredentialsModalOpen(true);
                                 }}
-                                className="gap-1.5 text-xs border-white/20 text-white hover:bg-white/10"
+                                className="gap-1.5 text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
                               >
                                 <ShieldCheck className="h-3.5 w-3.5" />
                                 Ver Acessos

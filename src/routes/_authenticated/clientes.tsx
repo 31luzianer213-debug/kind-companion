@@ -171,7 +171,7 @@ function getInitials(name: string) {
 }
 
 function getRelativeDueInfo(dueDateStr: string | null) {
-  if (!dueDateStr) return { text: "Sem vencimento", tone: "text-muted-foreground", badge: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20" };
+  if (!dueDateStr) return { text: "Sem vencimento", tone: "text-muted-foreground", badge: "border-border bg-muted/30 text-muted-foreground" };
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const due = new Date(dueDateStr + "T00:00:00");
@@ -182,35 +182,35 @@ function getRelativeDueInfo(dueDateStr: string | null) {
     const days = Math.abs(diffDays);
     return {
       text: `Vencido há ${days} dia${days > 1 ? "s" : ""}`,
-      tone: "text-zinc-400 font-semibold",
-      badge: "border border-zinc-700 bg-zinc-900 text-zinc-400",
+      tone: "text-rose-500 font-semibold",
+      badge: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold",
     };
   }
   if (diffDays === 0) {
     return {
       text: "Vence hoje!",
-      tone: "text-white font-bold",
-      badge: "border border-white/40 bg-white/10 text-white font-semibold animate-pulse",
+      tone: "text-amber-500 font-bold",
+      badge: "border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold animate-pulse",
     };
   }
   if (diffDays === 1) {
     return {
       text: "Vence amanhã",
-      tone: "text-zinc-300",
-      badge: "border border-white/20 bg-white/5 text-zinc-300",
+      tone: "text-amber-500",
+      badge: "border-amber-500/25 bg-amber-500/10 text-amber-500 font-medium",
     };
   }
   if (diffDays <= 5) {
     return {
       text: `Vence em ${diffDays} dias`,
-      tone: "text-zinc-300",
-      badge: "border border-white/10 bg-white/5 text-zinc-300",
+      tone: "text-muted-foreground",
+      badge: "border-border bg-muted/40 text-muted-foreground",
     };
   }
   return {
     text: formatDate(dueDateStr),
-    tone: "text-white",
-    badge: "border border-white/20 bg-white/10 text-white",
+    tone: "text-foreground",
+    badge: "border-border bg-muted/30 text-foreground",
   };
 }
 
@@ -230,6 +230,18 @@ function Clientes() {
   const [syncing, setSyncing] = useState(false);
   const [form, setForm] = useState<ClientForm>(empty);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Detecção de abertura automática ao vir do Painel Geral (?novo=1)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("novo") === "1" || params.get("novo") === "true") {
+        setForm(empty);
+        setOpen(true);
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, []);
 
   // Modais de confirmação
   const [confirmRenewClient, setConfirmRenewClient] = useState<ClientRow | null>(null);
@@ -956,10 +968,10 @@ function Clientes() {
                         <div
                           className={`size-9 rounded-full flex items-center justify-center font-bold text-xs shadow-sm border ${
                             client.status === "active"
-                              ? "bg-white text-black font-extrabold border-white"
+                              ? "bg-primary/10 text-primary border-primary/25 font-bold"
                               : client.status === "blocked"
-                              ? "bg-zinc-900 text-zinc-400 border-zinc-700"
-                              : "bg-zinc-950 text-zinc-500 border-zinc-800"
+                              ? "bg-rose-500/10 text-rose-500 border-rose-500/25"
+                              : "bg-muted text-muted-foreground border-border"
                           }`}
                         >
                           {getInitials(client.name)}
@@ -976,9 +988,9 @@ function Clientes() {
                             href={`https://wa.me/55${cleanPhoneDigits(client.phone)}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-white transition-colors font-mono mt-0.5"
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors font-mono mt-0.5"
                           >
-                            <MessageCircle className="size-3 text-white" />
+                            <MessageCircle className="size-3 text-emerald-500" />
                             {formatPhoneInput(client.phone)}
                           </a>
                         ) : null}
@@ -988,7 +1000,7 @@ function Clientes() {
                       <TableCell>
                         {client.iptv_username ? (
                           <div className="font-mono text-xs text-foreground flex items-center gap-1.5">
-                            <KeyRound className="size-3.5 text-white shrink-0" />
+                            <KeyRound className="size-3.5 text-primary shrink-0" />
                             <span>{client.iptv_username}</span>
                           </div>
                         ) : (
@@ -998,7 +1010,7 @@ function Clientes() {
                           <Tv className="size-3" />
                           <span>{client.screens || 1} tela{(client.screens || 1) > 1 ? "s" : ""}</span>
                           {client.sigma_customer_id ? (
-                            <span className="text-zinc-400 font-mono text-[10px]">
+                            <span className="text-muted-foreground font-mono text-[10px]">
                               • ID: {String(client.sigma_customer_id).slice(0, 10)}
                             </span>
                           ) : null}
@@ -1026,14 +1038,8 @@ function Clientes() {
                       {/* Status */}
                       <TableCell>
                         <Badge
-                          variant="outline"
-                          className={
-                            client.status === "active"
-                              ? "border-white bg-white text-black font-extrabold text-xs"
-                              : client.status === "blocked"
-                              ? "border-zinc-700 bg-zinc-900 text-zinc-400 text-xs"
-                              : "border-zinc-800 bg-zinc-950 text-zinc-500 text-xs"
-                          }
+                          variant={client.status === "active" ? "success" : client.status === "blocked" ? "destructive" : "outline"}
+                          className="text-xs font-semibold"
                         >
                           {client.status === "active" ? "Ativo" : client.status === "blocked" ? "Bloqueado" : "Inativo"}
                         </Badge>
@@ -1152,10 +1158,10 @@ function Clientes() {
                       <div
                         className={`size-10 rounded-full flex items-center justify-center font-bold text-xs shadow-sm border ${
                           client.status === "active"
-                            ? "bg-white text-black font-extrabold border-white"
+                            ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
                             : client.status === "blocked"
-                            ? "bg-zinc-900 text-zinc-400 border-zinc-700"
-                            : "bg-zinc-950 text-zinc-500 border-zinc-800"
+                            ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                            : "bg-muted text-muted-foreground border-border"
                         }`}
                       >
                         {getInitials(client.name)}
@@ -1166,23 +1172,17 @@ function Clientes() {
                           href={`https://wa.me/55${cleanPhoneDigits(client.phone)}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs text-muted-foreground hover:text-white font-mono inline-flex items-center gap-1 mt-0.5"
+                          className="text-xs text-muted-foreground hover:text-primary font-mono inline-flex items-center gap-1 mt-0.5"
                         >
-                          <MessageCircle className="size-3 text-white" />
+                          <MessageCircle className="size-3 text-emerald-500" />
                           {formatPhoneInput(client.phone)}
                         </a>
                       </div>
                     </div>
 
                     <Badge
-                      variant="outline"
-                      className={
-                        client.status === "active"
-                          ? "border-white bg-white text-black font-extrabold text-[11px]"
-                          : client.status === "blocked"
-                          ? "border-zinc-700 bg-zinc-900 text-zinc-400 text-[11px]"
-                          : "border-zinc-800 bg-zinc-950 text-zinc-500 text-[11px]"
-                      }
+                      variant={client.status === "active" ? "success" : client.status === "blocked" ? "destructive" : "secondary"}
+                      className="text-[11px]"
                     >
                       {client.status === "active" ? "Ativo" : client.status === "blocked" ? "Bloqueado" : "Inativo"}
                     </Badge>
@@ -1208,15 +1208,15 @@ function Clientes() {
                       <button
                         type="button"
                         onClick={() => setViewAccessClient(client)}
-                        className="flex items-center gap-1 bg-muted/40 hover:bg-white/10 hover:text-white px-2 py-0.5 rounded-md transition-colors text-left"
+                        className="flex items-center gap-1 bg-muted/50 hover:bg-primary/10 hover:text-primary px-2 py-0.5 rounded-md transition-colors text-left"
                         title="Ver credenciais IPTV e links M3U"
                       >
-                        <KeyRound className="size-3 text-white" />
+                        <KeyRound className="size-3 text-primary" />
                         <span>{client.iptv_username}</span>
-                        <Tv className="size-2.5 ml-0.5 text-white" />
+                        <Tv className="size-2.5 ml-0.5 text-primary" />
                       </button>
                       {client.sigma_customer_id ? (
-                        <span className="text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md text-[11px]">
+                        <span className="text-muted-foreground bg-muted/40 border border-border/50 px-2 py-0.5 rounded-md text-[11px]">
                           Sigma ID: {String(client.sigma_customer_id).slice(0, 8)}
                         </span>
                       ) : null}
@@ -1228,10 +1228,10 @@ function Clientes() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs gap-1 px-1 border-white/20 text-white hover:bg-white/10"
+                      className="h-8 text-xs gap-1 px-1"
                       onClick={() => copiarDadosAcesso(client)}
                     >
-                      {isCopied ? <Check className="size-3 text-white" /> : <Copy className="size-3" />}
+                      {isCopied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
                       Acesso
                     </Button>
 
@@ -1239,7 +1239,7 @@ function Clientes() {
                       variant="outline"
                       size="sm"
                       disabled={isBusy}
-                      className="h-8 text-xs gap-1 px-1 border-white/20 text-white hover:bg-white/10"
+                      className="h-8 text-xs gap-1 px-1 text-primary hover:bg-primary/10"
                       onClick={() => setConfirmRenewClient(client)}
                     >
                       {isBusy ? <Loader2 className="size-3 animate-spin" /> : <CalendarPlus className="size-3" />}
@@ -1250,7 +1250,7 @@ function Clientes() {
                       variant="outline"
                       size="sm"
                       disabled={isBusy}
-                      className="h-8 text-xs gap-1 px-1 border-white/20 text-white hover:bg-white/10"
+                      className="h-8 text-xs gap-1 px-1 text-emerald-500 hover:bg-emerald-500/10"
                       onClick={() => setConfirmRemindClient(client)}
                     >
                       <MessageCircle className="size-3" />

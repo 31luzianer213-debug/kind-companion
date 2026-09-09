@@ -117,7 +117,7 @@ function BotPage() {
     supportMessage: "",
     pixKey: "",
     pixHolder: "Alpha IPTV",
-    mercadopago_token: "APP_USR-3160859496295692-031614-d4b7df3cf7507800baabef77d641c0f2-1487021055",
+    mercadopago_token: "",
     payment_provider: "mercadopago",
   });
 
@@ -178,8 +178,7 @@ function BotPage() {
         supportMessage: c.supportMessage || "",
         pixKey: c.pixKey || "",
         pixHolder: c.pixHolder || "Alpha IPTV",
-        mercadopago_token:
-          c.mercadopago_token || "APP_USR-3160859496295692-031614-d4b7df3cf7507800baabef77d641c0f2-1487021055",
+        mercadopago_token: c.mercadopago_token || "",
         payment_provider: c.payment_provider || "mercadopago",
       });
     }
@@ -312,14 +311,11 @@ function BotPage() {
               <Bot className="size-6 text-primary" /> Robô WhatsApp & Auto-Atendimento
             </h1>
             <Badge
-              variant="outline"
-              className={
-                form.enabled
-                  ? "bg-white text-black font-extrabold border border-white text-xs py-0.5 px-2"
-                  : "bg-zinc-800 text-zinc-400 border-zinc-700 text-xs py-0.5 px-2"
-              }
+              variant={form.enabled ? "success" : "secondary"}
+              className="text-xs py-0.5 px-2.5 gap-1.5"
             >
-              {form.enabled ? "● Robô 24h Ativo" : "○ Robô Pausado"}
+              <span className={`size-1.5 rounded-full ${form.enabled ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground"}`} />
+              {form.enabled ? "Robô 24h Ativo" : "Robô Pausado"}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -346,7 +342,7 @@ function BotPage() {
             type="button"
             onClick={() => handleSave()}
             disabled={saving}
-            className="rounded-xl gap-2 font-bold px-6 bg-white text-black hover:bg-zinc-200 border-0 shadow-sm"
+            className="rounded-xl gap-2 font-semibold px-6 shadow-sm"
           >
             <Sparkles className="size-4" />
             {saving ? "Salvando..." : "Salvar Alterações"}
@@ -364,15 +360,11 @@ function BotPage() {
               <CardHeader className="pb-3 border-b border-border/50">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2 text-foreground font-bold">
-                    <Wallet className="size-5 text-white" /> Mercado Pago (PIX Automático)
+                    <Wallet className="size-5 text-emerald-500" /> Mercado Pago (PIX Automático)
                   </CardTitle>
                   <Badge
-                    variant="outline"
-                    className={
-                      isMpActive
-                        ? "bg-white text-black font-extrabold border border-white text-xs"
-                        : "border border-white/20 bg-white/5 text-zinc-300 text-xs"
-                    }
+                    variant={isMpActive ? "success" : "warning"}
+                    className="text-xs"
                   >
                     {isMpActive ? "⚡ PIX Dinâmico Ativo" : "📋 Chave PIX Manual"}
                   </Badge>
@@ -383,21 +375,21 @@ function BotPage() {
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
                 {isMpActive ? (
-                  <div className="p-3 rounded-xl bg-white/10 border border-white/20 flex items-start gap-2.5 text-xs text-zinc-300">
-                    <CheckCircle2 className="size-4 text-white shrink-0 mt-0.5" />
+                  <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-start gap-2.5 text-xs text-foreground">
+                    <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-white">PIX Automático Ativado!</p>
-                      <p className="text-zinc-300 text-[11px] mt-0.5">
+                      <p className="font-semibold text-emerald-400">PIX Automático Ativado!</p>
+                      <p className="text-muted-foreground text-[11px] mt-0.5">
                         As opções 2 (Renovar) e 3 (Comprar Planos) geram códigos PIX Copia e Cola dinâmicos do Mercado Pago com baixa automática no Sigma.
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-700 flex items-start gap-2.5 text-xs text-zinc-300">
-                    <AlertCircle className="size-4 text-zinc-400 shrink-0 mt-0.5" />
+                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-2.5 text-xs text-foreground">
+                    <AlertCircle className="size-4 text-amber-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-zinc-200">Modo Manual Ativo</p>
-                      <p className="text-zinc-400 text-[11px] mt-0.5">
+                      <p className="font-semibold text-amber-400">Modo Manual Ativo</p>
+                      <p className="text-muted-foreground text-[11px] mt-0.5">
                         Cole seu <strong>Access Token</strong> abaixo para o robô gerar PIX Copia e Cola na hora. Caso não tenha, o robô enviará sua chave PIX estática.
                       </p>
                     </div>
@@ -407,13 +399,13 @@ function BotPage() {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-semibold flex items-center gap-1.5">
-                      <Lock className="size-3.5 text-white" /> Access Token do Mercado Pago
+                      <Lock className="size-3.5 text-primary" /> Access Token do Mercado Pago
                     </Label>
                     <a
                       href="https://www.mercadopago.com.br/developers/panel/app"
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[11px] text-white hover:underline flex items-center gap-1"
+                      className="text-[11px] text-primary hover:underline flex items-center gap-1"
                     >
                       Onde pegar meu Token? <ExternalLink className="size-3" />
                     </a>
@@ -475,16 +467,16 @@ function BotPage() {
               <CardHeader className="pb-3 border-b border-border/50">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2 text-foreground font-bold">
-                    <DollarSign className="size-5 text-white" /> Tabela de Preços do Bot & Renovação
+                    <DollarSign className="size-5 text-emerald-500" /> Tabela de Preços do Bot & Renovação
                   </CardTitle>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={handleRegeneratePlansText}
-                    className="rounded-xl text-xs gap-1.5 border-white/20 text-white hover:bg-white/10"
+                    className="rounded-xl text-xs gap-1.5"
                   >
-                    <Sparkles className="size-3" /> Atualizar Texto com esses Preços
+                    <Sparkles className="size-3 text-primary" /> Atualizar Texto com esses Preços
                   </Button>
                 </div>
                 <CardDescription>
@@ -494,12 +486,12 @@ function BotPage() {
               <CardContent className="pt-4 space-y-4">
                 <div className="grid gap-3 sm:grid-cols-3">
                   {/* Renovação Mensal */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-muted/30 border border-white/20 sm:col-span-3">
+                  <div className="space-y-1.5 p-3 rounded-xl bg-primary/5 border border-primary/20 sm:col-span-3">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <RefreshCw className="size-3.5" /> Valor da Renovação Mensal (Opção 2)
+                      <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <RefreshCw className="size-3.5 text-primary" /> Valor da Renovação Mensal (Opção 2)
                       </Label>
-                      <Badge className="bg-white text-black font-bold text-[10px]">
+                      <Badge variant="outline" className="border-primary/30 text-primary font-semibold text-[10px]">
                         Cobrado na Opção 2
                       </Badge>
                     </div>
@@ -587,7 +579,7 @@ function BotPage() {
             <Card className="surface-card border-border/60 shadow-sm">
               <CardHeader className="pb-3 border-b border-border/50">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Tv className="size-4 text-white" /> Servidor IPTV & Testes no Sigma
+                  <Tv className="size-4 text-primary" /> Servidor IPTV & Testes no Sigma
                 </CardTitle>
                 <CardDescription>
                   Configure qual servidor e DNS de streaming o bot usará para gerar os testes e as listas M3U.
@@ -652,7 +644,7 @@ function BotPage() {
 
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold flex items-center gap-1.5">
-                      <ShieldCheck className="size-3.5 text-white" /> Bloqueio Anti-Fraude (Dias)
+                      <ShieldCheck className="size-3.5 text-primary" /> Bloqueio Anti-Fraude (Dias)
                     </Label>
                     <Input
                       type="number"
@@ -770,19 +762,19 @@ function BotPage() {
           </div>
 
           {/* Smartphone Mockup */}
-          <div className="rounded-3xl border-4 border-border/80 bg-zinc-950 p-3 shadow-2xl overflow-hidden flex flex-col h-[760px]">
+          <div className="rounded-3xl border-4 border-border/80 bg-background/95 p-3 shadow-2xl overflow-hidden flex flex-col h-[760px]">
             {/* Header do WhatsApp */}
-            <div className="bg-zinc-900 text-white p-3 rounded-2xl flex items-center gap-3 border border-white/10 shadow-sm shrink-0">
-              <div className="size-9 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm shadow-inner">
+            <div className="bg-card text-foreground p-3 rounded-2xl flex items-center gap-3 border border-border/60 shadow-sm shrink-0">
+              <div className="size-9 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-sm shadow-inner">
                 🤖
               </div>
               <div className="leading-tight flex-1">
-                <p className="text-xs font-bold truncate">{form.businessName || "Alpha IPTV"}</p>
-                <p className="text-[10px] text-zinc-400 flex items-center gap-1">
-                  <span className="size-1.5 rounded-full bg-white animate-pulse inline-block" /> online 24h
+                <p className="text-xs font-bold truncate text-foreground">{form.businessName || "Alpha IPTV"}</p>
+                <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" /> online 24h
                 </p>
               </div>
-              <Badge variant="secondary" className="bg-white/10 text-[10px] text-white border border-white/20">
+              <Badge variant="outline" className={isMpActive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px]" : "border-border bg-muted/40 text-muted-foreground text-[10px]"}>
                 {isMpActive ? "PIX MP Ativo" : "Robô Ativo"}
               </Badge>
             </div>
@@ -797,14 +789,14 @@ function BotPage() {
                   <div
                     className={`max-w-[90%] p-3 rounded-2xl whitespace-pre-wrap leading-relaxed shadow-sm text-xs ${
                       msg.sender === "user"
-                        ? "bg-white text-black rounded-tr-xs font-medium"
-                        : "bg-zinc-900 text-zinc-100 border border-white/10 rounded-tl-xs"
+                        ? "bg-primary text-primary-foreground rounded-tr-xs font-medium"
+                        : "bg-card text-foreground border border-border/60 rounded-tl-xs"
                     }`}
                   >
                     {msg.text}
                     <div
                       className={`text-[9px] mt-1 text-right ${
-                        msg.sender === "user" ? "text-zinc-600" : "text-zinc-400"
+                        msg.sender === "user" ? "text-primary-foreground/75" : "text-muted-foreground"
                       }`}
                     >
                       {msg.time}
@@ -813,15 +805,15 @@ function BotPage() {
                 </div>
               ))}
               {simLoading && (
-                <div className="flex items-center gap-1.5 text-zinc-400 text-xs p-2">
-                  <span className="size-1.5 rounded-full bg-white animate-ping" /> Digitando resposta...
+                <div className="flex items-center gap-1.5 text-muted-foreground text-xs p-2">
+                  <span className="size-1.5 rounded-full bg-emerald-400 animate-ping" /> Digitando resposta...
                 </div>
               )}
             </div>
 
             {/* Atalhos Rápidos */}
-            <div className="p-2 border-t border-zinc-800/80 bg-zinc-900/80 rounded-xl space-y-1.5 shrink-0">
-              <p className="text-[10px] text-zinc-400 font-semibold px-1">Testar Opções com 1 Clique:</p>
+            <div className="p-2 border-t border-border/60 bg-muted/20 rounded-xl space-y-1.5 shrink-0">
+              <p className="text-[10px] text-muted-foreground font-semibold px-1">Testar Opções com 1 Clique:</p>
               <div className="flex flex-wrap gap-1.5">
                 <Button
                   type="button"
@@ -829,7 +821,7 @@ function BotPage() {
                   size="sm"
                   onClick={() => handleSendSim("1")}
                   disabled={simLoading}
-                  className="h-6 text-[10px] rounded-lg px-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-200"
+                  className="h-6 text-[10px] rounded-lg px-2"
                 >
                   1 - Teste Grátis
                 </Button>
@@ -839,7 +831,7 @@ function BotPage() {
                   size="sm"
                   onClick={() => handleSendSim("2")}
                   disabled={simLoading}
-                  className="h-6 text-[10px] rounded-lg px-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-200"
+                  className="h-6 text-[10px] rounded-lg px-2"
                 >
                   2 - Renovar
                 </Button>
@@ -849,7 +841,7 @@ function BotPage() {
                   size="sm"
                   onClick={() => handleSendSim("2 114818587")}
                   disabled={simLoading}
-                  className="h-6 text-[10px] rounded-lg px-2 bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                  className="h-6 text-[10px] rounded-lg px-2 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
                 >
                   2 114818587 (PIX)
                 </Button>
@@ -859,7 +851,7 @@ function BotPage() {
                   size="sm"
                   onClick={() => handleSendSim("3")}
                   disabled={simLoading}
-                  className="h-6 text-[10px] rounded-lg px-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-200"
+                  className="h-6 text-[10px] rounded-lg px-2"
                 >
                   3 - Planos
                 </Button>
@@ -869,7 +861,7 @@ function BotPage() {
                   size="sm"
                   onClick={() => handleSendSim("1")}
                   disabled={simLoading}
-                  className="h-6 text-[10px] rounded-lg px-2 bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                  className="h-6 text-[10px] rounded-lg px-2 border-primary/30 text-primary hover:bg-primary/10"
                 >
                   Plano 1 (Mensal)
                 </Button>
@@ -879,7 +871,7 @@ function BotPage() {
                   size="sm"
                   onClick={() => handleSendSim("4")}
                   disabled={simLoading}
-                  className="h-6 text-[10px] rounded-lg px-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-200"
+                  className="h-6 text-[10px] rounded-lg px-2"
                 >
                   4 - Reenviar Dados
                 </Button>
@@ -889,7 +881,7 @@ function BotPage() {
                   size="sm"
                   onClick={() => handleSendSim("5")}
                   disabled={simLoading}
-                  className="h-6 text-[10px] rounded-lg px-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-200"
+                  className="h-6 text-[10px] rounded-lg px-2"
                 >
                   5 - Suporte
                 </Button>
@@ -902,7 +894,7 @@ function BotPage() {
                   onChange={(e) => setSimText(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSendSim()}
                   placeholder="Digite uma mensagem ou número (1 a 5)..."
-                  className="h-8 text-xs bg-zinc-950 border-zinc-700 rounded-xl"
+                  className="h-8 text-xs rounded-xl"
                   disabled={simLoading}
                 />
                 <Button
@@ -910,9 +902,9 @@ function BotPage() {
                   size="sm"
                   onClick={() => handleSendSim()}
                   disabled={simLoading || !simText.trim()}
-                  className="h-8 w-8 p-0 rounded-xl bg-white text-black hover:bg-zinc-200 shrink-0"
+                  className="h-8 w-8 p-0 rounded-xl shrink-0"
                 >
-                  <Send className="size-3.5 text-black" />
+                  <Send className="size-3.5" />
                 </Button>
               </div>
             </div>

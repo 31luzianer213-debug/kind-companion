@@ -71,28 +71,33 @@ type InvoiceRow = Tables<"invoices"> & { clients: { name: string; phone: string 
 const labels: Record<string, { label: string; tone: string; badge: string }> = {
   pending: {
     label: "Pendente",
-    tone: "text-zinc-300",
-    badge: "border border-white/20 bg-white/5 text-zinc-300",
+    tone: "text-amber-500",
+    badge: "border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold",
   },
   overdue: {
     label: "Atrasada",
-    tone: "text-zinc-400",
-    badge: "border border-zinc-700 bg-zinc-900 text-zinc-400",
+    tone: "text-rose-500",
+    badge: "border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold",
   },
   paid: {
     label: "Paga",
-    tone: "text-white",
-    badge: "border border-white bg-white text-black font-extrabold",
+    tone: "text-emerald-500",
+    badge: "border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold",
   },
   cancelled: {
     label: "Cancelada",
-    tone: "text-zinc-500",
-    badge: "border border-zinc-800 bg-zinc-950 text-zinc-500",
+    tone: "text-muted-foreground",
+    badge: "border border-border bg-muted/40 text-muted-foreground",
   },
 };
 
 function getRelativeDueInfo(dueDateStr: string, isPaid: boolean) {
-  if (isPaid) return { text: "Liquidada", badge: "border border-white bg-white text-black font-extrabold" };
+  if (isPaid) {
+    return {
+      text: "Liquidada",
+      badge: "border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold",
+    };
+  }
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const due = new Date(dueDateStr + "T00:00:00");
@@ -103,24 +108,24 @@ function getRelativeDueInfo(dueDateStr: string, isPaid: boolean) {
     const days = Math.abs(diffDays);
     return {
       text: `Atrasada há ${days} dia${days > 1 ? "s" : ""}`,
-      badge: "border border-zinc-700 bg-zinc-900 text-zinc-300",
+      badge: "border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold",
     };
   }
   if (diffDays === 0) {
     return {
       text: "Vence hoje!",
-      badge: "border border-white/40 bg-white/10 text-white font-semibold animate-pulse",
+      badge: "border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold animate-pulse",
     };
   }
   if (diffDays === 1) {
     return {
       text: "Vence amanhã",
-      badge: "border border-white/20 bg-white/5 text-zinc-300",
+      badge: "border border-amber-500/25 bg-amber-500/10 text-amber-500 font-medium",
     };
   }
   return {
     text: `Vence em ${diffDays} dias`,
-    badge: "border border-white/10 bg-white/5 text-zinc-400",
+    badge: "border border-border bg-muted/40 text-muted-foreground",
   };
 }
 
@@ -456,49 +461,49 @@ function Cobrancas() {
 
       {/* 3 Cards de Métricas Financeiras */}
       <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
-        <Card className="surface-card hover-lift overflow-hidden relative border-border/60">
-          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-white to-zinc-600" />
+        <Card className="surface-card hover-lift overflow-hidden relative">
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-amber-500 to-amber-600" />
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">A Receber (Em Aberto)</p>
-              <p className="text-2xl font-bold mt-1 text-foreground">{formatBRL(metrics.totalOpen)}</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">A Receber (Em Aberto)</p>
+              <p className="text-2xl font-black mt-1 text-foreground">{formatBRL(metrics.totalOpen)}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {metrics.openCount} fatura{metrics.openCount !== 1 ? "s" : ""} pendente{metrics.openCount !== 1 ? "s" : ""}
               </p>
             </div>
-            <div className="rounded-xl p-2.5 bg-white/10 text-white border border-white/20">
+            <div className="rounded-xl p-2.5 bg-amber-500/10 text-amber-500 border border-amber-500/25">
               <Clock className="size-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="surface-card hover-lift overflow-hidden relative border-border/60">
-          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-zinc-500 to-zinc-800" />
+        <Card className="surface-card hover-lift overflow-hidden relative">
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-rose-500 to-red-600" />
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total em Atraso</p>
-              <p className="text-2xl font-bold mt-1 text-white">{formatBRL(metrics.totalOverdue)}</p>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total em Atraso</p>
+              <p className="text-2xl font-black mt-1 text-rose-500">{formatBRL(metrics.totalOverdue)}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
                 {metrics.overdueCount} cliente{metrics.overdueCount !== 1 ? "s" : ""} atrasado{metrics.overdueCount !== 1 ? "s" : ""}
               </p>
             </div>
-            <div className="rounded-xl p-2.5 bg-white/5 text-zinc-400 border border-white/10">
+            <div className="rounded-xl p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/25">
               <AlertTriangle className="size-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="surface-card hover-lift overflow-hidden relative border-border/60">
-          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-white via-zinc-200 to-zinc-400" />
+        <Card className="surface-card hover-lift overflow-hidden relative">
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-600" />
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Liquidado</p>
-              <p className="text-2xl font-bold mt-1 text-white">{formatBRL(metrics.totalPaid)}</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Liquidado</p>
+              <p className="text-2xl font-black mt-1 text-emerald-600 dark:text-emerald-400">{formatBRL(metrics.totalPaid)}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {metrics.paidCount} pagamento{metrics.paidCount !== 1 ? "s" : ""} confirmado{metrics.paidCount !== 1 ? "s" : ""}
               </p>
             </div>
-            <div className="rounded-xl p-2.5 bg-white text-black font-extrabold shadow-sm">
+            <div className="rounded-xl p-2.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/25">
               <CheckCircle2 className="size-5" />
             </div>
           </CardContent>

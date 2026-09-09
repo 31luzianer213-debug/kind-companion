@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Zap,
   Building,
+  Bot,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
@@ -43,7 +44,7 @@ type AutomationSettings = {
 };
 
 const defaults: AutomationSettings = {
-  business_name: "",
+  business_name: "IPTV Manager Pro",
   reminder_days_before: 3,
   send_on_due_day: true,
   overdue_reminder: true,
@@ -138,28 +139,28 @@ function ConfiguracoesPage() {
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
           Módulos Integrados do Sistema
         </p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <Link
             to="/sigma"
-            className="group flex flex-col justify-between p-4 rounded-2xl border border-white/10 bg-zinc-950 hover:border-white/30 hover:shadow-md transition-all"
+            className="group flex flex-col justify-between p-4 rounded-2xl border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-xl bg-white/10 text-white border border-white/20">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
                 <Server className="size-4" />
               </div>
-              <Badge variant="outline" className={hasSigma ? "text-white border-white/30 bg-white/10 text-[10px]" : "text-zinc-400 border-white/10 bg-white/5 text-[10px]"}>
+              <Badge variant={hasSigma ? "success" : "secondary"} className="text-[10px]">
                 {hasSigma ? "Configurado" : "Pendente"}
               </Badge>
             </div>
             <div>
-              <p className="text-sm font-bold text-white group-hover:text-zinc-300 transition-colors">
+              <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                 Painel Sigma
               </p>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
+              <p className="text-[11px] text-muted-foreground mt-0.5">
                 Servidores, credenciais e renovação automática
               </p>
             </div>
-            <div className="flex items-center justify-end text-xs font-semibold text-white mt-3">
+            <div className="flex items-center justify-end text-xs font-semibold text-primary mt-3">
               <span>Gerenciar</span>
               <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
             </div>
@@ -167,25 +168,51 @@ function ConfiguracoesPage() {
 
           <Link
             to="/whatsapp"
-            className="group flex flex-col justify-between p-4 rounded-2xl border border-white/10 bg-zinc-950 hover:border-white/30 hover:shadow-md transition-all"
+            className="group flex flex-col justify-between p-4 rounded-2xl border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-xl bg-white/10 text-white border border-white/20">
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                 <MessageCircle className="size-4" />
               </div>
-              <Badge variant="outline" className="text-white border-white/30 bg-white/10 text-[10px]">
+              <Badge variant="success" className="text-[10px]">
                 Conexão
               </Badge>
             </div>
             <div>
-              <p className="text-sm font-bold text-white group-hover:text-zinc-300 transition-colors">
+              <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                 WhatsApp
               </p>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
+              <p className="text-[11px] text-muted-foreground mt-0.5">
                 QR Code, conexão e disparo de teste
               </p>
             </div>
-            <div className="flex items-center justify-end text-xs font-semibold text-white mt-3">
+            <div className="flex items-center justify-end text-xs font-semibold text-primary mt-3">
+              <span>Gerenciar</span>
+              <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
+            </div>
+          </Link>
+
+          <Link
+            to="/bot"
+            className="group flex flex-col justify-between p-4 rounded-2xl border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                <Bot className="size-4" />
+              </div>
+              <Badge variant="outline" className="border-purple-500/30 text-purple-400 bg-purple-500/10 text-[10px]">
+                24h Ativo
+              </Badge>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                Robô WhatsApp
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Auto-atendimento, testes grátis e PIX no chat
+              </p>
+            </div>
+            <div className="flex items-center justify-end text-xs font-semibold text-primary mt-3">
               <span>Gerenciar</span>
               <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
             </div>
@@ -193,25 +220,25 @@ function ConfiguracoesPage() {
 
           <Link
             to="/pagamentos"
-            className="group flex flex-col justify-between p-4 rounded-2xl border border-white/10 bg-zinc-950 hover:border-white/30 hover:shadow-md transition-all"
+            className="group flex flex-col justify-between p-4 rounded-2xl border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-xl bg-white/10 text-white border border-white/20">
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                 <CreditCard className="size-4" />
               </div>
-              <Badge variant="outline" className={hasPix ? "text-white border-white/30 bg-white/10 text-[10px]" : "text-zinc-400 border-white/10 bg-white/5 text-[10px]"}>
+              <Badge variant={hasPix ? "success" : "secondary"} className="text-[10px]">
                 {hasPix ? "PIX Ativo" : "Configurar"}
               </Badge>
             </div>
             <div>
-              <p className="text-sm font-bold text-white group-hover:text-zinc-300 transition-colors">
+              <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                 Pagamentos
               </p>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
+              <p className="text-[11px] text-muted-foreground mt-0.5">
                 Chave PIX, Mercado Pago e Asaas
               </p>
             </div>
-            <div className="flex items-center justify-end text-xs font-semibold text-white mt-3">
+            <div className="flex items-center justify-end text-xs font-semibold text-primary mt-3">
               <span>Gerenciar</span>
               <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
             </div>
@@ -219,25 +246,25 @@ function ConfiguracoesPage() {
 
           <Link
             to="/mensagens"
-            className="group flex flex-col justify-between p-4 rounded-2xl border border-white/10 bg-zinc-950 hover:border-white/30 hover:shadow-md transition-all"
+            className="group flex flex-col justify-between p-4 rounded-2xl border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-xl bg-white/10 text-white border border-white/20">
+              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
                 <Sparkles className="size-4" />
               </div>
-              <Badge variant="outline" className="text-white border-white/30 bg-white/10 text-[10px]">
+              <Badge variant="outline" className="text-[10px]">
                 Modelos
               </Badge>
             </div>
             <div>
-              <p className="text-sm font-bold text-white group-hover:text-zinc-300 transition-colors">
+              <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                 Mensagens
               </p>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
-                Textos do robô e simulador WhatsApp
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Modelos de cobrança e aviso de vencimento
               </p>
             </div>
-            <div className="flex items-center justify-end text-xs font-semibold text-white mt-3">
+            <div className="flex items-center justify-end text-xs font-semibold text-primary mt-3">
               <span>Gerenciar</span>
               <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
             </div>

@@ -86,17 +86,17 @@ function getFriendlyErrorMessage(errorMsg: string): string {
 }
 
 function evaluatePassword(password: string) {
-  if (!password) return { score: 0, label: "", color: "bg-muted" };
+  if (!password) return { score: 0, label: "", color: "bg-muted", text: "text-muted-foreground" };
   let score = 0;
   if (password.length >= 6) score += 1;
   if (password.length >= 8) score += 1;
   if (/[0-9]/.test(password)) score += 1;
   if (/[A-Z]/.test(password) || /[^a-zA-Z0-9]/.test(password)) score += 1;
 
-  if (score === 1) return { score: 1, label: "Fraca", color: "bg-zinc-600", text: "text-zinc-400" };
-  if (score === 2) return { score: 2, label: "Média", color: "bg-zinc-400", text: "text-zinc-300" };
-  if (score === 3) return { score: 3, label: "Forte", color: "bg-zinc-200", text: "text-zinc-100" };
-  return { score: 4, label: "Excelente", color: "bg-white", text: "text-white" };
+  if (score === 1) return { score: 1, label: "Fraca", color: "bg-rose-500", text: "text-rose-400" };
+  if (score === 2) return { score: 2, label: "Média", color: "bg-amber-500", text: "text-amber-400" };
+  if (score === 3) return { score: 3, label: "Forte", color: "bg-emerald-500", text: "text-emerald-400" };
+  return { score: 4, label: "Excelente", color: "bg-emerald-400", text: "text-emerald-300" };
 }
 
 function AuthPage() {
@@ -663,7 +663,7 @@ function AuthPage() {
 
                 <Button
                   type="submit"
-                  className="h-12 w-full rounded-xl font-bold text-base bg-white text-black hover:bg-zinc-200 border-0 transition-all shadow-sm"
+                  className="h-12 w-full rounded-xl font-semibold text-base bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md hover-lift"
                   disabled={loading}
                 >
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -815,7 +815,7 @@ function AuthPage() {
 
                 <Button
                   type="submit"
-                  className="h-12 w-full rounded-xl font-bold text-base bg-white text-black hover:bg-zinc-200 border-0 transition-all shadow-sm"
+                  className="h-12 w-full rounded-xl font-semibold text-base bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md hover-lift"
                   disabled={loading}
                 >
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

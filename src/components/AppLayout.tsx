@@ -28,17 +28,37 @@ import {
 } from "lucide-react";
 import defaultOrdersSeed from "../../data/orders_default.json";
 
-const nav = [
-  { to: "/painel", label: "Painel Geral", icon: LayoutDashboard, badgeKey: null },
-  { to: "/pedidos", label: "Pedidos & PIX", icon: ShoppingBag, badgeKey: "orders" },
-  { to: "/clientes", label: "Clientes & Linhas", icon: Users, badgeKey: "clients" },
-  { to: "/cobrancas", label: "Cobranças", icon: Receipt, badgeKey: "invoices" },
-  { to: "/sigma", label: "Servidor Sigma", icon: Server, badgeKey: null },
-  { to: "/bot", label: "Robô & Auto-Atendimento", icon: Bot, badgeKey: null },
-  { to: "/whatsapp", label: "WhatsApp", icon: MessageCircle, badgeKey: null },
-  { to: "/pagamentos", label: "Pagamentos", icon: CreditCard, badgeKey: null },
-  { to: "/mensagens", label: "Mensagens", icon: Sparkles, badgeKey: null },
-  { to: "/configuracoes", label: "Configurações", icon: Settings, badgeKey: null },
+const navGroups = [
+  {
+    title: "Principal",
+    items: [
+      { to: "/painel", label: "Painel Geral", icon: LayoutDashboard, badgeKey: null },
+    ],
+  },
+  {
+    title: "Operação & Vendas",
+    items: [
+      { to: "/pedidos", label: "Pedidos & PIX", icon: ShoppingBag, badgeKey: "orders" },
+      { to: "/clientes", label: "Clientes & Linhas", icon: Users, badgeKey: "clients" },
+      { to: "/cobrancas", label: "Cobranças", icon: Receipt, badgeKey: "invoices" },
+    ],
+  },
+  {
+    title: "Automação & Robô",
+    items: [
+      { to: "/sigma", label: "Servidor Sigma", icon: Server, badgeKey: "sigma" },
+      { to: "/bot", label: "Robô WhatsApp", icon: Bot, badgeKey: null },
+      { to: "/whatsapp", label: "Conexão WhatsApp", icon: MessageCircle, badgeKey: "whatsapp" },
+    ],
+  },
+  {
+    title: "Configurações",
+    items: [
+      { to: "/pagamentos", label: "Formas de Pagamento", icon: CreditCard, badgeKey: null },
+      { to: "/mensagens", label: "Modelos de Mensagem", icon: Sparkles, badgeKey: null },
+      { to: "/configuracoes", label: "Ajustes Gerais", icon: Settings, badgeKey: null },
+    ],
+  },
 ] as const;
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -132,10 +152,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <SigmaLogo size="md" />
       <div className="leading-tight">
         <div className="flex items-center gap-1.5">
-          <span className="text-[15px] font-black tracking-tight text-foreground group-hover:text-white transition-colors">
+          <span className="text-[15px] font-black tracking-tight text-foreground group-hover:text-primary transition-colors">
             Painel Sigma
           </span>
-          <span className="rounded-md bg-white text-black px-1.5 py-0.5 text-[9px] font-black tracking-wider">
+          <span className="rounded-md bg-primary text-primary-foreground px-1.5 py-0.5 text-[9px] font-black tracking-wider shadow-sm">
             PRO
           </span>
         </div>
@@ -152,23 +172,23 @@ export function AppLayout({ children }: { children: ReactNode }) {
       className={cn(
         "group flex items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-xs font-medium transition-all",
         isWaConnected
-          ? "border-white/20 bg-white/5 text-white hover:bg-white/10"
-          : "border-white/10 bg-white/[0.02] text-zinc-400 hover:bg-white/5",
+          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15"
+          : "border-border bg-card/60 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
       )}
     >
       <div className="flex items-center gap-2">
         <span className="relative flex h-2 w-2">
           {isWaConnected && (
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
           )}
           <span
             className={cn(
               "relative inline-flex h-2 w-2 rounded-full",
-              isWaConnected ? "bg-white" : "bg-zinc-600",
+              isWaConnected ? "bg-emerald-500" : "bg-zinc-400 dark:bg-zinc-600",
             )}
           />
         </span>
-        <span className="truncate">
+        <span className="truncate font-semibold">
           {isWaConnected ? "WhatsApp Online" : "WhatsApp Desconectado"}
         </span>
       </div>
@@ -177,64 +197,74 @@ export function AppLayout({ children }: { children: ReactNode }) {
   );
 
   const links = (
-    <nav className="flex flex-col gap-1">
-      <p className="mb-1.5 px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70">
-        Navegação Principal
-      </p>
-      {nav.map(({ to, label, icon: Icon, badgeKey }) => {
-        const active = pathname === to || pathname.startsWith(to + "/");
-        let badgeCount: number | null = null;
-        let isOverdue = false;
-        if (badgeKey === "orders" && (counts?.pendingOrders ?? 0) > 0) {
-          badgeCount = counts?.pendingOrders ?? null;
-          isOverdue = true;
-        } else if (badgeKey === "invoices" && (counts?.overdueInvoices ?? 0) > 0) {
-          badgeCount = counts?.overdueInvoices ?? null;
-          isOverdue = true;
-        } else if (badgeKey === "sigma" && (counts?.sigmaClients ?? 0) > 0) {
-          badgeCount = counts?.sigmaClients ?? null;
-        }
+    <nav className="flex flex-col gap-4">
+      {navGroups.map((group) => (
+        <div key={group.title} className="space-y-1">
+          <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+            {group.title}
+          </p>
+          {group.items.map(({ to, label, icon: Icon, badgeKey }) => {
+            const active = pathname === to || pathname.startsWith(to + "/");
+            let badgeCount: number | null = null;
+            let badgeType: "orders" | "overdue" | "clients" | "whatsapp" | null = null;
 
-        return (
-          <Link
-            key={to}
-            to={to}
-            className={cn(
-              "group flex items-center gap-3 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all duration-200",
-              active
-                ? "bg-white text-black font-bold shadow-sm"
-                : "text-zinc-400 hover:bg-white/10 hover:text-white",
-            )}
-          >
-            <Icon
-              className={cn(
-                "h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110",
-                active ? "text-black" : "text-zinc-400 group-hover:text-white",
-              )}
-            />
-            <span className="flex-1 truncate">{label}</span>
-            {badgeCount !== null && (
-              <span
+            if (badgeKey === "orders" && (counts?.pendingOrders ?? 0) > 0) {
+              badgeCount = counts?.pendingOrders ?? null;
+              badgeType = "orders";
+            } else if (badgeKey === "invoices" && (counts?.overdueInvoices ?? 0) > 0) {
+              badgeCount = counts?.overdueInvoices ?? null;
+              badgeType = "overdue";
+            } else if (badgeKey === "clients" && (counts?.clients ?? 0) > 0) {
+              badgeCount = counts?.clients ?? null;
+              badgeType = "clients";
+            }
+
+            return (
+              <Link
+                key={to}
+                to={to}
                 className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-black tracking-wide",
-                  badgeKey === "orders"
-                    ? "bg-white text-black font-extrabold border border-white"
-                    : isOverdue
-                    ? "bg-zinc-800 text-white font-bold border border-white/20"
-                    : active
-                    ? "bg-black text-white font-bold"
-                    : "bg-white/10 text-white",
+                  "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
+                  active
+                    ? "bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20"
+                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
                 )}
               >
-                {badgeCount}
-              </span>
-            )}
-            {active && badgeCount === null && (
-              <span className="h-1.5 w-1.5 rounded-full bg-black" />
-            )}
-          </Link>
-        );
-      })}
+                <Icon
+                  className={cn(
+                    "h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110",
+                    active ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground",
+                  )}
+                />
+                <span className="flex-1 truncate">{label}</span>
+                {badgeCount !== null && (
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide",
+                      badgeType === "orders"
+                        ? active
+                          ? "bg-amber-400 text-black font-black"
+                          : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                        : badgeType === "overdue"
+                        ? active
+                          ? "bg-rose-400 text-black font-black"
+                          : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
+                        : active
+                        ? "bg-white/20 text-white"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {badgeCount}
+                  </span>
+                )}
+                {badgeKey === "whatsapp" && isWaConnected && (
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" title="Conectado" />
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   );
 
@@ -244,7 +274,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       <div className="rounded-2xl border border-border/60 bg-card/70 p-3 shadow-sm backdrop-blur-sm">
         <div className="flex items-center gap-2.5">
-          <div className="grid h-8 w-8 place-items-center rounded-xl bg-white text-xs font-bold text-black ring-1 ring-white/20">
+          <div className="grid h-8 w-8 place-items-center rounded-xl bg-primary text-xs font-bold text-primary-foreground ring-1 ring-primary/25 shadow-sm">
             {(email?.[0] ?? "U").toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
