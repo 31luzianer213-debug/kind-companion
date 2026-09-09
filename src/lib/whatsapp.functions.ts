@@ -87,7 +87,7 @@ export const getWhatsAppStatus = createServerFn({ method: "POST" })
 /** Cria/abre a sessão e devolve o QR Code, já vinculando o Webhook automaticamente na Evolution API. */
 export const connectWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input?: { origin?: string }) => input)
+  .inputValidator((input?: { origin?: string; forceNew?: boolean }) => input)
   .handler(async ({ data, context }) => {
     const { connectInstance } = await import("./evolution.server");
     const { getRequest } = await import("@tanstack/react-start/server");
@@ -105,7 +105,7 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
     }
 
     try {
-      const result = await connectInstance(context.userId, publicUrl);
+      const result = await connectInstance(context.userId, publicUrl, data?.forceNew ?? true);
       return {
         ok: true as const,
         state: result.state,

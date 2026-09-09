@@ -90,22 +90,26 @@ function WhatsAppPage() {
     if (isConnected) setQr(null);
   }, [isConnected]);
 
-  async function gerarQr() {
+  async function gerarQr(forceNew = true) {
     setBusy(true);
+    setQr(null);
     try {
       const result = await connect({
-        data: { origin: typeof window !== "undefined" ? window.location.origin : undefined },
+        data: {
+          origin: typeof window !== "undefined" ? window.location.origin : undefined,
+          forceNew,
+        },
       });
       if (!result.ok) {
         toast.error(result.error ?? "Não foi possível gerar o QR Code.");
         return;
       }
-      if (result.state === "open") {
+      if (result.qr) {
+        setQr(result.qr);
+        toast.info("Nova instância limpa criada! Escaneie o QR Code no seu celular.");
+      } else if (result.state === "open" && !forceNew) {
         toast.success("Seu WhatsApp já está conectado!");
         setQr(null);
-      } else if (result.qr) {
-        setQr(result.qr);
-        toast.info("Escaneie o QR Code no seu WhatsApp.");
       } else {
         toast.error("A sessão não devolveu um QR Code. Tente novamente.");
       }
@@ -120,7 +124,7 @@ function WhatsAppPage() {
     try {
       const result = await disconnect({});
       if (result.ok) {
-        toast.success("WhatsApp desconectado e instância removida com sucesso.");
+        toast.success("WhatsApp desconectado e instância removida completamente da Evolution API.");
         setQr(null);
       } else {
         toast.error(result.error ?? "Não foi possível desconectar.");
@@ -223,16 +227,29 @@ function WhatsAppPage() {
 
               <div className="flex items-center gap-2">
                 {isConnected ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={desconectar}
-                    disabled={busy}
-                    className="text-rose-400 hover:text-rose-300 gap-1.5 border-rose-500/30 hover:bg-rose-500/10"
-                  >
-                    <Unplug className="size-3.5" />
-                    Desconectar
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => gerarQr(true)}
+                      disabled={busy}
+                      className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                      title="Remove a conexão atual e gera um novo QR Code"
+                    >
+                      <QrCode className="size-3.5" />
+                      Trocar Aparelho
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={desconectar}
+                      disabled={busy}
+                      className="text-rose-400 hover:text-rose-300 gap-1.5 border-rose-500/30 hover:bg-rose-500/10"
+                    >
+                      <Unplug className="size-3.5" />
+                      Desconectar e Remover
+                    </Button>
+                  </div>
                 ) : (
                   <>
                     {(qr || state === "connecting" || state === "close") && (
@@ -250,12 +267,12 @@ function WhatsAppPage() {
                     )}
                     <Button
                       size="sm"
-                      onClick={gerarQr}
+                      onClick={() => gerarQr(true)}
                       disabled={busy}
                       className="gap-1.5 bg-primary text-primary-foreground font-medium"
                     >
                       {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Plug className="size-3.5" />}
-                      {qr ? "Atualizar QR Code" : "Conectar WhatsApp"}
+                      {qr ? "Gerar Novo QR Code" : "Conectar WhatsApp"}
                     </Button>
                   </>
                 )}

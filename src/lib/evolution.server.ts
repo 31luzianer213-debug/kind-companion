@@ -79,19 +79,24 @@ export async function ensureInstanceWebhook(userId: string, publicAppUrl: string
   }
 }
 
-/** Cria a instância do zero ou devolve o QR Code limpo para leitura. */
-export async function connectInstance(userId: string, publicAppUrl?: string) {
+/** Cria uma instância 100% nova do zero e devolve o QR Code limpo para leitura. */
+export async function connectInstance(userId: string, publicAppUrl?: string, forceNew = true) {
   const { base, key, instance } = evolutionConfig(userId);
-  const state = await fetchState(userId);
 
-  if (state === "open") {
-    return { state: "open" as const, qr: null };
+  // Se forceNew for true (padrão ao clicar para gerar QR Code), remove qualquer resquício ou instância anterior
+  if (forceNew) {
+    try {
+      await call(`/instance/logout/${instance}`, { method: "DELETE", base, key }).catch(() => {});
+    } catch {}
+    try {
+      await call(`/instance/delete/${instance}`, { method: "DELETE", base, key }).catch(() => {});
+    } catch {}
+  } else {
+    const state = await fetchState(userId);
+    if (state === "open") {
+      return { state: "open" as const, qr: null };
+    }
   }
-
-  // Sempre que for conectar e não estiver aberto, remove qualquer resquício antigo na VPS para criar do zero
-  try {
-    await call(`/instance/delete/${instance}`, { method: "DELETE", base, key });
-  } catch {}
 
   // Cria a instância 100% nova do zero
   const created = await call(`/instance/create`, {
@@ -140,7 +145,7 @@ export async function deleteInstance(userId: string) {
     await call(`/instance/logout/${instance}`, { method: "DELETE", base, key }).catch(() => {});
   } catch {}
   try {
-    await call(`/instance/delete/${instance}`, { method: "DELETE", base, key });
+    await call(`/instance/delete/${instance}`, { method: "DELETE", base, key }).catch(() => {});
   } catch {}
   lastWebhookSync.delete(userId);
   return true;
