@@ -38,26 +38,12 @@ export function isValidBrPhone(raw: string) {
 }
 
 export async function sendWhatsapp(to: string, text: string, instanceOverride?: string) {
-  // 1. Prioriza envio direto pelo Baileys nativo
-  try {
-    const { getBaileysSocket, sendBaileysText, getBaileysState } = await import("./baileys.server");
-    const baileysState = getBaileysState();
-    if (getBaileysSocket() && baileysState.status === "open") {
-      const baileysRes = await sendBaileysText(to, text);
-      if (baileysRes.ok) {
-        return { ok: true as const };
-      }
-    }
-  } catch (baileysErr: any) {
-    console.warn("[sendWhatsapp] Aviso Baileys, tentando fallback Evolution:", baileysErr.message);
-  }
-
   const base = pickEnv("EVOLUTION_API_URL", "https://cobrancas-whatsapp.shop");
   const instance = instanceOverride || pickEnv("EVOLUTION_INSTANCE", FALLBACK_EVOLUTION_INSTANCE);
   const apiKey = pickEnv("EVOLUTION_API_KEY", "evolutionApiGlobalTokenSecure2026");
 
   if (!base || !instance || !apiKey) {
-    return { ok: false as const, error: "WhatsApp desconectado (Baileys e Evolution inativos)" };
+    return { ok: false as const, error: "WhatsApp desconectado na VPS" };
   }
 
   const normalized = normalizePhone(to);

@@ -8,6 +8,8 @@ import { processBotMessage, loadBotConfig } from "./bot.server";
 import {
   sendWhatsAppText,
   sendWhatsAppMedia,
+  sendWhatsAppButtons,
+  sendWhatsAppList,
   normalizePhone,
   getEvolutionConfig,
 } from "./whatsapp-connection.server";
@@ -309,9 +311,42 @@ export async function processIncomingWhatsAppEvent(
     return { handled: true, action: "no_reply_needed" };
   }
 
-  // 8. Envia mensagem de texto oficial para destinationJid com options completas da Evolution API v2
-  if (botResult.reply) {
-    console.log(`[WhatsApp Engine] 📤 Enviando resposta para ${destinationJid} (${customerDigits})...`);
+  // 8. Envia mensagem interativa (Botões ou Lista) ou mensagem de texto oficial
+  if (botResult.interactive) {
+    if (botResult.interactive.type === "buttons") {
+      console.log(`[WhatsApp Engine] 🔘 Enviando botões interativos para ${destinationJid}...`);
+      const btns = botResult.interactive.buttons.map((b) => ({
+        id: b.id,
+        displayText: b.displayText,
+        type: (b.type === "url" ? "url" : "reply") as "reply" | "url",
+        url: b.url,
+      }));
+      await sendWhatsAppButtons(
+        destinationJid,
+        {
+          title: botResult.interactive.title,
+          description: botResult.reply,
+          footer: botResult.interactive.footer,
+          buttons: btns,
+        },
+        instance || undefined,
+      );
+    } else if (botResult.interactive.type === "list") {
+      console.log(`[WhatsApp Engine] 📋 Enviando lista interativa para ${destinationJid}...`);
+      await sendWhatsAppList(
+        destinationJid,
+        {
+          title: botResult.interactive.title,
+          description: botResult.reply,
+          buttonText: botResult.interactive.buttonText,
+          footerText: botResult.interactive.footerText,
+          sections: botResult.interactive.sections,
+        },
+        instance || undefined,
+      );
+    }
+  } else if (botResult.reply) {
+    console.log(`[WhatsApp Engine] 📤 Enviando resposta texto para ${destinationJid} (${customerDigits})...`);
     const sendRes = await sendWhatsAppText(destinationJid, botResult.reply, instance || undefined, key);
     if (!sendRes.ok) {
       console.warn(`[WhatsApp Engine] ⚠️ Aviso ao enviar texto:`, sendRes.error);

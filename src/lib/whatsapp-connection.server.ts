@@ -428,3 +428,136 @@ export async function sendWhatsAppMedia(
   }
 }
 
+/**
+ * Envia mensagem com Botões Interativos (Quick Reply, CTA Copy, CTA Url)
+ * suportados nativamente pelo Baileys na Evolution API v2.
+ */
+export async function sendWhatsAppButtons(
+  to: string,
+  data: {
+    title?: string;
+    description: string;
+    footer?: string;
+    buttons: Array<{
+      id: string;
+      displayText: string;
+      type?: "reply" | "url" | "call" | "copy";
+      copyCode?: string;
+      url?: string;
+    }>;
+  },
+  instanceOverride?: string,
+) {
+  const { defaultInstance } = getEvolutionConfig();
+  const instance = instanceOverride || defaultInstance;
+  const normalized = normalizePhone(to);
+
+  if (!normalized) {
+    return { ok: false as const, error: "Número inválido ou não informado." };
+  }
+
+  const formattedButtons = data.buttons.map((b) => {
+    if (b.type === "copy" || b.copyCode) {
+      return {
+        type: "cta_copy",
+        displayText: b.displayText,
+        copyCode: b.copyCode,
+      };
+    }
+    if (b.type === "url" || b.url) {
+      return {
+        type: "cta_url",
+        displayText: b.displayText,
+        url: b.url,
+      };
+    }
+    return {
+      type: "reply",
+      displayText: b.displayText,
+      id: b.id,
+    };
+  });
+
+  try {
+    const res = await evolutionRequest<any>(
+      `/message/sendButtons/${encodeURIComponent(instance)}`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          number: normalized,
+          title: data.title || "",
+          description: data.description,
+          footer: data.footer || "",
+          buttons: formattedButtons,
+        }),
+      },
+    );
+    return { ok: true as const, data: res };
+  } catch (error: any) {
+    // Fallback: se o aparelho do cliente não suportar botões nativos, envia texto com as opções
+    const fallbackText =
+      `${data.description}\n\n🔘 *Opções:*\n` +
+      data.buttons.map((b) => `👉 *${b.id}* - ${b.displayText}`).join("\n");
+    return await sendWhatsAppText(to, fallbackText, instance);
+  }
+}
+
+/**
+ * Envia mensagem com Lista Interativa de Opções (seções e itens)
+ * suportada nativamente pelo Baileys na Evolution API v2.
+ */
+export async function sendWhatsAppList(
+  to: string,
+  data: {
+    title?: string;
+    description: string;
+    buttonText?: string;
+    footerText?: string;
+    sections: Array<{
+      title: string;
+      rows: Array<{
+        rowId: string;
+        title: string;
+        description?: string;
+      }>;
+    }>;
+  },
+  instanceOverride?: string,
+) {
+  const { defaultInstance } = getEvolutionConfig();
+  const instance = instanceOverride || defaultInstance;
+  const normalized = normalizePhone(to);
+
+  if (!normalized) {
+    return { ok: false as const, error: "Número inválido ou não informado." };
+  }
+
+  try {
+    const res = await evolutionRequest<any>(
+      `/message/sendList/${encodeURIComponent(instance)}`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          number: normalized,
+          title: data.title || "Opções Disponíveis",
+          description: data.description,
+          buttonText: data.buttonText || "📋 Abrir Opções",
+          footerText: data.footerText || "",
+          sections: data.sections,
+        }),
+      },
+    );
+    return { ok: true as const, data: res };
+  } catch (error: any) {
+    // Fallback para texto
+    let fallbackText = data.description;
+    for (const sec of data.sections) {
+      fallbackText += `\n\n📌 *${sec.title}*\n`;
+      fallbackText += sec.rows
+        .map((r) => `👉 *${r.rowId}* - ${r.title}${r.description ? ` (${r.description})` : ""}`)
+        .join("\n");
+    }
+    return await sendWhatsAppText(to, fallbackText, instance);
+  }
+}
+

@@ -425,4 +425,103 @@ export const setEvolutionWebhookUrl = createServerFn({ method: "POST" })
     return { ok: true, raw: res as unknown as Record<string, JsonValue> };
   });
 
+export const sendEvolutionTestButtons = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        instance: z.string().min(1),
+        number: z.string().min(8).max(60),
+        text: z.string().min(1).max(2000).default("Escolha uma das opções abaixo:"),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { sendWhatsAppButtons, normalizePhone } = await import("./whatsapp-connection.server");
+    const res = await sendWhatsAppButtons(
+      data.number,
+      {
+        title: "⚡ Teste de Botões Clicáveis",
+        description: data.text,
+        footer: "IPTV Manager • Auto-Atendimento",
+        buttons: [
+          { id: "1", displayText: "1️⃣ Gerar Teste Grátis", type: "reply" },
+          { id: "2", displayText: "2️⃣ Ver Planos", type: "reply" },
+          { id: "6", displayText: "3️⃣ Suporte Humano", type: "reply" },
+        ],
+      },
+      data.instance,
+    );
+    if (!res.ok) throw new Error(res.error);
+    const normalized = normalizePhone(data.number);
+    try {
+      if (context.userId) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.from("message_logs").insert({
+          user_id: context.userId,
+          phone: normalized,
+          body: `[Botões] ${data.text}`,
+          status: "sent",
+        });
+      }
+    } catch {}
+    return { ok: true };
+  });
+
+export const sendEvolutionTestList = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        instance: z.string().min(1),
+        number: z.string().min(8).max(60),
+        text: z.string().min(1).max(2000).default("Selecione um item na lista de opções:"),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { sendWhatsAppList, normalizePhone } = await import("./whatsapp-connection.server");
+    const res = await sendWhatsAppList(
+      data.number,
+      {
+        title: "📋 Lista de Opções IPTV",
+        description: data.text,
+        buttonText: "📋 Abrir Lista de Opções",
+        footerText: "IPTV Manager 24h",
+        sections: [
+          {
+            title: "Opções Rápidas",
+            rows: [
+              { rowId: "1", title: "1️⃣ Gerar Teste Grátis", description: "Acesso de 4h imediato" },
+              { rowId: "2", title: "2️⃣ Renovar Assinatura", description: "PIX Automático" },
+              { rowId: "3", title: "3️⃣ Comprar Planos", description: "Mensal, Trimestral e Anual" },
+            ],
+          },
+          {
+            title: "Outros",
+            rows: [
+              { rowId: "4", title: "📲 Baixar Aplicativos", description: "Android, TV Box, PC, iOS" },
+              { rowId: "6", title: "👨‍💼 Falar com Atendente", description: "Suporte Humano" },
+            ],
+          },
+        ],
+      },
+      data.instance,
+    );
+    if (!res.ok) throw new Error(res.error);
+    const normalized = normalizePhone(data.number);
+    try {
+      if (context.userId) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.from("message_logs").insert({
+          user_id: context.userId,
+          phone: normalized,
+          body: `[Lista] ${data.text}`,
+          status: "sent",
+        });
+      }
+    } catch {}
+    return { ok: true };
+  });
+
 
