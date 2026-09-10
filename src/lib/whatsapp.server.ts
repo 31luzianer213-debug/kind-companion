@@ -25,7 +25,7 @@ export function isValidBrPhone(raw: string) {
 /**
  * Envia mensagem pelo WhatsApp usando o motor Baileys nativo.
  */
-export async function sendWhatsapp(to: string, text: string) {
+export async function sendWhatsapp(to: string, text: string, instance?: string) {
   const normalized = normalizePhone(to);
   if (!normalized) {
     return {
@@ -38,7 +38,7 @@ export async function sendWhatsapp(to: string, text: string) {
     const response = await fetch(`${BAILEYS_URL}/api/send-message`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to: normalized, text }),
+      body: JSON.stringify({ to: normalized, text, instance }),
       signal: AbortSignal.timeout(10000),
     });
 

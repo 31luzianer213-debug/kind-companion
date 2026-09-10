@@ -40,12 +40,13 @@ export async function findInstanceToken(_instanceName?: string) {
   return "baileys_token";
 }
 
-export async function fetchConnectionState(_instanceName?: string): Promise<{
+export async function fetchConnectionState(instanceName?: string): Promise<{
   state: ConnectionState;
   raw: any;
 }> {
   try {
-    const res = await fetch(`${BAILEYS_URL}/api/status`, { signal: AbortSignal.timeout(3000) });
+    const q = instanceName ? `?instance=${encodeURIComponent(instanceName)}` : "";
+    const res = await fetch(`${BAILEYS_URL}/api/status${q}`, { signal: AbortSignal.timeout(3000) });
     if (res.ok) {
       const data = await res.json();
       const state: ConnectionState = data.status || "close";
@@ -64,7 +65,7 @@ export async function ensureAndConnectInstance(
     const res = await fetch(`${BAILEYS_URL}/api/connect`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode, phone }),
+      body: JSON.stringify({ instance: instanceName, mode, phone }),
       signal: AbortSignal.timeout(5000),
     });
     if (res.ok) {
@@ -114,7 +115,7 @@ export function normalizePhone(raw: string) {
   return digits;
 }
 
-export async function sendWhatsAppText(to: string, text: string) {
+export async function sendWhatsAppText(to: string, text: string, instance?: string, _quotedKey?: any) {
   const normalized = normalizePhone(to);
   if (!normalized) {
     return { ok: false as const, error: "Número inválido ou não informado." };
@@ -124,7 +125,7 @@ export async function sendWhatsAppText(to: string, text: string) {
     const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to: normalized, text }),
+      body: JSON.stringify({ to: normalized, text, instance }),
       signal: AbortSignal.timeout(10000),
     });
     const data = await res.json().catch(() => ({}));
@@ -152,6 +153,7 @@ export async function sendWhatsAppButtons(
     }>;
     footer?: string;
   },
+  instance?: string,
 ) {
   const normalized = normalizePhone(to);
   if (!normalized) return { ok: false as const, error: "Número inválido." };
@@ -192,16 +194,17 @@ export async function sendWhatsAppButtons(
         footer: options.footer || "IPTV Bot",
         type: "buttons",
         buttons: formattedButtons,
+        instance,
       }),
       signal: AbortSignal.timeout(10000),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.ok === false) {
-      return await sendWhatsAppText(normalized, options.description);
+      return await sendWhatsAppText(normalized, options.description, instance);
     }
     return { ok: true as const, data };
   } catch {
-    return await sendWhatsAppText(normalized, options.description);
+    return await sendWhatsAppText(normalized, options.description, instance);
   }
 }
 
@@ -221,6 +224,7 @@ export async function sendWhatsAppList(
       }>;
     }>;
   },
+  instance?: string,
 ) {
   const normalized = normalizePhone(to);
   if (!normalized) return { ok: false as const, error: "Número inválido." };
@@ -237,16 +241,17 @@ export async function sendWhatsAppList(
         footer: options.footerText || "Selecione uma opção",
         type: "list",
         sections: options.sections,
+        instance,
       }),
       signal: AbortSignal.timeout(10000),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.ok === false) {
-      return await sendWhatsAppText(normalized, options.description);
+      return await sendWhatsAppText(normalized, options.description, instance);
     }
     return { ok: true as const, data };
   } catch {
-    return await sendWhatsAppText(normalized, options.description);
+    return await sendWhatsAppText(normalized, options.description, instance);
   }
 }
 
@@ -258,6 +263,7 @@ export async function sendWhatsAppMedia(
     mimetype?: string;
     fileName?: string;
   },
+  instance?: string,
 ) {
   const normalized = normalizePhone(to);
   if (!normalized) return { ok: false as const, error: "Número inválido." };
@@ -275,6 +281,7 @@ export async function sendWhatsAppMedia(
           caption: mediaOptions.caption || "",
           fileName: mediaOptions.fileName || "qrcode-pix.png",
         },
+        instance,
       }),
       signal: AbortSignal.timeout(10000),
     });

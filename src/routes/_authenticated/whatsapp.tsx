@@ -73,6 +73,7 @@ function statusBadge(status: string) {
 
 function WhatsAppPage() {
   const qc = useQueryClient();
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [connectTab, setConnectTab] = useState<"qr" | "pairing">("qr");
   const [pairingPhone, setPairingPhone] = useState("");
   const [loadingAction, setLoadingAction] = useState(false);
@@ -86,22 +87,30 @@ function WhatsAppPage() {
   const [testText, setTestText] = useState("Teste IPTV Manager — WhatsApp conectado com Baileys nativo!");
   const [sendingTest, setSendingTest] = useState(false);
 
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) setCurrentUser(data.user);
+    });
+  }, []);
+
+  const instanceId = currentUser?.id || "default";
+
   // Query do Status da Conexão Baileys com detecção dupla (servidor + local direto)
   const baileysQuery = useQuery({
-    queryKey: ["baileys", "status"],
+    queryKey: ["baileys", "status", instanceId],
     queryFn: async () => {
       let s: any = null;
 
       // 1. Consulta via Server Function
       try {
-        const res = await getBaileysStatus();
+        const res = await getBaileysStatus({ data: { instance: instanceId } });
         if (res?.state) s = res.state;
       } catch {}
 
       // 2. Se não encontrou QR e está no navegador, consulta direto o daemon local
       if (!s?.qrCode && typeof window !== "undefined") {
         try {
-          const direct = await fetch("http://localhost:3001/api/status", {
+          const direct = await fetch(`http://localhost:3001/api/status?instance=${encodeURIComponent(instanceId)}`, {
             signal: AbortSignal.timeout(1500),
           });
           if (direct.ok) {
@@ -175,7 +184,7 @@ function WhatsAppPage() {
       const direct = await fetch("http://localhost:3001/api/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "qr", force }),
+        body: JSON.stringify({ instance: instanceId, mode: "qr", force }),
         signal: AbortSignal.timeout(7000),
       });
       if (direct.ok) {
@@ -193,7 +202,7 @@ function WhatsAppPage() {
 
     // 2. Fallback: via Server Function
     try {
-      const res = await connectBaileys({ data: { mode: "qr", force } });
+      const res = await connectBaileys({ data: { instance: instanceId, mode: "qr", force } });
       if (res?.state?.qrCode) {
         setLocalQr(res.state.qrCode);
         setIsRequestingQr(false);
@@ -224,7 +233,7 @@ function WhatsAppPage() {
       const direct = await fetch("http://localhost:3001/api/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "pairing", phone: clean }),
+        body: JSON.stringify({ instance: instanceId, mode: "pairing", phone: clean }),
         signal: AbortSignal.timeout(8000),
       });
       if (direct.ok) {
@@ -241,7 +250,7 @@ function WhatsAppPage() {
 
     // 2. Fallback: via Server Function
     try {
-      const res = await connectBaileys({ data: { mode: "pairing", phone: clean } });
+      const res = await connectBaileys({ data: { instance: instanceId, mode: "pairing", phone: clean } });
       if (res?.state?.pairingCode) {
         setLocalPairingCode(res.state.pairingCode);
         toast.success("Código de pareamento gerado!", { id: "pairing-toast" });
@@ -266,10 +275,12 @@ function WhatsAppPage() {
       try {
         await fetch("http://localhost:3001/api/logout", {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ instance: instanceId }),
           signal: AbortSignal.timeout(3000),
         });
       } catch {}
-      await disconnectBaileys();
+      await disconnectBaileys({ data: { instance: instanceId } });
       toast.success("WhatsApp desconectado.");
       qc.invalidateQueries({ queryKey: ["baileys"] });
     } catch (err: any) {
@@ -300,7 +311,7 @@ function WhatsAppPage() {
         const direct = await fetch("http://localhost:3001/api/send-test", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ to: cleanNum, text: testText, type }),
+          body: JSON.stringify({ instance: instanceId, to: cleanNum, text: testText, type }),
           signal: AbortSignal.timeout(6000),
         });
         if (direct.ok) sent = true;
@@ -309,6 +320,7 @@ function WhatsAppPage() {
       if (!sent) {
         await sendBaileysTest({
           data: {
+            instance: instanceId,
             to: cleanNum,
             text: testText,
             type,

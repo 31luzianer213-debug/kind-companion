@@ -23,7 +23,11 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
         }
 
         const url = new URL(request.url);
-        const queryUserId = url.searchParams.get("userId") || url.searchParams.get("user_id");
+        const queryUserId =
+          url.searchParams.get("userId") ||
+          url.searchParams.get("user_id") ||
+          payload?.instance ||
+          payload?.data?.instance;
 
         try {
           const result = await processIncomingWhatsAppEvent(payload, queryUserId);

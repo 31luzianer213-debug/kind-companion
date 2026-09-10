@@ -3,17 +3,23 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const BAILEYS_API = process.env.BAILEYS_API_URL || "http://localhost:3001";
 
-async function readLocalStatus() {
+async function readLocalStatus(instance = "default") {
   try {
     const fs = await import("node:fs");
     const path = await import("node:path");
-    const statusFile = path.resolve(process.cwd(), "data", "baileys_status.json");
-    if (fs.existsSync(statusFile)) {
-      const data = fs.readFileSync(statusFile, "utf8");
+    const instFile = path.resolve(process.cwd(), "data", `baileys_status_${instance}.json`);
+    if (fs.existsSync(instFile)) {
+      const data = fs.readFileSync(instFile, "utf8");
+      return JSON.parse(data);
+    }
+    const defaultFile = path.resolve(process.cwd(), "data", "baileys_status.json");
+    if (instance === "default" && fs.existsSync(defaultFile)) {
+      const data = fs.readFileSync(defaultFile, "utf8");
       return JSON.parse(data);
     }
   } catch {}
   return {
+    instance,
     status: "close",
     mode: "qr",
     qrCode: null,
@@ -25,13 +31,17 @@ async function readLocalStatus() {
 }
 
 /**
- * Consulta o status em tempo real da conexão Baileys nativa.
+ * Consulta o status em tempo real da conexão Baileys de um usuário/instância.
  */
 export const getBaileysStatus = createServerFn({ method: "POST" })
-  .handler(async () => {
+  .inputValidator((input?: { instance?: string }) => input)
+  .handler(async ({ data }) => {
+    const instance = data?.instance || "default";
+
     // 1. Tenta buscar via API HTTP local do daemon
     try {
-      const res = await fetch(`${BAILEYS_API}/api/status`, { signal: AbortSignal.timeout(3000) });
+      const q = `?instance=${encodeURIComponent(instance)}`;
+      const res = await fetch(`${BAILEYS_API}/api/status${q}`, { signal: AbortSignal.timeout(3000) });
       if (res.ok) {
         const state = await res.json();
         return { ok: true as const, state };
@@ -39,27 +49,30 @@ export const getBaileysStatus = createServerFn({ method: "POST" })
     } catch {}
 
     // 2. Fallback: lê arquivo de status compartilhado
-    const state = await readLocalStatus();
+    const state = await readLocalStatus(instance);
     return { ok: true as const, state };
   });
 
 /**
- * Inicia a conexão Baileys via QR Code ou Código de Pareamento.
+ * Inicia a conexão Baileys via QR Code ou Código de Pareamento para a instância do usuário.
  */
 export const connectBaileys = createServerFn({ method: "POST" })
   .inputValidator(
     (input: {
+      instance?: string;
       mode?: "qr" | "pairing";
       phone?: string;
       force?: boolean;
     }) => input,
   )
   .handler(async ({ data }) => {
+    const instance = data?.instance || "default";
     try {
       const res = await fetch(`${BAILEYS_API}/api/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          instance,
           mode: data?.mode || "qr",
           phone: data?.phone,
           force: data?.force,
@@ -74,18 +87,22 @@ export const connectBaileys = createServerFn({ method: "POST" })
 
     // Aguarda breve intervalo e lê arquivo de status
     await new Promise((r) => setTimeout(r, 600));
-    const local = await readLocalStatus();
+    const local = await readLocalStatus(instance);
     return { ok: true as const, state: local };
   });
 
 /**
- * Desconecta e limpa a sessão Baileys.
+ * Desconecta e limpa a sessão Baileys da instância do usuário.
  */
 export const disconnectBaileys = createServerFn({ method: "POST" })
-  .handler(async () => {
+  .inputValidator((input?: { instance?: string }) => input)
+  .handler(async ({ data }) => {
+    const instance = data?.instance || "default";
     try {
       await fetch(`${BAILEYS_API}/api/logout`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instance }),
         signal: AbortSignal.timeout(5000),
       });
     } catch {}
@@ -100,17 +117,20 @@ export const sendBaileysTest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
     (input: {
+      instance?: string;
       to: string;
       text?: string;
       type?: "text" | "buttons" | "list" | "pix_copy";
     }) => input,
   )
   .handler(async ({ data }) => {
+    const instance = data.instance || "default";
     try {
       const res = await fetch(`${BAILEYS_API}/api/send-test`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          instance,
           to: data.to,
           text: data.text,
           type: data.type || "text",
