@@ -1753,13 +1753,11 @@ export async function pollAndProcessWhatsAppMessages(userId?: string): Promise<{
 
     globalHandledMessageIds.add(msgId);
 
-    // Evita duplicatas: se já respondeu para este telefone há menos de 4 segundos (ex: LID + s.whatsapp.net simultâneos)
-    const lastRepliedAt = recentPhoneReplies.get(realPhone) ?? 0;
-    if (now - lastRepliedAt < 4000) {
-      console.log(`[Bot Auto-Poll] 🛡️ Ignorando duplicata para ${realPhone} (respondido há ${now - lastRepliedAt}ms)`);
+    const { isDuplicateMessage } = await import("./whatsapp-engine.server");
+    if (isDuplicateMessage(msgId, realPhone)) {
+      console.log(`[Bot Auto-Poll] 🛡️ Ignorando duplicata para ${realPhone} (ID: ${msgId})`);
       continue;
     }
-    recentPhoneReplies.set(realPhone, now);
 
     try {
       console.log(`[Bot Auto-Poll] 📩 Processando mensagem de ${realPhone} (${pushName}): "${incomingText}"`);

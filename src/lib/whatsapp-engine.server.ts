@@ -29,7 +29,7 @@ function pruneIdCache() {
 }
 
 /**
- * Verifica se a mensagem ou telefone já foi atendido recentemente (janela de 4 segundos).
+ * Verifica se a mensagem ou telefone já foi atendido recentemente (janela de 8 segundos).
  */
 export function isDuplicateMessage(messageId: string, phone: string): boolean {
   const now = Date.now();
@@ -43,11 +43,11 @@ export function isDuplicateMessage(messageId: string, phone: string): boolean {
     pruneIdCache();
   }
 
-  // 2. Checagem por debounce do número de telefone (4000ms)
+  // 2. Checagem por debounce do número de telefone (8000ms)
   if (phone) {
     const cleanPhone = normalizePhone(phone);
     const lastTimestamp = recentPhoneTimestamps.get(cleanPhone) ?? 0;
-    if (now - lastTimestamp < 4000) {
+    if (now - lastTimestamp < 8000) {
       return true;
     }
     recentPhoneTimestamps.set(cleanPhone, now);

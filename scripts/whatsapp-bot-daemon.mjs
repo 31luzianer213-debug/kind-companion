@@ -3,7 +3,7 @@ const require = createRequire(import.meta.url);
 
 const EVOLUTION_URL = process.env.EVOLUTION_API_URL || "https://cobrancas-whatsapp.shop";
 const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY || "evolutionApiGlobalTokenSecure2026";
-const LOCAL_API_URL = process.env.LOCAL_API_URL || "http://localhost:8080/api/public/hooks/whatsapp-bot";
+const LOCAL_API_URL = process.env.LOCAL_API_URL || "http://localhost:3000/api/public/hooks/whatsapp-bot";
 
 const processedMsgIds = new Set();
 const configuredInstances = new Set();
@@ -165,7 +165,7 @@ async function forwardToLocalWebhook(instanceName, msg) {
 
   const lastTime = phoneCooldownMap.get(normalizedPhone) || 0;
   const now = Date.now();
-  if (now - lastTime < 4000) {
+  if (now - lastTime < 8000) {
     console.log(`[Daemon] 🛡️ Ignorando duplicata para ${normalizedPhone} (recebida há ${now - lastTime}ms)`);
     return;
   }

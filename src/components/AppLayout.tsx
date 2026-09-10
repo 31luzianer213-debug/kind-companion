@@ -10,7 +10,6 @@ import { SigmaLogo } from "@/components/SigmaLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
 import { useSigmaAutoSync } from "@/lib/useSigmaAutoSync";
-import { useBotAutoPolling } from "@/lib/useBotAutoPolling";
 import {
   Users,
   Receipt,
@@ -71,9 +70,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   // Mantém os clientes e linhas do Painel Sigma automaticamente sincronizados em segundo plano
   useSigmaAutoSync();
-
-  // Mantém o Robô do WhatsApp respondendo novos clientes automaticamente em tempo real
-  useBotAutoPolling();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
