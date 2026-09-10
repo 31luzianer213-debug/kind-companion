@@ -1591,6 +1591,7 @@ export async function processBotMessage(
 
 // Conjunto de IDs de mensagens já tratadas pelo bot para evitar respostas duplicadas
 const globalHandledMessageIds = new Set<string>();
+const recentPhoneReplies = new Map<string, number>();
 let isInitialBotPoll = true;
 
 function unwrapRawBotMessage(m: any): any {
@@ -1751,6 +1752,14 @@ export async function pollAndProcessWhatsAppMessages(userId?: string): Promise<{
     const pushName = item.pushName || "Cliente";
 
     globalHandledMessageIds.add(msgId);
+
+    // Evita duplicatas: se já respondeu para este telefone há menos de 4 segundos (ex: LID + s.whatsapp.net simultâneos)
+    const lastRepliedAt = recentPhoneReplies.get(realPhone) ?? 0;
+    if (now - lastRepliedAt < 4000) {
+      console.log(`[Bot Auto-Poll] 🛡️ Ignorando duplicata para ${realPhone} (respondido há ${now - lastRepliedAt}ms)`);
+      continue;
+    }
+    recentPhoneReplies.set(realPhone, now);
 
     try {
       console.log(`[Bot Auto-Poll] 📩 Processando mensagem de ${realPhone} (${pushName}): "${incomingText}"`);

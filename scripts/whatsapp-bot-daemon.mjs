@@ -8,6 +8,7 @@ const LOCAL_API_URL = process.env.LOCAL_API_URL || "http://localhost:8080/api/pu
 const processedMsgIds = new Set();
 const configuredInstances = new Set();
 const lidToPhoneMap = new Map();
+const phoneCooldownMap = new Map();
 let isFirstRun = true;
 let lastHeartbeat = 0;
 let lastLidRefresh = 0;
@@ -160,6 +161,15 @@ async function forwardToLocalWebhook(instanceName, msg) {
 
   const cleanId = remoteJid.replace(/@.*$/, "").replace(/\D/g, "");
   const realPhone = lidToPhoneMap.get(cleanId) || lidToPhoneMap.get(remoteJid) || cleanId;
+  const normalizedPhone = realPhone.startsWith("55") ? realPhone : `55${realPhone}`;
+
+  const lastTime = phoneCooldownMap.get(normalizedPhone) || 0;
+  const now = Date.now();
+  if (now - lastTime < 4000) {
+    console.log(`[Daemon] 🛡️ Ignorando duplicata para ${normalizedPhone} (recebida há ${now - lastTime}ms)`);
+    return;
+  }
+  phoneCooldownMap.set(normalizedPhone, now);
 
   const pushName = msg.pushName || "Cliente";
 

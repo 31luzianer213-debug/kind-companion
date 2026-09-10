@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 const processedMessageCache = new Set<string>();
+const recentWebhookPhoneReplies = new Map<string, number>();
 function isMessageAlreadyHandled(id: string): boolean {
   if (!id) return false;
   if (processedMessageCache.has(id)) return true;
@@ -252,6 +253,14 @@ function unwrapMessage(m: any): any {
         if (!incomingText) {
           return Response.json({ ok: true, ignored: "empty_text" });
         }
+
+        const now = Date.now();
+        const lastWebhookTime = recentWebhookPhoneReplies.get(realPhone) ?? 0;
+        if (now - lastWebhookTime < 4000) {
+          console.log(`[WhatsApp Bot Webhook] 🛡️ Ignorando duplicata para ${realPhone} (recebida há ${now - lastWebhookTime}ms).`);
+          return Response.json({ ok: true, ignored: "phone_cooldown_duplicate" });
+        }
+        recentWebhookPhoneReplies.set(realPhone, now);
 
         console.log(`[WhatsApp Bot Webhook] Mensagem de ${realPhone} [Jid: ${targetSendJid}] (${pushName}): "${incomingText}"`);
 
