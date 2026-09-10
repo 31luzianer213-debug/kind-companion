@@ -6,6 +6,8 @@ import {
   ensureAndConnectEvolution,
   getEvolutionConfigStatus,
   getEvolutionConnectionState,
+  getEvolutionWebhook,
+  saveEvolutionWebhook,
   logoutEvolutionInstance,
   restartEvolutionInstance,
   sendEvolutionTestMessage,
@@ -31,6 +33,9 @@ import {
   AlertCircle,
   Loader2,
   ShieldCheck,
+  Globe,
+  Terminal,
+  Zap,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/whatsapp")({
@@ -89,6 +94,8 @@ function WhatsAppPage() {
     "🚀 *Mensagem de Teste do IPTV Manager!*\n\nSeu WhatsApp está 100% conectado e integrado ao Painel Sigma e Cobranças automáticas. ✅",
   );
   const [sendingTest, setSendingTest] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [savingWebhook, setSavingWebhook] = useState(false);
 
   // Carrega status da configuração da Evolution
   const config = useQuery({
@@ -96,6 +103,39 @@ function WhatsAppPage() {
     queryFn: () => getEvolutionConfigStatus(),
   });
   const instance = config.data?.defaultInstance ?? "";
+
+  // Consulta se o webhook já está configurado na VPS
+  const webhookQuery = useQuery({
+    queryKey: ["evolution", "webhook", instance],
+    queryFn: () => getEvolutionWebhook(),
+    enabled: !!instance,
+  });
+
+  useEffect(() => {
+    if (webhookQuery.data?.webhook?.url) {
+      setWebhookUrl(webhookQuery.data.webhook.url);
+    } else if (typeof window !== "undefined" && !webhookUrl) {
+      setWebhookUrl(`${window.location.origin}/api/public/hooks/whatsapp-bot`);
+    }
+  }, [webhookQuery.data]);
+
+  async function handleSaveWebhook(e: React.FormEvent) {
+    e.preventDefault();
+    if (!webhookUrl.trim()) {
+      toast.error("Informe a URL do Webhook.");
+      return;
+    }
+    setSavingWebhook(true);
+    try {
+      await saveEvolutionWebhook({ data: { webhookUrl: webhookUrl.trim() } });
+      toast.success("Webhook configurado e ativado com sucesso na VPS!");
+      qc.invalidateQueries({ queryKey: ["evolution", "webhook"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao salvar webhook");
+    } finally {
+      setSavingWebhook(false);
+    }
+  }
 
   // Consulta o estado da conexão em tempo real (2.5s se tiver QR aberto, 6s em repouso)
   const connState = useQuery({
@@ -443,6 +483,94 @@ function WhatsAppPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Card de Configuração do Webhook 24h & Modo Contínuo */}
+      <Card className="surface-card border-border/60">
+        <CardHeader className="pb-3 border-b border-border/50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Globe className="size-5 text-primary" />
+                Funcionamento 24h & Webhook na Nuvem
+              </CardTitle>
+              <CardDescription>
+                Configure para o robô responder automaticamente mesmo com o computador ou navegador desligados.
+              </CardDescription>
+            </div>
+            <Badge
+              variant="outline"
+              className={
+                webhookQuery.data?.webhook?.enabled
+                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 font-mono text-xs"
+                  : "bg-amber-500/15 text-amber-400 border-amber-500/30 font-mono text-xs"
+              }
+            >
+              {webhookQuery.data?.webhook?.enabled ? "Webhook 24h Ativo na VPS" : "Webhook VPS Desativado"}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4 space-y-4 text-xs">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-2.5">
+              <p className="font-semibold text-foreground flex items-center gap-1.5">
+                <Globe className="size-4 text-sky-400" />
+                Opção 1: Webhook Nuvem 24h (Lovable Publicado ou Domínio Próprio)
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                Ao clicar em <strong>Publish</strong> no Lovable ou configurar seu domínio, informe o link do Webhook abaixo e ative na VPS. Assim, a Evolution API entrega mensagens direto no servidor 24 horas por dia!
+              </p>
+              <form onSubmit={handleSaveWebhook} className="space-y-2 pt-1">
+                <Input
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  placeholder="https://seu-dominio.com/api/public/hooks/whatsapp-bot"
+                  className="rounded-xl font-mono text-xs"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={savingWebhook}
+                    className="gap-1.5 font-semibold text-xs rounded-xl"
+                  >
+                    {savingWebhook ? <Loader2 className="size-3.5 animate-spin" /> : <Zap className="size-3.5" />}
+                    Ativar Webhook na VPS
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        setWebhookUrl(`${window.location.origin}/api/public/hooks/whatsapp-bot`);
+                      }
+                    }}
+                    className="text-xs rounded-xl"
+                  >
+                    Usar Link Atual
+                  </Button>
+                </div>
+              </form>
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-2.5">
+              <p className="font-semibold text-foreground flex items-center gap-1.5">
+                <Terminal className="size-4 text-emerald-400" />
+                Opção 2: Robô 24h no Computador (Sem precisar publicar)
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                Se você ainda não publicou o site no Lovable, pode deixar o robô rodando direto no seu computador. Ele responde a todos os clientes mesmo com o navegador fechado:
+              </p>
+              <div className="p-2.5 rounded-lg bg-background border border-border/80 font-mono text-[11px] text-emerald-400 select-all">
+                npm run bot
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Ou dê dois cliques no arquivo <span className="font-mono text-foreground font-semibold">iniciar_bot_24h.bat</span> na pasta do projeto.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Dicas e Soluções de Problemas */}
       <Card className="surface-card border-border/60 bg-gradient-to-br from-card via-card to-primary/5">

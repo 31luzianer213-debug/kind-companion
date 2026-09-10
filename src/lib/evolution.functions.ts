@@ -383,3 +383,23 @@ export const ensureAndConnectEvolution = createServerFn({ method: "POST" })
       code: conn.code ?? conn.pairingCode ?? conn.qrcode?.code ?? null,
     };
   });
+
+/** Obtém as informações do webhook configurado na VPS */
+export const getEvolutionWebhook = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { findInstanceWebhook } = await import("./evolution.server");
+    const info = await findInstanceWebhook(context.userId);
+    return { ok: true, webhook: info };
+  });
+
+/** Salva o Webhook da Evolution API na VPS */
+export const saveEvolutionWebhook = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { webhookUrl: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { setInstanceWebhook } = await import("./evolution.server");
+    await setInstanceWebhook(context.userId, data.webhookUrl);
+    return { ok: true };
+  });
+

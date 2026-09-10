@@ -216,3 +216,30 @@ export async function setInstanceWebhook(userId: string, webhookUrl: string) {
 
   throw new Error(`Evolution API retornou status ${res.status}: ${res.raw.slice(0, 150)}`);
 }
+
+/** Consulta o webhook configurado atualmente para a instância na Evolution API */
+export async function findInstanceWebhook(userId?: string) {
+  const { base, key, instance } = evolutionConfig(userId);
+  let token: string | null = null;
+  try {
+    token = await getInstanceToken(instance);
+  } catch {}
+
+  const res = await call(`/webhook/find/${encodeURIComponent(instance)}`, {
+    method: "GET",
+    base,
+    key: token || key,
+  });
+
+  if (res.status === 200 && res.json) {
+    const wh = res.json?.webhook || res.json;
+    return {
+      enabled: Boolean(wh?.enabled),
+      url: typeof wh?.url === "string" ? wh.url : null,
+      events: Array.isArray(wh?.events) ? wh.events : [],
+    };
+  }
+
+  return { enabled: false, url: null, events: [] };
+}
+
