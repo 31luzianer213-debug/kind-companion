@@ -162,100 +162,49 @@ export const getEvolutionConnectionState = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ instance: z.string().min(1) }).parse(data))
   .handler(async ({ data }) => {
-    let instanceToken: string | null = null;
-    try {
-      instanceToken = await getInstanceToken(data.instance);
-    } catch {}
-    const json = await evolutionFetch(
-      `/instance/connectionState/${encodeURIComponent(data.instance)}`,
-      { method: "GET" },
-      instanceToken ?? undefined,
-    );
-    return json as Record<string, JsonValue>;
+    const { fetchConnectionState } = await import("./whatsapp-connection.server");
+    const res = await fetchConnectionState(data.instance);
+    return {
+      state: res.state,
+      status: res.state,
+      ...(res.raw && typeof res.raw === "object" ? res.raw : {}),
+    } as Record<string, JsonValue>;
   });
 
 export const connectEvolutionInstance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ instance: z.string().min(1) }).parse(data))
   .handler(async ({ data }) => {
-    let instanceToken: string | null = null;
-    try {
-      instanceToken = await getInstanceToken(data.instance);
-    } catch {}
-    const json = (await evolutionFetch(
-      `/instance/connect/${encodeURIComponent(data.instance)}`,
-      { method: "GET" },
-      instanceToken ?? undefined,
-    )) as {
-      base64?: string;
-      code?: string;
-      pairingCode?: string;
-      qrcode?: { base64?: string; code?: string };
-    } & Record<string, JsonValue>;
-    const base64 = json.base64 ?? json.qrcode?.base64 ?? null;
-    const code = json.code ?? json.pairingCode ?? json.qrcode?.code ?? null;
-    return { base64, code, raw: json as Record<string, JsonValue> };
+    const { ensureAndConnectInstance } = await import("./whatsapp-connection.server");
+    const res = await ensureAndConnectInstance(data.instance);
+    return { base64: res.base64, code: res.code, raw: res as unknown as Record<string, JsonValue> };
   });
 
 export const logoutEvolutionInstance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ instance: z.string().min(1) }).parse(data))
   .handler(async ({ data }) => {
-    let instanceToken: string | null = null;
-    try {
-      instanceToken = await getInstanceToken(data.instance);
-    } catch {}
-    try {
-      await evolutionFetch(
-        `/instance/logout/${encodeURIComponent(data.instance)}`,
-        { method: "DELETE" },
-        instanceToken ?? undefined,
-      );
-    } catch {}
-    try {
-      await evolutionFetch(
-        `/instance/delete/${encodeURIComponent(data.instance)}`,
-        { method: "DELETE" },
-      );
-    } catch {}
-    return { ok: true, deleted: true } as unknown as JsonValue;
+    const { logoutInstance } = await import("./whatsapp-connection.server");
+    await logoutInstance(data.instance);
+    return { ok: true, deleted: false } as unknown as JsonValue;
   });
 
 export const restartEvolutionInstance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ instance: z.string().min(1) }).parse(data))
   .handler(async ({ data }) => {
-    let instanceToken: string | null = null;
-    try {
-      instanceToken = await getInstanceToken(data.instance);
-    } catch {}
-    return (await evolutionFetch(
-      `/instance/restart/${encodeURIComponent(data.instance)}`,
-      { method: "POST" },
-      instanceToken ?? undefined,
-    )) as JsonValue;
+    const { restartInstance } = await import("./whatsapp-connection.server");
+    return (await restartInstance(data.instance)) as JsonValue;
   });
 
 export const deleteEvolutionInstance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ instance: z.string().min(1) }).parse(data))
   .handler(async ({ data }) => {
-    let instanceToken: string | null = null;
-    try {
-      instanceToken = await getInstanceToken(data.instance);
-    } catch {}
-    try {
-      await evolutionFetch(
-        `/instance/logout/${encodeURIComponent(data.instance)}`,
-        { method: "DELETE" },
-        instanceToken ?? undefined,
-      );
-    } catch {}
-    return (await evolutionFetch(
-      `/instance/delete/${encodeURIComponent(data.instance)}`,
-      { method: "DELETE" },
-    )) as JsonValue;
+    const { deleteInstanceFromVps } = await import("./whatsapp-connection.server");
+    return (await deleteInstanceFromVps(data.instance)) as JsonValue;
   });
+
 
 export const createEvolutionInstance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -334,30 +283,12 @@ export const sendEvolutionTestMessage = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
-    const { base, apiKey } = getEvolutionConfig();
-    if (!base || !apiKey) throw new Error("Evolution API não configurada");
-    const url = `${evolutionBaseUrl(base)}/message/sendText/${encodeURIComponent(data.instance)}`;
-    const digits = data.number.replace(/\D/g, "");
-    const normalized = digits.startsWith("55") ? digits : `55${digits}`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: apiKey },
-      body: JSON.stringify({ number: normalized, text: data.text }),
-    });
-    const text = await res.text();
-    let json: unknown = null;
-    try {
-      json = text ? JSON.parse(text) : null;
-    } catch {
-      json = text;
-    }
+    const { sendWhatsAppText, normalizePhone } = await import("./whatsapp-connection.server");
+    const res = await sendWhatsAppText(data.number, data.text, data.instance);
     if (!res.ok) {
-      const msg =
-        typeof json === "string" ? json : (json as { message?: string })?.message ?? `Falha ao enviar [${res.status}]`;
-      throw new Error(msg);
+      throw new Error(res.error);
     }
-
-    // Registra nos logs da conta no Supabase se houver usuário
+    const normalized = normalizePhone(data.number);
     try {
       if (context.userId) {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -370,71 +301,14 @@ export const sendEvolutionTestMessage = createServerFn({ method: "POST" })
       }
     } catch {}
 
-    return json as Record<string, JsonValue>;
+    return (res.data ?? { ok: true }) as Record<string, JsonValue>;
   });
 
-/**
- * Conexão inteligente idêntica ao BOMSABORR:
- * Garante que a instância exista (cria se não existir) e devolve o QR Code ou status open diretamente.
- */
 export const ensureAndConnectEvolution = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
+    const { ensureAndConnectInstance, getEvolutionConfig } = await import("./whatsapp-connection.server");
     const { defaultInstance } = getEvolutionConfig();
-    const name = defaultInstance;
-
-    const list = await evolutionFetch("/instance/fetchInstances", { method: "GET" }).catch(() => null);
-    const arr = Array.isArray(list)
-      ? list
-      : list && typeof list === "object"
-        ? ((list as Record<string, unknown>)["instances"] ?? (list as Record<string, unknown>)["data"])
-        : null;
-    const found = Array.isArray(arr)
-      ? (arr.find(
-          (item) => item && typeof item === "object" && (item as Record<string, unknown>)["name"] === name,
-        ) as Record<string, unknown> | undefined)
-      : undefined;
-
-    let created = false;
-    let token: string | null =
-      typeof found?.["token"] === "string" && (found["token"] as string).trim() ? (found["token"] as string).trim() : null;
-    let createJson: Record<string, unknown> | null = null;
-
-    if (!found) {
-      createJson = (await evolutionFetch("/instance/create", {
-        method: "POST",
-        body: JSON.stringify({ instanceName: name, qrcode: true, integration: "WHATSAPP-BAILEYS" }),
-      })) as Record<string, unknown>;
-      created = true;
-      const hash = createJson?.["hash"];
-      if (typeof hash === "string" && hash.trim()) token = hash.trim();
-      else if (hash && typeof hash === "object" && typeof (hash as Record<string, unknown>)["apikey"] === "string") {
-        token = (hash as Record<string, unknown>)["apikey"] as string;
-      }
-      const qrObj = createJson?.["qrcode"] as Record<string, unknown> | undefined;
-      const b64 = typeof qrObj?.["base64"] === "string" ? (qrObj["base64"] as string) : null;
-      const code = typeof qrObj?.["code"] === "string" ? (qrObj["code"] as string) : null;
-      if (b64 || code) {
-        return { instance: name, created, status: "connecting", base64: b64, code };
-      }
-    }
-
-    const status = typeof found?.["connectionStatus"] === "string" ? (found["connectionStatus"] as string) : "unknown";
-    if (status === "open") {
-      return { instance: name, created, status, base64: null, code: null };
-    }
-
-    const conn = (await evolutionFetch(
-      `/instance/connect/${encodeURIComponent(name)}`,
-      { method: "GET" },
-      token ?? undefined,
-    )) as { base64?: string; code?: string; pairingCode?: string; qrcode?: { base64?: string; code?: string } };
-
-    return {
-      instance: name,
-      created,
-      status: status === "unknown" ? "connecting" : status,
-      base64: conn.base64 ?? conn.qrcode?.base64 ?? null,
-      code: conn.code ?? conn.pairingCode ?? conn.qrcode?.code ?? null,
-    };
+    return await ensureAndConnectInstance(defaultInstance);
   });
+

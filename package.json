@@ -7,7 +7,9 @@
     "dev": "vite dev",
     "bot": "node scripts/whatsapp-bot-daemon.mjs",
     "build": "vite build",
+    "build:vps": "node scripts/build-vps.mjs",
     "build:dev": "vite build --mode development",
+    "start": "node .output/server/index.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."
