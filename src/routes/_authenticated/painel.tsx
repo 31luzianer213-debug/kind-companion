@@ -431,7 +431,7 @@ function Painel() {
               </div>
             </div>
 
-            {/* Step 2: WhatsApp Evolution */}
+            {/* Step 2: WhatsApp Baileys */}
             <div className={cn(
               "flex flex-col justify-between rounded-lg border p-3.5 transition-colors",
               isWaOk
@@ -442,7 +442,7 @@ function Painel() {
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
                     <MessageSquare className="size-3.5 text-emerald-500" />
-                    2. WhatsApp Evolution
+                    2. WhatsApp Baileys
                   </span>
                   {isWaOk ? (
                     <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-500 text-[10px] gap-1 py-0 font-semibold">

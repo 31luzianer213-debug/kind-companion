@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateTime } from "@/lib/format";
 import {
@@ -14,114 +15,98 @@ import {
   QrCode,
   RefreshCw,
   Send,
-  Smartphone,
   CheckCircle2,
   Clock,
   Loader2,
-  Trash2,
   Zap,
-  Layers,
+  Copy,
+  Check,
   List,
+  Layers,
+  KeyRound,
 } from "lucide-react";
 import {
-  ensureAndConnectEvolution,
-  getEvolutionConfigStatus,
-  getEvolutionConnectionState,
-  getEvolutionWebhookState,
-  setEvolutionWebhookUrl,
-  logoutEvolutionInstance,
-  deleteEvolutionInstance,
-  updateEvolutionInstanceName,
-  restartEvolutionInstance,
-  sendEvolutionTestMessage,
-  sendEvolutionTestButtons,
-  sendEvolutionTestList,
-} from "@/lib/evolution.functions";
+  getBaileysStatus,
+  connectBaileys,
+  disconnectBaileys,
+  sendBaileysTest,
+} from "@/lib/baileys.functions";
 
 export const Route = createFileRoute("/_authenticated/whatsapp")({
   head: () => ({
     meta: [
-      { title: "WhatsApp — Conexão & Botões Interativos" },
+      { title: "WhatsApp — Baileys Nativo & Botões Interativos" },
       {
         name: "description",
-        content: "Conecte seu WhatsApp pelo QR Code, teste botões e listas interativas e mantenha seu robô respondendo 24h.",
+        content: "Conecte seu WhatsApp via Baileys nativo por QR Code ou Código de Pareamento com suporte a botões e listas interativas.",
       },
     ],
   }),
   component: WhatsAppPage,
 });
 
-function statusInfo(status: string) {
+function statusBadge(status: string) {
   const s = String(status ?? "").toLowerCase();
   if (s === "open") {
     return {
-      label: "Conectado",
+      label: "Conectado (Baileys)",
       color: "bg-emerald-500",
       variant: "default" as const,
-      desc: "WhatsApp conectado! Botões interativos, listas e robô 24h ativos.",
+      desc: "WhatsApp conectado via Baileys! Botões e listas interativas 24h ativos.",
     };
   }
   if (s === "connecting") {
     return {
-      label: "Conectando",
+      label: "Conectando / Aguardando Leitura",
       color: "bg-amber-500",
       variant: "secondary" as const,
-      desc: "Escaneie o QR Code no seu celular em Aparelhos Conectados",
+      desc: "Escaneie o QR Code ou insira o Código de Pareamento no seu WhatsApp.",
     };
   }
   return {
     label: "Desconectado",
     color: "bg-red-500",
     variant: "destructive" as const,
-    desc: "Gere o QR Code para conectar seu número de atendimento",
+    desc: "Gere o QR Code ou solicite o Código de Pareamento para conectar.",
   };
-}
-
-function normalizeBase64(b64: string | null): string | null {
-  if (!b64) return null;
-  const s = b64.trim();
-  if (!s) return null;
-  return s.startsWith("data:") ? s : `data:image/png;base64,${s}`;
 }
 
 function WhatsAppPage() {
   const qc = useQueryClient();
-  const [qr, setQr] = useState<{ base64: string | null; code: string | null } | null>(null);
-  const [qrLoading, setQrLoading] = useState(false);
-  const [qrError, setQrError] = useState<string | null>(null);
+  const [connectTab, setConnectTab] = useState<"qr" | "pairing">("qr");
+  const [pairingPhone, setPairingPhone] = useState("");
+  const [loadingAction, setLoadingAction] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  // Testes
   const [testNumber, setTestNumber] = useState("");
-  const [testText, setTestText] = useState("Teste IPTV Manager — WhatsApp conectado com suporte a botões e listas!");
+  const [testText, setTestText] = useState("Teste IPTV Manager — WhatsApp conectado com Baileys nativo!");
   const [sendingTest, setSendingTest] = useState(false);
 
-  const config = useQuery({
-    queryKey: ["evolution", "config"],
-    queryFn: () => getEvolutionConfigStatus(),
-  });
-  const instance = config.data?.defaultInstance ?? "";
-
-  const connState = useQuery({
-    queryKey: ["evolution", "connState", instance],
-    queryFn: () => getEvolutionConnectionState({ data: { instance } }),
-    enabled: !!instance,
-    refetchInterval: qr ? 2500 : 6000,
+  // Query do Status da Conexão Baileys
+  const baileysQuery = useQuery({
+    queryKey: ["baileys", "status"],
+    queryFn: () => getBaileysStatus(),
+    refetchInterval: (query) => {
+      const s = query.state.data?.state?.status;
+      return s === "connecting" ? 2500 : 8000;
+    },
     retry: 0,
   });
 
-  const raw = connState.data as
-    | ({ state?: string; status?: string; instance?: { state?: string } } & Record<string, unknown>)
-    | undefined;
-  const status = raw?.state ?? raw?.status ?? raw?.instance?.state ?? "unknown";
-  const info = statusInfo(status);
-  const connected = String(status).toLowerCase() === "open";
+  const state = baileysQuery.data?.state;
+  const status = state?.status || "close";
+  const isConnected = status === "open";
+  const info = statusBadge(status);
 
-  // Fecha o QR Code automaticamente assim que o WhatsApp conecta
+  // Toast quando conecta
   useEffect(() => {
-    if (connected && qr) {
-      setQr(null);
-      setQrError(null);
-      toast.success("WhatsApp conectado com sucesso!");
+    if (isConnected && state?.phone) {
+      toast.success(`WhatsApp conectado com sucesso no número +${state.phone}!`, {
+        id: "baileys-connected-toast",
+      });
     }
-  }, [connected, qr]);
+  }, [isConnected, state?.phone]);
 
   // Histórico Recente de Disparos do Supabase
   const { data: logsData } = useQuery({
@@ -137,189 +122,91 @@ function WhatsAppPage() {
     refetchInterval: 10000,
   });
 
-  const [webhookUrlInput, setWebhookUrlInput] = useState("");
-  const [savingWebhook, setSavingWebhook] = useState(false);
-
-  const webhookState = useQuery({
-    queryKey: ["evolution", "webhook", instance],
-    queryFn: () => getEvolutionWebhookState({ data: { instance } }),
-    enabled: !!instance,
-    retry: 0,
-  });
-
-  useEffect(() => {
-    if (webhookState.data?.url) {
-      setWebhookUrlInput(webhookState.data.url);
-    } else if (typeof window !== "undefined" && window.location.origin && !webhookUrlInput) {
-      setWebhookUrlInput(`${window.location.origin}/api/public/hooks/whatsapp-bot`);
+  async function handleStartQr() {
+    setLoadingAction(true);
+    try {
+      await connectBaileys({ data: { mode: "qr" } });
+      toast.success("Solicitando QR Code... Aguarde alguns segundos.");
+      qc.invalidateQueries({ queryKey: ["baileys"] });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao gerar QR Code");
+    } finally {
+      setLoadingAction(false);
     }
-  }, [webhookState.data?.url]);
+  }
 
-  async function handleSaveWebhook(customUrl?: string) {
-    const targetUrl = (customUrl || webhookUrlInput || "").trim();
-    if (!targetUrl || !targetUrl.startsWith("http")) {
-      toast.error("Informe uma URL válida com http:// ou https://");
+  async function handleStartPairing() {
+    const clean = pairingPhone.replace(/\D/g, "");
+    if (clean.length < 10) {
+      toast.error("Informe o número completo com DDD (ex: 5593991614242)");
       return;
     }
-    setSavingWebhook(true);
+    setLoadingAction(true);
     try {
-      await setEvolutionWebhookUrl({ data: { instance, webhookUrl: targetUrl } });
-      toast.success("Webhook 24 horas configurado com sucesso!");
-      qc.invalidateQueries({ queryKey: ["evolution", "webhook"] });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao salvar webhook");
+      await connectBaileys({ data: { mode: "pairing", phone: clean } });
+      toast.success("Código de pareamento solicitado! Aguarde ~5 segundos.");
+      qc.invalidateQueries({ queryKey: ["baileys"] });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao solicitar código de pareamento");
     } finally {
-      setSavingWebhook(false);
-    }
-  }
-
-  function refresh() {
-    qc.invalidateQueries({ queryKey: ["evolution"] });
-    qc.invalidateQueries({ queryKey: ["whatsapp-recent-logs"] });
-  }
-
-  async function handleConnect() {
-    setQrLoading(true);
-    setQr(null);
-    setQrError(null);
-    try {
-      const res = await ensureAndConnectEvolution({ data: { instance } });
-      const b64 = normalizeBase64(res.base64 ?? null);
-      if (b64 || res.code) {
-        setQr({ base64: b64, code: res.code ?? null });
-        toast.success(res.created ? "Conexão criada! Escaneie o QR Code." : "QR Code gerado! Escaneie em até 45s.");
-      } else if (String(res.status).toLowerCase() === "open") {
-        toast.message("Já está conectado — não precisa de QR Code.");
-      } else {
-        setQrError("A conexão não devolveu QR Code. Clique em Reiniciar e tente de novo.");
-        toast.message("Sem QR Code agora. Tente Reiniciar.");
-      }
-
-      // Auto-configura o Webhook na Evolution API para responder 24h
-      if (typeof window !== "undefined" && window.location.origin && !webhookState.data?.url) {
-        const autoUrl = `${window.location.origin}/api/public/hooks/whatsapp-bot`;
-        setEvolutionWebhookUrl({ data: { instance, webhookUrl: autoUrl } })
-          .then(() => qc.invalidateQueries({ queryKey: ["evolution", "webhook"] }))
-          .catch(() => {});
-      }
-
-      refresh();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao gerar QR Code";
-      setQrError(msg);
-      toast.error(msg);
-    } finally {
-      setQrLoading(false);
+      setLoadingAction(false);
     }
   }
 
   async function handleLogout() {
-    if (!instance || !confirm("Desconectar o WhatsApp? Será preciso escanear o QR Code novamente.")) return;
+    if (!confirm("Deseja realmente desconectar o WhatsApp? Será necessário escanear o QR Code novamente.")) return;
+    setLoadingAction(true);
     try {
-      await logoutEvolutionInstance({ data: { instance } });
-      setQr(null);
-      setQrError(null);
-      toast.success("Desconectado.");
-      refresh();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao desconectar");
+      await disconnectBaileys();
+      toast.success("WhatsApp desconectado.");
+      qc.invalidateQueries({ queryKey: ["baileys"] });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao desconectar");
+    } finally {
+      setLoadingAction(false);
     }
   }
 
-  async function handleDeleteInstance(generateNewName = true) {
-    if (!instance) return;
-    const confirmMsg = generateNewName
-      ? `Tem certeza que deseja APAGAR A INSTÂNCIA da VPS e gerar um NOVO identificador?\n\n• A sessão atual no WhatsApp será excluída da VPS.\n• Um novo nome de instância limpo será gerado automaticamente.\n• Você poderá escanear o QR Code do zero.`
-      : `Tem certeza que deseja APAGAR a sessão da instância "${instance}" da VPS?`;
-
-    if (!confirm(confirmMsg)) return;
-
-    try {
-      const res = (await deleteEvolutionInstance({ data: { instance, generateNewName } })) as any;
-      setQr(null);
-      setQrError(null);
-      const newName = res?.newInstanceName || instance;
-      toast.success(
-        generateNewName
-          ? `Instância antiga apagada! Novo identificador limpo: ${newName}. Clique em 'Gerar QR Code' para conectar.`
-          : "Instância apagada com sucesso! Clique em 'Gerar QR Code' para recriar.",
-      );
-      refresh();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao apagar instância");
-    }
+  function handleCopyPairingCode(code: string) {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(true);
+    toast.success("Código copiado!");
+    setTimeout(() => setCopiedCode(false), 2000);
   }
 
-  async function handleRenamePrompt() {
-    const newName = prompt(
-      "Digite o novo nome para esta instância (apenas letras minúsculas, números, _ ou -):",
-      instance || "iptv_principal",
-    );
-    if (!newName || newName.trim() === instance) return;
-    const clean = newName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
-    if (clean.length < 3) {
-      toast.error("O nome deve ter pelo menos 3 caracteres.");
-      return;
-    }
-    try {
-      await updateEvolutionInstanceName({ data: { newInstanceName: clean } });
-      toast.success(`Nome da instância alterado para "${clean}"!`);
-      refresh();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao alterar nome");
-    }
-  }
-
-  async function handleRestart() {
-    if (!instance) return;
-    setQrError(null);
-    try {
-      await restartEvolutionInstance({ data: { instance } });
-      toast.success("Reiniciando... aguarde 5s e clique em Gerar QR Code.");
-      refresh();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao reiniciar");
-    }
-  }
-
-  async function handleTest(type: "text" | "buttons" | "list" = "text") {
-    if (!instance) return;
+  async function handleSendTest(type: "text" | "buttons" | "list" | "pix_copy") {
     const cleanNum = testNumber.replace(/\D/g, "");
     if (cleanNum.length < 10) {
-      toast.error("Informe o número com DDD (ex: 55 93 99161-4242).");
+      toast.error("Informe o número de teste com DDD (ex: 5593991614242)");
       return;
     }
     setSendingTest(true);
     try {
-      if (type === "buttons") {
-        await sendEvolutionTestButtons({ data: { instance, number: cleanNum, text: testText } });
-        toast.success("Botões interativos enviados! Confira o WhatsApp.");
-      } else if (type === "list") {
-        await sendEvolutionTestList({ data: { instance, number: cleanNum, text: testText } });
-        toast.success("Lista interativa enviada! Confira o WhatsApp.");
-      } else {
-        await sendEvolutionTestMessage({ data: { instance, number: cleanNum, text: testText } });
-        toast.success("Mensagem de texto enviada! Confira o WhatsApp.");
-      }
+      await sendBaileysTest({
+        data: {
+          to: cleanNum,
+          text: testText,
+          type,
+        },
+      });
+      const typeLabels = {
+        text: "Texto simples",
+        buttons: "Botões rápidos",
+        list: "Lista interativa",
+        pix_copy: "Botão Copiar PIX",
+      };
+      toast.success(`Teste (${typeLabels[type]}) enviado! Confira seu WhatsApp.`);
       qc.invalidateQueries({ queryKey: ["whatsapp-recent-logs"] });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao enviar mensagem de teste");
+    } catch (err: any) {
+      toast.error(err.message || "Falha ao enviar mensagem de teste");
     } finally {
       setSendingTest(false);
     }
   }
 
-  if (config.isPending) {
-    return (
-      <div className="flex items-center justify-center p-12 text-sm text-muted-foreground gap-2">
-        <Loader2 className="size-4 animate-spin" /> Carregando conexão...
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4 max-w-4xl animate-in fade-in duration-300">
-      {/* Banner de Recursos: Botões & Listas */}
+      {/* Banner de Destaque: Baileys Nativo */}
       <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-4 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -328,287 +215,249 @@ function WhatsAppPage() {
             </div>
             <div>
               <p className="text-sm font-extrabold text-foreground flex items-center gap-2">
-                WhatsApp com Botões & Listas Interativas
+                WhatsApp Baileys Nativo
                 <Badge variant="outline" className="text-emerald-400 border-emerald-500/40 text-[10px]">
                   24h Ativo
                 </Badge>
               </p>
               <p className="text-xs text-muted-foreground">
-                Respostas rápidas com botões clicáveis, menus de planos em listas e atendimento ininterrupto.
+                Conexão direta sem intermediários. Suporta <strong>botões clicáveis</strong>, <strong>listas interativas</strong> e <strong>botão de copiar PIX</strong>.
               </p>
             </div>
           </div>
           <Button
             variant="outline"
             size="sm"
-            onClick={refresh}
+            onClick={() => qc.invalidateQueries({ queryKey: ["baileys"] })}
             className="rounded-full text-xs font-bold gap-1.5 self-start sm:self-auto"
           >
-            <RefreshCw className="size-3.5" /> Atualizar
+            <RefreshCw className="size-3.5" /> Atualizar Status
           </Button>
         </div>
       </div>
 
-      {/* Card 1: Informações da Instância */}
-      <div className="rounded-2xl border border-white/10 bg-card p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              <Smartphone className="size-3.5 text-primary" /> Conexão WhatsApp na VPS
-            </p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold text-foreground">Identificador da Instância:</span>
-              <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md text-sm border border-primary/20">
-                {instance}
-              </span>
-              <Badge variant={status === "open" ? "default" : "outline"} className="text-xs">
-                {status === "open" ? "🟢 Sessão Ativa" : "⚪ Sem Sessão / Aguardando QR Code"}
-              </Badge>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Este é o canal da sua conexão. Ao clicar em "Apagar", a sessão antiga é excluída e um novo nome limpo é gerado automaticamente.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              id="whatsapp-rename-btn"
-              variant="outline"
-              size="sm"
-              className="rounded-full font-bold shadow-sm text-xs"
-              onClick={handleRenamePrompt}
-            >
-              Renomear
-            </Button>
-            <Button
-              id="whatsapp-refresh-btn"
-              variant="secondary"
-              size="sm"
-              className="rounded-full font-bold shadow-sm text-xs"
-              onClick={refresh}
-            >
-              <RefreshCw className="size-3.5" /> Atualizar
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Card 2: Status, Ações, QR Code e Envio de Teste com Botões e Listas */}
-      <div className="rounded-2xl border-2 border-primary/30 bg-card p-4 shadow-md">
+      {/* Card Principal: Status da Conexão e Métodos de Pareamento */}
+      <div className="rounded-2xl border-2 border-primary/30 bg-card p-4 shadow-md space-y-4">
         <div className="flex items-center gap-3">
-          <span className={`size-2.5 shrink-0 rounded-full ${info.color} ${status === "connecting" ? "animate-pulse" : ""}`} />
+          <span className={`size-3 shrink-0 rounded-full ${info.color} ${status === "connecting" ? "animate-pulse" : ""}`} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <p className="text-base font-extrabold text-foreground">WhatsApp</p>
+              <p className="text-base font-extrabold text-foreground">Conexão WhatsApp (Baileys)</p>
               <Badge variant={info.variant}>{info.label}</Badge>
             </div>
             <p className="text-xs text-muted-foreground">{info.desc}</p>
           </div>
-          {connState.isFetching && (
-            <span className="text-xs text-muted-foreground animate-pulse">atualizando...</span>
+          {state?.phone && (
+            <div className="text-right">
+              <span className="text-[11px] text-muted-foreground block">Número Conectado:</span>
+              <span className="font-mono font-bold text-sm text-primary">+{state.phone}</span>
+            </div>
           )}
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button
-            id="whatsapp-connect-btn"
-            onClick={handleConnect}
-            disabled={qrLoading}
-            className="rounded-full font-bold gap-1.5 shadow-sm"
-          >
-            {qrLoading ? <Loader2 className="size-4 animate-spin" /> : <QrCode className="size-4" />}
-            {qrLoading ? "Gerando..." : connected ? "Gerar novo QR Code" : "Gerar QR Code"}
-          </Button>
-          <Button
-            id="whatsapp-restart-btn"
-            variant="secondary"
-            onClick={handleRestart}
-            className="rounded-full font-bold gap-1.5"
-          >
-            <RefreshCw className="size-4" /> Reiniciar
-          </Button>
-          <Button
-            id="whatsapp-logout-btn"
-            variant="outline"
-            onClick={handleLogout}
-            className="rounded-full font-bold gap-1.5"
-          >
-            <LogOut className="size-4" /> Desconectar
-          </Button>
-          <Button
-            id="whatsapp-delete-btn"
-            variant="destructive"
-            onClick={() => handleDeleteInstance(true)}
-            className="rounded-full font-bold gap-1.5 shadow-sm"
-          >
-            <Trash2 className="size-4" /> Apagar Instância & Gerar Novo ID
-          </Button>
-        </div>
-
-        {qrError && (
-          <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-400 break-words">
-            {qrError}
-          </p>
-        )}
-
-        {(qr || qrLoading) && (
-          <div className="mt-4 grid place-items-center rounded-2xl border bg-card p-4">
-            {qrLoading ? (
-              <div className="py-10 text-center space-y-2">
-                <Loader2 className="size-8 animate-spin mx-auto text-primary" />
-                <p className="text-sm text-muted-foreground">Gerando QR Code...</p>
+        {/* Se já está conectado */}
+        {isConnected && (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-3">
+            <div className="flex items-center gap-2.5 text-emerald-400">
+              <CheckCircle2 className="size-5 shrink-0" />
+              <div className="text-xs font-semibold">
+                WhatsApp conectado via Baileys! O robô com botões interativos e listas está 100% operacional 24 horas por dia.
               </div>
-            ) : qr?.base64 ? (
-              <div className="space-y-3 text-center">
-                <img
-                  src={qr.base64}
-                  alt="QR Code do WhatsApp"
-                  className="mx-auto size-64 rounded-xl bg-white object-contain p-2 shadow-md"
-                />
-                <p className="text-xs text-muted-foreground">
-                  WhatsApp &rarr; Aparelhos conectados &rarr; Conectar (expira em ~45s)
-                </p>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="rounded-full font-bold"
-                  onClick={handleConnect}
-                >
-                  <RefreshCw className="size-4" /> Novo QR Code
-                </Button>
-              </div>
-            ) : qr?.code ? (
-              <div className="space-y-2 text-center">
-                <p className="text-xs text-muted-foreground">Código de pareamento:</p>
-                <p className="font-mono font-bold text-base bg-muted p-2 rounded-lg">{qr.code}</p>
-              </div>
-            ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full font-bold text-xs gap-1.5"
+                onClick={handleStartQr}
+                disabled={loadingAction}
+              >
+                <RefreshCw className="size-3.5" /> Reconectar / Novo QR Code
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="rounded-full font-bold text-xs gap-1.5"
+                onClick={handleLogout}
+                disabled={loadingAction}
+              >
+                <LogOut className="size-3.5" /> Desconectar WhatsApp
+              </Button>
+            </div>
           </div>
         )}
 
-        {connected && !qr && (
-          <div className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-emerald-400">
-            <CheckCircle2 className="size-5 shrink-0" />
-            <p className="text-xs font-semibold">
-              WhatsApp conectado e pronto! Robô com botões interativos e disparos de cobrança 100% operacionais.
-            </p>
+        {/* Se NÃO está conectado, exibe Abas de Conexão: QR Code ou Pairing Code */}
+        {!isConnected && (
+          <div className="space-y-4 pt-2">
+            <Tabs value={connectTab} onValueChange={(v) => setConnectTab(v as "qr" | "pairing")}>
+              <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
+                <TabsTrigger value="qr" className="font-bold text-xs gap-1.5">
+                  <QrCode className="size-3.5" /> 1. Escanear QR Code
+                </TabsTrigger>
+                <TabsTrigger value="pairing" className="font-bold text-xs gap-1.5">
+                  <KeyRound className="size-3.5" /> 2. Código de Pareamento
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Aba QR Code */}
+              <TabsContent value="qr" className="space-y-3 pt-3">
+                <div className="text-center space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Clique em <strong>Gerar QR Code</strong> e aponte a câmera do WhatsApp (Aparelhos Conectados &rarr; Conectar Aparelho).
+                  </p>
+                  <Button
+                    onClick={handleStartQr}
+                    disabled={loadingAction}
+                    className="rounded-full font-bold gap-1.5 shadow-sm"
+                  >
+                    {loadingAction ? <Loader2 className="size-4 animate-spin" /> : <QrCode className="size-4" />}
+                    {state?.qrCode ? "Gerar Novo QR Code" : "Gerar QR Code Agora"}
+                  </Button>
+                </div>
+
+                {state?.qrCode && (
+                  <div className="grid place-items-center rounded-2xl border bg-card/60 p-4 space-y-3">
+                    <img
+                      src={state.qrCode}
+                      alt="QR Code WhatsApp"
+                      className="size-64 rounded-xl bg-white object-contain p-2 shadow-md"
+                    />
+                    <p className="text-xs text-muted-foreground text-center">
+                      📱 WhatsApp &rarr; <strong>Aparelhos conectados</strong> &rarr; <strong>Conectar aparelho</strong> (Expira em ~45s)
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Aba Pairing Code */}
+              <TabsContent value="pairing" className="space-y-3 pt-3">
+                <div className="max-w-md mx-auto space-y-3 text-center">
+                  <p className="text-xs text-muted-foreground">
+                    Conecte digitando o número do seu chip. Você receberá um código de 8 dígitos para digitar no WhatsApp.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Input
+                      placeholder="55 + DDD + número (ex: 5593991614242)"
+                      value={pairingPhone}
+                      onChange={(e) => setPairingPhone(e.target.value)}
+                      className="font-mono text-xs rounded-xl flex-1 text-center sm:text-left"
+                    />
+                    <Button
+                      onClick={handleStartPairing}
+                      disabled={loadingAction}
+                      className="rounded-full font-bold gap-1.5 shadow-sm shrink-0"
+                    >
+                      {loadingAction ? <Loader2 className="size-3.5 animate-spin" /> : <KeyRound className="size-3.5" />}
+                      Gerar Código
+                    </Button>
+                  </div>
+
+                  {state?.pairingCode && (
+                    <div className="rounded-2xl border-2 border-primary/50 bg-primary/10 p-5 text-center space-y-3 animate-in zoom-in-95">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                        Seu Código de Pareamento:
+                      </p>
+                      <div className="flex items-center justify-center gap-3">
+                        <span className="font-mono font-extrabold text-3xl tracking-widest text-primary bg-background/80 px-4 py-2 rounded-xl border border-primary/30 shadow-inner">
+                          {state.pairingCode}
+                        </span>
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="rounded-xl size-11"
+                          onClick={() => handleCopyPairingCode(state.pairingCode!)}
+                        >
+                          {copiedCode ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
+                        </Button>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground text-left bg-background/50 p-3 rounded-xl space-y-1">
+                        <p className="font-bold text-foreground">Como conectar:</p>
+                        <p>1. No celular, abra o <strong>WhatsApp</strong>.</p>
+                        <p>2. Toque nos 3 pontinhos &rarr; <strong>Aparelhos Conectados</strong> &rarr; <strong>Conectar Aparelho</strong>.</p>
+                        <p>3. Na tela da câmera, toque em <strong>"Conectar com número de telefone"</strong>.</p>
+                        <p>4. Digite o código de 8 dígitos exibido acima.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         )}
 
-        {/* Testar Envio com Botões e Listas */}
-        <div className="mt-4 rounded-xl border bg-secondary/40 p-3.5 space-y-3">
+        {/* Testador Interativo de Envio */}
+        <div className="mt-4 rounded-xl border bg-secondary/30 p-3.5 space-y-3">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            <Send className="size-3.5 text-primary" /> Testar Envio & Recursos Interativos
+            <Send className="size-3.5 text-primary" /> Testar Recursos Interativos Baileys
           </p>
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Input
-              id="whatsapp-test-number-input"
-              placeholder="55 + DDD + número (ex: 5593991614242)"
+              id="baileys-test-number"
+              placeholder="Número com DDD (ex: 5593991614242)"
               value={testNumber}
               onChange={(e) => setTestNumber(e.target.value)}
-              className="flex-1 font-mono text-xs rounded-xl"
+              className="font-mono text-xs rounded-xl flex-1"
             />
           </div>
           <Textarea
-            id="whatsapp-test-message-input"
-            className="rounded-xl text-xs font-sans resize-none"
-            rows={2}
+            id="baileys-test-message"
             value={testText}
             onChange={(e) => setTestText(e.target.value)}
+            rows={2}
+            className="rounded-xl text-xs font-sans resize-none"
             placeholder="Texto da mensagem de teste..."
           />
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <Button
-              id="whatsapp-test-text-btn"
-              onClick={() => handleTest("text")}
-              disabled={sendingTest || !connected}
+              id="test-send-text-btn"
               variant="outline"
               size="sm"
+              disabled={sendingTest || !isConnected}
+              onClick={() => handleSendTest("text")}
               className="rounded-full text-xs font-bold gap-1.5"
             >
-              {sendingTest ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+              {sendingTest ? <Loader2 className="size-3 animate-spin" /> : <Send className="size-3" />}
               Texto Simples
             </Button>
             <Button
-              id="whatsapp-test-buttons-btn"
-              onClick={() => handleTest("buttons")}
-              disabled={sendingTest || !connected}
+              id="test-send-buttons-btn"
               variant="secondary"
               size="sm"
+              disabled={sendingTest || !isConnected}
+              onClick={() => handleSendTest("buttons")}
               className="rounded-full text-xs font-bold gap-1.5 shadow-sm"
             >
-              {sendingTest ? <Loader2 className="size-3.5 animate-spin" /> : <Layers className="size-3.5 text-primary" />}
+              {sendingTest ? <Loader2 className="size-3 animate-spin" /> : <Layers className="size-3 text-primary" />}
               🔘 Testar Botões Clicáveis
             </Button>
             <Button
-              id="whatsapp-test-list-btn"
-              onClick={() => handleTest("list")}
-              disabled={sendingTest || !connected}
+              id="test-send-list-btn"
               variant="secondary"
               size="sm"
+              disabled={sendingTest || !isConnected}
+              onClick={() => handleSendTest("list")}
               className="rounded-full text-xs font-bold gap-1.5 shadow-sm"
             >
-              {sendingTest ? <Loader2 className="size-3.5 animate-spin" /> : <List className="size-3.5 text-primary" />}
+              {sendingTest ? <Loader2 className="size-3 animate-spin" /> : <List className="size-3 text-primary" />}
               📋 Testar Lista Interativa
             </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Card: Atendimento Automático 24 Horas & Webhook na VPS */}
-      <div className="rounded-2xl border border-white/10 bg-card p-4 shadow-sm space-y-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              <Zap className="size-3.5 text-amber-400" /> Atendimento Automático 24 Horas (Mesmo com site fechado)
-            </p>
-            <p className="mt-1 text-sm font-semibold text-foreground">
-              {webhookState.data?.url ? (
-                <span className="text-emerald-400 flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Robô ativo 24h — O WhatsApp responde mesmo com o site fechado ou deslogado!
-                </span>
-              ) : (
-                <span className="text-amber-400 flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
-                  Webhook não ativado. Clique em "Ativar 24h" para o robô responder sem precisar abrir o site.
-                </span>
-              )}
-            </p>
-          </div>
-          {webhookState.data?.url && (
-            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[11px] self-start sm:self-auto">
-              24h Ativo
-            </Badge>
-          )}
-        </div>
-
-        <div className="rounded-xl border bg-secondary/30 p-3 space-y-2">
-          <p className="text-xs text-muted-foreground">
-            Endereço do Webhook no servidor (entrega as mensagens diretamente aqui):
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Input
-              id="whatsapp-webhook-url-input"
-              value={webhookUrlInput}
-              onChange={(e) => setWebhookUrlInput(e.target.value)}
-              placeholder="https://seusite.com/api/public/hooks/whatsapp-bot"
-              className="font-mono text-xs rounded-xl flex-1"
-            />
             <Button
-              id="whatsapp-save-webhook-btn"
-              onClick={() => handleSaveWebhook()}
-              disabled={savingWebhook || !instance}
-              className="rounded-full font-bold gap-1.5 shadow-sm shrink-0"
+              id="test-send-pix-btn"
+              variant="secondary"
               size="sm"
+              disabled={sendingTest || !isConnected}
+              onClick={() => handleSendTest("pix_copy")}
+              className="rounded-full text-xs font-bold gap-1.5 shadow-sm"
             >
-              {savingWebhook ? <Loader2 className="size-3.5 animate-spin" /> : <Zap className="size-3.5 text-amber-400" />}
-              {savingWebhook ? "Salvando..." : "Ativar 24h Agora"}
+              {sendingTest ? <Loader2 className="size-3 animate-spin" /> : <Zap className="size-3 text-amber-400" />}
+              💳 Testar Botão Copiar PIX
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Card 3: Histórico Recente de Disparos */}
+      {/* Card: Histórico Recente de Disparos */}
       <Card className="surface-card border-border/60 rounded-2xl">
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div>
@@ -616,7 +465,7 @@ function WhatsAppPage() {
               <Clock className="size-4 text-primary" /> Registro Recente de Disparos
             </CardTitle>
             <CardDescription className="text-xs">
-              Últimas mensagens enviadas pelo robô, cobranças automáticas e testes.
+              Últimas mensagens enviadas pelo robô Baileys e cobranças automáticas.
             </CardDescription>
           </div>
           <Badge variant="secondary" className="font-mono text-xs">

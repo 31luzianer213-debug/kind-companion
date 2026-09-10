@@ -1,20 +1,5 @@
-import { evolutionBaseUrl } from "./evolution-url";
-
-export const FALLBACK_EVOLUTION_INSTANCE = "iptv_ccd7362726074f97";
-
-function isPlaceholderEnv(v: string | undefined) {
-  if (!v) return true;
-  const t = v.trim();
-  if (!t) return true;
-  if (t.includes("COLE_A")) return true;
-  if (t.length < 5) return true;
-  return false;
-}
-
-export function pickEnv(name: string, fallback = "") {
-  const v = process.env[name];
-  return isPlaceholderEnv(v) ? fallback : (v?.trim() ?? fallback);
-}
+const BAILEYS_PORT = process.env.BAILEYS_PORT ? Number(process.env.BAILEYS_PORT) : 3001;
+const BAILEYS_URL = process.env.BAILEYS_API_URL || `http://127.0.0.1:${BAILEYS_PORT}`;
 
 export function normalizePhone(raw: string) {
   if (!raw) return "";
@@ -37,15 +22,10 @@ export function isValidBrPhone(raw: string) {
   return digits.length === 12 || digits.length === 13;
 }
 
-export async function sendWhatsapp(to: string, text: string, instanceOverride?: string) {
-  const base = pickEnv("EVOLUTION_API_URL", "https://cobrancas-whatsapp.shop");
-  const instance = instanceOverride || pickEnv("EVOLUTION_INSTANCE", FALLBACK_EVOLUTION_INSTANCE);
-  const apiKey = pickEnv("EVOLUTION_API_KEY", "evolutionApiGlobalTokenSecure2026");
-
-  if (!base || !instance || !apiKey) {
-    return { ok: false as const, error: "WhatsApp desconectado na VPS" };
-  }
-
+/**
+ * Envia mensagem pelo WhatsApp usando o motor Baileys nativo.
+ */
+export async function sendWhatsapp(to: string, text: string) {
   const normalized = normalizePhone(to);
   if (!normalized) {
     return {
@@ -55,31 +35,29 @@ export async function sendWhatsapp(to: string, text: string, instanceOverride?: 
   }
 
   try {
-    const url = `${evolutionBaseUrl(base)}/message/sendText/${encodeURIComponent(instance)}`;
-    const response = await fetch(url, {
+    const response = await fetch(`${BAILEYS_URL}/api/send-message`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: apiKey },
-      body: JSON.stringify({ number: normalized, text }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to: normalized, text }),
+      signal: AbortSignal.timeout(10000),
     });
 
-    if (!response.ok) {
-      const body = await response.text();
-      console.error(`Evolution API falhou [${response.status}]: ${body}`);
-      if (response.status === 400) {
-        return {
-          ok: false as const,
-          error: "Este número não tem WhatsApp ou está escrito errado",
-        };
-      }
-      if (response.status === 401 || response.status === 403) {
-        return { ok: false as const, error: "WhatsApp desconectado — gere o QR Code novamente" };
-      }
-      return { ok: false as const, error: `Evolution API [${response.status}]` };
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || data.ok === false) {
+      console.error(`[Baileys sendWhatsapp] Falha:`, data.error || response.statusText);
+      return {
+        ok: false as const,
+        error: data.error || `Baileys falhou [${response.status}]`,
+      };
     }
 
     return { ok: true as const };
-  } catch (error) {
-    console.error("Evolution API erro de rede", error);
-    return { ok: false as const, error: "Falha de rede ao chamar a Evolution API" };
+  } catch (error: any) {
+    console.error("[Baileys sendWhatsapp] Erro de rede:", error?.message);
+    return {
+      ok: false as const,
+      error: "Motor Baileys não está respondendo. Conecte o WhatsApp pelo painel.",
+    };
   }
 }

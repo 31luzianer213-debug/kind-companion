@@ -24,6 +24,7 @@ data/*.tmp
 # WhatsApp Baileys Auth Session
 auth_baileys/
 data/auth_baileys/
+data/baileys_status.json
 scratch/
 
 # Editor directories and files

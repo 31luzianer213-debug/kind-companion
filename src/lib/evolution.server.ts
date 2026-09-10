@@ -1,242 +1,88 @@
-/** Acesso à Evolution API usando as credenciais do servidor e padrão BOMSABORR. */
-import { evolutionBaseUrl } from "./evolution-url";
-import { DEFAULT_EVOLUTION_INSTANCE, getInstanceToken, evolutionFetch } from "./evolution.functions";
+/**
+ * Adaptador de Compatibilidade — Baileys Nativo.
+ * Redireciona todas as chamadas legadas de WhatsApp para o motor Baileys local (porta 3001).
+ * Elimina 100% de chamadas para servidores externos da Evolution API.
+ */
 
-export function instanceNameFor(userId?: string) {
-  const envInst = process.env["EVOLUTION_INSTANCE"]?.trim();
-  if (envInst && envInst.length > 3 && !envInst.includes("COLE_A")) {
-    return envInst;
-  }
+const BAILEYS_PORT = process.env.BAILEYS_PORT ? Number(process.env.BAILEYS_PORT) : 3001;
+const BAILEYS_URL = process.env.BAILEYS_API_URL || `http://127.0.0.1:${BAILEYS_PORT}`;
+
+export const DEFAULT_EVOLUTION_INSTANCE = "baileys_default";
+
+export function instanceNameFor(_userId?: string) {
   return DEFAULT_EVOLUTION_INSTANCE;
 }
 
-export function evolutionConfig(userId?: string, customBase?: string, customKey?: string, customInstance?: string) {
-  const envBase = customBase?.trim() || process.env["EVOLUTION_API_URL"]?.trim();
-  const base = evolutionBaseUrl(envBase && envBase.length > 0 ? envBase : "https://cobrancas-whatsapp.shop");
-  const key =
-    customKey?.trim() ||
-    process.env["EVOLUTION_API_KEY"]?.trim() ||
-    "evolutionApiGlobalTokenSecure2026";
-  const instance = customInstance?.trim() || instanceNameFor(userId);
-  return { base, key, instance };
-}
-
-async function call(
-  path: string,
-  init: RequestInit & { base: string; key: string },
-): Promise<{ status: number; json: any; raw: string }> {
-  const { base, key, ...rest } = init;
-  const res = await fetch(`${evolutionBaseUrl(base)}${path}`, {
-    ...rest,
-    headers: { "Content-Type": "application/json", apikey: key, ...(rest.headers ?? {}) },
-  });
-  const raw = await res.text();
-  let json: any = null;
-  try {
-    json = JSON.parse(raw);
-  } catch {
-    json = null;
-  }
-  return { status: res.status, json, raw };
+export function evolutionConfig(_userId?: string) {
+  return {
+    base: BAILEYS_URL,
+    key: "baileys_local_token",
+    instance: DEFAULT_EVOLUTION_INSTANCE,
+  };
 }
 
 /** open | connecting | close | none */
-export async function fetchState(userId?: string) {
-  const { base, key, instance } = evolutionConfig(userId);
-  let token: string | null = null;
+export async function fetchState(_userId?: string): Promise<"open" | "connecting" | "close" | "none"> {
   try {
-    token = await getInstanceToken(instance);
-  } catch {}
-
-  const reqKey = token || key;
-  const { status, json } = await call(`/instance/connectionState/${encodeURIComponent(instance)}`, {
-    method: "GET",
-    base,
-    key: reqKey,
-  });
-
-  if (status === 404) return "none" as const;
-  const state = json?.instance?.state ?? json?.state ?? json?.status ?? "close";
-  return (String(state).toLowerCase() === "open" ? "open" : state) as "open" | "connecting" | "close" | "none";
-}
-
-function extractQr(json: any) {
-  const base64 = json?.qrcode?.base64 ?? json?.base64 ?? null;
-  const code = json?.qrcode?.code ?? json?.code ?? json?.pairingCode ?? null;
-  return { base64, code };
-}
-
-/** Cache de controle para evitar chamadas redundantes de webhook na VPS */
-const lastWebhookSync = new Map<string, number>();
-
-/** Garante que o Webhook do Bot e as configurações da instância estão 100% ativos na Evolution API sem sobrecarregar a VPS */
-export async function ensureInstanceWebhook(userId: string, publicAppUrl: string) {
-  if (!publicAppUrl) return;
-  if (publicAppUrl.includes("localhost") || publicAppUrl.includes("127.0.0.1")) {
-    return;
-  }
-  const last = lastWebhookSync.get(userId) ?? 0;
-  const now = Date.now();
-  // Se configurou há menos de 3 minutos, não precisa reenviar
-  if (now - last < 3 * 60 * 1000) return;
-
-  const webhookUrl = `${publicAppUrl.replace(/\/+$/, "")}/api/public/hooks/whatsapp-bot?userId=${userId}`;
-  try {
-    await setInstanceWebhook(userId, webhookUrl);
-    lastWebhookSync.set(userId, now);
-    console.log(`[Auto Webhook VPS] ✅ Sincronizado automaticamente na VPS: ${webhookUrl}`);
-  } catch (err) {
-    console.warn(`[Auto Webhook VPS] Aviso ao sincronizar para ${userId}:`, err);
-  }
-}
-
-/** Conecta de forma não destrutiva, garantindo que a instância exista e gerando QR Code quando necessário. */
-export async function connectInstance(userId?: string, publicAppUrl?: string, forceNew = false) {
-  const { base, key, instance } = evolutionConfig(userId);
-
-  let token: string | null = null;
-  try {
-    token = await getInstanceToken(instance);
-  } catch {}
-
-  // Se a instância já estiver aberta e conectada, retorna imediatamente
-  const currentState = await fetchState(userId);
-  if (currentState === "open" && !forceNew) {
-    return { state: "open" as const, qr: null };
-  }
-
-  // Busca lista de instâncias para saber se existe
-  const list = await evolutionFetch("/instance/fetchInstances", { method: "GET" }).catch(() => null);
-  const arr = Array.isArray(list)
-    ? list
-    : list && typeof list === "object"
-      ? ((list as Record<string, unknown>)["instances"] ?? (list as Record<string, unknown>)["data"])
-      : null;
-  const found = Array.isArray(arr)
-    ? (arr.find(
-        (item) => item && typeof item === "object" && (item as Record<string, unknown>)["name"] === instance,
-      ) as Record<string, unknown> | undefined)
-    : undefined;
-
-  if (found) {
-    const status = String(found["connectionStatus"] ?? "").toLowerCase();
-    if (status === "open" && !forceNew) {
-      return { state: "open" as const, qr: null };
+    const res = await fetch(`${BAILEYS_URL}/api/status`, { signal: AbortSignal.timeout(2500) });
+    if (res.ok) {
+      const data = await res.json();
+      const status = data.status || "close";
+      return status === "open" ? "open" : status === "connecting" ? "connecting" : "close";
     }
-    const instToken = (typeof found["token"] === "string" && (found["token"] as string).trim()) ? (found["token"] as string).trim() : token;
-    const connected = await call(`/instance/connect/${encodeURIComponent(instance)}`, {
-      method: "GET",
-      base,
-      key: instToken || key,
+  } catch {}
+  return "close";
+}
+
+export async function ensureInstanceWebhook(_userId?: string, _publicAppUrl?: string) {
+  // Baileys processa mensagens em tempo real via WebSocket
+  return { ok: true };
+}
+
+export async function setInstanceWebhook(_userId?: string, _webhookUrl?: string) {
+  return { ok: true };
+}
+
+export async function connectInstance(_userId?: string, _publicAppUrl?: string, _forceNew = false) {
+  try {
+    const res = await fetch(`${BAILEYS_URL}/api/connect`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "qr" }),
+      signal: AbortSignal.timeout(5000),
     });
-    const qr = extractQr(connected.json);
-    return { state: "connecting" as const, qr };
-  }
-
-  // Cria apenas se a instância ainda não existir
-  const created = await call(`/instance/create`, {
-    method: "POST",
-    base,
-    key,
-    body: JSON.stringify({
-      instanceName: instance,
-      qrcode: true,
-      integration: "WHATSAPP-BAILEYS",
-    }),
-  });
-
-  const qr = extractQr(created.json);
-  if (qr.base64) {
-    return { state: "connecting" as const, qr };
-  }
-
-  // Fallback para connect se qrcode não veio direto no create
-  const connected = await call(`/instance/connect/${encodeURIComponent(instance)}`, {
-    method: "GET",
-    base,
-    key,
-  });
-  return { state: "connecting" as const, qr: extractQr(connected.json) };
+    if (res.ok) {
+      const data = await res.json();
+      const st = data.state || {};
+      return {
+        state: st.status || "connecting",
+        base64: st.qrCode || null,
+        code: st.pairingCode || null,
+      };
+    }
+  } catch {}
+  return { state: "close", base64: null, code: null };
 }
 
-/** Desconecta e limpa a sessão usando o token correto. */
-export async function deleteInstance(userId?: string) {
-  const { base, key, instance } = evolutionConfig(userId);
-  let token: string | null = null;
+export async function deleteInstance(_userId?: string) {
   try {
-    token = await getInstanceToken(instance);
+    await fetch(`${BAILEYS_URL}/api/logout`, {
+      method: "POST",
+      signal: AbortSignal.timeout(3000),
+    });
   } catch {}
-
-  const reqKey = token || key;
-  try {
-    await call(`/instance/logout/${encodeURIComponent(instance)}`, { method: "DELETE", base, key: reqKey }).catch(() => {});
-  } catch {}
-  try {
-    await call(`/instance/delete/${encodeURIComponent(instance)}`, { method: "DELETE", base, key }).catch(() => {});
-  } catch {}
-  if (userId) lastWebhookSync.delete(userId);
-  return true;
+  return { ok: true };
 }
 
-export async function logoutInstance(userId?: string) {
-  return deleteInstance(userId);
+export async function restartInstance(_userId?: string) {
+  return await connectInstance();
 }
 
-/** Configura o webhook da instância diretamente na Evolution API na VPS */
-export async function setInstanceWebhook(userId: string, webhookUrl: string) {
-  const { base, key, instance } = evolutionConfig(userId);
-  let token: string | null = null;
-  try {
-    token = await getInstanceToken(instance);
-  } catch {}
-
-  const payload = {
-    webhook: {
-      enabled: true,
-      url: webhookUrl,
-      byEvents: false,
-      base64: false,
-      events: ["MESSAGES_UPSERT"],
-    },
-  };
-
-  const res = await call(`/webhook/set/${encodeURIComponent(instance)}`, {
-    method: "POST",
-    base,
-    key: token || key,
-    body: JSON.stringify(payload),
-  });
-
-  if (res.status === 200 || res.status === 201) {
-    return { ok: true, instance, message: "Webhook configurado com sucesso na VPS!" };
-  }
-
-  throw new Error(`Evolution API retornou status ${res.status}: ${res.raw.slice(0, 150)}`);
+export async function logoutInstance(_userId?: string) {
+  return await deleteInstance();
 }
 
-/** Consulta o webhook configurado atualmente para a instância na Evolution API */
-export async function findInstanceWebhook(userId?: string) {
-  const { base, key, instance } = evolutionConfig(userId);
-  let token: string | null = null;
-  try {
-    token = await getInstanceToken(instance);
-  } catch {}
-
-  const res = await call(`/webhook/find/${encodeURIComponent(instance)}`, {
-    method: "GET",
-    base,
-    key: token || key,
-  });
-
-  if (res.status === 200 && res.json) {
-    const wh = res.json?.webhook || res.json;
-    return {
-      enabled: Boolean(wh?.enabled),
-      url: typeof wh?.url === "string" ? wh.url : null,
-      events: Array.isArray(wh?.events) ? wh.events : [],
-    };
-  }
-
-  return { enabled: false, url: null, events: [] };
+export async function sendTextMessage(_userId: string, to: string, text: string) {
+  const { sendWhatsapp } = await import("./whatsapp.server");
+  return await sendWhatsapp(to, text);
 }
-

@@ -11,10 +11,8 @@ import {
   sendWhatsAppButtons,
   sendWhatsAppList,
   normalizePhone,
-  getEvolutionConfig,
 } from "./whatsapp-connection.server";
 import { resolvePhoneFromLid } from "./lid.server";
-import { instanceNameFor } from "./evolution.server";
 
 // Cache de IDs de mensagens já processadas (evita responder à mesma mensagem mais de uma vez)
 const processedMessageIds = new Set<string>();

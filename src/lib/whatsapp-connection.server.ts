@@ -1,11 +1,13 @@
 /**
- * Módulo central de conexão WhatsApp com a Evolution API.
- * Construído do zero para máxima estabilidade, suporte a VPS e prevenção de falhas de rede.
+ * Módulo de Conexão WhatsApp — Baileys Nativo.
+ * Conecta diretamente ao daemon local Baileys (porta 3001) para envio instantâneo e zero delays.
+ * 100% Baileys — ZERO chamadas para Evolution API.
  */
-import { evolutionBaseUrl } from "./evolution-url";
 
-export const DEFAULT_INSTANCE_NAME = "iptv_5ngpz2zz";
+const BAILEYS_PORT = process.env.BAILEYS_PORT ? Number(process.env.BAILEYS_PORT) : 3001;
+const BAILEYS_URL = process.env.BAILEYS_API_URL || `http://127.0.0.1:${BAILEYS_PORT}`;
 
+export const DEFAULT_INSTANCE_NAME = "baileys_default";
 export type ConnectionState = "open" | "connecting" | "close" | "none" | "unknown";
 
 export type ConnectResult = {
@@ -16,308 +18,85 @@ export type ConnectResult = {
   code: string | null;
 };
 
-function cleanEnv(v?: string) {
-  if (!v) return null;
-  const t = v.trim();
-  if (!t || t.includes("COLE_A") || t.length < 5) return null;
-  return t;
-}
-
-let activeDynamicInstance: string | null = null;
-
-export function setActiveInstanceName(name: string) {
-  if (name && name.trim()) {
-    activeDynamicInstance = name.trim();
-    process.env["EVOLUTION_INSTANCE"] = name.trim();
-  }
+export function setActiveInstanceName(_name: string) {
+  // Baileys gerencia uma sessão única e contínua
 }
 
 export function getEvolutionConfig() {
-  const envBase = cleanEnv(process.env["EVOLUTION_API_URL"]);
-  const envKey = cleanEnv(process.env["EVOLUTION_API_KEY"]);
-  const envInst = cleanEnv(activeDynamicInstance || process.env["EVOLUTION_INSTANCE"]);
-
-  const rawBase = envBase || "https://cobrancas-whatsapp.shop";
-  const base = evolutionBaseUrl(rawBase);
-  const apiKey = envKey || "evolutionApiGlobalTokenSecure2026";
-  const defaultInstance = envInst || DEFAULT_INSTANCE_NAME;
-
-  return { base, apiKey, defaultInstance };
-}
-
-/**
- * Executa chamadas HTTP autenticadas para a Evolution API.
- */
-export async function evolutionRequest<T = any>(
-  path: string,
-  init: RequestInit = {},
-  tokenOverride?: string,
-): Promise<T> {
-  const { base, apiKey } = getEvolutionConfig();
-  const token = tokenOverride || apiKey;
-
-  const url = `${base}${path}`;
-  const headers: Record<string, string> = {
-    apikey: token,
-    ...(init.body ? { "Content-Type": "application/json" } : {}),
-    ...((init.headers as Record<string, string>) || {}),
+  return {
+    base: BAILEYS_URL,
+    apiKey: "baileys_local_token",
+    defaultInstance: DEFAULT_INSTANCE_NAME,
   };
-
-  const response = await fetch(url, { ...init, headers });
-  const text = await response.text();
-
-  // Tratamento contra bloqueio de IP direto no Cloudflare
-  if (
-    response.status === 403 &&
-    (/error code:\s*1003/i.test(text) || /direct ip access not allowed/i.test(text))
-  ) {
-    throw new Error(
-      "Acesso por IP direto bloqueado pela borda. Use um domínio ou subdomínio sslip.io com HTTPS.",
-    );
-  }
-
-  let data: any = null;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text;
-  }
-
-  if (!response.ok) {
-    let message = "Erro de comunicação com a Evolution API";
-    if (typeof data === "string") {
-      message = data;
-    } else if (data && typeof data === "object") {
-      message =
-        data.response?.message ||
-        data.message ||
-        data.error ||
-        data.exception?.message ||
-        `Erro HTTP ${response.status}`;
-    }
-    throw new Error(`${message} (HTTP ${response.status})`);
-  }
-
-  return data as T;
 }
 
-const tokenCache = new Map<string, { token: string | null; expires: number }>();
-
-/**
- * Obtém o token de autenticação específico da instância, com cache de 5 minutos.
- */
-export async function findInstanceToken(instanceName: string): Promise<string | null> {
-  const cached = tokenCache.get(instanceName);
-  if (cached && Date.now() < cached.expires) {
-    return cached.token;
-  }
-  try {
-    const list = await evolutionRequest<any[]>("/instance/fetchInstances", { method: "GET" });
-    const instances = Array.isArray(list) ? list : list?.instances || list?.data || [];
-    const found = instances.find((i: any) => i?.name === instanceName);
-    const token = (typeof found?.token === "string" && found.token.trim()) ? found.token.trim() : null;
-    tokenCache.set(instanceName, { token, expires: Date.now() + 300000 });
-    return token;
-  } catch {
-    return null;
-  }
+export async function evolutionRequest<T = any>(path: string, init: RequestInit = {}): Promise<T> {
+  const url = `${BAILEYS_URL}${path}`;
+  const res = await fetch(url, init);
+  return (await res.json()) as T;
 }
 
-/**
- * Consulta o estado atual da conexão da instância.
- */
-export async function fetchConnectionState(instanceName: string): Promise<{
+export async function findInstanceToken(_instanceName?: string) {
+  return "baileys_token";
+}
+
+export async function fetchConnectionState(_instanceName?: string): Promise<{
   state: ConnectionState;
   raw: any;
 }> {
-  const token = await findInstanceToken(instanceName);
   try {
-    const res = await evolutionRequest(
-      `/instance/connectionState/${encodeURIComponent(instanceName)}`,
-      { method: "GET" },
-      token || undefined,
-    );
-
-    const rawState = String(res?.instance?.state || res?.state || res?.status || "").toLowerCase();
-    const state: ConnectionState =
-      rawState === "open"
-        ? "open"
-        : rawState === "connecting"
-          ? "connecting"
-          : rawState === "close"
-            ? "close"
-            : "unknown";
-
-    return { state, raw: res };
-  } catch (err: any) {
-    if (String(err?.message || "").includes("404")) {
-      return { state: "none", raw: null };
+    const res = await fetch(`${BAILEYS_URL}/api/status`, { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      const data = await res.json();
+      const state: ConnectionState = data.status || "close";
+      return { state, raw: data };
     }
-    return { state: "unknown", raw: err };
-  }
+  } catch {}
+  return { state: "close", raw: null };
 }
 
-/**
- * Cria ou conecta uma instância, gerando QR Code limpo.
- */
-export async function ensureAndConnectInstance(instanceName: string): Promise<ConnectResult> {
-  const list = await evolutionRequest<any[]>("/instance/fetchInstances", { method: "GET" }).catch(
-    () => null,
-  );
-  const arr = Array.isArray(list) ? list : list?.instances || list?.data || [];
-  const found = arr.find((i: any) => i?.name === instanceName);
-
-  let created = false;
-  let token = (typeof found?.token === "string" && found.token.trim()) ? found.token.trim() : null;
-
-  // 1. Se a instância não existir, cria com o motor Baileys oficial
-  if (!found) {
-    const createRes = await evolutionRequest<any>("/instance/create", {
+export async function ensureAndConnectInstance(
+  instanceName: string,
+  mode: "qr" | "pairing" = "qr",
+  phone?: string,
+): Promise<ConnectResult> {
+  try {
+    const res = await fetch(`${BAILEYS_URL}/api/connect`, {
       method: "POST",
-      body: JSON.stringify({
-        instanceName,
-        qrcode: true,
-        integration: "WHATSAPP-BAILEYS",
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode, phone }),
+      signal: AbortSignal.timeout(5000),
     });
-    created = true;
-    token = createRes?.hash?.apikey || createRes?.hash || null;
-
-    const b64 = createRes?.qrcode?.base64 || createRes?.base64 || null;
-    const code = createRes?.qrcode?.code || createRes?.code || null;
-
-    if (b64 || code) {
+    if (res.ok) {
+      const data = await res.json();
+      const state = data.state || {};
       return {
-        instance: instanceName,
+        instance: instanceName || DEFAULT_INSTANCE_NAME,
         created: true,
-        status: "connecting",
-        base64: b64,
-        code,
+        status: state.status || "connecting",
+        base64: state.qrCode || null,
+        code: state.pairingCode || null,
       };
     }
-  }
-
-  // 2. Se já estiver conectada, não força nova leitura
-  const status = String(found?.connectionStatus || "").toLowerCase();
-  if (status === "open") {
-    return {
-      instance: instanceName,
-      created,
-      status: "open",
-      base64: null,
-      code: null,
-    };
-  }
-
-  // 3. Se estiver desconectada, gera um QR Code novo
-  const connRes = await evolutionRequest<any>(
-    `/instance/connect/${encodeURIComponent(instanceName)}`,
-    { method: "GET" },
-    token || undefined,
-  );
-
-  const base64 = connRes?.base64 || connRes?.qrcode?.base64 || null;
-  const code = connRes?.code || connRes?.pairingCode || connRes?.qrcode?.code || null;
-
-  return {
-    instance: instanceName,
-    created,
-    status: "connecting",
-    base64,
-    code,
-  };
-}
-
-/**
- * Desconecta a sessão do WhatsApp.
- */
-export async function logoutInstance(instanceName: string) {
-  const token = await findInstanceToken(instanceName);
-  return evolutionRequest(
-    `/instance/logout/${encodeURIComponent(instanceName)}`,
-    { method: "DELETE" },
-    token || undefined,
-  );
-}
-
-/**
- * Reinicia a sessão da instância na VPS.
- */
-export async function restartInstance(instanceName: string) {
-  const token = await findInstanceToken(instanceName);
-  return evolutionRequest(
-    `/instance/restart/${encodeURIComponent(instanceName)}`,
-    { method: "POST" },
-    token || undefined,
-  );
-}
-
-/**
- * Apaga a instância completamente da VPS (logout + delete).
- */
-export async function deleteInstanceFromVps(instanceName: string) {
-  const token = await findInstanceToken(instanceName);
-  try {
-    await evolutionRequest(
-      `/instance/logout/${encodeURIComponent(instanceName)}`,
-      { method: "DELETE" },
-      token || undefined,
-    ).catch(() => {});
   } catch {}
 
-  return evolutionRequest(
-    `/instance/delete/${encodeURIComponent(instanceName)}`,
-    { method: "DELETE" },
-  );
-}
-
-/**
- * Configura o Webhook na Evolution API automaticamente.
- */
-export async function setupInstanceWebhook(instanceName: string, webhookUrl: string) {
-  const token = await findInstanceToken(instanceName);
-  const payload = {
-    webhook: {
-      enabled: true,
-      url: webhookUrl,
-      byEvents: false,
-      base64: false,
-      events: ["MESSAGES_UPSERT"],
-    },
+  return {
+    instance: instanceName || DEFAULT_INSTANCE_NAME,
+    created: false,
+    status: "close",
+    base64: null,
+    code: null,
   };
-
-  return evolutionRequest(
-    `/webhook/set/${encodeURIComponent(instanceName)}`,
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
-    token || undefined,
-  );
 }
 
-/**
- * Consulta o Webhook configurado na Evolution API.
- */
-export async function fetchInstanceWebhook(instanceName: string) {
-  const token = await findInstanceToken(instanceName);
-  try {
-    const res = await evolutionRequest<any>(
-      `/webhook/find/${encodeURIComponent(instanceName)}`,
-      { method: "GET" },
-      token || undefined,
-    );
-    return res;
-  } catch {
-    return null;
-  }
+export async function ensureWebhookConfigured(_instanceName: string, _webhookUrl: string) {
+  return { ok: true };
 }
 
+export async function fetchInstanceWebhook(_instanceName: string) {
+  return { enabled: true, mode: "baileys_socket" };
+}
 
-/**
- * Normaliza número para formato internacional do Brasil (55 + DDD + 8/9 dígitos)
- * ou preserva @lid e @s.whatsapp.net íntegros.
- */
 export function normalizePhone(raw: string) {
   if (!raw) return "";
   const trimmed = raw.trim();
@@ -325,7 +104,6 @@ export function normalizePhone(raw: string) {
     return trimmed;
   }
   let digits = trimmed.replace(/\D/g, "").replace(/^0+/, "");
-  // Se for identificador numérico longo (LID sem sufixo)
   if (digits.length >= 14 && !digits.startsWith("55")) {
     return `${digits}@lid`;
   }
@@ -336,228 +114,176 @@ export function normalizePhone(raw: string) {
   return digits;
 }
 
-/**
- * Envia mensagem de texto para o WhatsApp seguindo 100% da documentação da Evolution API v2.
- * Utiliza options.delay e presence 'composing' para garantir a sincronização da criptografia
- * e evitar o aviso 'Aguardando mensagem' no celular.
- */
-export async function sendWhatsAppText(
-  to: string,
-  text: string,
-  instanceOverride?: string,
-  quotedKey?: any,
-) {
-  const { defaultInstance } = getEvolutionConfig();
-  const instance = instanceOverride || defaultInstance;
+export async function sendWhatsAppText(to: string, text: string) {
   const normalized = normalizePhone(to);
-
   if (!normalized) {
     return { ok: false as const, error: "Número inválido ou não informado." };
   }
 
   try {
-    const payload: Record<string, any> = {
-      number: normalized,
-      text,
-      textMessage: { text },
-      options: {
-        delay: 0,
-        linkPreview: false,
-        ...(quotedKey ? { quoted: { key: quotedKey } } : {}),
-      },
-    };
-
-    const res = await evolutionRequest<any>(
-      `/message/sendText/${encodeURIComponent(instance)}`,
-      {
-        method: "POST",
-        body: JSON.stringify(payload),
-      },
-    );
-    return { ok: true as const, data: res };
+    const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to: normalized, text }),
+      signal: AbortSignal.timeout(10000),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      return { ok: false as const, error: data.error || "Falha no envio Baileys." };
+    }
+    return { ok: true as const, data };
   } catch (error: any) {
     return { ok: false as const, error: error?.message || "Falha ao enviar mensagem." };
   }
 }
 
-/**
- * Envia imagem ou mídia em base64 para o WhatsApp (ex: QR Code PIX).
- */
+export async function sendWhatsAppButtons(
+  to: string,
+  options: {
+    title?: string;
+    description: string;
+    buttons: Array<{
+      id: string;
+      displayText: string;
+      type?: "reply" | "copy" | "url" | "call" | "pix";
+      copyCode?: string;
+      url?: string;
+      phoneNumber?: string;
+    }>;
+    footer?: string;
+  },
+) {
+  const normalized = normalizePhone(to);
+  if (!normalized) return { ok: false as const, error: "Número inválido." };
+
+  const formattedButtons = options.buttons.map((b) => {
+    if (b.type === "copy" || b.copyCode) {
+      return {
+        name: "cta_copy",
+        buttonParamsJson: JSON.stringify({
+          display_text: b.displayText,
+          copy_code: b.copyCode || "",
+        }),
+      };
+    }
+    if (b.type === "url" || b.url) {
+      return {
+        name: "cta_url",
+        buttonParamsJson: JSON.stringify({
+          display_text: b.displayText,
+          url: b.url || "",
+        }),
+      };
+    }
+    return {
+      buttonId: String(b.id),
+      buttonText: { displayText: b.displayText },
+      type: 1,
+    };
+  });
+
+  try {
+    const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: normalized,
+        text: options.description,
+        footer: options.footer || "IPTV Bot",
+        type: "buttons",
+        buttons: formattedButtons,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      return await sendWhatsAppText(normalized, options.description);
+    }
+    return { ok: true as const, data };
+  } catch {
+    return await sendWhatsAppText(normalized, options.description);
+  }
+}
+
+export async function sendWhatsAppList(
+  to: string,
+  options: {
+    title: string;
+    description: string;
+    buttonText: string;
+    footerText?: string;
+    sections: Array<{
+      title: string;
+      rows: Array<{
+        title: string;
+        description?: string;
+        rowId: string;
+      }>;
+    }>;
+  },
+) {
+  const normalized = normalizePhone(to);
+  if (!normalized) return { ok: false as const, error: "Número inválido." };
+
+  try {
+    const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: normalized,
+        title: options.title,
+        text: options.description,
+        buttonText: options.buttonText,
+        footer: options.footerText || "Selecione uma opção",
+        type: "list",
+        sections: options.sections,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      return await sendWhatsAppText(normalized, options.description);
+    }
+    return { ok: true as const, data };
+  } catch {
+    return await sendWhatsAppText(normalized, options.description);
+  }
+}
+
 export async function sendWhatsAppMedia(
   to: string,
-  media: {
+  mediaOptions: {
     base64: string;
     caption?: string;
     mimetype?: string;
     fileName?: string;
   },
-  instanceOverride?: string,
 ) {
-  const { defaultInstance } = getEvolutionConfig();
-  const instance = instanceOverride || defaultInstance;
   const normalized = normalizePhone(to);
-
-  if (!normalized) {
-    return { ok: false as const, error: "Número inválido ou não informado." };
-  }
+  if (!normalized) return { ok: false as const, error: "Número inválido." };
 
   try {
-    const token = await findInstanceToken(instance);
-    const res = await evolutionRequest<any>(
-      `/message/sendMedia/${encodeURIComponent(instance)}`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          number: normalized,
-          mediatype: "image",
-          mimetype: media.mimetype || "image/png",
-          caption: media.caption || "",
-          media: media.base64,
-          fileName: media.fileName || "qrcode-pix.png",
-          options: {
-            delay: 1200,
-            presence: "composing",
-          },
-        }),
-      },
-      token || undefined,
-    );
-    return { ok: true as const, data: res };
-  } catch (error: any) {
-    return { ok: false as const, error: error?.message || "Falha ao enviar mídia." };
+    const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: normalized,
+        text: mediaOptions.caption || "",
+        media: {
+          base64: mediaOptions.base64,
+          mimetype: mediaOptions.mimetype || "image/png",
+          caption: mediaOptions.caption || "",
+          fileName: mediaOptions.fileName || "qrcode-pix.png",
+        },
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      return { ok: false as const, error: data.error || "Falha no envio de mídia." };
+    }
+    return { ok: true as const, data };
+  } catch (err: any) {
+    return { ok: false as const, error: err?.message || "Falha ao enviar mídia." };
   }
 }
-
-/**
- * Envia mensagem com Botões Interativos (Quick Reply, CTA Copy, CTA Url)
- * suportados nativamente pelo Baileys na Evolution API v2.
- */
-export async function sendWhatsAppButtons(
-  to: string,
-  data: {
-    title?: string;
-    description: string;
-    footer?: string;
-    buttons: Array<{
-      id: string;
-      displayText: string;
-      type?: "reply" | "url" | "call" | "copy";
-      copyCode?: string;
-      url?: string;
-    }>;
-  },
-  instanceOverride?: string,
-) {
-  const { defaultInstance } = getEvolutionConfig();
-  const instance = instanceOverride || defaultInstance;
-  const normalized = normalizePhone(to);
-
-  if (!normalized) {
-    return { ok: false as const, error: "Número inválido ou não informado." };
-  }
-
-  const formattedButtons = data.buttons.map((b) => {
-    if (b.type === "copy" || b.copyCode) {
-      return {
-        type: "cta_copy",
-        displayText: b.displayText,
-        copyCode: b.copyCode,
-      };
-    }
-    if (b.type === "url" || b.url) {
-      return {
-        type: "cta_url",
-        displayText: b.displayText,
-        url: b.url,
-      };
-    }
-    return {
-      type: "reply",
-      displayText: b.displayText,
-      id: b.id,
-    };
-  });
-
-  try {
-    const res = await evolutionRequest<any>(
-      `/message/sendButtons/${encodeURIComponent(instance)}`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          number: normalized,
-          title: data.title || "",
-          description: data.description,
-          footer: data.footer || "",
-          buttons: formattedButtons,
-        }),
-      },
-    );
-    return { ok: true as const, data: res };
-  } catch (error: any) {
-    // Fallback: se o aparelho do cliente não suportar botões nativos, envia texto com as opções
-    const fallbackText =
-      `${data.description}\n\n🔘 *Opções:*\n` +
-      data.buttons.map((b) => `👉 *${b.id}* - ${b.displayText}`).join("\n");
-    return await sendWhatsAppText(to, fallbackText, instance);
-  }
-}
-
-/**
- * Envia mensagem com Lista Interativa de Opções (seções e itens)
- * suportada nativamente pelo Baileys na Evolution API v2.
- */
-export async function sendWhatsAppList(
-  to: string,
-  data: {
-    title?: string;
-    description: string;
-    buttonText?: string;
-    footerText?: string;
-    sections: Array<{
-      title: string;
-      rows: Array<{
-        rowId: string;
-        title: string;
-        description?: string;
-      }>;
-    }>;
-  },
-  instanceOverride?: string,
-) {
-  const { defaultInstance } = getEvolutionConfig();
-  const instance = instanceOverride || defaultInstance;
-  const normalized = normalizePhone(to);
-
-  if (!normalized) {
-    return { ok: false as const, error: "Número inválido ou não informado." };
-  }
-
-  try {
-    const res = await evolutionRequest<any>(
-      `/message/sendList/${encodeURIComponent(instance)}`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          number: normalized,
-          title: data.title || "Opções Disponíveis",
-          description: data.description,
-          buttonText: data.buttonText || "📋 Abrir Opções",
-          footerText: data.footerText || "",
-          sections: data.sections,
-        }),
-      },
-    );
-    return { ok: true as const, data: res };
-  } catch (error: any) {
-    // Fallback para texto
-    let fallbackText = data.description;
-    for (const sec of data.sections) {
-      fallbackText += `\n\n📌 *${sec.title}*\n`;
-      fallbackText += sec.rows
-        .map((r) => `👉 *${r.rowId}* - ${r.title}${r.description ? ` (${r.description})` : ""}`)
-        .join("\n");
-    }
-    return await sendWhatsAppText(to, fallbackText, instance);
-  }
-}
-

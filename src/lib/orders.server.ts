@@ -1,7 +1,7 @@
 import { addMonths } from "date-fns";
 import { generateM3uUrl, generateEpgUrl, extractCleanIptvDns } from "./format";
 import type { SigmaConfig } from "./sigma.panel";
-import { sendViaEvolution } from "./billing.server";
+import { sendViaBaileys } from "./billing.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import defaultOrdersData from "../../data/orders_default.json";
 import defaultBotConfigData from "../../data/bot_config_default.json";
@@ -397,7 +397,7 @@ export async function approveAndReleaseOrderServer(
   }
 
   try {
-    await sendViaEvolution(wsRow ?? {}, order.customer_phone, accessMessage, userId);
+    await sendViaBaileys(order.customer_phone, accessMessage);
   } catch (sendErr) {
     console.error("Aviso ao enviar mensagem de acesso via WhatsApp:", sendErr);
   }

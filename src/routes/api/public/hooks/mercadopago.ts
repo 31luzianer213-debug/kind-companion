@@ -199,9 +199,9 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago")({
           // Notificação de agradecimento e confirmação via WhatsApp
           if (client?.phone) {
             try {
-              const { sendViaEvolution } = await import("@/lib/billing.server");
+              const { sendViaBaileys } = await import("@/lib/billing.server");
               const text = `🎉 *Pagamento Confirmado!*\n\nOlá *${client.name}*, seu pagamento de *R$ ${Number(invoice.amount).toFixed(2)}* via Mercado Pago foi aprovado com sucesso!\n\n✅ Sua assinatura foi renovada por mais 30 dias (novo vencimento: *${nextIso.split("-").reverse().join("/")}*).\n\nObrigado pela preferência! Tenha um ótimo entretenimento.`;
-              await sendViaEvolution(matchedSettings, client.phone, text, matchedSettings.user_id);
+              await sendViaBaileys(client.phone, text);
               await supabaseAdmin.from("message_logs").insert({
                 user_id: matchedSettings.user_id,
                 client_id: client.id,

@@ -36,48 +36,49 @@ export function normalizeNumber(phone: string) {
   return digits;
 }
 
-export async function sendViaEvolution(
-  settings: WhatsAppSettings & { user_id?: string },
+const BAILEYS_PORT = process.env.BAILEYS_PORT ? Number(process.env.BAILEYS_PORT) : 3001;
+const BAILEYS_URL = process.env.BAILEYS_API_URL || `http://127.0.0.1:${BAILEYS_PORT}`;
+
+export async function sendViaBaileys(
   phone: string,
   text: string,
-  userId?: string,
+  options?: {
+    type?: "text" | "buttons" | "list" | "pix_copy";
+    buttons?: any[];
+    sections?: any[];
+    pixCode?: string;
+  },
 ) {
-  const { evolutionConfig } = await import("./evolution.server");
-  const { getInstanceToken } = await import("./evolution.functions");
-  const { evolutionBaseUrl } = await import("./evolution-url");
-
-  const owner = userId ?? settings.user_id;
-  const { base, key, instance } = evolutionConfig(
-    owner,
-    settings.api_url ?? undefined,
-    settings.api_key ?? undefined,
-    settings.instance_name ?? undefined,
-  );
-
-  let token: string | null = null;
-  try {
-    token = await getInstanceToken(instance);
-  } catch {}
-
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const reqKey = token || key;
-  if (reqKey) headers["apikey"] = reqKey;
-
-  const res = await fetch(`${evolutionBaseUrl(base)}/message/sendText/${encodeURIComponent(instance)}`, {
+  const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
     method: "POST",
-    headers,
-    body: JSON.stringify({ number: normalizeNumber(phone), text, textMessage: { text } }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      to: normalizeNumber(phone),
+      text,
+      type: options?.type || "text",
+      buttons: options?.buttons,
+      sections: options?.sections,
+      pixCode: options?.pixCode,
+    }),
+    signal: AbortSignal.timeout(10000),
   });
-  const raw = await res.text();
-  if (!res.ok) {
-    console.error(`[Billing WhatsApp] Falha no envio (${res.status}): ${raw.slice(0, 300)}`);
-    throw new Error(`Falha no envio (${res.status}): ${raw.slice(0, 300)}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.error || `Falha no envio Baileys [${res.status}]`);
   }
-  return raw.slice(0, 500);
+  return data;
 }
 
-export async function sendMediaViaEvolution(
-  settings: WhatsAppSettings & { user_id?: string },
+export async function sendViaEvolution(
+  _settings: WhatsAppSettings & { user_id?: string },
+  phone: string,
+  text: string,
+  _userId?: string,
+) {
+  return await sendViaBaileys(phone, text);
+}
+
+export async function sendMediaViaBaileys(
   phone: string,
   mediaOptions: {
     base64: string;
@@ -85,47 +86,41 @@ export async function sendMediaViaEvolution(
     mimetype?: string;
     fileName?: string;
   },
-  userId?: string,
 ) {
-  const { evolutionConfig } = await import("./evolution.server");
-  const { getInstanceToken } = await import("./evolution.functions");
-  const { evolutionBaseUrl } = await import("./evolution-url");
-
-  const owner = userId ?? settings.user_id;
-  const { base, key, instance } = evolutionConfig(
-    owner,
-    settings.api_url ?? undefined,
-    settings.api_key ?? undefined,
-    settings.instance_name ?? undefined,
-  );
-
-  let token: string | null = null;
-  try {
-    token = await getInstanceToken(instance);
-  } catch {}
-
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const reqKey = token || key;
-  if (reqKey) headers["apikey"] = reqKey;
-
-  const res = await fetch(`${evolutionBaseUrl(base)}/message/sendMedia/${encodeURIComponent(instance)}`, {
+  const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
     method: "POST",
-    headers,
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      number: normalizeNumber(phone),
-      mediatype: "image",
-      mimetype: mediaOptions.mimetype || "image/png",
-      caption: mediaOptions.caption || "",
-      media: mediaOptions.base64,
-      fileName: mediaOptions.fileName || "qrcode-pix.png",
+      to: normalizeNumber(phone),
+      text: mediaOptions.caption || "",
+      media: {
+        base64: mediaOptions.base64,
+        mimetype: mediaOptions.mimetype || "image/png",
+        caption: mediaOptions.caption || "",
+        fileName: mediaOptions.fileName || "qrcode-pix.png",
+      },
     }),
+    signal: AbortSignal.timeout(10000),
   });
-  const raw = await res.text();
-  if (!res.ok) {
-    console.error(`[Billing WhatsApp Media] Falha no envio (${res.status}): ${raw.slice(0, 300)}`);
-    throw new Error(`Falha no envio de mídia (${res.status}): ${raw.slice(0, 300)}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.error || `Falha no envio de mídia Baileys [${res.status}]`);
   }
-  return raw.slice(0, 500);
+  return data;
+}
+
+export async function sendMediaViaEvolution(
+  _settings: WhatsAppSettings & { user_id?: string },
+  phone: string,
+  mediaOptions: {
+    base64: string;
+    caption?: string;
+    mimetype?: string;
+    fileName?: string;
+  },
+  _userId?: string,
+) {
+  return await sendMediaViaBaileys(phone, mediaOptions);
 }
 
 export interface ButtonItem {
@@ -137,12 +132,7 @@ export interface ButtonItem {
   phoneNumber?: string;
 }
 
-/**
- * Envia botões interativos via Evolution API v2 (/message/sendButtons/:instance).
- * Se a API ou WhatsApp rejeitar, faz fallback automático para mensagem de texto normal.
- */
-export async function sendButtonsViaEvolution(
-  settings: WhatsAppSettings & { user_id?: string },
+export async function sendButtonsViaBaileys(
   phone: string,
   options: {
     title?: string;
@@ -151,62 +141,70 @@ export async function sendButtonsViaEvolution(
     footer?: string;
     fallbackText?: string;
   },
-  userId?: string,
 ) {
-  const { evolutionConfig } = await import("./evolution.server");
-  const owner = userId ?? settings.user_id;
-  if (!owner) throw new Error("Conta sem WhatsApp conectado.");
-  const { base, key, instance } = evolutionConfig(
-    owner,
-    settings.api_url ?? undefined,
-    settings.api_key ?? undefined,
-  );
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (key) headers["apikey"] = key;
+  const formattedButtons = options.buttons.map((b) => {
+    if (b.type === "copy" || b.copyCode) {
+      return {
+        name: "cta_copy",
+        buttonParamsJson: JSON.stringify({
+          display_text: b.displayText,
+          copy_code: b.copyCode || "",
+        }),
+      };
+    }
+    if (b.type === "url" || b.url) {
+      return {
+        name: "cta_url",
+        buttonParamsJson: JSON.stringify({
+          display_text: b.displayText,
+          url: b.url || "",
+        }),
+      };
+    }
+    return {
+      buttonId: String(b.id),
+      buttonText: { displayText: b.displayText },
+      type: 1,
+    };
+  });
 
   try {
-    const formattedButtons = options.buttons.map((b) => ({
-      id: String(b.id),
-      buttonId: String(b.id),
-      displayText: b.displayText,
-      text: b.displayText,
-      buttonText: { displayText: b.displayText },
-      type: b.type || "reply",
-      ...(b.copyCode ? { copyCode: b.copyCode } : {}),
-      ...(b.url ? { url: b.url } : {}),
-      ...(b.phoneNumber ? { phoneNumber: b.phoneNumber } : {}),
-    }));
-
-    const payload: any = {
-      number: normalizeNumber(phone),
-      description: options.description,
-      text: options.description,
-      buttons: formattedButtons,
-    };
-    if (options.title) payload.title = options.title;
-    if (options.footer) {
-      payload.footer = options.footer;
-      payload.footerText = options.footer;
-    }
-
-    const res = await fetch(`${base}/message/sendButtons/${instance}`, {
+    const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
       method: "POST",
-      headers,
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: normalizeNumber(phone),
+        text: options.description,
+        footer: options.footer || "IPTV Bot",
+        type: "buttons",
+        buttons: formattedButtons,
+      }),
+      signal: AbortSignal.timeout(10000),
     });
 
-    if (res.ok) {
-      return await res.text();
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok !== false) {
+      return data;
     }
+  } catch {}
 
-    console.warn(`Evolution sendButtons retornado status ${res.status}. Usando fallback para texto.`);
-  } catch (btnErr) {
-    console.warn("Exceção no sendButtons, caindo para fallback de texto:", btnErr);
-  }
+  // Fallback para texto simples
+  return await sendViaBaileys(phone, options.fallbackText || options.description);
+}
 
-  // Fallback para texto normal
-  const fallback = options.fallbackText || options.description;
-  return await sendViaEvolution(settings, phone, fallback, userId);
+export async function sendButtonsViaEvolution(
+  _settings: WhatsAppSettings & { user_id?: string },
+  phone: string,
+  options: {
+    title?: string;
+    description: string;
+    buttons: ButtonItem[];
+    footer?: string;
+    fallbackText?: string;
+  },
+  _userId?: string,
+) {
+  return await sendButtonsViaBaileys(phone, options);
 }
 
 export interface ListSection {
@@ -218,12 +216,7 @@ export interface ListSection {
   }>;
 }
 
-/**
- * Envia Menu de Lista Interativa via Evolution API v2 (/message/sendList/:instance).
- * Se o dispositivo do cliente não suportar ou a API falhar, cai para fallback de texto limpo.
- */
-export async function sendListViaEvolution(
-  settings: WhatsAppSettings & { user_id?: string },
+export async function sendListViaBaileys(
   phone: string,
   options: {
     title: string;
@@ -233,48 +226,46 @@ export async function sendListViaEvolution(
     sections: ListSection[];
     fallbackText?: string;
   },
-  userId?: string,
 ) {
-  const { evolutionConfig } = await import("./evolution.server");
-  const owner = userId ?? settings.user_id;
-  if (!owner) throw new Error("Conta sem WhatsApp conectado.");
-  const { base, key, instance } = evolutionConfig(
-    owner,
-    settings.api_url ?? undefined,
-    settings.api_key ?? undefined,
-  );
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (key) headers["apikey"] = key;
-
   try {
-    const payload = {
-      number: normalizeNumber(phone),
-      title: options.title,
-      description: options.description,
-      buttonText: options.buttonText,
-      footerText: options.footerText || "Selecione uma opção acima",
-      footer: options.footerText || "Selecione uma opção acima",
-      sections: options.sections,
-    };
-
-    const res = await fetch(`${base}/message/sendList/${instance}`, {
+    const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
       method: "POST",
-      headers,
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: normalizeNumber(phone),
+        title: options.title,
+        text: options.description,
+        buttonText: options.buttonText,
+        footer: options.footerText || "Selecione uma opção",
+        type: "list",
+        sections: options.sections,
+      }),
+      signal: AbortSignal.timeout(10000),
     });
 
-    if (res.ok) {
-      return await res.text();
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok !== false) {
+      return data;
     }
+  } catch {}
 
-    console.warn(`Evolution sendList retornado status ${res.status}. Usando fallback para texto.`);
-  } catch (listErr) {
-    console.warn("Exceção no sendList, caindo para fallback de texto:", listErr);
-  }
+  return await sendViaBaileys(phone, options.fallbackText || options.description);
+}
 
-  // Fallback para texto normal
-  const fallback = options.fallbackText || options.description;
-  return await sendViaEvolution(settings, phone, fallback, userId);
+export async function sendListViaEvolution(
+  _settings: WhatsAppSettings & { user_id?: string },
+  phone: string,
+  options: {
+    title: string;
+    description: string;
+    buttonText: string;
+    footerText?: string;
+    sections: ListSection[];
+    fallbackText?: string;
+  },
+  _userId?: string,
+) {
+  return await sendListViaBaileys(phone, options);
 }
 
 function iso(date: Date) {

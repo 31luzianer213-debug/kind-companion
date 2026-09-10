@@ -127,15 +127,15 @@ export const Route = createFileRoute("/api/public/hooks/asaas")({
 
           // Envia comprovante e confirmação no WhatsApp
           let whatsappSent = false;
-          if (client?.phone && matchedSettings?.api_url) {
+          if (client?.phone) {
             try {
-              const { sendViaEvolution } = await import("@/lib/billing.server");
+              const { sendViaBaileys } = await import("@/lib/billing.server");
               const msg = `✅ *Pagamento Confirmado!*\n\nOlá, *${client.name}*!\nSeu pagamento via Pix de *R$ ${Number(payment.value).toFixed(2)}* foi identificado com sucesso pelo Asaas.\n\n📅 *Novo Vencimento:* ${nextIso.split("-").reverse().join("/")}${
                 sigmaRenewed ? "\n📺 *Linha IPTV renovada com sucesso!*" : ""
               }\n\nObrigado pela preferência!`;
 
-              const resWs = await sendViaEvolution(matchedSettings, client.phone, msg);
-              whatsappSent = resWs.ok;
+              await sendViaBaileys(client.phone, msg);
+              whatsappSent = true;
             } catch {}
           }
 

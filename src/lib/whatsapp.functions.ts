@@ -45,80 +45,43 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
     }
   });
 
-/** Estado atual da sessão de WhatsApp da conta. */
+/** Estado atual da sessão de WhatsApp da conta (Baileys nativo). */
 export const getWhatsAppStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input?: { origin?: string }) => input)
-  .handler(async ({ data, context }) => {
-    const { fetchState, ensureInstanceWebhook } = await import("./evolution.server");
-    const { getRequest } = await import("@tanstack/react-start/server");
+  .handler(async () => {
     try {
-      const state = await fetchState(context.userId);
-
-      // Se a conexão estiver ativa ("open"), garante em segundo plano que o Webhook está configurado na VPS
-      if (state === "open") {
-        let publicUrl = data?.origin;
-        if (!publicUrl) {
-          try {
-            const req = getRequest();
-            if (req) {
-              const proto = req.headers.get("x-forwarded-proto") || "https";
-              const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
-              if (host) publicUrl = `${proto}://${host}`;
-            }
-          } catch {}
-        }
-        if (
-          publicUrl &&
-          !publicUrl.includes("localhost") &&
-          !publicUrl.includes("preview--") &&
-          !publicUrl.includes("127.0.0.1")
-        ) {
-          ensureInstanceWebhook(context.userId, publicUrl).catch(() => {});
-        }
-      }
-
-      return { ok: true as const, state, error: null };
+      const { getBaileysStatus } = await import("./baileys.functions");
+      const res = await getBaileysStatus();
+      const st = res?.state?.status || "close";
+      return { ok: true as const, state: st, error: null };
     } catch (error) {
       return {
         ok: false as const,
         state: "none" as const,
-        error: error instanceof Error ? error.message : "Não foi possível consultar.",
+        error: error instanceof Error ? error.message : "Não foi possível consultar status.",
       };
     }
   });
 
-/** Cria/abre a sessão e devolve o QR Code, idêntico à lógica do BOMSABORR. */
+/** Conecta o WhatsApp via QR Code ou Código de Pareamento (Baileys nativo). */
 export const connectWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input?: { origin?: string; forceNew?: boolean }) => input)
-  .handler(async ({ data, context }) => {
-    const { ensureAndConnectEvolution } = await import("./evolution.functions");
-    const { ensureInstanceWebhook } = await import("./evolution.server");
-    const { getRequest } = await import("@tanstack/react-start/server");
-
-    let publicUrl = data?.origin;
-    if (!publicUrl) {
-      try {
-        const req = getRequest();
-        if (req) {
-          const proto = req.headers.get("x-forwarded-proto") || "https";
-          const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
-          if (host) publicUrl = `${proto}://${host}`;
-        }
-      } catch {}
-    }
-
+  .inputValidator((input?: { origin?: string; forceNew?: boolean; mode?: "qr" | "pairing"; phone?: string }) => input)
+  .handler(async ({ data }) => {
     try {
-      const result = await ensureAndConnectEvolution();
-      if (result.status === "open" && publicUrl) {
-        ensureInstanceWebhook(context.userId, publicUrl).catch(() => {});
-      }
+      const { connectBaileys } = await import("./baileys.functions");
+      const res = await connectBaileys({
+        data: {
+          mode: data?.mode || "qr",
+          phone: data?.phone,
+        },
+      });
       return {
         ok: true as const,
-        state: result.status,
-        qr: result.base64 ?? null,
-        code: result.code ?? null,
+        state: res?.state?.status || "connecting",
+        qr: res?.state?.qrCode ?? null,
+        code: res?.state?.pairingCode ?? null,
         error: null,
       };
     } catch (error) {
@@ -127,7 +90,7 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
         state: "close" as const,
         qr: null,
         code: null,
-        error: error instanceof Error ? error.message : "Não foi possível gerar o QR Code.",
+        error: error instanceof Error ? error.message : "Não foi possível conectar via Baileys.",
       };
     }
   });
@@ -135,10 +98,10 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
 /** Desconecta o número conectado. */
 export const disconnectWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { deleteInstance } = await import("./evolution.server");
+  .handler(async () => {
     try {
-      await deleteInstance(context.userId);
+      const { disconnectBaileys } = await import("./baileys.functions");
+      await disconnectBaileys();
       return { ok: true as const, error: null };
     } catch (error) {
       return {
@@ -236,7 +199,7 @@ export const sendAccessDetails = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { clientId: string }) => input)
   .handler(async ({ data, context }) => {
-    const { sendViaEvolution } = await import("./billing.server");
+    const { sendViaBaileys } = await import("./billing.server");
     const { buildTemplateVars, renderTemplate } = await import("./format");
     const { supabase, userId } = context;
 
@@ -272,7 +235,7 @@ export const sendAccessDetails = createServerFn({ method: "POST" })
     );
 
     try {
-      await sendViaEvolution({}, client.phone, body, userId);
+      await sendViaBaileys(client.phone, body);
       await supabase.from("message_logs").insert({
         user_id: userId,
         client_id: client.id,
