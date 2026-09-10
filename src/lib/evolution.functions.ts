@@ -312,3 +312,32 @@ export const ensureAndConnectEvolution = createServerFn({ method: "POST" })
     return await ensureAndConnectInstance(defaultInstance);
   });
 
+export const getEvolutionWebhookState = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ instance: z.string().min(1) }).parse(data))
+  .handler(async ({ data }) => {
+    const { fetchInstanceWebhook } = await import("./whatsapp-connection.server");
+    const webhook = await fetchInstanceWebhook(data.instance);
+    const url = webhook?.url || null;
+    const enabled = Boolean(webhook?.enabled);
+    return { url, enabled, raw: webhook as unknown as Record<string, JsonValue> };
+  });
+
+export const setEvolutionWebhookUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: unknown) =>
+      z
+        .object({
+          instance: z.string().min(1),
+          webhookUrl: z.string().url("URL de webhook inválida"),
+        })
+        .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { setupInstanceWebhook } = await import("./whatsapp-connection.server");
+    const res = await setupInstanceWebhook(data.instance, data.webhookUrl);
+    return { ok: true, raw: res as unknown as Record<string, JsonValue> };
+  });
+
+

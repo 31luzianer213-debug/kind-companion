@@ -19,11 +19,14 @@ import {
   Clock,
   Loader2,
   Trash2,
+  Zap,
 } from "lucide-react";
 import {
   ensureAndConnectEvolution,
   getEvolutionConfigStatus,
   getEvolutionConnectionState,
+  getEvolutionWebhookState,
+  setEvolutionWebhookUrl,
   logoutEvolutionInstance,
   deleteEvolutionInstance,
   restartEvolutionInstance,
@@ -129,6 +132,42 @@ function WhatsAppPage() {
     refetchInterval: 10000,
   });
 
+  const [webhookUrlInput, setWebhookUrlInput] = useState("");
+  const [savingWebhook, setSavingWebhook] = useState(false);
+
+  const webhookState = useQuery({
+    queryKey: ["evolution", "webhook", instance],
+    queryFn: () => getEvolutionWebhookState({ data: { instance } }),
+    enabled: !!instance,
+    retry: 0,
+  });
+
+  useEffect(() => {
+    if (webhookState.data?.url) {
+      setWebhookUrlInput(webhookState.data.url);
+    } else if (typeof window !== "undefined" && window.location.origin && !webhookUrlInput) {
+      setWebhookUrlInput(`${window.location.origin}/api/public/hooks/whatsapp-bot`);
+    }
+  }, [webhookState.data?.url]);
+
+  async function handleSaveWebhook(customUrl?: string) {
+    const targetUrl = (customUrl || webhookUrlInput || "").trim();
+    if (!targetUrl || !targetUrl.startsWith("http")) {
+      toast.error("Informe uma URL válida com http:// ou https://");
+      return;
+    }
+    setSavingWebhook(true);
+    try {
+      await setEvolutionWebhookUrl({ data: { instance, webhookUrl: targetUrl } });
+      toast.success("Webhook 24 horas configurado com sucesso!");
+      qc.invalidateQueries({ queryKey: ["evolution", "webhook"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar webhook");
+    } finally {
+      setSavingWebhook(false);
+    }
+  }
+
   function refresh() {
     qc.invalidateQueries({ queryKey: ["evolution"] });
     qc.invalidateQueries({ queryKey: ["whatsapp-recent-logs"] });
@@ -150,6 +189,15 @@ function WhatsAppPage() {
         setQrError("A Evolution não devolveu QR Code. Clique em Reiniciar e tente de novo.");
         toast.message("Sem QR Code agora. Tente Reiniciar.");
       }
+
+      // Auto-configura o Webhook na Evolution API para responder 24h
+      if (typeof window !== "undefined" && window.location.origin && !webhookState.data?.url) {
+        const autoUrl = `${window.location.origin}/api/public/hooks/whatsapp-bot`;
+        setEvolutionWebhookUrl({ data: { instance, webhookUrl: autoUrl } })
+          .then(() => qc.invalidateQueries({ queryKey: ["evolution", "webhook"] }))
+          .catch(() => {});
+      }
+
       refresh();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao gerar QR Code";
@@ -393,6 +441,63 @@ function WhatsAppPage() {
             value={testText}
             onChange={(e) => setTestText(e.target.value)}
           />
+        </div>
+      </div>
+
+      {/* Card: Atendimento Automático 24 Horas & Webhook na VPS */}
+      <div className="rounded-2xl border border-white/10 bg-card p-4 shadow-sm space-y-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              <Zap className="size-3.5 text-amber-400" /> Atendimento Automático 24 Horas (Mesmo com site fechado)
+            </p>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {webhookState.data?.url ? (
+                <span className="text-emerald-400 flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Robô ativo 24h — O WhatsApp responde mesmo com o site fechado ou deslogado!
+                </span>
+              ) : (
+                <span className="text-amber-400 flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
+                  Webhook não ativado. Clique em "Ativar 24h" para o robô responder sem precisar abrir o site.
+                </span>
+              )}
+            </p>
+          </div>
+          {webhookState.data?.url && (
+            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[11px] self-start sm:self-auto">
+              24h Ativo
+            </Badge>
+          )}
+        </div>
+
+        <div className="rounded-xl border bg-secondary/30 p-3 space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Endereço do Webhook no servidor (Evolution API entrega as mensagens diretamente aqui):
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input
+              id="whatsapp-webhook-url-input"
+              value={webhookUrlInput}
+              onChange={(e) => setWebhookUrlInput(e.target.value)}
+              placeholder="https://seusite.com/api/public/hooks/whatsapp-bot"
+              className="font-mono text-xs rounded-xl flex-1"
+            />
+            <Button
+              id="whatsapp-save-webhook-btn"
+              onClick={() => handleSaveWebhook()}
+              disabled={savingWebhook || !instance}
+              className="rounded-full font-bold gap-1.5 shadow-sm shrink-0"
+              size="sm"
+            >
+              {savingWebhook ? <Loader2 className="size-3.5 animate-spin" /> : <Zap className="size-3.5 text-amber-400" />}
+              {savingWebhook ? "Salvando..." : "Ativar 24h Agora"}
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            💡 Dica: Se estiver na VPS, aponte para o domínio ou IP público da VPS. A Evolution API fará o envio das mensagens diretamente para o robô 24 horas por dia, 7 dias por semana.
+          </p>
         </div>
       </div>
 

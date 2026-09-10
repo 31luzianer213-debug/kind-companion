@@ -280,6 +280,24 @@ export async function setupInstanceWebhook(instanceName: string, webhookUrl: str
 }
 
 /**
+ * Consulta o Webhook configurado na Evolution API.
+ */
+export async function fetchInstanceWebhook(instanceName: string) {
+  const token = await findInstanceToken(instanceName);
+  try {
+    const res = await evolutionRequest<any>(
+      `/webhook/find/${encodeURIComponent(instanceName)}`,
+      { method: "GET" },
+      token || undefined,
+    );
+    return res;
+  } catch {
+    return null;
+  }
+}
+
+
+/**
  * Normaliza número para formato internacional do Brasil (55 + DDD + 8/9 dígitos).
  */
 export function normalizePhone(raw: string) {

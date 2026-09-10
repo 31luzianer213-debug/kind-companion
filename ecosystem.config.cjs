@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "kind-companion",
+      name: "iptv-web",
       script: ".output/server/index.mjs",
       instances: 1,
       exec_mode: "fork",
@@ -13,8 +13,26 @@ module.exports = {
       restart_delay: 2000,
       autorestart: true,
       watch: false,
-      error_file: "logs/err.log",
-      out_file: "logs/out.log",
+      error_file: "logs/web-err.log",
+      out_file: "logs/web-out.log",
+      merge_logs: true,
+      log_date_format: "YYYY-MM-DD HH:mm:ss",
+    },
+    {
+      name: "iptv-bot-24h",
+      script: "scripts/whatsapp-bot-daemon.mjs",
+      instances: 1,
+      exec_mode: "fork",
+      env: {
+        NODE_ENV: "production",
+        LOCAL_API_URL: "http://localhost:3000/api/public/hooks/whatsapp-bot",
+      },
+      max_memory_restart: "400M",
+      restart_delay: 3000,
+      autorestart: true,
+      watch: false,
+      error_file: "logs/bot-err.log",
+      out_file: "logs/bot-out.log",
       merge_logs: true,
       log_date_format: "YYYY-MM-DD HH:mm:ss",
     },
