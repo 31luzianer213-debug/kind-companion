@@ -56,8 +56,7 @@ async function updateLidMapping(instanceName) {
   } catch {}
 }
 
-async function ensureGroupIgnore(instanceName) {
-  if (configuredInstances.has(instanceName)) return;
+async function ensureInstanceOnlineAndSettings(instanceName) {
   try {
     const res = await fetch(`${EVOLUTION_URL}/settings/set/${instanceName}`, {
       method: "POST",
@@ -69,16 +68,28 @@ async function ensureGroupIgnore(instanceName) {
         rejectCall: false,
         msgCall: "",
         groupsIgnore: true,
-        alwaysOnline: false,
-        readMessages: false,
+        alwaysOnline: true,
+        readMessages: true,
         readStatus: false,
         syncFullHistory: false,
       }),
     });
-    if (res.ok) {
+    if (res.ok && !configuredInstances.has(instanceName)) {
       configuredInstances.add(instanceName);
-      console.log(`[Daemon] 🛡️ Ignorar grupos ativado na instância ${instanceName}`);
+      console.log(`[Daemon] 🛡️ Instância ${instanceName} configurada: alwaysOnline=true, readMessages=true, groupsIgnore=true`);
     }
+
+    // Mantém presença global permanentemente disponível no WhatsApp
+    await fetch(`${EVOLUTION_URL}/instance/setPresence/${instanceName}`, {
+      method: "POST",
+      headers: {
+        apikey: EVOLUTION_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        presence: "available",
+      }),
+    }).catch(() => {});
   } catch {}
 }
 
@@ -312,7 +323,7 @@ async function pollOnce() {
   }
 
   for (const inst of instances) {
-    await ensureGroupIgnore(inst.name);
+    await ensureInstanceOnlineAndSettings(inst.name);
     await updateLidMapping(inst.name);
     const msgs = await getRecentMessages(inst.name);
 

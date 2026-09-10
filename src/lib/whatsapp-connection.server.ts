@@ -361,8 +361,7 @@ export async function sendWhatsAppText(
       text,
       textMessage: { text },
       options: {
-        delay: 1200,
-        presence: "composing",
+        delay: 0,
         linkPreview: false,
         ...(quotedKey ? { quoted: { key: quotedKey } } : {}),
       },
