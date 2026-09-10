@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Clock,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import {
   ensureAndConnectEvolution,
@@ -160,10 +161,23 @@ function WhatsAppPage() {
   }
 
   async function handleLogout() {
+    if (!instance || !confirm("Desconectar o WhatsApp? Será preciso escanear o QR Code novamente.")) return;
+    try {
+      await logoutEvolutionInstance({ data: { instance } });
+      setQr(null);
+      setQrError(null);
+      toast.success("Desconectado.");
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao desconectar");
+    }
+  }
+
+  async function handleDeleteInstance() {
     if (
       !instance ||
       !confirm(
-        "Deseja realmente desconectar e apagar a instância da VPS? Ao clicar em 'Gerar QR Code', uma nova instância limpa será recriada automaticamente na Evolution API."
+        "Tem certeza que deseja APAGAR A INSTÂNCIA da VPS? Isso excluirá completamente o registro e arquivos da sessão na Evolution API. Ao clicar em 'Gerar QR Code', uma nova instância limpa será criada do zero."
       )
     )
       return;
@@ -171,7 +185,7 @@ function WhatsAppPage() {
       await deleteEvolutionInstance({ data: { instance } });
       setQr(null);
       setQrError(null);
-      toast.success("Instância apagada da VPS com sucesso! Pronto para criar nova.");
+      toast.success("Instância apagada da VPS com sucesso! Clique em 'Gerar QR Code' para recriar.");
       refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao apagar instância da VPS");
@@ -262,7 +276,7 @@ function WhatsAppPage() {
           )}
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <Button
             id="whatsapp-connect-btn"
             onClick={handleConnect}
@@ -284,9 +298,17 @@ function WhatsAppPage() {
             id="whatsapp-logout-btn"
             variant="outline"
             onClick={handleLogout}
-            className="rounded-full font-bold text-destructive hover:bg-destructive/10 gap-1.5"
+            className="rounded-full font-bold gap-1.5"
           >
-            <LogOut className="size-4" /> Desconectar & Apagar da VPS
+            <LogOut className="size-4" /> Desconectar
+          </Button>
+          <Button
+            id="whatsapp-delete-btn"
+            variant="destructive"
+            onClick={handleDeleteInstance}
+            className="rounded-full font-bold gap-1.5 shadow-sm"
+          >
+            <Trash2 className="size-4" /> Apagar Instância
           </Button>
         </div>
 
