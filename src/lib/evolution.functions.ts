@@ -360,7 +360,7 @@ export const sendEvolutionTestMessage = createServerFn({ method: "POST" })
     z
       .object({
         instance: z.string().min(1),
-        number: z.string().min(10).max(25),
+        number: z.string().min(8).max(60),
         text: z.string().min(1).max(2000).default("Teste WhatsApp — conectado com sucesso!"),
       })
       .parse(data),

@@ -29,7 +29,7 @@ function pruneIdCache() {
 }
 
 /**
- * Verifica se a mensagem ou telefone já foi atendido recentemente (janela de 8 segundos).
+ * Verifica se a mensagem ou telefone já foi atendido recentemente (janela rápida de 1.2 segundos).
  */
 export function isDuplicateMessage(messageId: string, phone: string): boolean {
   const now = Date.now();
@@ -43,11 +43,11 @@ export function isDuplicateMessage(messageId: string, phone: string): boolean {
     pruneIdCache();
   }
 
-  // 2. Checagem por debounce do número de telefone (8000ms)
+  // 2. Checagem por debounce do número de telefone (1200ms - elimina delay excessivo)
   if (phone) {
     const cleanPhone = normalizePhone(phone);
     const lastTimestamp = recentPhoneTimestamps.get(cleanPhone) ?? 0;
-    if (now - lastTimestamp < 8000) {
+    if (now - lastTimestamp < 1200) {
       return true;
     }
     recentPhoneTimestamps.set(cleanPhone, now);
@@ -208,27 +208,27 @@ export async function processIncomingWhatsAppEvent(
   }
 
   // 2. Filtra grupos e transmissões
-  const remoteJid = String(
+  const rawRemoteJid = String(
     key?.remoteJid ||
     key?.participant ||
     item?.remoteJid ||
     rawData?.remoteJid ||
     payload?.sender ||
     ""
-  );
+  ).trim();
 
-  if (!remoteJid || remoteJid.includes("@g.us") || remoteJid.includes("@broadcast")) {
+  if (!rawRemoteJid || rawRemoteJid.includes("@g.us") || rawRemoteJid.includes("@broadcast")) {
     return { handled: false, ignored: "group_or_broadcast" };
   }
 
-  const senderDigits = remoteJid.replace(/@.+$/, "").replace(/\D/g, "");
+  const senderDigits = rawRemoteJid.replace(/@.+$/, "").replace(/\D/g, "");
   if (!senderDigits || senderDigits.length < 8) {
     return { handled: false, ignored: "invalid_sender" };
   }
 
-  const isLid = remoteJid.endsWith("@lid") || (senderDigits.length >= 14 && !senderDigits.startsWith("55"));
+  const isLid = rawRemoteJid.endsWith("@lid") || (senderDigits.length >= 14 && !senderDigits.startsWith("55"));
 
-  // 3. Resolve telefone real caso seja LID
+  // 3. Resolve telefone real caso seja LID (para banco, Mercado Pago e Sigma)
   let realPhone = "";
   const candidates = [
     payload?.sender,
@@ -252,15 +252,24 @@ export async function processIncomingWhatsAppEvent(
 
   if (isLid) {
     try {
-      const resolved = await resolvePhoneFromLid(instance, remoteJid);
+      const resolved = await resolvePhoneFromLid(instance, rawRemoteJid);
       if (resolved) {
         realPhone = resolved;
-        console.log(`[WhatsApp Engine] 🔗 LID ${remoteJid} resolvido para número real: ${realPhone}`);
+        console.log(`[WhatsApp Engine] 🔗 LID ${rawRemoteJid} resolvido para número real: ${realPhone}`);
       }
     } catch {}
   }
 
-  const normalizedTargetPhone = normalizePhone(realPhone);
+  // Número limpo com DDD apenas dígitos (usado em consultas ao Sigma, PIX e BD)
+  let customerDigits = realPhone.replace(/\D/g, "");
+  if (!customerDigits.startsWith("55") && customerDigits.length >= 10 && customerDigits.length <= 11) {
+    customerDigits = `55${customerDigits}`;
+  }
+
+  // Destino exato de envio no WhatsApp: mantém @lid ou @s.whatsapp.net para evitar 'Aguardando mensagem'
+  const destinationJid = isLid
+    ? (rawRemoteJid.endsWith("@lid") ? rawRemoteJid : `${senderDigits}@lid`)
+    : (rawRemoteJid.endsWith("@s.whatsapp.net") ? rawRemoteJid : `${customerDigits}@s.whatsapp.net`);
 
   // 4. Extrai texto da mensagem
   const rawMsg = item?.message ?? rawData?.message ?? payload?.message ?? {};
@@ -270,15 +279,15 @@ export async function processIncomingWhatsAppEvent(
     return { handled: false, ignored: "empty_text" };
   }
 
-  // 5. Anti-Duplicação estrita (4s debounce por telefone + dedup por ID)
+  // 5. Anti-Duplicação rápida (1.2s debounce por telefone + dedup por ID)
   const messageId = String(key?.id || item?.id || "");
-  if (isDuplicateMessage(messageId, normalizedTargetPhone)) {
-    console.log(`[WhatsApp Engine] 🛡️ Mensagem duplicada ignorada para ${normalizedTargetPhone} (ID: ${messageId}).`);
+  if (isDuplicateMessage(messageId, customerDigits)) {
+    console.log(`[WhatsApp Engine] 🛡️ Mensagem duplicada ignorada para ${customerDigits} (ID: ${messageId}).`);
     return { handled: false, ignored: "duplicate_suppressed" };
   }
 
   const pushName = item?.pushName || rawData?.pushName || payload?.pushName || "Cliente";
-  console.log(`[WhatsApp Engine] 📩 Mensagem de ${normalizedTargetPhone} (${pushName}): "${incomingText}"`);
+  console.log(`[WhatsApp Engine] 📩 Mensagem de ${customerDigits} [${destinationJid}] (${pushName}): "${incomingText}"`);
 
   // 6. Carrega usuário do sistema e configurações
   const targetUserId = await resolveTargetUserId(queryUserId, instance);
@@ -291,7 +300,7 @@ export async function processIncomingWhatsAppEvent(
 
   // 7. Processa a mensagem e gera a resposta oficial
   const botResult = await processBotMessage(supabaseAdmin, targetUserId, {
-    phone: normalizedTargetPhone,
+    phone: customerDigits,
     text: incomingText,
     pushName,
   });
@@ -300,10 +309,10 @@ export async function processIncomingWhatsAppEvent(
     return { handled: true, action: "no_reply_needed" };
   }
 
-  // 8. Envia mensagem de texto oficial
+  // 8. Envia mensagem de texto oficial para destinationJid com options completas da Evolution API v2
   if (botResult.reply) {
-    console.log(`[WhatsApp Engine] 📤 Enviando resposta para ${normalizedTargetPhone}...`);
-    const sendRes = await sendWhatsAppText(normalizedTargetPhone, botResult.reply, instance || undefined);
+    console.log(`[WhatsApp Engine] 📤 Enviando resposta para ${destinationJid} (${customerDigits})...`);
+    const sendRes = await sendWhatsAppText(destinationJid, botResult.reply, instance || undefined, key);
     if (!sendRes.ok) {
       console.warn(`[WhatsApp Engine] ⚠️ Aviso ao enviar texto:`, sendRes.error);
     }
@@ -312,9 +321,9 @@ export async function processIncomingWhatsAppEvent(
   // 9. Envia imagem do QR Code PIX caso gerada (Mercado Pago)
   if (botResult.media?.base64) {
     try {
-      console.log(`[WhatsApp Engine] 📸 Enviando QR Code PIX para ${normalizedTargetPhone}...`);
+      console.log(`[WhatsApp Engine] 📸 Enviando QR Code PIX para ${destinationJid}...`);
       await sendWhatsAppMedia(
-        normalizedTargetPhone,
+        destinationJid,
         {
           base64: botResult.media.base64,
           caption: botResult.media.caption || "Escaneie o QR Code acima pelo app do seu banco para pagar via PIX!",
@@ -332,7 +341,7 @@ export async function processIncomingWhatsAppEvent(
   if (Array.isArray(botResult.extraMessages)) {
     for (const extra of botResult.extraMessages) {
       if (extra && extra.trim()) {
-        await sendWhatsAppText(normalizedTargetPhone, extra, instance || undefined);
+        await sendWhatsAppText(destinationJid, extra, instance || undefined);
       }
     }
   }
@@ -341,7 +350,7 @@ export async function processIncomingWhatsAppEvent(
   try {
     await supabaseAdmin.from("message_logs").insert({
       user_id: targetUserId,
-      phone: normalizedTargetPhone,
+      phone: customerDigits,
       body: botResult.reply,
       status: "sent",
     });
@@ -351,6 +360,6 @@ export async function processIncomingWhatsAppEvent(
     handled: true,
     action: botResult.action,
     reply: botResult.reply,
-    phone: normalizedTargetPhone,
+    phone: customerDigits,
   };
 }

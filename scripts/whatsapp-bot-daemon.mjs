@@ -82,17 +82,26 @@ async function ensureGroupIgnore(instanceName) {
   } catch {}
 }
 
+let cachedInstances = [];
+let lastInstancesFetch = 0;
+
 async function getConnectedInstances() {
+  const now = Date.now();
+  if (now - lastInstancesFetch < 10000 && cachedInstances.length > 0) {
+    return cachedInstances;
+  }
   try {
     const res = await fetch(`${EVOLUTION_URL}/instance/fetchInstances`, {
       headers: { apikey: EVOLUTION_KEY },
     });
-    if (!res.ok) return [];
+    if (!res.ok) return cachedInstances;
     const instances = await res.json();
-    return (instances || []).filter((i) => i.connectionStatus === "open");
+    cachedInstances = (instances || []).filter((i) => i.connectionStatus === "open");
+    lastInstancesFetch = now;
+    return cachedInstances;
   } catch (err) {
     console.error("[Daemon] Erro ao buscar instâncias:", err.message);
-    return [];
+    return cachedInstances;
   }
 }
 
@@ -105,7 +114,7 @@ async function getRecentMessages(instanceName) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        limit: 50,
+        limit: 15,
       }),
     });
     if (!res.ok) return [];
@@ -165,7 +174,7 @@ async function forwardToLocalWebhook(instanceName, msg) {
 
   const lastTime = phoneCooldownMap.get(normalizedPhone) || 0;
   const now = Date.now();
-  if (now - lastTime < 8000) {
+  if (now - lastTime < 1200) {
     console.log(`[Daemon] 🛡️ Ignorando duplicata para ${normalizedPhone} (recebida há ${now - lastTime}ms)`);
     return;
   }
@@ -268,7 +277,7 @@ async function forwardToLocalWebhook(instanceName, msg) {
           `_Responda com 1, 2, 3, 4, 5 ou 6._`;
       }
 
-      const targetSendJid = `${realPhone}@s.whatsapp.net`;
+      const targetSendJid = remoteJid || `${realPhone}@s.whatsapp.net`;
       try {
         await fetch(`${EVOLUTION_URL}/message/sendText/${instanceName}`, {
           method: "POST",
@@ -277,6 +286,11 @@ async function forwardToLocalWebhook(instanceName, msg) {
             number: targetSendJid,
             text: reply,
             textMessage: { text: reply },
+            options: {
+              delay: 1200,
+              presence: "composing",
+              linkPreview: false,
+            },
           }),
         });
         console.log(`[Daemon] ✅ Resposta direta autônoma enviada para ${targetSendJid}!`);
@@ -338,7 +352,7 @@ async function pollOnce() {
 }
 
 async function start() {
-  console.log("[Daemon] Conectando ao Evolution API na VPS com suporte a LIDs e tempo real (DESC)...");
+  console.log("[Daemon] Conectando ao Evolution API na VPS com suporte a LIDs e tempo real (800ms)...");
   await pollOnce();
 
   setInterval(async () => {
@@ -347,7 +361,7 @@ async function start() {
     } catch (e) {
       console.error("[Daemon] Erro no loop de polling:", e.message);
     }
-  }, 1500);
+  }, 800);
 }
 
 start();

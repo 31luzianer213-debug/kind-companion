@@ -4,7 +4,7 @@
  */
 import { evolutionBaseUrl } from "./evolution-url";
 
-export const DEFAULT_INSTANCE_NAME = "iptv_ccd7362726074f97";
+export const DEFAULT_INSTANCE_NAME = "iptv_ozpbaj5n";
 
 export type ConnectionState = "open" | "connecting" | "close" | "none" | "unknown";
 
@@ -101,15 +101,23 @@ export async function evolutionRequest<T = any>(
   return data as T;
 }
 
+const tokenCache = new Map<string, { token: string | null; expires: number }>();
+
 /**
- * Obtém o token de autenticação específico da instância, caso exista.
+ * Obtém o token de autenticação específico da instância, com cache de 5 minutos.
  */
 export async function findInstanceToken(instanceName: string): Promise<string | null> {
+  const cached = tokenCache.get(instanceName);
+  if (cached && Date.now() < cached.expires) {
+    return cached.token;
+  }
   try {
     const list = await evolutionRequest<any[]>("/instance/fetchInstances", { method: "GET" });
     const instances = Array.isArray(list) ? list : list?.instances || list?.data || [];
     const found = instances.find((i: any) => i?.name === instanceName);
-    return (typeof found?.token === "string" && found.token.trim()) ? found.token.trim() : null;
+    const token = (typeof found?.token === "string" && found.token.trim()) ? found.token.trim() : null;
+    tokenCache.set(instanceName, { token, expires: Date.now() + 300000 });
+    return token;
   } catch {
     return null;
   }
@@ -307,15 +315,20 @@ export async function fetchInstanceWebhook(instanceName: string) {
 
 
 /**
- * Normaliza número para formato internacional do Brasil (55 + DDD + 8/9 dígitos).
+ * Normaliza número para formato internacional do Brasil (55 + DDD + 8/9 dígitos)
+ * ou preserva @lid e @s.whatsapp.net íntegros.
  */
 export function normalizePhone(raw: string) {
   if (!raw) return "";
   const trimmed = raw.trim();
-  if (trimmed.endsWith("@lid") || trimmed.endsWith("@s.whatsapp.net")) {
+  if (trimmed.endsWith("@lid") || trimmed.endsWith("@s.whatsapp.net") || trimmed.endsWith("@g.us")) {
     return trimmed;
   }
   let digits = trimmed.replace(/\D/g, "").replace(/^0+/, "");
+  // Se for identificador numérico longo (LID sem sufixo)
+  if (digits.length >= 14 && !digits.startsWith("55")) {
+    return `${digits}@lid`;
+  }
   if (digits.length > 13 && digits.startsWith("55")) digits = digits.slice(-13);
   if (!digits.startsWith("55") && digits.length >= 10 && digits.length <= 11) {
     digits = `55${digits}`;
@@ -324,12 +337,15 @@ export function normalizePhone(raw: string) {
 }
 
 /**
- * Envia mensagem de texto para o WhatsApp.
+ * Envia mensagem de texto para o WhatsApp seguindo 100% da documentação da Evolution API v2.
+ * Utiliza options.delay e presence 'composing' para garantir a sincronização da criptografia
+ * e evitar o aviso 'Aguardando mensagem' no celular.
  */
 export async function sendWhatsAppText(
   to: string,
   text: string,
   instanceOverride?: string,
+  quotedKey?: any,
 ) {
   const { defaultInstance } = getEvolutionConfig();
   const instance = instanceOverride || defaultInstance;
@@ -340,11 +356,23 @@ export async function sendWhatsAppText(
   }
 
   try {
+    const payload: Record<string, any> = {
+      number: normalized,
+      text,
+      textMessage: { text },
+      options: {
+        delay: 1200,
+        presence: "composing",
+        linkPreview: false,
+        ...(quotedKey ? { quoted: { key: quotedKey } } : {}),
+      },
+    };
+
     const res = await evolutionRequest<any>(
       `/message/sendText/${encodeURIComponent(instance)}`,
       {
         method: "POST",
-        body: JSON.stringify({ number: normalized, text }),
+        body: JSON.stringify(payload),
       },
     );
     return { ok: true as const, data: res };
@@ -387,6 +415,10 @@ export async function sendWhatsAppMedia(
           caption: media.caption || "",
           media: media.base64,
           fileName: media.fileName || "qrcode-pix.png",
+          options: {
+            delay: 1200,
+            presence: "composing",
+          },
         }),
       },
       token || undefined,
