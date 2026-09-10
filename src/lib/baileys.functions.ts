@@ -28,11 +28,10 @@ async function readLocalStatus() {
  * Consulta o status em tempo real da conexão Baileys nativa.
  */
 export const getBaileysStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .handler(async () => {
     // 1. Tenta buscar via API HTTP local do daemon
     try {
-      const res = await fetch(`${BAILEYS_API}/api/status`, { signal: AbortSignal.timeout(1500) });
+      const res = await fetch(`${BAILEYS_API}/api/status`, { signal: AbortSignal.timeout(3000) });
       if (res.ok) {
         const state = await res.json();
         return { ok: true as const, state };
@@ -48,11 +47,11 @@ export const getBaileysStatus = createServerFn({ method: "POST" })
  * Inicia a conexão Baileys via QR Code ou Código de Pareamento.
  */
 export const connectBaileys = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator(
     (input: {
       mode?: "qr" | "pairing";
       phone?: string;
+      force?: boolean;
     }) => input,
   )
   .handler(async ({ data }) => {
@@ -63,8 +62,9 @@ export const connectBaileys = createServerFn({ method: "POST" })
         body: JSON.stringify({
           mode: data?.mode || "qr",
           phone: data?.phone,
+          force: data?.force,
         }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(10000),
       });
       if (res.ok) {
         const result = await res.json();
@@ -72,19 +72,21 @@ export const connectBaileys = createServerFn({ method: "POST" })
       }
     } catch {}
 
-    return { ok: true as const, state: await readLocalStatus() };
+    // Aguarda breve intervalo e lê arquivo de status
+    await new Promise((r) => setTimeout(r, 600));
+    const local = await readLocalStatus();
+    return { ok: true as const, state: local };
   });
 
 /**
  * Desconecta e limpa a sessão Baileys.
  */
 export const disconnectBaileys = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .handler(async () => {
     try {
       await fetch(`${BAILEYS_API}/api/logout`, {
         method: "POST",
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(5000),
       });
     } catch {}
 

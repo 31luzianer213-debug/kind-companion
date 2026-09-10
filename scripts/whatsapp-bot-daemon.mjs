@@ -508,10 +508,14 @@ export async function startBaileysBot(options = {}) {
           try {
             fs.rmSync(AUTH_DIR, { recursive: true, force: true });
           } catch {}
-        } else if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-          reconnectAttempts++;
-          const delay = Math.min(reconnectAttempts * 3000, 15000);
-          console.log(`🔄 Reconectando em ${delay / 1000}s... (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+        } else {
+          // Se for timeout de QR Code (408), reconecta rápido para sempre ter QR Code disponível
+          const isTimeout = statusCode === 408;
+          if (isTimeout) reconnectAttempts = 0;
+          else reconnectAttempts++;
+
+          const delay = isTimeout ? 1200 : Math.min(reconnectAttempts * 2000, 10000);
+          console.log(`🔄 Reconectando em ${delay / 1000}s...`);
           setTimeout(() => startBaileysBot({ mode: currentMode }), delay);
         }
       }
@@ -605,7 +609,27 @@ const server = http.createServer(async (req, res) => {
     req.on("end", async () => {
       try {
         const payload = JSON.parse(body || "{}");
-        await startBaileysBot({ mode: payload.mode || "qr", phone: payload.phone });
+        const mode = payload.mode || "qr";
+        const force = Boolean(payload.force);
+
+        // Se já tem QR Code fresco gerado nos últimos 30s e não foi forçado, devolve direto!
+        if (!force && mode === "qr" && botState.qrCode && Date.now() - botState.updatedAt < 30000) {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: true, state: botState }));
+          return;
+        }
+
+        await startBaileysBot({ mode, phone: payload.phone });
+
+        // Aguarda até 5 segundos para o QR code ou pairing code ser emitido pelo socket
+        const timeoutAt = Date.now() + 5500;
+        while (Date.now() < timeoutAt) {
+          if (mode === "qr" && botState.qrCode) break;
+          if (mode === "pairing" && botState.pairingCode) break;
+          if (botState.status === "open") break;
+          await new Promise((r) => setTimeout(r, 200));
+        }
+
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ ok: true, state: botState }));
       } catch (e) {

@@ -77,27 +77,70 @@ function WhatsAppPage() {
   const [pairingPhone, setPairingPhone] = useState("");
   const [loadingAction, setLoadingAction] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [localQr, setLocalQr] = useState<string | null>(null);
+  const [localPairingCode, setLocalPairingCode] = useState<string | null>(null);
+  const [isRequestingQr, setIsRequestingQr] = useState(false);
 
   // Testes
   const [testNumber, setTestNumber] = useState("");
   const [testText, setTestText] = useState("Teste IPTV Manager — WhatsApp conectado com Baileys nativo!");
   const [sendingTest, setSendingTest] = useState(false);
 
-  // Query do Status da Conexão Baileys
+  // Query do Status da Conexão Baileys com detecção dupla (servidor + local direto)
   const baileysQuery = useQuery({
     queryKey: ["baileys", "status"],
-    queryFn: () => getBaileysStatus(),
+    queryFn: async () => {
+      let s: any = null;
+
+      // 1. Consulta via Server Function
+      try {
+        const res = await getBaileysStatus();
+        if (res?.state) s = res.state;
+      } catch {}
+
+      // 2. Se não encontrou QR e está no navegador, consulta direto o daemon local
+      if (!s?.qrCode && typeof window !== "undefined") {
+        try {
+          const direct = await fetch("http://localhost:3001/api/status", {
+            signal: AbortSignal.timeout(1500),
+          });
+          if (direct.ok) {
+            const data = await direct.json();
+            if (data?.status) s = data;
+          }
+        } catch {}
+      }
+
+      // Sincroniza estados locais
+      if (s?.qrCode) {
+        setLocalQr(s.qrCode);
+        setIsRequestingQr(false);
+      }
+      if (s?.pairingCode) {
+        setLocalPairingCode(s.pairingCode);
+      }
+      if (s?.status === "open") {
+        setLocalQr(null);
+        setLocalPairingCode(null);
+        setIsRequestingQr(false);
+      }
+
+      return { ok: true, state: s };
+    },
     refetchInterval: (query) => {
       const s = query.state.data?.state?.status;
-      return s === "connecting" ? 2500 : 8000;
+      return s === "open" ? 10000 : 2000;
     },
     retry: 0,
   });
 
   const state = baileysQuery.data?.state;
-  const status = state?.status || "close";
+  const status = state?.status || (isRequestingQr ? "connecting" : "close");
   const isConnected = status === "open";
   const info = statusBadge(status);
+
+  const activeQr = localQr || state?.qrCode;
+  const activePairing = localPairingCode || state?.pairingCode;
 
   // Toast quando conecta
   useEffect(() => {
@@ -122,16 +165,48 @@ function WhatsAppPage() {
     refetchInterval: 10000,
   });
 
-  async function handleStartQr() {
+  async function handleStartQr(force = false) {
     setLoadingAction(true);
+    setIsRequestingQr(true);
+    toast.loading("Solicitando QR Code do WhatsApp...", { id: "qr-toast" });
+
+    // 1. Tenta chamada direta ao daemon local (instantâneo se estiver no mesmo PC ou Lovable preview)
     try {
-      await connectBaileys({ data: { mode: "qr" } });
-      toast.success("Solicitando QR Code... Aguarde alguns segundos.");
+      const direct = await fetch("http://localhost:3001/api/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "qr", force }),
+        signal: AbortSignal.timeout(7000),
+      });
+      if (direct.ok) {
+        const json = await direct.json();
+        if (json?.state?.qrCode) {
+          setLocalQr(json.state.qrCode);
+          setIsRequestingQr(false);
+          setLoadingAction(false);
+          toast.success("QR Code gerado! Aponte a câmera do WhatsApp.", { id: "qr-toast" });
+          qc.invalidateQueries({ queryKey: ["baileys"] });
+          return;
+        }
+      }
+    } catch {}
+
+    // 2. Fallback: via Server Function
+    try {
+      const res = await connectBaileys({ data: { mode: "qr", force } });
+      if (res?.state?.qrCode) {
+        setLocalQr(res.state.qrCode);
+        setIsRequestingQr(false);
+        toast.success("QR Code gerado! Aponte a câmera do WhatsApp.", { id: "qr-toast" });
+      } else {
+        toast.info("Aguardando geração do QR Code... Aparecerá em instantes.", { id: "qr-toast" });
+      }
       qc.invalidateQueries({ queryKey: ["baileys"] });
     } catch (err: any) {
-      toast.error(err.message || "Erro ao gerar QR Code");
+      toast.error(err.message || "Erro ao solicitar QR Code", { id: "qr-toast" });
     } finally {
       setLoadingAction(false);
+      setTimeout(() => setIsRequestingQr(false), 10000);
     }
   }
 
@@ -142,12 +217,40 @@ function WhatsAppPage() {
       return;
     }
     setLoadingAction(true);
+    toast.loading("Gerando código de pareamento no WhatsApp...", { id: "pairing-toast" });
+
+    // 1. Tenta chamada direta ao daemon local
     try {
-      await connectBaileys({ data: { mode: "pairing", phone: clean } });
-      toast.success("Código de pareamento solicitado! Aguarde ~5 segundos.");
+      const direct = await fetch("http://localhost:3001/api/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "pairing", phone: clean }),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (direct.ok) {
+        const json = await direct.json();
+        if (json?.state?.pairingCode) {
+          setLocalPairingCode(json.state.pairingCode);
+          toast.success("Código de pareamento gerado!", { id: "pairing-toast" });
+          qc.invalidateQueries({ queryKey: ["baileys"] });
+          setLoadingAction(false);
+          return;
+        }
+      }
+    } catch {}
+
+    // 2. Fallback: via Server Function
+    try {
+      const res = await connectBaileys({ data: { mode: "pairing", phone: clean } });
+      if (res?.state?.pairingCode) {
+        setLocalPairingCode(res.state.pairingCode);
+        toast.success("Código de pareamento gerado!", { id: "pairing-toast" });
+      } else {
+        toast.info("Aguardando liberação do código pelo WhatsApp...", { id: "pairing-toast" });
+      }
       qc.invalidateQueries({ queryKey: ["baileys"] });
     } catch (err: any) {
-      toast.error(err.message || "Erro ao solicitar código de pareamento");
+      toast.error(err.message || "Erro ao solicitar código de pareamento", { id: "pairing-toast" });
     } finally {
       setLoadingAction(false);
     }
@@ -156,7 +259,16 @@ function WhatsAppPage() {
   async function handleLogout() {
     if (!confirm("Deseja realmente desconectar o WhatsApp? Será necessário escanear o QR Code novamente.")) return;
     setLoadingAction(true);
+    setLocalQr(null);
+    setLocalPairingCode(null);
     try {
+      // 1. Tenta chamada direta
+      try {
+        await fetch("http://localhost:3001/api/logout", {
+          method: "POST",
+          signal: AbortSignal.timeout(3000),
+        });
+      } catch {}
       await disconnectBaileys();
       toast.success("WhatsApp desconectado.");
       qc.invalidateQueries({ queryKey: ["baileys"] });
@@ -182,13 +294,28 @@ function WhatsAppPage() {
     }
     setSendingTest(true);
     try {
-      await sendBaileysTest({
-        data: {
-          to: cleanNum,
-          text: testText,
-          type,
-        },
-      });
+      // 1. Tenta envio direto
+      let sent = false;
+      try {
+        const direct = await fetch("http://localhost:3001/api/send-test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ to: cleanNum, text: testText, type }),
+          signal: AbortSignal.timeout(6000),
+        });
+        if (direct.ok) sent = true;
+      } catch {}
+
+      if (!sent) {
+        await sendBaileysTest({
+          data: {
+            to: cleanNum,
+            text: testText,
+            type,
+          },
+        });
+      }
+
       const typeLabels = {
         text: "Texto simples",
         buttons: "Botões rápidos",
@@ -269,7 +396,7 @@ function WhatsAppPage() {
                 variant="outline"
                 size="sm"
                 className="rounded-full font-bold text-xs gap-1.5"
-                onClick={handleStartQr}
+                onClick={() => handleStartQr(true)}
                 disabled={loadingAction}
               >
                 <RefreshCw className="size-3.5" /> Reconectar / Novo QR Code
@@ -301,37 +428,78 @@ function WhatsAppPage() {
               </TabsList>
 
               {/* Aba QR Code */}
-              <TabsContent value="qr" className="space-y-3 pt-3">
+              <TabsContent value="qr" className="space-y-4 pt-3">
                 <div className="text-center space-y-2">
                   <p className="text-xs text-muted-foreground">
                     Clique em <strong>Gerar QR Code</strong> e aponte a câmera do WhatsApp (Aparelhos Conectados &rarr; Conectar Aparelho).
                   </p>
                   <Button
-                    onClick={handleStartQr}
+                    onClick={() => handleStartQr(true)}
                     disabled={loadingAction}
-                    className="rounded-full font-bold gap-1.5 shadow-sm"
+                    className="rounded-full font-bold gap-1.5 shadow-md px-6"
                   >
                     {loadingAction ? <Loader2 className="size-4 animate-spin" /> : <QrCode className="size-4" />}
-                    {state?.qrCode ? "Gerar Novo QR Code" : "Gerar QR Code Agora"}
+                    {activeQr ? "Gerar Novo QR Code" : "Gerar QR Code Agora"}
                   </Button>
                 </div>
 
-                {state?.qrCode && (
-                  <div className="grid place-items-center rounded-2xl border bg-card/60 p-4 space-y-3">
-                    <img
-                      src={state.qrCode}
-                      alt="QR Code WhatsApp"
-                      className="size-64 rounded-xl bg-white object-contain p-2 shadow-md"
-                    />
-                    <p className="text-xs text-muted-foreground text-center">
-                      📱 WhatsApp &rarr; <strong>Aparelhos conectados</strong> &rarr; <strong>Conectar aparelho</strong> (Expira em ~45s)
-                    </p>
+                {/* Card de exibição do QR Code */}
+                {activeQr && (
+                  <div className="grid place-items-center rounded-2xl border-2 border-emerald-500/40 bg-card/90 p-5 space-y-3 shadow-lg animate-in zoom-in-95 duration-200">
+                    <div className="p-2.5 bg-white rounded-2xl shadow-md border border-emerald-500/20">
+                      <img
+                        src={activeQr}
+                        alt="QR Code WhatsApp Baileys"
+                        className="size-64 rounded-xl bg-white object-contain"
+                      />
+                    </div>
+                    <div className="text-center space-y-1 max-w-sm">
+                      <p className="text-xs font-bold text-foreground flex items-center justify-center gap-1.5">
+                        <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                        Aguardando leitura do WhatsApp...
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        No WhatsApp do celular: Toque em <strong>Mais opções (⋮)</strong> &rarr; <strong>Aparelhos conectados</strong> &rarr; <strong>Conectar aparelho</strong>.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleStartQr(true)}
+                      disabled={loadingAction}
+                      className="rounded-full text-xs font-bold gap-1.5"
+                    >
+                      <RefreshCw className="size-3" /> Atualizar / Novo QR
+                    </Button>
+                  </div>
+                )}
+
+                {/* Feedback visual durante a solicitação caso o QR ainda não tenha retornado */}
+                {!activeQr && (loadingAction || isRequestingQr || status === "connecting") && (
+                  <div className="grid place-items-center rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-8 space-y-3 text-center animate-in fade-in duration-300">
+                    <Loader2 className="size-10 animate-spin text-primary" />
+                    <div className="space-y-1">
+                      <p className="font-bold text-sm text-foreground">
+                        Gerando QR Code com o WhatsApp...
+                      </p>
+                      <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                        Aguarde alguns instantes. O motor Baileys está comunicando com os servidores do WhatsApp e renderizará a chave na tela.
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => qc.invalidateQueries({ queryKey: ["baileys"] })}
+                      className="text-xs text-primary font-semibold gap-1"
+                    >
+                      <RefreshCw className="size-3" /> Verificar agora
+                    </Button>
                   </div>
                 )}
               </TabsContent>
 
               {/* Aba Pairing Code */}
-              <TabsContent value="pairing" className="space-y-3 pt-3">
+              <TabsContent value="pairing" className="space-y-4 pt-3">
                 <div className="max-w-md mx-auto space-y-3 text-center">
                   <p className="text-xs text-muted-foreground">
                     Conecte digitando o número do seu chip. Você receberá um código de 8 dígitos para digitar no WhatsApp.
@@ -353,20 +521,20 @@ function WhatsAppPage() {
                     </Button>
                   </div>
 
-                  {state?.pairingCode && (
+                  {activePairing && (
                     <div className="rounded-2xl border-2 border-primary/50 bg-primary/10 p-5 text-center space-y-3 animate-in zoom-in-95">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
                         Seu Código de Pareamento:
                       </p>
                       <div className="flex items-center justify-center gap-3">
                         <span className="font-mono font-extrabold text-3xl tracking-widest text-primary bg-background/80 px-4 py-2 rounded-xl border border-primary/30 shadow-inner">
-                          {state.pairingCode}
+                          {activePairing}
                         </span>
                         <Button
                           variant="secondary"
                           size="icon"
                           className="rounded-xl size-11"
-                          onClick={() => handleCopyPairingCode(state.pairingCode!)}
+                          onClick={() => handleCopyPairingCode(activePairing)}
                         >
                           {copiedCode ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
                         </Button>
@@ -378,6 +546,13 @@ function WhatsAppPage() {
                         <p>3. Na tela da câmera, toque em <strong>"Conectar com número de telefone"</strong>.</p>
                         <p>4. Digite o código de 8 dígitos exibido acima.</p>
                       </div>
+                    </div>
+                  )}
+
+                  {!activePairing && loadingAction && (
+                    <div className="grid place-items-center rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-6 space-y-2 text-center">
+                      <Loader2 className="size-8 animate-spin text-primary" />
+                      <p className="text-xs font-semibold text-foreground">Solicitando código ao WhatsApp...</p>
                     </div>
                   )}
                 </div>
