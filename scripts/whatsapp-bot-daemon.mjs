@@ -274,9 +274,6 @@ async function forwardToLocalWebhook(instanceName, msg) {
         console.error(`[Daemon] Falha ao enviar resposta direta:`, directErr.message);
       }
     }
-  } catch (err) {
-    console.error("[Daemon] Erro ao processar mensagem:", err.message);
-  }
 }
 
 async function pollOnce() {

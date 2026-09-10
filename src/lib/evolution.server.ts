@@ -69,27 +69,24 @@ function extractQr(json: any) {
 /** Cache de controle para evitar chamadas redundantes de webhook na VPS */
 const lastWebhookSync = new Map<string, number>();
 
-/** Garante que o Webhook do Bot está configurado na Evolution API sem sobrecarregar a VPS */
+/** Garante que o Webhook do Bot e as configurações da instância estão 100% ativos na Evolution API sem sobrecarregar a VPS */
 export async function ensureInstanceWebhook(userId: string, publicAppUrl: string) {
   if (!publicAppUrl) return;
-  if (
-    publicAppUrl.includes("localhost") ||
-    publicAppUrl.includes("preview--") ||
-    publicAppUrl.includes("127.0.0.1")
-  ) {
+  if (publicAppUrl.includes("localhost") || publicAppUrl.includes("127.0.0.1")) {
     return;
   }
   const last = lastWebhookSync.get(userId) ?? 0;
   const now = Date.now();
-  // Se configurou há menos de 10 minutos, não precisa reenviar
-  if (now - last < 10 * 60 * 1000) return;
+  // Se configurou há menos de 3 minutos, não precisa reenviar
+  if (now - last < 3 * 60 * 1000) return;
 
   const webhookUrl = `${publicAppUrl.replace(/\/+$/, "")}/api/public/hooks/whatsapp-bot?userId=${userId}`;
   try {
     await setInstanceWebhook(userId, webhookUrl);
     lastWebhookSync.set(userId, now);
+    console.log(`[Auto Webhook VPS] ✅ Sincronizado automaticamente na VPS: ${webhookUrl}`);
   } catch (err) {
-    console.warn(`[Evolution Webhook Auto] Falha silenciosa ao sincronizar para ${userId}:`, err);
+    console.warn(`[Auto Webhook VPS] Aviso ao sincronizar para ${userId}:`, err);
   }
 }
 

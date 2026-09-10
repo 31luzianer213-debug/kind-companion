@@ -378,6 +378,27 @@ export async function saveBotConfigServer(
   } catch (err) {
     console.error("Erro ao salvar bot_settings no metadata:", err);
   }
+
+  // 4. Configura AUTOMATICAMENTE o Webhook e parâmetros na VPS da Evolution API
+  try {
+    const { ensureInstanceWebhook } = await import("./evolution.server");
+    const { getRequest } = await import("@tanstack/react-start/server");
+    let appUrl = "";
+    try {
+      const req = getRequest();
+      if (req) {
+        const proto = req.headers.get("x-forwarded-proto") || "https";
+        const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+        if (host) appUrl = `${proto}://${host}`;
+      }
+    } catch {}
+    if (!appUrl) appUrl = process.env["APP_URL"] || "";
+    if (appUrl) {
+      ensureInstanceWebhook(userId, appUrl).catch(() => {});
+    }
+  } catch (syncErr) {
+    console.warn("[Auto Webhook VPS] Aviso:", syncErr);
+  }
 }
 
 /** Cria um teste no Sigma e registra o cliente no sistema */
