@@ -390,70 +390,9 @@ class WhatsAppSession {
     this.saveState();
   }
 
-  async sendButtonsMessage(jid, { text, footer, buttons, media }) {
+  async sendButtonsMessage(jid, { text, footer, buttons }) {
     if (!this.sock) return false;
     const cleanButtons = normalizeButtons(buttons);
-
-    // Se possui mídia (ex: QR Code do PIX), anexa no cabeçalho da mensagem interativa
-    if (media && media.base64) {
-      try {
-        const { prepareWAMessageMedia, generateWAMessageFromContent } = require("whaileys");
-        const rawBase64 = media.base64.replace(/^data:[^;]+;base64,/, "");
-        const imageBuffer = Buffer.from(rawBase64, "base64");
-
-        const prepared = await prepareWAMessageMedia(
-          { image: imageBuffer },
-          { upload: this.sock.waUploadToServer }
-        );
-
-        if (prepared && prepared.imageMessage) {
-          const formattedButtons = cleanButtons.map((b, i) => {
-            if (b.name && b.buttonParamsJson) return b;
-            return {
-              name: "quick_reply",
-              buttonParamsJson: JSON.stringify({
-                display_text: b.text || b.displayText || `Opção ${i + 1}`,
-                id: b.id || `btn_${i + 1}`,
-              }),
-            };
-          });
-
-          const interactiveMessage = {
-            header: {
-              title: media.title || "QR CODE PIX",
-              hasMediaAttachment: true,
-              imageMessage: prepared.imageMessage,
-            },
-            body: { text: text || "Pagamento PIX" },
-            footer: footer ? { text: footer } : undefined,
-            nativeFlowMessage: {
-              buttons: formattedButtons,
-              messageVersion: 2,
-            },
-          };
-
-          const userJid = this.sock.authState?.creds?.me?.id || this.sock.user?.id;
-          const fullMsg = generateWAMessageFromContent(
-            jid,
-            { interactiveMessage },
-            { userJid }
-          );
-
-          await this.sock.relayMessage(jid, fullMsg.message, {
-            messageId: fullMsg.key.id,
-            additionalNodes: [
-              { tag: "biz", attrs: {} },
-              { tag: "bot", attrs: { biz_bot: "1" } },
-            ],
-          });
-          console.log(`[${this.instanceId}] ✅ QR Code PIX com botão de copiar enviado em mensagem única unificada!`);
-          return true;
-        }
-      } catch (mediaBtnErr) {
-        console.warn(`[${this.instanceId}] Fallback de botão com imagem (${mediaBtnErr.message}), enviando separado.`);
-      }
-    }
-
     try {
       await sendButtons(this.sock, jid, {
         text: text || "🤖 *ASSISTENTE IPTV*\n\nEscolha uma opção:",
@@ -502,7 +441,7 @@ class WhatsAppSession {
     }
   }
 
-  async sendCopyButtonMessage(jid, code, text, media) {
+  async sendCopyButtonMessage(jid, code, text) {
     if (!this.sock) return false;
     const buttons = [
       {
@@ -517,7 +456,6 @@ class WhatsAppSession {
       text: text || `📋 *Código PIX Copia e Cola:*\n\n\`${code}\``,
       footer: "Toque no botão para copiar automaticamente",
       buttons,
-      media,
     });
   }
 
@@ -661,11 +599,12 @@ class WhatsAppSession {
       await this.sendButtonsMessage(jid, {
         text:
           `📲 *APLICATIVOS OFICIAIS DISPONÍVEIS* 🍿\n\n` +
-          `• *TV Box & Celular Android:* Baixe o APK oficial ou use o código Downloader: *${config.appAndroidDownloaderCode || "389471"}*\n` +
-          `• *iPhone / iPad / Apple TV:* Smarters Player Lite na App Store\n` +
-          `• *Smart TVs Samsung / LG:* IBO Player ou SmartOne na loja da TV\n` +
-          `• *Computador / PC Windows:* IPTV Smarters Pro\n\n` +
-          `Toque abaixo nos botões interativos para baixar direto:`,
+          `• *TV Box & Android:* No aplicativo *Downloader*, digite o código rápido: *${config.appAndroidDownloaderCode || "389471"}*\n` +
+          `• *Celular Android:* Toque no botão *Baixar APK Android* abaixo.\n` +
+          `• *iPhone / iPad / Apple TV:* Toque no botão *App iPhone / iPad* abaixo.\n` +
+          `• *Computador (PC):* Toque no botão *App Windows (PC)* abaixo.\n` +
+          `• *Smart TVs:* Baixe o IBO Player ou SmartOne na loja da TV.\n\n` +
+          `Toque no botão correspondente ao seu aparelho para baixar direto:`,
         footer: `${config.businessName || "Alpha IPTV"} • Suporte 24h`,
         buttons: [
           {
@@ -682,7 +621,13 @@ class WhatsAppSession {
               url: config.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509",
             }),
           },
-          { id: "1", text: "1️⃣ Gerar Teste Grátis" },
+          {
+            name: "cta_url",
+            buttonParamsJson: JSON.stringify({
+              display_text: "💻 App Windows (PC)",
+              url: config.appWindowsLink || "https://www.iptvsmarters.com/download?download=windows",
+            }),
+          },
         ],
       });
       return;
@@ -874,25 +819,8 @@ const server = http.createServer(async (req, res) => {
 
         let ok = false;
 
-        // Se tem botões, passa mídia caso venha junto para enviar QR Code + Botão de Copiar em mensagem única
-        if (type === "buttons" || payload.buttons) {
-          ok = await session.sendButtonsMessage(jid, {
-            text,
-            footer: payload.footer,
-            buttons: payload.buttons,
-            media: payload.media,
-          });
-          // Se não conseguiu unificar com a imagem e havia mídia, envia a foto separada como fallback
-          if (!ok && payload.media && payload.media.base64) {
-            const buffer = Buffer.from(payload.media.base64.replace(/^data:[^;]+;base64,/, ""), "base64");
-            await session.sock.sendMessage(jid, {
-              image: buffer,
-              caption: text || payload.media.caption || "",
-              mimetype: payload.media.mimetype || "image/png",
-            });
-            ok = true;
-          }
-        } else if (payload.media && payload.media.base64) {
+        // Disparo de Mídia (ex: QR Code PIX em foto separada)
+        if (payload.media && payload.media.base64) {
           const buffer = Buffer.from(payload.media.base64.replace(/^data:[^;]+;base64,/, ""), "base64");
           await session.sock.sendMessage(jid, {
             image: buffer,
@@ -900,6 +828,12 @@ const server = http.createServer(async (req, res) => {
             mimetype: payload.media.mimetype || "image/png",
           });
           ok = true;
+        } else if (type === "buttons" || payload.buttons) {
+          ok = await session.sendButtonsMessage(jid, {
+            text,
+            footer: payload.footer,
+            buttons: payload.buttons,
+          });
         } else if (type === "list" || payload.sections) {
           ok = await session.sendListMessage(jid, {
             text,

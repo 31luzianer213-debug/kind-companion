@@ -149,34 +149,26 @@ export function generateAppsMessage(config: BotConfigData, serverName: string): 
     return config.appsCustomText.trim();
   }
 
-  const apk = config.appAndroidApk || DEFAULT_BOT_CONFIG.appAndroidApk;
   const code = config.appAndroidDownloaderCode || DEFAULT_BOT_CONFIG.appAndroidDownloaderCode;
-  const ios = config.appIosLink || DEFAULT_BOT_CONFIG.appIosLink;
-  const win = config.appWindowsLink || DEFAULT_BOT_CONFIG.appWindowsLink;
-  const web = config.appWebPlayerLink || DEFAULT_BOT_CONFIG.appWebPlayerLink;
   const smartTv = config.appSmartTvText || DEFAULT_BOT_CONFIG.appSmartTvText;
 
   return (
     `📲 *APLICATIVOS OFICIAIS — ${serverName.toUpperCase()}* 🍿\n\n` +
-    `Escolha o seu dispositivo abaixo para instalar nosso aplicativo recomendado:\n\n` +
+    `Toque no botão abaixo correspondente ao seu aparelho para fazer o download:\n\n` +
     `🤖 *TV BOX / ANDROID TV / FIRESTICK:*\n` +
-    `• Abra o aplicativo *Downloader* na TV e digite o código: *${code}*\n` +
-    `• Ou baixe o instalador APK direto: ${apk}\n\n` +
+    `• No aplicativo *Downloader* da TV, digite o código rápido: *${code}*\n` +
+    `• Ou toque no botão *Baixar APK Android* abaixo.\n\n` +
     `📱 *CELULAR & TABLET ANDROID:*\n` +
-    `• Baixar APK Direto: ${apk}\n\n` +
+    `• Toque no botão *Baixar APK Android* abaixo.\n\n` +
     `🍏 *IPHONE / IPAD / APPLE TV (iOS):*\n` +
-    `• Baixar na App Store (Smarters Player Lite):\n` +
-    `${ios}\n\n` +
+    `• Toque no botão *App iPhone / iPad* abaixo.\n\n` +
     `💻 *COMPUTADOR & NOTEBOOK (WINDOWS):*\n` +
-    `• Baixar IPTV Smarters Pro (.exe):\n` +
-    `${win}\n\n` +
-    `🌐 *ASSISTIR NO NAVEGADOR (WEB PLAYER):*\n` +
-    `• Acesso direto sem instalar nada: ${web}\n\n` +
+    `• Toque no botão *App Windows (PC)* abaixo.\n\n` +
     `📺 *SMART TV (SAMSUNG / LG / ROKU):*\n` +
     `${smartTv}\n\n` +
     `━━━━━━━━━━━━━━━━━━━\n` +
     `🔑 *Como Conectar:*\n` +
-    `Após instalar, abra o app e entre com os dados do seu teste ou assinatura (Usuário, Senha e URL/DNS do servidor).\n\n` +
+    `Após instalar, abra o app e entre com seus dados (Usuário, Senha e URL/DNS do servidor).\n\n` +
     `_Precisa dos seus dados de acesso? Digite *5*._\n` +
     `_Dúvidas na instalação? Digite *6* para falar com o suporte._`
   );
@@ -1537,6 +1529,7 @@ export async function processBotMessage(
     const appsReply = generateAppsMessage(config, serverName);
     const apkUrl = config.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
     const iosUrl = config.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509";
+    const winUrl = config.appWindowsLink || "https://www.iptvsmarters.com/download?download=windows";
 
     return {
       reply: appsReply,
@@ -1544,7 +1537,7 @@ export async function processBotMessage(
       interactive: {
         type: "buttons",
         title: "📲 Aplicativos de Streaming",
-        description: "Toque nos botões abaixo para baixar direto ou abrir na loja oficial:",
+        description: "Toque nos botões abaixo para baixar direto no seu dispositivo:",
         footer: `${serverName} • Suporte 24h`,
         buttons: [
           {
@@ -1555,14 +1548,15 @@ export async function processBotMessage(
           },
           {
             id: "btn_download_ios",
-            displayText: "🍏 App iPhone / iPad (iOS)",
+            displayText: "🍏 App iPhone / iPad",
             type: "url",
             url: iosUrl,
           },
           {
-            id: "1",
-            displayText: "1️⃣ Gerar Teste Grátis",
-            type: "reply",
+            id: "btn_download_pc",
+            displayText: "💻 App Windows (PC)",
+            type: "url",
+            url: winUrl,
           },
         ],
       },
