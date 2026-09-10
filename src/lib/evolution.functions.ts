@@ -109,7 +109,6 @@ export async function getInstanceToken(instanceName: string) {
   }) as Record<string, unknown> | undefined;
   const token = instance?.["token"];
   if (typeof token !== "string" || !token.trim()) {
-    // Se não encontrou token individual, retorna null para usar a apiKey global
     return null;
   }
   return token.trim();
@@ -294,6 +293,11 @@ export const createEvolutionInstance = createServerFn({ method: "POST" })
           `Nome "${data.instance}" já existe ou criação bloqueada. Use a instância padrão "${DEFAULT_EVOLUTION_INSTANCE}". Detalhe: ${raw}`,
         );
       }
+      if (/403|Forbidden/i.test(raw)) {
+        throw new Error(
+          `Evolution bloqueou a criação (403). Use a instância padrão "${DEFAULT_EVOLUTION_INSTANCE}" já conectada. Detalhe: ${raw}`,
+        );
+      }
       throw new Error(raw);
     }
   });
@@ -305,22 +309,53 @@ export const sendEvolutionTestMessage = createServerFn({ method: "POST" })
       .object({
         instance: z.string().min(1),
         number: z.string().min(10).max(25),
-        text: z.string().min(1).max(2000).default("Teste IPTV Manager — WhatsApp conectado com sucesso!"),
+        text: z.string().min(1).max(2000).default("Teste WhatsApp — conectado com sucesso!"),
       })
       .parse(data),
   )
-  .handler(async ({ data }) => {
-    const { sendWhatsapp } = await import("./whatsapp.server");
-    const res = await sendWhatsapp(data.number, data.text, data.instance);
-    if (!res.ok) {
-      throw new Error(res.error || "Falha ao enviar mensagem");
+  .handler(async ({ data, context }) => {
+    const { base, apiKey } = getEvolutionConfig();
+    if (!base || !apiKey) throw new Error("Evolution API não configurada");
+    const url = `${evolutionBaseUrl(base)}/message/sendText/${encodeURIComponent(data.instance)}`;
+    const digits = data.number.replace(/\D/g, "");
+    const normalized = digits.startsWith("55") ? digits : `55${digits}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: apiKey },
+      body: JSON.stringify({ number: normalized, text: data.text }),
+    });
+    const text = await res.text();
+    let json: unknown = null;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      json = text;
     }
-    return { ok: true, message: "Mensagem de teste enviada com sucesso!" };
+    if (!res.ok) {
+      const msg =
+        typeof json === "string" ? json : (json as { message?: string })?.message ?? `Falha ao enviar [${res.status}]`;
+      throw new Error(msg);
+    }
+
+    // Registra nos logs da conta no Supabase se houver usuário
+    try {
+      if (context.userId) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.from("message_logs").insert({
+          user_id: context.userId,
+          phone: normalized,
+          body: data.text,
+          status: "sent",
+        });
+      }
+    } catch {}
+
+    return json as Record<string, JsonValue>;
   });
 
 /**
- * Conexão inteligente (idêntica ao BOMSABORR): garante que a instância exista
- * (cria apenas se não existir) e devolve o QR Code ou status open diretamente.
+ * Conexão inteligente idêntica ao BOMSABORR:
+ * Garante que a instância exista (cria se não existir) e devolve o QR Code ou status open diretamente.
  */
 export const ensureAndConnectEvolution = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -383,23 +418,3 @@ export const ensureAndConnectEvolution = createServerFn({ method: "POST" })
       code: conn.code ?? conn.pairingCode ?? conn.qrcode?.code ?? null,
     };
   });
-
-/** Obtém as informações do webhook configurado na VPS */
-export const getEvolutionWebhook = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { findInstanceWebhook } = await import("./evolution.server");
-    const info = await findInstanceWebhook(context.userId);
-    return { ok: true, webhook: info };
-  });
-
-/** Salva o Webhook da Evolution API na VPS */
-export const saveEvolutionWebhook = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: { webhookUrl: string }) => input)
-  .handler(async ({ data, context }) => {
-    const { setInstanceWebhook } = await import("./evolution.server");
-    await setInstanceWebhook(context.userId, data.webhookUrl);
-    return { ok: true };
-  });
-

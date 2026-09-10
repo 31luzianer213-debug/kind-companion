@@ -23,10 +23,6 @@ export function normalizePhone(raw: string) {
     return trimmed;
   }
   let digits = trimmed.replace(/\D/g, "").replace(/^0+/, "");
-  // Se for LID (14 ou 15 dígitos sem código do país 55)
-  if (trimmed.includes("@lid") || (digits.length >= 14 && !digits.startsWith("55"))) {
-    return `${digits}@lid`;
-  }
   // remove DDI duplicado / prefixo de operadora
   if (digits.length > 13 && digits.startsWith("55")) digits = digits.slice(-13);
   if (!digits.startsWith("55") && digits.length >= 10 && digits.length <= 11) {
@@ -54,7 +50,7 @@ export async function sendWhatsapp(to: string, text: string, instanceOverride?: 
   if (!normalized) {
     return {
       ok: false as const,
-      error: "Número de telefone não informado.",
+      error: "Número do cliente incompleto ou inválido — confira o WhatsApp dele",
     };
   }
 
@@ -63,7 +59,7 @@ export async function sendWhatsapp(to: string, text: string, instanceOverride?: 
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: apiKey },
-      body: JSON.stringify({ number: normalized, text, textMessage: { text } }),
+      body: JSON.stringify({ number: normalized, text }),
     });
 
     if (!response.ok) {
