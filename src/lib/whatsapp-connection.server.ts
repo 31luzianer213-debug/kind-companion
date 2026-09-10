@@ -4,7 +4,7 @@
  */
 import { evolutionBaseUrl } from "./evolution-url";
 
-export const DEFAULT_INSTANCE_NAME = "iptv_ozpbaj5n";
+export const DEFAULT_INSTANCE_NAME = "iptv_5ngpz2zz";
 
 export type ConnectionState = "open" | "connecting" | "close" | "none" | "unknown";
 
