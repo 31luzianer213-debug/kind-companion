@@ -310,6 +310,7 @@ export async function processIncomingWhatsAppEvent(
   }
 
   // 8. Envia mensagem interativa (Botões ou Lista) ou mensagem de texto oficial
+  let mediaSentWithButtons = false;
   if (botResult.interactive) {
     if (botResult.interactive.type === "buttons") {
       console.log(`[WhatsApp Engine] 🔘 Enviando botões interativos para ${destinationJid}...`);
@@ -320,16 +321,27 @@ export async function processIncomingWhatsAppEvent(
         copyCode: b.copyCode,
         url: b.url,
       }));
-      await sendWhatsAppButtons(
+      const btnRes = await sendWhatsAppButtons(
         destinationJid,
         {
           title: botResult.interactive.title,
           description: botResult.reply,
           footer: botResult.interactive.footer,
           buttons: btns,
+          media: botResult.media?.base64
+            ? {
+                base64: botResult.media.base64,
+                caption: botResult.media.caption || "",
+                mimetype: "image/png",
+                fileName: "qrcode-pix.png",
+              }
+            : undefined,
         },
         instance || undefined,
       );
+      if (btnRes.ok && botResult.media?.base64) {
+        mediaSentWithButtons = true;
+      }
     } else if (botResult.interactive.type === "list") {
       console.log(`[WhatsApp Engine] 📋 Enviando lista interativa para ${destinationJid}...`);
       await sendWhatsAppList(
@@ -352,8 +364,8 @@ export async function processIncomingWhatsAppEvent(
     }
   }
 
-  // 9. Envia imagem do QR Code PIX caso gerada (Mercado Pago)
-  if (botResult.media?.base64) {
+  // 9. Envia imagem do QR Code PIX separada SOMENTE se não foi anexada junto com o botão
+  if (!mediaSentWithButtons && botResult.media?.base64) {
     try {
       console.log(`[WhatsApp Engine] 📸 Enviando QR Code PIX para ${destinationJid}...`);
       await sendWhatsAppMedia(
@@ -371,8 +383,9 @@ export async function processIncomingWhatsAppEvent(
     }
   }
 
-  // 10. Envia mensagens adicionais (ex: código Copia e Cola isolado)
-  if (Array.isArray(botResult.extraMessages)) {
+  // 10. Envia mensagens adicionais (apenas se estritamente configurado e sem botão de cópia)
+  const hasCopyButton = botResult.interactive?.buttons?.some((b) => b.type === "copy" || b.copyCode);
+  if (!hasCopyButton && Array.isArray(botResult.extraMessages)) {
     for (const extra of botResult.extraMessages) {
       if (extra && extra.trim()) {
         await sendWhatsAppText(destinationJid, extra, instance || undefined);

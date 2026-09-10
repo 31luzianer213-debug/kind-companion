@@ -647,13 +647,13 @@ async function handlePlanOrderCreation({
       `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
       `📦 *Plano:* ${planName}\n` +
       `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-      `⚡ *Forma de Pagamento:* PIX Automático (Mercado Pago)\n\n` +
-      `👇 *COMO PAGAR RAPIDAMENTE:*\n` +
-      `1️⃣ Toque no botão *📋 Copiar Chave PIX* abaixo.\n` +
+      `⚡ *Forma de Pagamento:* PIX Automático\n\n` +
+      `👇 *COMO PAGAR:*\n` +
+      `1️⃣ Toque no botão *📋 Copiar Código PIX* abaixo.\n` +
       `2️⃣ Abra o app do seu banco (Nubank, Inter, Caixa, Itaú, etc.).\n` +
-      `3️⃣ Vá na opção *PIX* > *PIX Copia e Cola* e confirme o pagamento.\n\n` +
+      `3️⃣ Vá na opção *PIX* > *PIX Copia e Cola* e pague.\n\n` +
       `✅ *Liberação 100% Automática!*\n` +
-      `Assim que o banco confirmar, seu Login, Senha e Lista M3U serão enviados aqui na conversa! 🚀`;
+      `Assim que o banco confirmar, seus dados de acesso (usuário, senha e M3U) serão enviados aqui na conversa! 🚀`;
 
     return {
       reply,
@@ -668,30 +668,17 @@ async function handlePlanOrderCreation({
       interactive: {
         type: "buttons",
         title: "💳 Pagamento PIX",
-        description: `Toque no botão abaixo para copiar o código PIX e pagar no app do seu banco:`,
-        footer: `Pedido #${order.order_number} • Liberação Automática`,
+        description: reply,
+        footer: `Pedido #${order.order_number} • Pagamento Seguro`,
         buttons: [
           {
             id: "btn_copy_pix",
-            displayText: "📋 Copiar Chave PIX",
+            displayText: "📋 Copiar Código PIX",
             type: "copy",
             copyCode: mpPixResult.qrCode,
           },
-          {
-            id: `check_order_${order.id}`,
-            displayText: "✅ Já Paguei / Verificar",
-            type: "reply",
-          },
-          {
-            id: "0",
-            displayText: "⬅️ Menu Principal",
-            type: "reply",
-          },
         ],
       },
-      extraMessages: [
-        mpPixResult.qrCode,
-      ],
     };
   }
 
@@ -703,7 +690,7 @@ async function handlePlanOrderCreation({
     `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
     `📦 *Plano:* ${planName}\n` +
     `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-    `💳 *Forma de Pagamento:* Transferência PIX (Liberação Manual)\n\n` +
+    `💳 *Forma de Pagamento:* Transferência PIX\n\n` +
     `🔑 *Chave PIX:* \`${effectivePixKey}\`\n` +
     `👤 *Titular:* ${effectivePixHolder}\n\n` +
     `📌 *Como Ativar Seu Acesso:*\n` +
@@ -717,7 +704,7 @@ async function handlePlanOrderCreation({
     interactive: {
       type: "buttons",
       title: "💳 Chave PIX (Manual)",
-      description: `Toque abaixo para copiar nossa chave PIX:`,
+      description: reply,
       footer: `Pedido #${order.order_number} • Titular: ${effectivePixHolder}`,
       buttons: [
         {
@@ -726,16 +713,8 @@ async function handlePlanOrderCreation({
           type: "copy",
           copyCode: effectivePixKey,
         },
-        {
-          id: "0",
-          displayText: "⬅️ Menu Principal",
-          type: "reply",
-        },
       ],
     },
-    extraMessages: [
-      effectivePixKey,
-    ],
   };
 }
 
@@ -821,12 +800,12 @@ async function handleRenewOrderCreation({
       (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
       `📺 *Servidor:* ${serverName}\n` +
       `💰 *Valor da Mensalidade:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-      `⚡ *Forma de Pagamento:* PIX Automático (Mercado Pago)\n\n` +
-      `👇 *COMO PAGAR RAPIDAMENTE:*\n` +
-      `1️⃣ Toque no botão *📋 Copiar Chave PIX* abaixo.\n` +
+      `⚡ *Forma de Pagamento:* PIX Automático\n\n` +
+      `👇 *COMO PAGAR:*\n` +
+      `1️⃣ Toque no botão *📋 Copiar Código PIX* abaixo.\n` +
       `2️⃣ Abra o app do seu banco, vá em *PIX* > *PIX Copia e Cola* e pague.\n\n` +
       `✅ *Renovação 100% Automática!*\n` +
-      `Assim que o banco confirmar, seu acesso é reativado imediatamente! 🚀`;
+      `Assim que o banco confirmar, seu acesso será reativado imediatamente! 🚀`;
 
     return {
       reply,
@@ -841,30 +820,17 @@ async function handleRenewOrderCreation({
       interactive: {
         type: "buttons",
         title: "💳 Renovação PIX",
-        description: `Toque abaixo para copiar o código PIX da renovação de ${targetUsername}:`,
-        footer: `Pedido #${order.order_number} • Liberação Automática`,
+        description: reply,
+        footer: `Pedido #${order.order_number} • Pagamento Seguro`,
         buttons: [
           {
             id: "btn_copy_pix",
-            displayText: "📋 Copiar Chave PIX",
+            displayText: "📋 Copiar Código PIX",
             type: "copy",
             copyCode: mpPixResult.qrCode,
           },
-          {
-            id: `check_order_${order.id}`,
-            displayText: "✅ Já Paguei / Verificar",
-            type: "reply",
-          },
-          {
-            id: "0",
-            displayText: "⬅️ Menu Principal",
-            type: "reply",
-          },
         ],
       },
-      extraMessages: [
-        mpPixResult.qrCode,
-      ],
     };
   }
 
@@ -878,7 +844,7 @@ async function handleRenewOrderCreation({
     (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
     `📺 *Servidor:* ${serverName}\n` +
     `💰 *Valor da Mensalidade:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-    `💳 *Forma de Pagamento:* Transferência PIX (Liberação Manual)\n\n` +
+    `💳 *Forma de Pagamento:* Transferência PIX\n\n` +
     `🔑 *Chave PIX:* \`${effectivePixKey}\`\n` +
     `👤 *Titular:* ${effectivePixHolder}\n\n` +
     `📌 *Como Confirmar Sua Renovação:*\n` +
@@ -892,7 +858,7 @@ async function handleRenewOrderCreation({
     interactive: {
       type: "buttons",
       title: "💳 Chave PIX (Renovação)",
-      description: `Toque abaixo para copiar nossa chave PIX:`,
+      description: reply,
       footer: `Pedido #${order.order_number} • Titular: ${effectivePixHolder}`,
       buttons: [
         {
@@ -901,16 +867,8 @@ async function handleRenewOrderCreation({
           type: "copy",
           copyCode: effectivePixKey,
         },
-        {
-          id: "0",
-          displayText: "⬅️ Menu Principal",
-          type: "reply",
-        },
       ],
     },
-    extraMessages: [
-      effectivePixKey,
-    ],
   };
 }
 
@@ -1029,21 +987,17 @@ export async function processBotMessage(
     if (order.pix_code) {
       orderButtons.push({
         id: "btn_copy_pix",
-        displayText: "📋 Copiar Chave PIX",
+        displayText: "📋 Copiar Código PIX",
         type: "copy",
         copyCode: order.pix_code,
       });
+    } else {
+      orderButtons.push({
+        id: "0",
+        displayText: "⬅️ Menu Principal",
+        type: "reply",
+      });
     }
-    orderButtons.push({
-      id: `check_order_${order.id}`,
-      displayText: "🔄 Verificar Pagamento",
-      type: "reply",
-    });
-    orderButtons.push({
-      id: "0",
-      displayText: "⬅️ Menu Principal",
-      type: "reply",
-    });
 
     return {
       reply:

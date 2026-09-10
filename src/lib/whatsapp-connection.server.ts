@@ -152,6 +152,12 @@ export async function sendWhatsAppButtons(
       phoneNumber?: string;
     }>;
     footer?: string;
+    media?: {
+      base64: string;
+      caption?: string;
+      mimetype?: string;
+      fileName?: string;
+    };
   },
   instance?: string,
 ) {
@@ -193,6 +199,7 @@ export async function sendWhatsAppButtons(
         footer: options.footer || "IPTV Bot",
         type: "buttons",
         buttons: formattedButtons,
+        media: options.media,
         instance,
       }),
       signal: AbortSignal.timeout(10000),
