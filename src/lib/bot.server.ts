@@ -648,16 +648,12 @@ async function handlePlanOrderCreation({
       `📦 *Plano:* ${planName}\n` +
       `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
       `⚡ *Forma de Pagamento:* PIX Automático (Mercado Pago)\n\n` +
-      `Escaneie a imagem do QR Code abaixo ou utilize o código Copia e Cola enviado a seguir:`;
-
-    const extraMessages: string[] = [
-      // 1. Mensagem dedicada contendo APENAS o código PIX Copia e Cola (facilita cópia com 1 toque)
-      mpPixResult.qrCode,
-      // 2. Orientações de ativação automática
+      `👇 *COMO PAGAR RAPIDAMENTE:*\n` +
+      `1️⃣ Toque no botão *📋 Copiar Chave PIX* abaixo.\n` +
+      `2️⃣ Abra o app do seu banco (Nubank, Inter, Caixa, Itaú, etc.).\n` +
+      `3️⃣ Vá na opção *PIX* > *PIX Copia e Cola* e confirme o pagamento.\n\n` +
       `✅ *Liberação 100% Automática!*\n` +
-      `Assim que você realizar o pagamento no aplicativo do seu banco, o sistema reconhece em poucos segundos e já envia seu Login, Senha e Lista M3U aqui mesmo nesta conversa! 🚀\n\n` +
-      `_Dica: Se já concluiu o PIX e quer checar agora, basta digitar *verificar*._`,
-    ];
+      `Assim que o banco confirmar, seu Login, Senha e Lista M3U serão enviados aqui na conversa! 🚀`;
 
     return {
       reply,
@@ -669,7 +665,33 @@ async function handlePlanOrderCreation({
             caption: `📱 *QR CODE PIX — PEDIDO #${order.order_number}*\n💰 Valor: R$ ${amount.toFixed(2).replace(".", ",")}\nAponte a câmera do aplicativo do seu banco para pagar!`,
           }
         : undefined,
-      extraMessages,
+      interactive: {
+        type: "buttons",
+        title: "💳 Pagamento PIX",
+        description: `Toque no botão abaixo para copiar o código PIX e pagar no app do seu banco:`,
+        footer: `Pedido #${order.order_number} • Liberação Automática`,
+        buttons: [
+          {
+            id: "btn_copy_pix",
+            displayText: "📋 Copiar Chave PIX",
+            type: "copy",
+            copyCode: mpPixResult.qrCode,
+          },
+          {
+            id: `check_order_${order.id}`,
+            displayText: "✅ Já Paguei / Verificar",
+            type: "reply",
+          },
+          {
+            id: "0",
+            displayText: "⬅️ Menu Principal",
+            type: "reply",
+          },
+        ],
+      },
+      extraMessages: [
+        mpPixResult.qrCode,
+      ],
     };
   }
 
@@ -685,13 +707,35 @@ async function handlePlanOrderCreation({
     `🔑 *Chave PIX:* \`${effectivePixKey}\`\n` +
     `👤 *Titular:* ${effectivePixHolder}\n\n` +
     `📌 *Como Ativar Seu Acesso:*\n` +
-    `1️⃣ Faça o PIX no valor de *R$ ${amount.toFixed(2).replace(".", ",")}* para a chave acima.\n` +
-    `2️⃣ *Envie o comprovante do PIX aqui nesta conversa*.\n` +
-    `3️⃣ Nosso administrador confirmará pelo painel e seu acesso será liberado imediatamente! 🚀`;
+    `1️⃣ Toque no botão *📋 Copiar Chave PIX* abaixo.\n` +
+    `2️⃣ Faça a transferência no valor de *R$ ${amount.toFixed(2).replace(".", ",")}*.\n` +
+    `3️⃣ *Envie o comprovante do PIX aqui nesta conversa* para liberação imediata! 🚀`;
 
   return {
     reply,
     action: "order_created_manual",
+    interactive: {
+      type: "buttons",
+      title: "💳 Chave PIX (Manual)",
+      description: `Toque abaixo para copiar nossa chave PIX:`,
+      footer: `Pedido #${order.order_number} • Titular: ${effectivePixHolder}`,
+      buttons: [
+        {
+          id: "btn_copy_pix",
+          displayText: "📋 Copiar Chave PIX",
+          type: "copy",
+          copyCode: effectivePixKey,
+        },
+        {
+          id: "0",
+          displayText: "⬅️ Menu Principal",
+          type: "reply",
+        },
+      ],
+    },
+    extraMessages: [
+      effectivePixKey,
+    ],
   };
 }
 
@@ -778,16 +822,11 @@ async function handleRenewOrderCreation({
       `📺 *Servidor:* ${serverName}\n` +
       `💰 *Valor da Mensalidade:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
       `⚡ *Forma de Pagamento:* PIX Automático (Mercado Pago)\n\n` +
-      `Escaneie a imagem do QR Code abaixo ou utilize o código Copia e Cola enviado a seguir:`;
-
-    const extraMessages: string[] = [
-      // 1. Mensagem dedicada contendo APENAS o código PIX Copia e Cola (facilita cópia com 1 toque)
-      mpPixResult.qrCode,
-      // 2. Orientações de renovação automática
-      `✅ *Liberação 100% Automática!*\n` +
-      `Assim que você realizar o pagamento no aplicativo do seu banco, o sistema reconhece em poucos segundos e renova seu acesso imediatamente no servidor! 🚀\n\n` +
-      `_Dica: Se já concluiu o PIX e quer checar agora, basta digitar *verificar*._`,
-    ];
+      `👇 *COMO PAGAR RAPIDAMENTE:*\n` +
+      `1️⃣ Toque no botão *📋 Copiar Chave PIX* abaixo.\n` +
+      `2️⃣ Abra o app do seu banco, vá em *PIX* > *PIX Copia e Cola* e pague.\n\n` +
+      `✅ *Renovação 100% Automática!*\n` +
+      `Assim que o banco confirmar, seu acesso é reativado imediatamente! 🚀`;
 
     return {
       reply,
@@ -799,7 +838,33 @@ async function handleRenewOrderCreation({
             caption: `📱 *QR CODE PIX — RENOVAÇÃO IPTV*\n👤 Usuário: ${targetUsername}\n💰 Valor: R$ ${amount.toFixed(2).replace(".", ",")}`,
           }
         : undefined,
-      extraMessages,
+      interactive: {
+        type: "buttons",
+        title: "💳 Renovação PIX",
+        description: `Toque abaixo para copiar o código PIX da renovação de ${targetUsername}:`,
+        footer: `Pedido #${order.order_number} • Liberação Automática`,
+        buttons: [
+          {
+            id: "btn_copy_pix",
+            displayText: "📋 Copiar Chave PIX",
+            type: "copy",
+            copyCode: mpPixResult.qrCode,
+          },
+          {
+            id: `check_order_${order.id}`,
+            displayText: "✅ Já Paguei / Verificar",
+            type: "reply",
+          },
+          {
+            id: "0",
+            displayText: "⬅️ Menu Principal",
+            type: "reply",
+          },
+        ],
+      },
+      extraMessages: [
+        mpPixResult.qrCode,
+      ],
     };
   }
 
@@ -817,14 +882,35 @@ async function handleRenewOrderCreation({
     `🔑 *Chave PIX:* \`${effectivePixKey}\`\n` +
     `👤 *Titular:* ${effectivePixHolder}\n\n` +
     `📌 *Como Confirmar Sua Renovação:*\n` +
-    `1️⃣ Faça o PIX no valor de *R$ ${amount.toFixed(2).replace(".", ",")}* para a chave acima.\n` +
-    `2️⃣ *Envie o comprovante do PIX aqui nesta conversa*.\n` +
-    `3️⃣ Nosso administrador confirmará pelo painel e seu acesso será renovado imediatamente! 🚀\n\n` +
-    `Se precisar de suporte, digite *6*.`;
+    `1️⃣ Toque no botão *📋 Copiar Chave PIX* abaixo.\n` +
+    `2️⃣ Faça o PIX no valor de *R$ ${amount.toFixed(2).replace(".", ",")}*.\n` +
+    `3️⃣ *Envie o comprovante do PIX aqui nesta conversa* para renovação imediata! 🚀`;
 
   return {
     reply,
     action: "renew_pix_manual_sent",
+    interactive: {
+      type: "buttons",
+      title: "💳 Chave PIX (Renovação)",
+      description: `Toque abaixo para copiar nossa chave PIX:`,
+      footer: `Pedido #${order.order_number} • Titular: ${effectivePixHolder}`,
+      buttons: [
+        {
+          id: "btn_copy_pix",
+          displayText: "📋 Copiar Chave PIX",
+          type: "copy",
+          copyCode: effectivePixKey,
+        },
+        {
+          id: "0",
+          displayText: "⬅️ Menu Principal",
+          type: "reply",
+        },
+      ],
+    },
+    extraMessages: [
+      effectivePixKey,
+    ],
   };
 }
 
@@ -939,15 +1025,42 @@ export async function processBotMessage(
       ? `\n\n👇 *PIX Copia e Cola:*\n\`${order.pix_code}\``
       : "";
 
+    const orderButtons: any[] = [];
+    if (order.pix_code) {
+      orderButtons.push({
+        id: "btn_copy_pix",
+        displayText: "📋 Copiar Chave PIX",
+        type: "copy",
+        copyCode: order.pix_code,
+      });
+    }
+    orderButtons.push({
+      id: `check_order_${order.id}`,
+      displayText: "🔄 Verificar Pagamento",
+      type: "reply",
+    });
+    orderButtons.push({
+      id: "0",
+      displayText: "⬅️ Menu Principal",
+      type: "reply",
+    });
+
     return {
       reply:
         `⏳ *PEDIDO #${order.order_number} AGUARDANDO PAGAMENTO* ⏳\n\n` +
         `📦 *Plano:* ${order.plan_name}\n` +
         `💰 *Valor:* R$ ${Number(order.amount).toFixed(2).replace(".", ",")}\n` +
         (order.payment_method === "mercadopago_pix"
-          ? `⚡ O Mercado Pago confirmará automaticamente assim que o PIX for concluído.${pixCodeNotice}\n\n_Assim que pagar, digite *verificar* para checar novamente._`
+          ? `⚡ O Mercado Pago confirmará automaticamente assim que o PIX for concluído.${pixCodeNotice}\n\n_Toque no botão abaixo para copiar a chave PIX ou verificar o pagamento._`
           : `💳 *Chave PIX:* \`${pixKey}\`\n👤 *Titular:* ${pixHolder}\n\nPor favor, envie o comprovante do PIX aqui para liberação pelo administrador!`),
       action: "order_status_checked",
+      interactive: {
+        type: "buttons",
+        title: `Pedido #${order.order_number}`,
+        description: `Aguardando confirmação do PIX (R$ ${Number(order.amount).toFixed(2).replace(".", ",")}):`,
+        footer: `${serverName} • Liberação Automática`,
+        buttons: orderButtons,
+      },
     };
   }
 
@@ -1183,20 +1296,27 @@ export async function processBotMessage(
       `${appsBlock}\n\n` +
       `Bom divertimento! Qualquer dúvida, digite *6* para falar conosco. 🍿`;
 
+    const apkUrl = config.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
+
     return {
       reply:
         reply +
-        `\n\n_Gostou e quer assinar? Digite *3* para ver nossos planos e garantir seu acesso definitivo!_ 🚀`,
+        `\n\n_Gostou e quer assinar? Toque no botão de planos abaixo para garantir seu acesso definitivo!_ 🚀`,
       action: "trial_created",
       interactive: {
         type: "buttons",
         title: "🎉 Teste Liberado!",
-        description: "Seu teste gratuito foi ativado com sucesso! Escolha o próximo passo:",
+        description: "Seu teste gratuito foi ativado com sucesso! Baixe o app oficial ou veja nossos planos:",
         footer: `${serverName} • Suporte 24h`,
         buttons: [
-          { id: "4", displayText: "📲 Baixar Aplicativos", type: "reply" },
+          {
+            id: "btn_download_apk",
+            displayText: "📲 Baixar App Oficial (APK)",
+            type: "url",
+            url: apkUrl,
+          },
           { id: "3", displayText: "🛒 Ver Nossos Planos", type: "reply" },
-          { id: "6", displayText: "💬 Falar com Suporte", type: "reply" },
+          { id: "0", displayText: "⬅️ Menu Principal", type: "reply" },
         ],
       },
     };
@@ -1385,7 +1505,7 @@ export async function processBotMessage(
 
     const reply =
       `${config.plansText}${pixBlock}\n\n` +
-      `👇 *Para assinar agora, responda com o número do plano desejado:*\n\n` +
+      `👇 *Para assinar agora, toque em uma opção na lista abaixo ou responda com o número:*\n\n` +
       `👉 Digite *1* para *Plano Mensal (${p1})*\n` +
       `👉 Digite *2* para *Plano Trimestral (${p2})*\n` +
       `👉 Digite *3* para *Plano Semestral (${p3})*\n` +
@@ -1396,14 +1516,42 @@ export async function processBotMessage(
       reply,
       action: "plans_shown",
       interactive: {
-        type: "buttons",
-        title: "🍿 Escolha seu Plano IPTV",
+        type: "list",
+        title: "🍿 Nossos Planos IPTV",
         description: "Selecione o plano desejado para gerar seu PIX Automático:",
-        footer: `${serverName} • Liberação Imediata`,
-        buttons: [
-          { id: "1", displayText: `1️⃣ Mensal (${p1})`, type: "reply" },
-          { id: "2", displayText: `2️⃣ Trimestral (${p2})`, type: "reply" },
-          { id: "3", displayText: `3️⃣ Semestral (${p3})`, type: "reply" },
+        buttonText: "📋 Ver Planos e Assinar",
+        footerText: `${serverName} • Liberação Imediata`,
+        sections: [
+          {
+            title: "Planos Disponíveis",
+            rows: [
+              {
+                rowId: "plano_1m",
+                title: `1️⃣ Plano Mensal (${p1})`,
+                description: "Acesso por 30 dias • 1 Tela • Liberação na hora",
+              },
+              {
+                rowId: "plano_3m",
+                title: `2️⃣ Plano Trimestral (${p2})`,
+                description: "Acesso por 90 dias • Economize mais",
+              },
+              {
+                rowId: "plano_6m",
+                title: `3️⃣ Plano Semestral (${p3})`,
+                description: "Acesso por 180 dias • Mais Vendido 🔥",
+              },
+              {
+                rowId: "plano_12m",
+                title: `4️⃣ Plano Anual (${p4})`,
+                description: "Acesso por 365 dias • Super Desconto ⭐",
+              },
+              {
+                rowId: "0",
+                title: "⬅️ Voltar ao Menu Principal",
+                description: "Retornar ao início do atendimento",
+              },
+            ],
+          },
         ],
       },
     };
@@ -1433,18 +1581,35 @@ export async function processBotMessage(
     text.includes("downloader")
   ) {
     const appsReply = generateAppsMessage(config, serverName);
+    const apkUrl = config.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
+    const iosUrl = config.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509";
+
     return {
       reply: appsReply,
       action: "apps_links_sent",
       interactive: {
         type: "buttons",
         title: "📲 Aplicativos de Streaming",
-        description: "Links de download para Celular, TV Box, PC, Smart TV e iPhone.",
+        description: "Toque nos botões abaixo para baixar direto ou abrir na loja oficial:",
         footer: `${serverName} • Suporte 24h`,
         buttons: [
-          { id: "1", displayText: "1️⃣ Gerar Teste Grátis", type: "reply" },
-          { id: "5", displayText: "5️⃣ Meus Dados de Acesso", type: "reply" },
-          { id: "6", displayText: "6️⃣ Atendimento Humano", type: "reply" },
+          {
+            id: "btn_download_apk",
+            displayText: "🤖 Baixar APK Android",
+            type: "url",
+            url: apkUrl,
+          },
+          {
+            id: "btn_download_ios",
+            displayText: "🍏 App iPhone / iPad (iOS)",
+            type: "url",
+            url: iosUrl,
+          },
+          {
+            id: "1",
+            displayText: "1️⃣ Gerar Teste Grátis",
+            type: "reply",
+          },
         ],
       },
     };
@@ -1484,6 +1649,17 @@ export async function processBotMessage(
           `• Digite *4* para baixar nossos aplicativos.\n` +
           `• Digite *6* se você contratou com outro número para falar com o suporte.`,
         action: "credentials_not_found",
+        interactive: {
+          type: "buttons",
+          title: "🔍 Assinatura Não Encontrada",
+          description: "Não localizamos uma conta ativa com este número de WhatsApp. O que deseja fazer?",
+          footer: `${serverName} • Suporte 24h`,
+          buttons: [
+            { id: "1", displayText: "1️⃣ Gerar Teste Grátis", type: "reply" },
+            { id: "3", displayText: "3️⃣ Ver Nossos Planos", type: "reply" },
+            { id: "6", displayText: "👨‍💼 Falar com Atendente", type: "reply" },
+          ],
+        },
       };
     }
 
@@ -1509,9 +1685,27 @@ export async function processBotMessage(
       `${appsBlock}\n\n` +
       `Bom divertimento! 🍿`;
 
+    const apkUrl = config.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
+
     return {
       reply,
       action: "credentials_resent",
+      interactive: {
+        type: "buttons",
+        title: "📡 Seus Dados de Acesso",
+        description: "Toque abaixo para baixar o aplicativo ou renovar sua assinatura:",
+        footer: `${serverName} • Bom divertimento!`,
+        buttons: [
+          {
+            id: "btn_download_apk",
+            displayText: "📲 Baixar Aplicativo (APK)",
+            type: "url",
+            url: apkUrl,
+          },
+          { id: "2", displayText: "💳 Renovar Assinatura", type: "reply" },
+          { id: "0", displayText: "⬅️ Menu Principal", type: "reply" },
+        ],
+      },
     };
   }
 
@@ -1529,15 +1723,33 @@ export async function processBotMessage(
     return {
       reply: config.supportMessage,
       action: "human_support",
+      interactive: {
+        type: "buttons",
+        title: "👨‍💼 Atendimento Humano",
+        description: "Um atendente irá te responder em breve. Enquanto isso, escolha uma opção rápida:",
+        footer: `${serverName} • Suporte 24h`,
+        buttons: [
+          { id: "1", displayText: "1️⃣ Gerar Teste Grátis", type: "reply" },
+          { id: "3", displayText: "3️⃣ Ver Nossos Planos", type: "reply" },
+          { id: "0", displayText: "⬅️ Menu Principal", type: "reply" },
+        ],
+      },
     };
   }
 
   // =========================================================================
   // MENU PRINCIPAL (PADRÃO PARA SAUDAÇÃO OU RESPOSTA NÃO RECONHECIDA)
   // =========================================================================
-  let greeting = config.menuGreeting
-    .replace(/{empresa}/g, config.businessName)
-    .replace(/{servidor}/g, serverName);
+  const greeting =
+    `👋 *Olá! Seja muito bem-vindo(a) à ${config.businessName || "Central IPTV"}!* 🍿\n\n` +
+    `Como podemos te ajudar hoje? Digite o *número* da opção ou clique no botão abaixo:\n\n` +
+    `1️⃣ *TESTE GRÁTIS* — Teste imediato de ${config.testDurationHours} horas\n` +
+    `2️⃣ *RENOVAÇÃO* — Renove seu acesso com PIX Automático\n` +
+    `3️⃣ *PLANOS & PREÇOS* — Conheça nossos planos e valores\n` +
+    `4️⃣ *BAIXAR APLICATIVOS* — Links oficiais Android, iOS, PC e TV\n` +
+    `5️⃣ *MEUS DADOS* — Receber login, senha e lista M3U\n` +
+    `6️⃣ *SUPORTE* — Falar com atendente humano\n\n` +
+    `_👇 Toque no botão abaixo para abrir as opções ou envie o número desejado:_`;
 
   return {
     reply: greeting,
@@ -1546,41 +1758,41 @@ export async function processBotMessage(
       type: "list",
       title: config.businessName || "Menu IPTV",
       description: greeting,
-      buttonText: "Ver Opções do Menu",
+      buttonText: "📋 Abrir Menu de Opções",
       footerText: `${serverName} • Auto-Atendimento 24h`,
       sections: [
         {
-          title: "Auto-Atendimento",
+          title: "Auto-Atendimento Rápido",
           rows: [
             {
               rowId: "1",
               title: "1️⃣ Gerar Teste Grátis",
-              description: `Acesso imediato de ${config.testDurationHours}h liberado na hora`,
+              description: `Acesso liberado na hora por ${config.testDurationHours} horas`,
             },
             {
               rowId: "2",
               title: "2️⃣ Renovar Assinatura",
-              description: "Renovação rápida com PIX Automático",
+              description: "Pagar via PIX com ativação imediata",
             },
             {
               rowId: "3",
-              title: "3️⃣ Comprar Acesso / Planos",
-              description: "Consulte nossos planos e valores",
+              title: "3️⃣ Planos e Preços",
+              description: "Ver opções Mensal, Trimestral, Semestral e Anual",
             },
             {
               rowId: "4",
               title: "4️⃣ Baixar Aplicativos",
-              description: "Links para Celular, TV Box, PC, iOS e Smart TV 📲",
+              description: "Links de download para TV Box, Celular, iOS e PC 📲",
             },
             {
               rowId: "5",
-              title: "5️⃣ Reenviar Meus Dados",
+              title: "5️⃣ Reenviar Meus Acessos",
               description: "Receber login, senha e lista M3U",
             },
             {
               rowId: "6",
-              title: "6️⃣ Falar com Atendente",
-              description: "Suporte com nossa equipe humana",
+              title: "6️⃣ Atendimento Humano",
+              description: "Tirar dúvidas com nossa equipe de suporte",
             },
           ],
         },

@@ -178,9 +178,8 @@ export async function sendWhatsAppButtons(
       };
     }
     return {
-      buttonId: String(b.id),
-      buttonText: { displayText: b.displayText },
-      type: 1,
+      id: String(b.id),
+      text: b.displayText,
     };
   });
 

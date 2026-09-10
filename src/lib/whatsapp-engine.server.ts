@@ -316,7 +316,8 @@ export async function processIncomingWhatsAppEvent(
       const btns = botResult.interactive.buttons.map((b) => ({
         id: b.id,
         displayText: b.displayText,
-        type: (b.type === "url" ? "url" : "reply") as "reply" | "url",
+        type: (b.type || (b.copyCode ? "copy" : b.url ? "url" : "reply")) as "reply" | "copy" | "url",
+        copyCode: b.copyCode,
         url: b.url,
       }));
       await sendWhatsAppButtons(

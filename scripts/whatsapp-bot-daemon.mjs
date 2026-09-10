@@ -73,9 +73,27 @@ function normalizeButtons(buttons) {
   return (buttons || []).map((b, i) => {
     if (!b || typeof b !== "object") return b;
     if (b.name && b.buttonParamsJson) return b;
-    if (b.id && b.text) return b;
-    const id = b.id || b.buttonId || b.rowId || `btn_${i + 1}`;
-    const text = b.text || b.displayText || b.buttonText?.displayText || b.title || `Botão ${i + 1}`;
+    if (b.type === "copy" || b.copyCode) {
+      return {
+        name: "cta_copy",
+        buttonParamsJson: JSON.stringify({
+          display_text: b.displayText || b.text || "📋 Copiar Chave PIX",
+          copy_code: b.copyCode || b.code || "",
+        }),
+      };
+    }
+    if (b.type === "url" || b.url) {
+      return {
+        name: "cta_url",
+        buttonParamsJson: JSON.stringify({
+          display_text: b.displayText || b.text || "Abrir Link",
+          url: b.url || "",
+        }),
+      };
+    }
+    if (b.id && b.text) return { id: String(b.id), text: String(b.text) };
+    const id = String(b.id || b.buttonId || b.rowId || `btn_${i + 1}`);
+    const text = String(b.text || b.displayText || b.buttonText?.displayText || b.title || `Opção ${i + 1}`);
     return { id, text };
   });
 }
@@ -531,6 +549,7 @@ class WhatsAppSession {
       text === "2" ||
       text === "2." ||
       text === "btn_renovar" ||
+      text.startsWith("plano_") ||
       text.includes("renovar") ||
       text.includes("pix") ||
       text.includes("pagar")
@@ -539,11 +558,11 @@ class WhatsAppSession {
       await this.sendCopyButtonMessage(
         jid,
         pix,
-        `💳 *RENOVAÇÃO DE ASSINATURA VIA PIX* 📺\n\n` +
+        `💳 *PAGAMENTO VIA PIX AUTOMÁTICO* 📺\n\n` +
           `💰 *Valor:* R$ ${Number(config.planMonthlyPrice || 35).toFixed(2).replace(".", ",")}\n` +
-          `👤 *Titular:* ${config.pixHolder || config.businessName}\n` +
-          `⚡ Seu acesso é liberado automaticamente após o pagamento!\n\n` +
-          `Toque no botão abaixo para copiar a chave PIX Copia e Cola:`,
+          `👤 *Titular:* ${config.pixHolder || config.businessName || "Central IPTV"}\n` +
+          `⚡ Liberação automática no servidor assim que o PIX for concluído!\n\n` +
+          `👇 Toque no botão abaixo para copiar o código PIX Copia e Cola:`,
       );
       return;
     }
@@ -555,21 +574,22 @@ class WhatsAppSession {
       const a = Number(config.planAnnualPrice || 290).toFixed(2).replace(".", ",");
 
       await this.sendListMessage(jid, {
-        title: "🛒 Planos Disponíveis",
+        title: "🍿 Planos IPTV",
         text:
           `🛒 *PLANOS E ASSINATURAS ${config.serverName?.toUpperCase() || "IPTV"}* 🍿\n\n` +
           `📺 *1 Mês:* R$ ${m}\n` +
-          `📺 *3 Meses:* R$ ${q}\n` +
-          `📺 *6 Meses:* R$ ${s}\n` +
-          `📺 *12 Meses:* R$ ${a}\n\n` +
+          `📺 *3 Meses:* R$ ${q} (Econômico!)\n` +
+          `📺 *6 Meses:* R$ ${s} (Mais Vendido 🔥)\n` +
+          `📺 *12 Meses:* R$ ${a} (Super Desconto ⭐)\n\n` +
           `⭐ *Mais de 80.000 conteúdos com canais 4K, filmes, séries e EPG.*`,
-        buttonText: "🛒 Escolher Plano",
-        footer: "Selecione o plano desejado:",
+        buttonText: "📋 Ver Opções de Planos",
+        footer: "Toque abaixo para assinar:",
         rows: [
-          { rowId: "2", title: `1 Mês — R$ ${m}`, description: "1 tela / Ativação Imediata" },
-          { rowId: "2", title: `3 Meses — R$ ${q}`, description: "Econômico / 1 tela" },
-          { rowId: "2", title: `6 Meses — R$ ${s}`, description: "Mais Vendido 🔥" },
-          { rowId: "2", title: `12 Meses — R$ ${a}`, description: "Super Desconto ⭐" },
+          { rowId: "plano_1m", title: `1️⃣ 1 Mês — R$ ${m}`, description: "1 tela / Ativação Imediata" },
+          { rowId: "plano_3m", title: `2️⃣ 3 Meses — R$ ${q}`, description: "Econômico / 1 tela" },
+          { rowId: "plano_6m", title: `3️⃣ 6 Meses — R$ ${s}`, description: "Mais Vendido 🔥" },
+          { rowId: "plano_12m", title: `4️⃣ 12 Meses — R$ ${a}`, description: "Super Desconto ⭐" },
+          { rowId: "0", title: "⬅️ Menu Principal", description: "Voltar ao início" },
         ],
       });
       return;
@@ -579,22 +599,28 @@ class WhatsAppSession {
       await this.sendButtonsMessage(jid, {
         text:
           `📲 *APLICATIVOS OFICIAIS DISPONÍVEIS* 🍿\n\n` +
-          `• *TV Box & Android:* Baixe o APK oficial ou use código Downloader: *${config.appAndroidDownloaderCode || "389471"}*\n` +
-          `• *iPhone / iPad:* Smarters Player Lite na App Store\n` +
-          `• *Smart TVs Samsung/LG:* IBO Player ou SmartOne\n` +
-          `• *Computador / PC:* IPTV Smarters Pro Windows\n\n` +
-          `Toque abaixo para baixar o APK direto:`,
-        footer: "Suporte 24h",
+          `• *TV Box & Celular Android:* Baixe o APK oficial ou use o código Downloader: *${config.appAndroidDownloaderCode || "389471"}*\n` +
+          `• *iPhone / iPad / Apple TV:* Smarters Player Lite na App Store\n` +
+          `• *Smart TVs Samsung / LG:* IBO Player ou SmartOne na loja da TV\n` +
+          `• *Computador / PC Windows:* IPTV Smarters Pro\n\n` +
+          `Toque abaixo nos botões interativos para baixar direto:`,
+        footer: `${config.businessName || "Alpha IPTV"} • Suporte 24h`,
         buttons: [
           {
             name: "cta_url",
             buttonParamsJson: JSON.stringify({
-              display_text: "📱 Baixar APK Android",
+              display_text: "🤖 Baixar APK Android",
               url: config.appAndroidApk || "https://bit.ly/app-xciptv-oficial",
             }),
           },
+          {
+            name: "cta_url",
+            buttonParamsJson: JSON.stringify({
+              display_text: "🍏 App iPhone / iPad",
+              url: config.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509",
+            }),
+          },
           { id: "1", text: "1️⃣ Gerar Teste Grátis" },
-          { id: "voltar_menu", text: "⬅️ Menu Principal" },
         ],
       });
       return;
@@ -603,9 +629,9 @@ class WhatsAppSession {
     // Menu Principal Padrão
     await this.sendButtonsMessage(jid, {
       text:
-        `👋 Olá, *${pushName}*! Seja bem-vindo(a) à *${config.businessName || "Alpha IPTV"}*! 🍿\n` +
-        `Eu sou o assistente virtual do *${config.serverName || "Alpha IPTV"}* e estou aqui para te atender 24h por dia.\n\n` +
-        `Como posso te ajudar hoje? Toque em um dos botões abaixo:`,
+        `👋 Olá, *${pushName}*! Seja muito bem-vindo(a) à *${config.businessName || "Alpha IPTV"}*! 🍿\n\n` +
+        `Eu sou o assistente virtual 24h e estou pronto para te atender.\n` +
+        `Escolha uma das opções abaixo para começar:`,
       footer: "Atendimento 100% Automático",
       buttons: [
         { id: "1", text: "1️⃣ Gerar Teste Grátis" },
