@@ -21,6 +21,11 @@ data/*.tmp
 .wrangler/
 .dev.vars
 
+# WhatsApp Baileys Auth Session
+auth_baileys/
+data/auth_baileys/
+scratch/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
