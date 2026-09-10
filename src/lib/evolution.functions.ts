@@ -205,11 +205,20 @@ export const logoutEvolutionInstance = createServerFn({ method: "POST" })
     try {
       instanceToken = await getInstanceToken(data.instance);
     } catch {}
-    return (await evolutionFetch(
-      `/instance/logout/${encodeURIComponent(data.instance)}`,
-      { method: "DELETE" },
-      instanceToken ?? undefined,
-    )) as JsonValue;
+    try {
+      await evolutionFetch(
+        `/instance/logout/${encodeURIComponent(data.instance)}`,
+        { method: "DELETE" },
+        instanceToken ?? undefined,
+      );
+    } catch {}
+    try {
+      await evolutionFetch(
+        `/instance/delete/${encodeURIComponent(data.instance)}`,
+        { method: "DELETE" },
+      );
+    } catch {}
+    return { ok: true, deleted: true } as unknown as JsonValue;
   });
 
 export const restartEvolutionInstance = createServerFn({ method: "POST" })
@@ -231,6 +240,17 @@ export const deleteEvolutionInstance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ instance: z.string().min(1) }).parse(data))
   .handler(async ({ data }) => {
+    let instanceToken: string | null = null;
+    try {
+      instanceToken = await getInstanceToken(data.instance);
+    } catch {}
+    try {
+      await evolutionFetch(
+        `/instance/logout/${encodeURIComponent(data.instance)}`,
+        { method: "DELETE" },
+        instanceToken ?? undefined,
+      );
+    } catch {}
     return (await evolutionFetch(
       `/instance/delete/${encodeURIComponent(data.instance)}`,
       { method: "DELETE" },

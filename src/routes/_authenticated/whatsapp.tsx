@@ -24,6 +24,7 @@ import {
   getEvolutionConfigStatus,
   getEvolutionConnectionState,
   logoutEvolutionInstance,
+  deleteEvolutionInstance,
   restartEvolutionInstance,
   sendEvolutionTestMessage,
 } from "@/lib/evolution.functions";
@@ -159,15 +160,21 @@ function WhatsAppPage() {
   }
 
   async function handleLogout() {
-    if (!instance || !confirm("Desconectar o WhatsApp? Será preciso escanear o QR Code novamente.")) return;
+    if (
+      !instance ||
+      !confirm(
+        "Deseja realmente desconectar e apagar a instância da VPS? Ao clicar em 'Gerar QR Code', uma nova instância limpa será recriada automaticamente na Evolution API."
+      )
+    )
+      return;
     try {
-      await logoutEvolutionInstance({ data: { instance } });
+      await deleteEvolutionInstance({ data: { instance } });
       setQr(null);
       setQrError(null);
-      toast.success("Desconectado.");
+      toast.success("Instância apagada da VPS com sucesso! Pronto para criar nova.");
       refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao desconectar");
+      toast.error(e instanceof Error ? e.message : "Erro ao apagar instância da VPS");
     }
   }
 
@@ -279,7 +286,7 @@ function WhatsAppPage() {
             onClick={handleLogout}
             className="rounded-full font-bold text-destructive hover:bg-destructive/10 gap-1.5"
           >
-            <LogOut className="size-4" /> Desconectar
+            <LogOut className="size-4" /> Desconectar & Apagar da VPS
           </Button>
         </div>
 
