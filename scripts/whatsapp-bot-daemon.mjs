@@ -17,19 +17,31 @@
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 
+// Shim de compatibilidade (redireciona @whiskeysockets/baileys → whaileys)
+// 100% idêntico ao bot de teste enviado (media_1789061899925.js)
+const Module = require("module");
+const _resolve = Module._resolveFilename.bind(Module);
+Module._resolveFilename = function (request, ...args) {
+  if (request === "@whiskeysockets/baileys") request = "whaileys";
+  return _resolve(request, ...args);
+};
+
 const {
   default: makeWASocket,
   DisconnectReason,
   useMultiFileAuthState,
   makeCacheableSignalKeyStore,
   fetchLatestBaileysVersion,
-} = require("@whiskeysockets/baileys");
+} = require("whaileys");
 
-let sendButtonsHelper = null;
+let baileysOficial;
 try {
-  const bh = require("baileys_helper");
-  sendButtonsHelper = bh.sendButtons;
-} catch {}
+  baileysOficial = require("whaileys");
+} catch {
+  baileysOficial = require("@whiskeysockets/baileys");
+}
+
+const { sendButtons, sendInteractiveMessage } = require("baileys_helper");
 
 const pino = require("pino");
 const QRCode = require("qrcode");
@@ -76,40 +88,44 @@ function saveState() {
 // ║        FUNÇÕES DE ENVIO INTERATIVO (IGUAL AO BOT TESTE)      ║
 // ╚══════════════════════════════════════════════════════════════╝
 
+function normalizeButtons(buttons) {
+  return (buttons || []).map((b, i) => {
+    if (!b || typeof b !== "object") return b;
+    if (b.name && b.buttonParamsJson) return b;
+    if (b.id && b.text) return b;
+    const id = b.id || b.buttonId || b.rowId || `btn_${i + 1}`;
+    const text = b.text || b.displayText || b.buttonText?.displayText || b.title || `Botão ${i + 1}`;
+    return { id, text };
+  });
+}
+
 /**
  * Envia botões rápidos usando sendButtons do baileys_helper (com fallback nativo no sock)
+ * 100% fiel ao bot teste (media_1789061899925.js)
  */
 async function enviarBotoes(jid, { text, footer, buttons }) {
   if (!sock) return false;
-  if (sendButtonsHelper) {
-    try {
-      await sendButtonsHelper(sock, jid, { text, footer: footer || "IPTV Bot", buttons });
-      return true;
-    } catch (e) {
-      console.warn("[Baileys] Fallback no sendButtons helper:", e.message);
-    }
-  }
-
-  // Fallback direto via sock
+  const cleanButtons = normalizeButtons(buttons);
   try {
-    await sock.sendMessage(jid, {
-      text,
-      footer: footer || "IPTV Bot",
-      buttons,
+    await sendButtons(sock, jid, {
+      text: text || "🤖 *BOT DE TESTE*\n\nEscolha uma opção abaixo:",
+      footer: footer || "Bot de Teste — Botões & Listas",
+      buttons: cleanButtons,
     });
     return true;
   } catch (e) {
-    // Fallback texto limpo com numeração
-    let fallback = text;
-    if (buttons && buttons.length > 0) {
-      fallback +=
-        "\n\n🔘 *Opções:*\n" +
-        buttons
-          .map((b, i) => `👉 *${b.buttonId || i + 1}* - ${b.buttonText?.displayText || b.name || ""}`)
-          .join("\n");
+    console.warn("[Baileys] Fallback no sendButtons helper:", e.message);
+    try {
+      await sock.sendMessage(jid, {
+        text: text || "🤖 *BOT DE TESTE*\n\nEscolha uma opção abaixo:",
+        footer: footer || "Bot de Teste — Botões & Listas",
+        buttons: cleanButtons,
+      });
+      return true;
+    } catch (e2) {
+      console.error("[Baileys] Erro ao enviar botões:", e2.message);
+      return false;
     }
-    await sock.sendMessage(jid, { text: fallback });
-    return false;
   }
 }
 
@@ -122,29 +138,22 @@ async function enviarLista(jid, options = {}) {
     { rowId: "opcao_1", title: "🔹 Opção 1", description: "Descrição da opção 1" },
     { rowId: "opcao_2", title: "🔹 Opção 2", description: "Descrição da opção 2" },
     { rowId: "opcao_3", title: "🔹 Opção 3", description: "Descrição da opção 3" },
-    { rowId: "plano_1m", title: "📺 Plano Mensal (R$ 35)", description: "Todos os canais, filmes e séries" },
     { rowId: "voltar_menu", title: "⬅️ Voltar", description: "Voltar ao menu principal" },
   ];
 
-  const sections = options.sections || [{ title: "📦 Opções Disponíveis", rows }];
+  const sections = options.sections || [{ title: options.title || "📦 Opções", rows }];
 
   try {
     await sock.sendMessage(jid, {
-      text: options.text || "📋 *LISTA DE OPÇÕES*\n\nSelecione um item abaixo:",
-      footer: options.footer || "Bot de Atendimento 24h",
+      text: options.text || "📋 *LISTA DE OPÇÕES*\n\nSelecione um item:",
+      footer: options.footer || "Bot de Teste",
       title: options.title || "Opções disponíveis",
       buttonText: options.buttonText || "📋 Abrir Lista",
       sections,
     });
     return true;
   } catch (e) {
-    console.warn("[Baileys] Fallback no envio de lista:", e.message);
-    let fallback = (options.text || "📋 *LISTA DE OPÇÕES*") + "\n";
-    for (const sec of sections) {
-      fallback += `\n*${sec.title}*\n`;
-      fallback += sec.rows.map((r) => `👉 *${r.rowId}* - ${r.title}${r.description ? ` (${r.description})` : ""}`).join("\n");
-    }
-    await sock.sendMessage(jid, { text: fallback });
+    console.error("[Baileys] Erro no envio de lista:", e.message);
     return false;
   }
 }
@@ -154,18 +163,18 @@ async function enviarLista(jid, options = {}) {
  */
 async function enviarConfirmacao(jid, pergunta = "❓ *Confirma a ação de teste?*") {
   const buttons = [
-    { buttonId: "confirmar_sim", buttonText: { displayText: "✅ Sim" }, type: 1 },
-    { buttonId: "confirmar_nao", buttonText: { displayText: "❌ Não" }, type: 1 },
+    { id: "confirmar_sim", text: "✅ Sim" },
+    { id: "confirmar_nao", text: "❌ Não" },
   ];
-  return await enviarBotoes(jid, { text: pergunta, footer: "Bot de Atendimento", buttons });
+  return await enviarBotoes(jid, { text: pergunta, footer: "Bot de Teste", buttons });
 }
 
 /**
  * Resposta simples com botão de voltar — igual ao bot teste
  */
 async function enviarComVoltar(jid, texto) {
-  const buttons = [{ buttonId: "voltar_menu", buttonText: { displayText: "⬅️ Voltar ao Menu" }, type: 1 }];
-  return await enviarBotoes(jid, { text: texto, footer: "Bot de Atendimento", buttons });
+  const buttons = [{ id: "voltar_menu", text: "⬅️ Voltar" }];
+  return await enviarBotoes(jid, { text: texto, footer: "Bot de Teste", buttons });
 }
 
 /**
@@ -181,7 +190,6 @@ async function enviarBotaoCopiar(jid, codigo, texto) {
         copy_code: codigo,
       }),
     },
-    { buttonId: "voltar_menu", buttonText: { displayText: "⬅️ Voltar ao Menu" }, type: 1 },
   ];
   const bodyText = texto || `📋 *Código PIX Copia e Cola:*\n\n\`${codigo}\``;
   return await enviarBotoes(jid, {
@@ -204,7 +212,6 @@ async function enviarBotaoLink(jid, texto, label, url) {
         url,
       }),
     },
-    { buttonId: "voltar_menu", buttonText: { displayText: "⬅️ Voltar ao Menu" }, type: 1 },
   ];
   return await enviarBotoes(jid, {
     text,
@@ -214,20 +221,18 @@ async function enviarBotaoLink(jid, texto, label, url) {
 }
 
 /**
- * Menu principal com botões interativos rápidos — igual ao bot teste
+ * Menu principal com botões interativos rápidos — 100% igual ao bot teste
  */
 async function enviarMenuPrincipal(jid) {
   const mainButtons = [
-    { buttonId: "btn_teste", buttonText: { displayText: "1️⃣ Gerar Teste Grátis" }, type: 1 },
-    { buttonId: "btn_renovar", buttonText: { displayText: "2️⃣ Renovar / PIX" }, type: 1 },
-    { buttonId: "btn_lista", buttonText: { displayText: "📋 Ver Lista de Opções" }, type: 1 },
+    { id: "btn_lista", text: "📋 Ver Lista de Opções" },
+    { id: "btn_confirmar", text: "✅ Testar Confirmação" },
+    { id: "btn_sobre", text: "ℹ️ Sobre o Bot" },
   ];
 
   await enviarBotoes(jid, {
-    text:
-      "🤖 *ATENDIMENTO AUTOMÁTICO WHATSAPP*\n\n" +
-      "Olá! Seja bem-vindo(a). Escolha uma opção abaixo tocando no botão desejado:",
-    footer: "Auto-Atendimento 24h • Baileys",
+    text: "🤖 *BOT DE TESTE*\n\nEscolha uma opção abaixo:",
+    footer: "Bot de Teste — Botões & Listas",
     buttons: mainButtons,
   });
 }
@@ -272,48 +277,38 @@ async function handleMessage(msg) {
       // ── Opções do arquivo bot teste ────────────────────────────
       case "btn_lista":
       case "lista":
-      case "planos":
-        await enviarLista(jid, {
-          title: "Opções e Planos",
-          text: "📋 *LISTA DE OPÇÕES DISPONÍVEIS*\n\nSelecione um item:",
-          buttonText: "📋 Abrir Lista",
-          rows: [
-            { rowId: "btn_teste", title: "🍿 Teste Grátis (4 Horas)", description: "Liberar acesso instantâneo" },
-            { rowId: "plano_1m", title: "📺 Plano 1 Mês (R$ 35)", description: "Acesso completo a todos canais e filmes" },
-            { rowId: "plano_3m", title: "📺 Plano 3 Meses (R$ 90)", description: "Trimestral com desconto" },
-            { rowId: "btn_apps", title: "📲 Baixar Aplicativos", description: "Android, TV Box, iOS e PC" },
-            { rowId: "btn_confirmar", title: "✅ Testar Confirmação", description: "Exemplo de botões Sim / Não" },
-            { rowId: "btn_sobre", title: "ℹ️ Sobre o Bot", description: "Informações sobre este robô" },
-            { rowId: "voltar_menu", title: "⬅️ Voltar", description: "Voltar ao menu inicial" },
-          ],
-        });
+        await enviarLista(jid);
         return;
 
       case "btn_confirmar":
-        await enviarConfirmacao(jid, "❓ *Confirma a ação de teste do robô?*");
+        await enviarConfirmacao(jid);
         return;
 
       case "btn_sobre":
         await enviarComVoltar(
           jid,
-          "ℹ️ *Sobre o Bot*\n\nEste robô funciona 24 horas por dia com Baileys nativo, respondendo mensagens instantaneamente com botões clicáveis, listas interativas e cópia de chave PIX automática.",
+          "ℹ️ *Sobre o Bot*\n\nEste é um bot com lógica de botões e listas interativas via WhatsApp (whaileys + baileys_helper).",
         );
-        await enviarBotaoCopiar(jid, "CHAVE-PIX-EXEMPLO-2026", "💳 Exemplo de botão copiar chave PIX:");
-        await enviarBotaoLink(jid, "🔗 Exemplo de botão de link oficial:", "🌐 Abrir Painel", "https://seu-painel.com");
+        await enviarBotaoCopiar(jid, "CODIGO-TESTE-12345");
+        await enviarBotaoLink(jid, "🔗 Exemplo de botão de link:", "🌐 Abrir site", "https://www.google.com");
         return;
 
       case "opcao_1":
       case "opcao_2":
       case "opcao_3":
-        await enviarComVoltar(jid, `✅ Você selecionou com sucesso: *${actionId.toUpperCase()}*`);
+        await enviarComVoltar(jid, `✅ Você selecionou: *${actionId}*`);
         return;
 
       case "confirmar_sim":
-        await enviarComVoltar(jid, "✅ Ação confirmada com sucesso pelo robô!");
+        await enviarComVoltar(jid, "✅ Ação confirmada com sucesso!");
         return;
 
       case "confirmar_nao":
         await enviarComVoltar(jid, "❌ Ação cancelada.");
+        return;
+
+      case "voltar_menu":
+        await enviarMenuPrincipal(jid);
         return;
 
       // ── Opções de IPTV e Atendimento ───────────────────────────
@@ -686,16 +681,16 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        // Envio de Botões Rápidos
+        // Envio de Botões Rápidos (100% igual bot teste)
         if (type === "buttons" || (Array.isArray(payload.buttons) && payload.buttons.length > 0)) {
           const buttons = payload.buttons || [
-            { buttonId: "1", buttonText: { displayText: "1️⃣ Gerar Teste Grátis" }, type: 1 },
-            { buttonId: "2", buttonText: { displayText: "2️⃣ Renovar Assinatura" }, type: 1 },
-            { buttonId: "6", buttonText: { displayText: "3️⃣ Suporte Humano" }, type: 1 },
+            { id: "btn_lista", text: "📋 Ver Lista de Opções" },
+            { id: "btn_confirmar", text: "✅ Testar Confirmação" },
+            { id: "btn_sobre", text: "ℹ️ Sobre o Bot" },
           ];
           await enviarBotoes(jid, {
-            text: text || "🤖 *Mensagem com Botões Clicáveis*",
-            footer: payload.footer || "IPTV Bot",
+            text: text || "🤖 *BOT DE TESTE*\n\nEscolha uma opção abaixo:",
+            footer: payload.footer || "Bot de Teste — Botões & Listas",
             buttons,
           });
           res.writeHead(200, { "Content-Type": "application/json" });
@@ -703,12 +698,12 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        // Envio de Lista Interativa
+        // Envio de Lista Interativa (100% igual bot teste)
         if (type === "list" || (Array.isArray(payload.sections) && payload.sections.length > 0)) {
           await enviarLista(jid, {
-            title: payload.title || "Menu de Opções",
-            text: text || "📋 Selecione uma das opções abaixo:",
-            footer: payload.footer || "IPTV Bot",
+            title: payload.title || "Opções disponíveis",
+            text: text || "📋 *LISTA DE OPÇÕES*\n\nSelecione um item:",
+            footer: payload.footer || "Bot de Teste",
             buttonText: payload.buttonText || "📋 Abrir Lista",
             sections: payload.sections,
             rows: payload.rows,
