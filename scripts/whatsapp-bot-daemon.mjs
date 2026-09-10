@@ -183,25 +183,99 @@ async function forwardToLocalWebhook(instanceName, msg) {
 
   console.log(`[Daemon] 📩 Nova mensagem de ${realPhone} [${remoteJid}] (${pushName}): "${text.slice(0, 60)}"`);
 
-  try {
-    const res = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    let forwardedSuccessfully = false;
+    try {
+      const res = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    if (res.ok) {
-      const resJson = await res.json().catch(() => null);
-      if (resJson?.ignored === "bot_disabled" || resJson?.action === "bot_disabled") {
-        console.log(`[Daemon] 🛑 Robô DESLIGADO no painel. Nenhuma mensagem enviada para ${realPhone}.`);
+      if (res.ok) {
+        forwardedSuccessfully = true;
+        const resJson = await res.json().catch(() => null);
+        if (resJson?.ignored === "bot_disabled" || resJson?.action === "bot_disabled") {
+          console.log(`[Daemon] 🛑 Robô DESLIGADO no painel. Nenhuma mensagem enviada para ${realPhone}.`);
+        } else {
+          console.log(`[Daemon] ✅ Resposta enviada com sucesso para ${realPhone} [${remoteJid}]! (Ação: ${resJson?.action || "ok"})`);
+        }
       } else {
-        console.log(`[Daemon] ✅ Resposta enviada com sucesso para ${realPhone} [${remoteJid}]! (Ação: ${resJson?.action || "ok"})`);
+        console.warn(`[Daemon] ⚠️ Webhook local respondeu com status ${res.status}`);
       }
-    } else {
-      console.warn(`[Daemon] ⚠️ Webhook local respondeu com status ${res.status}`);
+    } catch (err) {
+      console.warn(`[Daemon] Webhook local inacessível (${err.message}). Acionando resposta direta autônoma...`);
+    }
+
+    // Se o webhook local não respondeu (ex: app rodando no navegador ou sem localhost), responde diretamente via Evolution API
+    if (!forwardedSuccessfully) {
+      const t = text.trim().toLowerCase();
+      let reply = "";
+
+      if (t === "4" || t === "4." || t.includes("app") || t.includes("baixar") || t.includes("aplicativo")) {
+        reply =
+          `📲 *APLICATIVOS OFICIAIS — ALPHA IPTV* 🍿\n\n` +
+          `🤖 *TV Box / Android TV / FireStick:*\n` +
+          `• Abra o app *Downloader* na TV e digite o código: *389471*\n` +
+          `• Ou baixe o APK direto: https://bit.ly/app-xciptv-oficial\n\n` +
+          `📱 *Celular & Tablet Android:*\n` +
+          `• Baixar APK Direto: https://bit.ly/app-xciptv-oficial\n\n` +
+          `🍏 *iPhone / iPad / Apple TV (iOS):*\n` +
+          `• Baixar na App Store (Smarters Player Lite):\nhttps://apps.apple.com/app/smarters-player-lite/id1628995509\n\n` +
+          `💻 *Computador & Notebook (Windows):*\n` +
+          `• Baixar IPTV Smarters Pro (.exe):\nhttps://www.iptvsmarters.com/download?download=windows\n\n` +
+          `🌐 *Assistir no Navegador (Web Player):*\n` +
+          `• Acesso direto sem instalar nada: http://webtv.iptvsmarters.com\n\n` +
+          `📺 *Smart TV (Samsung, LG e Roku):*\n` +
+          `• Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.`;
+      } else if (t === "3" || t === "3." || t.includes("plano") || t.includes("comprar")) {
+        reply =
+          `🛒 *PLANOS E ASSINATURAS ALPHA IPTV* 🍿\n\n` +
+          `📺 *1 Mês (1 Tela):* R$ 35,00\n` +
+          `📺 *3 Meses (Trimestral):* R$ 90,00 (Mais econômico!)\n` +
+          `📺 *6 Meses (Semestral):* R$ 160,00\n` +
+          `📺 *12 Meses (Anual):* R$ 290,00 (Super Desconto ⭐)\n\n` +
+          `⭐ *Todos os planos incluem:*\n` +
+          `• Mais de 80.000 conteúdos (Canais 4K/FHD, Filmes e Séries atualizados)\n` +
+          `• Guia de Canais completo (EPG)\n` +
+          `• Compatível com TV Box, Smart TV, Celular, Computador e Tablet\n` +
+          `• Ativação Imediata via PIX Automático!`;
+      } else if (t === "6" || t === "6." || t.includes("suporte") || t.includes("humano")) {
+        reply =
+          `👨‍💼 *ATENDIMENTO HUMANO*\n\n` +
+          `Sua solicitação foi recebida! Um de nossos atendentes irá te responder diretamente aqui em instantes.\n` +
+          `Por favor, deixe sua dúvida ou mensagem abaixo para agilizar seu atendimento. 👇`;
+      } else {
+        reply =
+          `👋 Olá! Seja muito bem-vindo(a) à *Alpha IPTV*! 🍿\n` +
+          `Eu sou o assistente virtual do *Alpha server IPTV* e estou aqui para te atender 24h por dia.\n\n` +
+          `Como posso te ajudar hoje? Digite o *número* da opção desejada:\n\n` +
+          `1️⃣ *Gerar Teste Grátis* (Acesso Imediato)\n` +
+          `2️⃣ *Renovar Minha Assinatura* (PIX Automático)\n` +
+          `3️⃣ *Comprar Novo Acesso / Planos*\n` +
+          `4️⃣ *Baixar Aplicativos* (Celular, TV Box, PC, iOS) 📲\n` +
+          `5️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n` +
+          `6️⃣ *Falar com Atendente Humano*\n\n` +
+          `_Responda com 1, 2, 3, 4, 5 ou 6._`;
+      }
+
+      const targetSendJid = `${realPhone}@s.whatsapp.net`;
+      try {
+        await fetch(`${EVOLUTION_URL}/message/sendText/${instanceName}`, {
+          method: "POST",
+          headers: { apikey: EVOLUTION_KEY, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            number: targetSendJid,
+            text: reply,
+            textMessage: { text: reply },
+          }),
+        });
+        console.log(`[Daemon] ✅ Resposta direta autônoma enviada para ${targetSendJid}!`);
+      } catch (directErr) {
+        console.error(`[Daemon] Falha ao enviar resposta direta:`, directErr.message);
+      }
     }
   } catch (err) {
-    console.error("[Daemon] Erro ao enviar para webhook local:", err.message);
+    console.error("[Daemon] Erro ao processar mensagem:", err.message);
   }
 }
 

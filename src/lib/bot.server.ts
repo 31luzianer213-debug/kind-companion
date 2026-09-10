@@ -1567,3 +1567,237 @@ export async function processBotMessage(
     },
   };
 }
+
+// Conjunto de IDs de mensagens já tratadas pelo bot para evitar respostas duplicadas
+const globalHandledMessageIds = new Set<string>();
+let isInitialBotPoll = true;
+
+function unwrapRawBotMessage(m: any): any {
+  if (!m || typeof m !== "object") return {};
+  if (m.ephemeralMessage?.message) return unwrapRawBotMessage(m.ephemeralMessage.message);
+  if (m.viewOnceMessage?.message) return unwrapRawBotMessage(m.viewOnceMessage.message);
+  if (m.viewOnceMessageV2?.message) return unwrapRawBotMessage(m.viewOnceMessageV2.message);
+  if (m.viewOnceMessageV2Extension?.message) return unwrapRawBotMessage(m.viewOnceMessageV2Extension.message);
+  if (m.documentWithCaptionMessage?.message) return unwrapRawBotMessage(m.documentWithCaptionMessage.message);
+  return m;
+}
+
+/**
+ * Consulta mensagens recentes na Evolution API e processa respostas automaticamente.
+ * Funciona tanto em segundo plano no navegador quanto no Webhook e Daemon.
+ */
+export async function pollAndProcessWhatsAppMessages(userId?: string): Promise<{
+  ok: boolean;
+  processed: number;
+  handled?: string[];
+}> {
+  const { evolutionConfig } = await import("./evolution.server");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { sendViaEvolution, sendMediaViaEvolution } = await import("./billing.server");
+
+  const { base, key, instance } = evolutionConfig(userId);
+  if (!base || !instance) {
+    return { ok: false, processed: 0 };
+  }
+
+  let rawMessages: any[] = [];
+  try {
+    const res = await fetch(`${base}/chat/findMessages/${encodeURIComponent(instance)}`, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ limit: 15 }),
+    });
+
+    if (!res.ok) {
+      return { ok: false, processed: 0 };
+    }
+
+    const data = await res.json();
+    rawMessages = data.messages?.records || data.records || (Array.isArray(data) ? data : []);
+  } catch {
+    return { ok: false, processed: 0 };
+  }
+
+  if (!rawMessages || rawMessages.length === 0) {
+    return { ok: true, processed: 0 };
+  }
+
+  let processedCount = 0;
+  const handled: string[] = [];
+  const targetUserId = userId || "00000000-0000-0000-0000-000000000000";
+
+  // Busca configurações da conta
+  let settings: any = null;
+  try {
+    const { data: s } = await supabaseAdmin
+      .from("whatsapp_settings")
+      .select("*")
+      .eq("user_id", targetUserId)
+      .maybeSingle();
+    settings = s;
+  } catch {}
+
+  // Carrega configuração do bot
+  const botConfig = await loadBotConfig(supabaseAdmin, targetUserId);
+  if (!botConfig.enabled) {
+    return { ok: true, processed: 0 };
+  }
+
+  const now = Date.now();
+
+  for (const item of rawMessages) {
+    const keyObj = item.key || {};
+    const msgId = String(keyObj.id || item.id || "");
+    if (!msgId) continue;
+
+    // Se é mensagem enviada pelo próprio robô, marca como tratada e pula
+    if (keyObj.fromMe || item.fromMe) {
+      globalHandledMessageIds.add(msgId);
+      continue;
+    }
+
+    // Ignora grupos e transmissões
+    const remoteJid = String(keyObj.remoteJid || item.remoteJid || "");
+    if (!remoteJid || remoteJid.endsWith("@g.us") || remoteJid.includes("@broadcast")) {
+      continue;
+    }
+
+    // Verifica idade da mensagem
+    const msgTimestamp = Number(item.messageTimestamp || 0) * 1000;
+    const ageSeconds = Math.floor((now - msgTimestamp) / 1000);
+
+    // No primeiro ciclo após inicialização do servidor, não responde mensagens antigas (> 2 min)
+    if (isInitialBotPoll && ageSeconds > 120) {
+      globalHandledMessageIds.add(msgId);
+      continue;
+    }
+
+    // Se a mensagem for mais velha que 5 minutos, ignora para não floodar
+    if (ageSeconds > 300) {
+      globalHandledMessageIds.add(msgId);
+      continue;
+    }
+
+    if (globalHandledMessageIds.has(msgId)) {
+      continue;
+    }
+
+    // Extrai o texto do cliente
+    const rawMsg = item.message ?? item;
+    const messageObj = unwrapRawBotMessage(rawMsg);
+    let incomingText = String(
+      messageObj?.conversation ||
+      messageObj?.extendedTextMessage?.text ||
+      messageObj?.buttonsResponseMessage?.selectedButtonId ||
+      messageObj?.buttonsResponseMessage?.selectedDisplayText ||
+      messageObj?.listResponseMessage?.singleSelectReply?.selectedRowId ||
+      messageObj?.listResponseMessage?.title ||
+      messageObj?.templateButtonReplyMessage?.selectedId ||
+      messageObj?.interactiveResponseMessage?.body?.text ||
+      item?.body ||
+      ""
+    ).trim();
+
+    if (!incomingText) {
+      const nativeFlow = messageObj?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson;
+      if (nativeFlow) {
+        try {
+          const parsed = JSON.parse(nativeFlow);
+          incomingText = String(parsed.id || parsed.selectedId || parsed.rowId || nativeFlow).trim();
+        } catch {
+          incomingText = String(nativeFlow).trim();
+        }
+      }
+    }
+
+    if (!incomingText) {
+      globalHandledMessageIds.add(msgId);
+      continue;
+    }
+
+    // Extrai número do cliente e garante envio no JID primário (@s.whatsapp.net)
+    const cleanDigits = remoteJid.replace(/@.*$/, "").replace(/\D/g, "");
+    let realPhone = cleanDigits;
+    if (realPhone.length > 13 && realPhone.startsWith("55")) realPhone = realPhone.slice(-13);
+    if (!realPhone.startsWith("55") && realPhone.length >= 10 && realPhone.length <= 11) {
+      realPhone = `55${realPhone}`;
+    }
+
+    const targetSendJid = `${realPhone}@s.whatsapp.net`;
+    const pushName = item.pushName || "Cliente";
+
+    globalHandledMessageIds.add(msgId);
+
+    try {
+      console.log(`[Bot Auto-Poll] 📩 Processando mensagem de ${realPhone} (${pushName}): "${incomingText}"`);
+
+      const botResult = await processBotMessage(supabaseAdmin, targetUserId, {
+        phone: realPhone,
+        text: incomingText,
+        pushName,
+      });
+
+      if (botResult?.reply) {
+        // Envia resposta oficial via Evolution API
+        await sendViaEvolution(settings ?? {}, targetSendJid, botResult.reply, targetUserId);
+        console.log(`[Bot Auto-Poll] 📤 Resposta enviada para ${targetSendJid}: "${botResult.reply.slice(0, 60)}..."`);
+
+        // Envia QR Code se houver
+        if (botResult.media?.base64) {
+          try {
+            await sendMediaViaEvolution(
+              settings ?? {},
+              targetSendJid,
+              {
+                base64: botResult.media.base64,
+                ...(botResult.media.caption ? { caption: botResult.media.caption } : {}),
+                mimetype: "image/png",
+                fileName: "qrcode-pix.png",
+              },
+              targetUserId,
+            );
+          } catch {}
+        }
+
+        // Envia mensagens adicionais (ex: código PIX copia e cola)
+        if (Array.isArray(botResult.extraMessages)) {
+          for (const extra of botResult.extraMessages) {
+            if (extra && extra.trim()) {
+              await sendViaEvolution(settings ?? {}, targetSendJid, extra, targetUserId);
+            }
+          }
+        }
+
+        // Salva log de mensagem enviada
+        try {
+          await supabaseAdmin.from("message_logs").insert({
+            user_id: targetUserId,
+            phone: realPhone,
+            body: botResult.reply,
+            status: "sent",
+          });
+        } catch {}
+
+        processedCount++;
+        handled.push(msgId);
+      }
+    } catch (err) {
+      console.error(`[Bot Auto-Poll] Erro ao responder para ${realPhone}:`, err);
+    }
+  }
+
+  isInitialBotPoll = false;
+
+  // Limpa cache se exceder 3000 mensagens
+  if (globalHandledMessageIds.size > 3000) {
+    const arr = Array.from(globalHandledMessageIds);
+    globalHandledMessageIds.clear();
+    arr.slice(-1500).forEach((id) => globalHandledMessageIds.add(id));
+  }
+
+  return { ok: true, processed: processedCount, handled };
+}
+

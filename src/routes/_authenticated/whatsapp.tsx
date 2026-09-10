@@ -444,6 +444,55 @@ function WhatsAppPage() {
         </Card>
       </div>
 
+      {/* Dicas e Soluções de Problemas */}
+      <Card className="surface-card border-border/60 bg-gradient-to-br from-card via-card to-primary/5">
+        <CardHeader className="pb-3 border-b border-border/50">
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShieldCheck className="size-5 text-emerald-400" />
+            Diagnóstico & Estabilidade da Conexão
+          </CardTitle>
+          <CardDescription>
+            Informações importantes para manter sua entrega de mensagens 100% ativa e estável.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-4 space-y-3.5 text-xs text-muted-foreground leading-relaxed">
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-3.5 space-y-1.5">
+            <p className="font-semibold text-foreground flex items-center gap-2">
+              <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+              Robô Automático 24h Ativo
+            </p>
+            <p>
+              O sistema monitora continuamente as mensagens recebidas pela Evolution API.
+              Clientes que enviarem mensagens receberão respostas instantâneas de opções de menu,
+              geração de teste grátis, renovações PIX e links de aplicativos.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 space-y-1.5">
+            <p className="font-semibold text-amber-400 flex items-center gap-2">
+              <AlertCircle className="size-4" />
+              Mensagem diz "Aguardando mensagem. Essa ação pode levar alguns instantes. Saiba mais"?
+            </p>
+            <p className="text-foreground/80">
+              Isso é um comportamento padrão do WhatsApp quando as chaves de criptografia de ponta a ponta
+              precisam ser sincronizadas entre o servidor e o seu aparelho.
+            </p>
+            <ul className="list-disc list-inside space-y-1 pt-1 text-muted-foreground">
+              <li>
+                Abra o aplicativo WhatsApp no seu celular conectado e deixe-o aberto na tela por 30 a 60 segundos com conexão à internet ativa.
+              </li>
+              <li>
+                Isso faz o WhatsApp sincronizar automaticamente as chaves criptográficas da sessão com o WhatsApp Web.
+              </li>
+              <li>
+                O sistema já prioriza o envio direto para o número primário (@s.whatsapp.net) para acelerar a descriptografia imediata.
+              </li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+
       {/* Histórico dos Últimos Disparos de WhatsApp */}
       <Card className="surface-card border-border/60">
         <CardHeader className="flex flex-row items-center justify-between pb-3">

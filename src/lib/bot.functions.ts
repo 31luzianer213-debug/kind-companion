@@ -83,3 +83,12 @@ export const generateAppsMessageText = createServerFn({ method: "POST" })
     return { ok: true as const, text };
   });
 
+/** Executa o ciclo de polling para responder clientes pendentes no WhatsApp */
+export const pollWhatsAppBot = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { pollAndProcessWhatsAppMessages } = await import("./bot.server");
+    return await pollAndProcessWhatsAppMessages(context.userId);
+  });
+
+
