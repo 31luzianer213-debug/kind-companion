@@ -29,6 +29,7 @@ import {
   setEvolutionWebhookUrl,
   logoutEvolutionInstance,
   deleteEvolutionInstance,
+  updateEvolutionInstanceName,
   restartEvolutionInstance,
   sendEvolutionTestMessage,
 } from "@/lib/evolution.functions";
@@ -178,7 +179,7 @@ function WhatsAppPage() {
     setQr(null);
     setQrError(null);
     try {
-      const res = await ensureAndConnectEvolution();
+      const res = await ensureAndConnectEvolution({ data: { instance } });
       const b64 = normalizeBase64(res.base64 ?? null);
       if (b64 || res.code) {
         setQr({ base64: b64, code: res.code ?? null });
@@ -221,22 +222,60 @@ function WhatsAppPage() {
     }
   }
 
-  async function handleDeleteInstance() {
-    if (
-      !instance ||
-      !confirm(
-        "Tem certeza que deseja APAGAR A INSTÂNCIA da VPS? Isso excluirá completamente o registro e arquivos da sessão na Evolution API. Ao clicar em 'Gerar QR Code', uma nova instância limpa será criada do zero."
-      )
-    )
-      return;
+  async function handleDeleteInstance(generateNewName = true) {
+    if (!instance) return;
+    const confirmMsg = generateNewName
+      ? `Tem certeza que deseja APAGAR A INSTÂNCIA da VPS e gerar um NOVO identificador?\n\n• A sessão atual no WhatsApp será excluída da VPS.\n• Um novo nome de instância limpo será gerado automaticamente.\n• Você poderá escanear o QR Code do zero.`
+      : `Tem certeza que deseja APAGAR a sessão da instância "${instance}" da VPS?`;
+
+    if (!confirm(confirmMsg)) return;
+
     try {
-      await deleteEvolutionInstance({ data: { instance } });
+      const res = (await deleteEvolutionInstance({ data: { instance, generateNewName } })) as any;
       setQr(null);
       setQrError(null);
-      toast.success("Instância apagada da VPS com sucesso! Clique em 'Gerar QR Code' para recriar.");
+      const newName = res?.newInstanceName || instance;
+      toast.success(
+        generateNewName
+          ? `Instância antiga apagada da VPS! Novo identificador limpo: ${newName}. Clique em 'Gerar QR Code' para conectar.`
+          : "Instância apagada da VPS com sucesso! Clique em 'Gerar QR Code' para recriar."
+      );
       refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao apagar instância da VPS");
+    }
+  }
+
+  async function handleRenamePrompt() {
+    const newName = prompt(
+      "Digite o novo nome para esta instância (apenas letras minúsculas, números, _ ou -):",
+      instance || "iptv_principal"
+    );
+    if (!newName || newName.trim() === instance) return;
+    const clean = newName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    if (clean.length < 3) {
+      toast.error("O nome deve ter pelo menos 3 caracteres.");
+      return;
+    }
+    try {
+      await updateEvolutionInstanceName({ data: { newInstanceName: clean } });
+      toast.success(`Nome da instância alterado para "${clean}"!`);
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao alterar nome");
+    }
+  }
+
+  async function handleGenerateRandomInstance() {
+    if (!confirm("Deseja gerar um novo identificador exclusivo aleatório para a sua conexão?")) return;
+    const randomHex = Math.random().toString(36).slice(2, 10);
+    const newName = `iptv_${randomHex}`;
+    try {
+      await updateEvolutionInstanceName({ data: { newInstanceName: newName } });
+      toast.success(`Novo identificador gerado: "${newName}"!`);
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao gerar novo identificador");
     }
   }
 
@@ -285,26 +324,52 @@ function WhatsAppPage() {
       {/* Card 1: Informações da Instância */}
       <div className="rounded-2xl border border-white/10 bg-card p-4 shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              <Smartphone className="size-3.5 text-primary" /> WhatsApp do Sistema
+              <Smartphone className="size-3.5 text-primary" /> Conexão WhatsApp na VPS
             </p>
-            <p className="mt-1 truncate text-sm font-semibold text-foreground">
-              Conexão única: <span className="font-mono text-primary">{instance}</span>
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Se ela ainda não existir, é criada automaticamente ao gerar o QR Code.
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold text-foreground">Identificador da Instância:</span>
+              <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md text-sm border border-primary/20">
+                {instance}
+              </span>
+              <Badge variant={status === "open" ? "default" : "outline"} className="text-xs">
+                {status === "open" ? "🟢 Sessão Ativa" : "⚪ Sem Sessão / Aguardando QR Code"}
+              </Badge>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Este é o canal da sua conexão na Evolution API. Ao clicar em "Apagar", a sessão antiga é excluída e um novo nome limpo é gerado automaticamente.
             </p>
           </div>
-          <Button
-            id="whatsapp-refresh-btn"
-            variant="secondary"
-            size="sm"
-            className="rounded-full font-bold shadow-sm"
-            onClick={refresh}
-          >
-            <RefreshCw className="size-4" /> Atualizar
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              id="whatsapp-random-id-btn"
+              variant="outline"
+              size="sm"
+              className="rounded-full font-bold shadow-sm text-xs"
+              onClick={handleGenerateRandomInstance}
+            >
+              Novo ID Aleatório
+            </Button>
+            <Button
+              id="whatsapp-rename-btn"
+              variant="outline"
+              size="sm"
+              className="rounded-full font-bold shadow-sm text-xs"
+              onClick={handleRenamePrompt}
+            >
+              Renomear
+            </Button>
+            <Button
+              id="whatsapp-refresh-btn"
+              variant="secondary"
+              size="sm"
+              className="rounded-full font-bold shadow-sm"
+              onClick={refresh}
+            >
+              <RefreshCw className="size-4" /> Atualizar
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -353,10 +418,10 @@ function WhatsAppPage() {
           <Button
             id="whatsapp-delete-btn"
             variant="destructive"
-            onClick={handleDeleteInstance}
+            onClick={() => handleDeleteInstance(true)}
             className="rounded-full font-bold gap-1.5 shadow-sm"
           >
-            <Trash2 className="size-4" /> Apagar Instância
+            <Trash2 className="size-4" /> Apagar Instância & Gerar Novo ID
           </Button>
         </div>
 

@@ -23,10 +23,19 @@ function cleanEnv(v?: string) {
   return t;
 }
 
+let activeDynamicInstance: string | null = null;
+
+export function setActiveInstanceName(name: string) {
+  if (name && name.trim()) {
+    activeDynamicInstance = name.trim();
+    process.env["EVOLUTION_INSTANCE"] = name.trim();
+  }
+}
+
 export function getEvolutionConfig() {
   const envBase = cleanEnv(process.env["EVOLUTION_API_URL"]);
   const envKey = cleanEnv(process.env["EVOLUTION_API_KEY"]);
-  const envInst = cleanEnv(process.env["EVOLUTION_INSTANCE"]);
+  const envInst = cleanEnv(activeDynamicInstance || process.env["EVOLUTION_INSTANCE"]);
 
   const rawBase = envBase || "https://cobrancas-whatsapp.shop";
   const base = evolutionBaseUrl(rawBase);

@@ -134,9 +134,31 @@ type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string
 
 export const getEvolutionConfigStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => {
+  .handler(async ({ context }) => {
+    let customInstance: string | null = null;
+    if (context.userId) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data } = await supabaseAdmin
+          .from("whatsapp_settings")
+          .select("instance_name")
+          .eq("user_id", context.userId)
+          .maybeSingle();
+        if (data?.instance_name && data.instance_name.trim()) {
+          customInstance = data.instance_name.trim();
+          const { setActiveInstanceName } = await import("./whatsapp-connection.server");
+          setActiveInstanceName(customInstance);
+        }
+      } catch {}
+    }
+    const { getEvolutionConfig } = await import("./whatsapp-connection.server");
     const { base, apiKey, defaultInstance } = getEvolutionConfig();
-    return { configured: Boolean(base && apiKey), base: base ?? null, defaultInstance, hasApiKey: Boolean(apiKey) };
+    return {
+      configured: Boolean(base && apiKey),
+      base: base ?? null,
+      defaultInstance: customInstance || defaultInstance,
+      hasApiKey: Boolean(apiKey),
+    };
   });
 
 export const listEvolutionInstances = createServerFn({ method: "GET" })
@@ -199,10 +221,71 @@ export const restartEvolutionInstance = createServerFn({ method: "POST" })
 
 export const deleteEvolutionInstance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ instance: z.string().min(1) }).parse(data))
-  .handler(async ({ data }) => {
-    const { deleteInstanceFromVps } = await import("./whatsapp-connection.server");
-    return (await deleteInstanceFromVps(data.instance)) as JsonValue;
+  .inputValidator(
+    (data: unknown) =>
+      z
+        .object({
+          instance: z.string().min(1),
+          generateNewName: z.boolean().optional(),
+        })
+        .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { deleteInstanceFromVps, setActiveInstanceName } = await import("./whatsapp-connection.server");
+    await deleteInstanceFromVps(data.instance);
+
+    let nextInstance = data.instance;
+    if (data.generateNewName) {
+      const randomHex = Math.random().toString(36).slice(2, 10);
+      nextInstance = `iptv_${randomHex}`;
+      setActiveInstanceName(nextInstance);
+      if (context.userId) {
+        try {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          await supabaseAdmin.from("whatsapp_settings").upsert(
+            {
+              user_id: context.userId,
+              instance_name: nextInstance,
+            },
+            { onConflict: "user_id" },
+          );
+        } catch {}
+      }
+    }
+
+    return { ok: true, deleted: true, newInstanceName: nextInstance } as Record<string, JsonValue>;
+  });
+
+export const updateEvolutionInstanceName = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: unknown) =>
+      z
+        .object({
+          newInstanceName: z
+            .string()
+            .min(3, "Nome deve ter no mínimo 3 caracteres")
+            .max(40, "Nome muito longo")
+            .regex(/^[a-z0-9_-]+$/, "Use apenas letras minúsculas, números, _ e -"),
+        })
+        .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { setActiveInstanceName } = await import("./whatsapp-connection.server");
+    setActiveInstanceName(data.newInstanceName);
+    if (context.userId) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.from("whatsapp_settings").upsert(
+          {
+            user_id: context.userId,
+            instance_name: data.newInstanceName,
+          },
+          { onConflict: "user_id" },
+        );
+      } catch {}
+    }
+    return { ok: true, instanceName: data.newInstanceName } as Record<string, JsonValue>;
   });
 
 
@@ -306,10 +389,12 @@ export const sendEvolutionTestMessage = createServerFn({ method: "POST" })
 
 export const ensureAndConnectEvolution = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => {
+  .inputValidator((data: unknown) => z.object({ instance: z.string().optional() }).optional().parse(data))
+  .handler(async ({ data }) => {
     const { ensureAndConnectInstance, getEvolutionConfig } = await import("./whatsapp-connection.server");
     const { defaultInstance } = getEvolutionConfig();
-    return await ensureAndConnectInstance(defaultInstance);
+    const target = data?.instance?.trim() || defaultInstance;
+    return await ensureAndConnectInstance(target);
   });
 
 export const getEvolutionWebhookState = createServerFn({ method: "GET" })
