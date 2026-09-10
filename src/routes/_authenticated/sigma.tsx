@@ -40,7 +40,7 @@ export const Route = createFileRoute("/_authenticated/sigma")({
   head: () => ({
     meta: [
       { title: "Servidor Sigma — Conexão & Sincronização" },
-      { name: "description", content: "Conecte sua conta de revendedor Sigma, teste a API em tempo real e sincronize suas linhas automaticamente." },
+      { name: "description", content: "Conecte sua conta de revendedor Sigma, teste a API em tempo real e sincronize seus acessos automaticamente." },
     ],
   }),
   component: SigmaPage,
@@ -255,11 +255,11 @@ function SigmaPage() {
           const names = res.createdNames?.slice(0, 3).join(", ") || "";
           toast.success(
             res.created === 1
-              ? `🎉 1 nova linha importada do Sigma: ${names}`
-              : `🎉 ${res.created} novas linhas importadas do Sigma! (${names})`,
+              ? `🎉 1 novo acesso importado do Sigma: ${names}`
+              : `🎉 ${res.created} novos acessos importados do Sigma! (${names})`,
           );
         } else if (res.updated > 0) {
-          toast.success(`${res.updated} linha(s) sincronizadas com os dados de dentro do painel.`);
+          toast.success(`${res.updated} acesso(s) sincronizados com os dados de dentro do painel.`);
         } else {
           toast.info("Tudo em dia! Dados de clientes e servidor sincronizados.");
         }
@@ -293,7 +293,7 @@ function SigmaPage() {
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            Conecte sua conta de revendedor Sigma. Todas as linhas de clientes são gerenciadas diretamente na tela de Clientes & Linhas.
+            Conecte sua conta de revendedor Sigma. Todos os acessos de clientes são gerenciados diretamente na tela de Clientes & Acessos.
           </p>
         </div>
 
@@ -305,7 +305,7 @@ function SigmaPage() {
           >
             <Link to="/clientes">
               <Users className="size-4 text-primary" />
-              Ver Todas as Linhas
+              Ver Todos os Acessos
               <ArrowRight className="size-3 text-muted-foreground ml-1" />
             </Link>
           </Button>
@@ -339,11 +339,11 @@ function SigmaPage() {
           </CardContent>
         </Card>
 
-        {/* Card 2: Linhas Sincronizadas */}
+        {/* Card 2: Acessos Sincronizados */}
         <Card className="surface-card border-border/60">
           <CardContent className="p-4 flex items-center justify-between">
             <div className="space-y-0.5">
-              <p className="text-xs text-muted-foreground uppercase font-medium tracking-wider">Linhas no Servidor</p>
+              <p className="text-xs text-muted-foreground uppercase font-medium tracking-wider">Acessos no Servidor</p>
               <p className="text-base font-bold text-foreground font-mono">
                 {sigmaCount ?? 0} ativas
               </p>
@@ -552,7 +552,7 @@ function SigmaPage() {
                 <div className="space-y-0.5">
                   <p className="text-xs font-semibold text-foreground">Habilitar Servidor Sigma</p>
                   <p className="text-[11px] text-muted-foreground">
-                    Ativa a sincronização de clientes e criação de linhas pelo sistema.
+                    Ativa a sincronização de clientes e criação de acessos pelo sistema.
                   </p>
                 </div>
                 <Switch
@@ -633,7 +633,7 @@ function SigmaPage() {
             className="shrink-0 gap-2 font-semibold bg-primary text-primary-foreground shadow-sm hover-lift"
           >
             {syncing ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-            Sincronizar Todas as Linhas
+            Sincronizar Todos os Acessos
           </Button>
         </CardContent>
       </Card>

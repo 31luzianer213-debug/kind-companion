@@ -39,7 +39,7 @@ const navGroups = [
     title: "Operação & Vendas",
     items: [
       { to: "/pedidos", label: "Pedidos & PIX", icon: ShoppingBag, badgeKey: "orders" },
-      { to: "/clientes", label: "Clientes & Linhas", icon: Users, badgeKey: "clients" },
+      { to: "/clientes", label: "Clientes & Acessos", icon: Users, badgeKey: "clients" },
       { to: "/cobrancas", label: "Cobranças", icon: Receipt, badgeKey: "invoices" },
     ],
   },

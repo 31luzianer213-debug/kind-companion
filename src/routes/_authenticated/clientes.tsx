@@ -74,6 +74,7 @@ import {
   generateM3uUrl,
   generateEpgUrl,
   extractM3uFromNotes,
+  formatAppsLinksBlock,
 } from "@/lib/format";
 import {
   KeyRound,
@@ -111,8 +112,8 @@ import {
 export const Route = createFileRoute("/_authenticated/clientes")({
   head: () => ({
     meta: [
-      { title: "Clientes & Linhas Sigma — IPTV Manager" },
-      { name: "description", content: "Gerencie assinantes, credenciais de acesso, renovações e status no servidor Sigma." },
+      { title: "Clientes & Acessos Sigma — IPTV Manager" },
+      { name: "description", content: "Gerencie sua base de clientes, mensalidades e sincronize acessos com o servidor Sigma." },
     ],
   }),
   component: Clientes,
@@ -264,6 +265,16 @@ function Clientes() {
   const quickTest = useServerFn(createSigmaQuickTest);
   const getBot = useServerFn(getBotSettings);
 
+  const botSettingsQuery = useQuery({
+    queryKey: ["bot-settings"],
+    queryFn: async () => {
+      const res = await getBot({});
+      return res?.config;
+    },
+    staleTime: 60000,
+  });
+  const botConfig = botSettingsQuery.data;
+
   // Modal de Teste Rápido no Sigma
   const [testModalOpen, setTestModalOpen] = useState(false);
   const [generatingTest, setGeneratingTest] = useState(false);
@@ -302,6 +313,11 @@ function Clientes() {
   const [showModalPass, setShowModalPass] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
+  function openCreateModal() {
+    setForm(empty);
+    setOpen(true);
+  }
+
   function copyText(text?: string | null, fieldName: string = "Item") {
     if (!text) return;
     navigator.clipboard.writeText(text);
@@ -322,7 +338,7 @@ function Clientes() {
   // Estado de ação rápida
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["clients"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -487,10 +503,12 @@ function Clientes() {
 
             const sigmaRes = await createSigma({ data: createPayload });
             if (sigmaRes.ok) {
-              toast.success("Linha criada e sincronizada no Painel Sigma!");
+              toast.success("Acesso criado e sincronizado no Painel Sigma!");
+            } else {
+              toast.warning(`Cliente salvo, mas aviso no Sigma: ${sigmaRes.error}`);
             }
           } catch (err) {
-            console.error("Erro Sigma ao criar:", err);
+            toast.warning("Cliente salvo no banco local. Verifique a conexão com o Sigma.");
           }
         } else if (isSigmaConfigured && (values.iptv_username || savedRow?.sigma_customer_id)) {
           // Atualiza dados no Sigma
@@ -510,7 +528,7 @@ function Clientes() {
 
             const updateRes = await updateSigma({ data: updatePayload });
             if (updateRes.ok) {
-              toast.info("Linha atualizada no Painel Sigma!");
+              toast.info("Acesso atualizado no Painel Sigma!");
             }
           } catch (err) {
             console.warn("Aviso Sigma ao atualizar:", err);
@@ -541,7 +559,7 @@ function Clientes() {
 
             const sigmaRes = await createSigma({ data: createPayload });
             if (sigmaRes.ok) {
-              toast.success("Linha criada e sincronizada no Painel Sigma!");
+              toast.success("Acesso criado e sincronizado no Painel Sigma!");
             }
           } catch (err) {
             console.error("Erro Sigma ao criar:", err);
@@ -644,9 +662,10 @@ function Clientes() {
           },
         });
         if (res.ok) {
-          toast.success(newStatus === "blocked" ? "Linha bloqueada no Sigma!" : "Linha desbloqueada no Sigma!");
+          toast.success(newStatus === "blocked" ? "Acesso bloqueado no Sigma!" : "Acesso desbloqueado no Sigma!");
+          refetch();
         } else {
-          toast.error(res.error ?? "Falha ao alterar status no Sigma.");
+          toast.error(res.error ?? "Erro ao alterar status no Sigma.");
         }
       } else {
         const { error } = await supabase
@@ -889,9 +908,9 @@ function Clientes() {
     setSyncing(false);
     if (result.ok) {
       if (result.created > 0) {
-        toast.success(`🎉 ${result.created} nova(s) linha(s) importada(s) do Painel Sigma!`);
+        toast.success(`🎉 ${result.created} novo(s) acesso(s) importado(s) do Painel Sigma!`);
       } else if (result.updated > 0) {
-        toast.success(`${result.updated} linha(s) atualizadas com o servidor.`);
+        toast.success(`${result.updated} acesso(s) atualizados com o servidor.`);
       } else {
         toast.info("Tudo sincronizado! Nenhuma alteração pendente no servidor.");
       }
@@ -940,7 +959,7 @@ function Clientes() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <Users className="size-6 text-primary" /> Clientes & Linhas Sigma
+              <Users className="size-6 text-primary" /> Clientes & Acessos Sigma
             </h1>
             <Badge variant="secondary" className="font-mono text-xs">
               {stats.total} clientes
@@ -999,14 +1018,11 @@ function Clientes() {
 
           <Button
             size="sm"
-            onClick={() => {
-              setForm(empty);
-              setOpen(true);
-            }}
+            onClick={openCreateModal}
             className="gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-xs"
           >
             <Plus className="size-3.5" />
-            Novo Cliente / Linha
+            Novo Cliente / Acesso
           </Button>
         </div>
       </div>
@@ -1015,12 +1031,12 @@ function Clientes() {
       <Dialog open={testModalOpen} onOpenChange={setTestModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="size-5 text-amber-500" />
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+              <Sparkles className="size-4 text-amber-400" />
               Gerador de Teste Grátis — {sigmaServerName}
             </DialogTitle>
             <DialogDescription>
-              Crie uma linha temporária de teste com 1 clique para enviar a um cliente potencial.
+              Gere um acesso temporário de teste com 1 clique para enviar ao cliente.
             </DialogDescription>
           </DialogHeader>
 
@@ -1070,14 +1086,14 @@ function Clientes() {
                 className="w-full gap-2 font-bold bg-amber-500 hover:bg-amber-600 text-black shadow-md mt-2"
               >
                 {generatingTest ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-                Criar Linha de Teste Agora
+                Gerar Teste Grátis Agora
               </Button>
             </div>
           ) : (
             <div className="space-y-4 py-2">
               <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-400 font-medium flex items-center gap-2">
                 <CheckCircle2 className="size-4 shrink-0" />
-                Linha de teste criada com validade de {testCredentials.hours} horas!
+                Acesso de teste criado com validade de {testCredentials.hours} horas!
               </div>
 
               <div className="space-y-2 text-xs font-mono bg-muted/40 p-3 rounded-lg border border-border/50">
@@ -1095,26 +1111,56 @@ function Clientes() {
                 </div>
               </div>
 
+              {/* Seção de Aplicativos Recomendados */}
+              <div className="space-y-2 p-3 rounded-lg bg-muted/20 border border-border/40 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-foreground flex items-center gap-1.5 text-[11px]">
+                    <Smartphone className="size-3.5 text-primary" /> Aplicativos Recomendados:
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">Inclusos na mensagem</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                  <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
+                    <span className="text-muted-foreground">Downloader (TV):</span>
+                    <span className="font-mono font-bold text-amber-400">{botConfig?.appAndroidDownloaderCode || "389471"}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
+                    <span className="text-muted-foreground">App Android:</span>
+                    <a href={botConfig?.appAndroidApk || "https://bit.ly/app-xciptv-oficial"} target="_blank" rel="noreferrer" className="text-primary hover:underline font-mono truncate max-w-[80px]">APK</a>
+                  </div>
+                  <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
+                    <span className="text-muted-foreground">iPhone / iOS:</span>
+                    <a href={botConfig?.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509"} target="_blank" rel="noreferrer" className="text-primary hover:underline font-mono truncate max-w-[80px]">App Store</a>
+                  </div>
+                  <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
+                    <span className="text-muted-foreground">Windows PC:</span>
+                    <a href={botConfig?.appWindowsLink || "https://www.iptvsmarters.com/download?download=windows"} target="_blank" rel="noreferrer" className="text-primary hover:underline font-mono truncate max-w-[80px]">.exe</a>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    const text = `📺 *SEU TESTE GRÁTIS DE IPTV (${testCredentials.hours}h)*\n\n👤 *Usuário:* ${testCredentials.username}\n🔑 *Senha:* ${testCredentials.password}\n🌐 *Servidor:* ${testCredentials.serverUrl || sigmaServerUrl}\n\n🔗 *Lista M3U:*\n${testCredentials.m3uUrl}\n\nAproveite sua programação!`;
+                    const appsBlock = formatAppsLinksBlock(botConfig, testCredentials.serverName || sigmaServerName || "IPTV");
+                    const text = `📺 *SEU TESTE GRÁTIS DE IPTV (${testCredentials.hours}h)*\n\n👤 *Usuário:* ${testCredentials.username}\n🔑 *Senha:* ${testCredentials.password}\n🌐 *Servidor:* ${testCredentials.serverUrl || sigmaServerUrl}\n\n🔗 *Lista M3U:*\n${testCredentials.m3uUrl}\n\n━━━━━━━━━━━━━━━━━━━\n${appsBlock}\n\nAproveite sua programação! 🍿`;
                     navigator.clipboard.writeText(text);
-                    toast.success("Dados do teste copiados para a área de transferência!");
+                    toast.success("Dados do teste e links dos apps copiados!");
                   }}
                   className="w-full gap-1.5"
                 >
-                  <Copy className="size-4" /> Copiar Mensagem
+                  <Copy className="size-4" /> Copiar Mensagem Completa
                 </Button>
 
                 {testClientPhone ? (
                   <Button
                     size="sm"
                     onClick={() => {
+                      const appsBlock = formatAppsLinksBlock(botConfig, testCredentials.serverName || sigmaServerName || "IPTV");
                       const text = encodeURIComponent(
-                        `📺 *SEU TESTE GRÁTIS DE IPTV (${testCredentials.hours}h)*\n\n👤 *Usuário:* ${testCredentials.username}\n🔑 *Senha:* ${testCredentials.password}\n🌐 *Servidor:* ${testCredentials.serverUrl || sigmaServerUrl}\n\n🔗 *Lista M3U:*\n${testCredentials.m3uUrl}\n\nAproveite sua programação!`
+                        `📺 *SEU TESTE GRÁTIS DE IPTV (${testCredentials.hours}h)*\n\n👤 *Usuário:* ${testCredentials.username}\n🔑 *Senha:* ${testCredentials.password}\n🌐 *Servidor:* ${testCredentials.serverUrl || sigmaServerUrl}\n\n🔗 *Lista M3U:*\n${testCredentials.m3uUrl}\n\n━━━━━━━━━━━━━━━━━━━\n${appsBlock}\n\nAproveite sua programação! 🍿`
                       );
                       window.open(`https://wa.me/55${cleanPhoneDigits(testClientPhone)}?text=${text}`, "_blank");
                     }}
@@ -1155,7 +1201,7 @@ function Clientes() {
         <Card className="surface-card border-border/70">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Linhas Ativas</p>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Acessos Ativos</p>
               <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">{stats.active}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% da base
@@ -1269,10 +1315,7 @@ function Clientes() {
             ) : (
               <Button
                 size="sm"
-                onClick={() => {
-                  setForm(empty);
-                  setOpen(true);
-                }}
+                onClick={openCreateModal}
               >
                 Cadastrar primeiro cliente
               </Button>
@@ -1640,7 +1683,7 @@ function Clientes() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base text-foreground">
               {form.id ? <Pencil className="size-4 text-primary" /> : <Plus className="size-4 text-primary" />}
-              {form.id ? "Editar Cliente & Linha" : "Novo Cliente & Linha Sigma"}
+              {form.id ? "Editar Cliente & Acesso" : "Novo Cliente & Acesso Sigma"}
             </DialogTitle>
             <DialogDescription>
               Cadastre ou atualize os dados do assinante. O acesso é sincronizado diretamente no Painel Sigma.
@@ -1722,7 +1765,7 @@ function Clientes() {
               </div>
             </div>
 
-            {/* Seção 2: Linha no Servidor Sigma */}
+            {/* Seção 2: Acesso no Servidor Sigma */}
             <div className="space-y-3 pt-3 border-t border-border/50">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
@@ -1832,7 +1875,7 @@ function Clientes() {
                 className="bg-primary text-primary-foreground font-semibold gap-1.5"
               >
                 {save.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
-                {form.id ? "Salvar Alterações" : "Cadastrar Cliente & Linha"}
+                {form.id ? "Salvar Alterações" : "Cadastrar Cliente & Acesso"}
               </Button>
             </DialogFooter>
           </form>
@@ -2261,7 +2304,7 @@ function Clientes() {
                       htmlFor="deleteSigma"
                       className="text-sm font-semibold text-foreground cursor-pointer"
                     >
-                      Remover também a linha no Painel Sigma
+                      Remover também o acesso no Painel Sigma
                     </label>
                     <p className="text-xs text-muted-foreground">
                       Cancela e exclui o acesso do assinante na fonte transmissora do Sigma.

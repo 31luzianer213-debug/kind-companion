@@ -419,7 +419,7 @@ function Painel() {
                   )}
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  {isSigmaOk ? "Sincronização de linhas e renovações ativa." : "Informe a URL da API e token para sincronizar linhas."}
+                  {isSigmaOk ? "Sincronização de acessos e renovações ativa." : "Informe a URL da API e token para sincronizar acessos."}
                 </p>
               </div>
               <div className="mt-3 pt-2 border-t border-border/40">
@@ -595,7 +595,7 @@ function Painel() {
                 {serverDisplayName}
               </p>
               <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-                <span>{sigmaClients.length} linhas vinculadas</span>
+                <span>{sigmaClients.length} acessos vinculados</span>
                 <Link to="/sigma" className="font-semibold text-primary hover:underline flex items-center gap-0.5 text-[11px]">
                   Configurar <ArrowUpRight className="size-3" />
                 </Link>

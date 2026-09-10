@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import { addMonths } from "date-fns";
 import { generateM3uUrl, generateEpgUrl, extractCleanIptvDns } from "./format";
 import type { SigmaConfig } from "./sigma.panel";
@@ -37,145 +35,51 @@ export function getCanonicalUserId(userId?: string): string {
 
 export function getOrdersFilePath(userId?: string): string {
   const canonicalId = getCanonicalUserId(userId);
-  const dir = path.resolve(process.cwd(), "data");
-  if (!fs.existsSync(dir)) {
-    try {
-      fs.mkdirSync(dir, { recursive: true });
-    } catch {}
-  }
-  return path.join(dir, `orders_${canonicalId}.json`);
+  return `orders_${canonicalId}.json`;
 }
 
-export function getDeletedOrderIds(): Set<string> {
-  const set = new Set<string>();
-  try {
-    const dir = path.resolve(process.cwd(), "data");
-    const filePath = path.join(dir, "deleted_order_ids.json");
-    if (fs.existsSync(filePath)) {
-      const raw = fs.readFileSync(filePath, "utf-8");
-      const list = JSON.parse(raw);
-      if (Array.isArray(list)) {
-        for (const id of list) {
-          if (typeof id === "string") set.add(id);
-        }
+const deletedOrderIdsSet = new Set<string>();
+const ordersMemoryStore = new Map<string, OrderItem>();
+
+// Inicializa o store em memória com os pedidos pré-compilados
+try {
+  if (Array.isArray(defaultOrdersData)) {
+    for (const item of defaultOrdersData as OrderItem[]) {
+      if (item && item.id) {
+        ordersMemoryStore.set(item.id, item);
       }
     }
-  } catch {}
-  return set;
+  }
+} catch {}
+
+export function getDeletedOrderIds(): Set<string> {
+  return deletedOrderIdsSet;
 }
 
 export function markOrdersAsDeleted(orderIds: string[]): void {
-  try {
-    const dir = path.resolve(process.cwd(), "data");
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+  for (const id of orderIds) {
+    if (id) {
+      deletedOrderIdsSet.add(id);
+      ordersMemoryStore.delete(id);
     }
-    const set = getDeletedOrderIds();
-    for (const id of orderIds) {
-      if (id) set.add(id);
-    }
-    const filePath = path.join(dir, "deleted_order_ids.json");
-    fs.writeFileSync(filePath, JSON.stringify(Array.from(set), null, 2), "utf-8");
-  } catch {}
+  }
 }
 
 export function readLocalOrders(userId?: string): OrderItem[] {
-  const ordersMap = new Map<string, OrderItem>();
-  const deletedIds = getDeletedOrderIds();
-
-  // 1. Inicializa com os pedidos pré-compilados (garante funcionamento no Lovable Cloud / Edge Workers)
-  try {
-    if (Array.isArray(defaultOrdersData)) {
-      for (const item of defaultOrdersData as OrderItem[]) {
-        if (item && item.id && !deletedIds.has(item.id)) {
-          ordersMap.set(item.id, item);
-        }
-      }
-    }
-  } catch {}
-
-  // 2. Se houver sistema de arquivos local (Node.js/localhost), mescla dados mais recentes do disco
-  try {
-    const dir = path.resolve(process.cwd(), "data");
-    if (fs.existsSync(dir)) {
-      const files = fs.readdirSync(dir);
-      for (const f of files) {
-        if (!f.startsWith("orders_") || !f.endsWith(".json")) continue;
-        try {
-          const raw = fs.readFileSync(path.join(dir, f), "utf-8");
-          const content = JSON.parse(raw);
-          if (Array.isArray(content)) {
-            for (const item of content) {
-              if (item && item.id && !deletedIds.has(item.id)) {
-                const existing = ordersMap.get(item.id);
-                if (
-                  !existing ||
-                  new Date(item.updated_at || item.created_at).getTime() >=
-                    new Date(existing.updated_at || existing.created_at).getTime()
-                ) {
-                  ordersMap.set(item.id, item);
-                }
-              }
-            }
-          }
-        } catch {}
-      }
-    }
-  } catch {}
-
-  const list = Array.from(ordersMap.values()).filter((o) => !deletedIds.has(o.id));
+  const list = Array.from(ordersMemoryStore.values()).filter((o) => !deletedOrderIdsSet.has(o.id));
   list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   return list;
 }
 
-let gitSyncTimeout: any = null;
 export function triggerOrdersGitSync(): void {
-  if (gitSyncTimeout) clearTimeout(gitSyncTimeout);
-  gitSyncTimeout = setTimeout(async () => {
-    try {
-      const { exec } = await import("child_process");
-      exec('git add data/ && git commit -m "chore(orders): auto sync orders" && git push origin main', (err) => {
-        if (!err) {
-          console.log("[AutoGitSync] ✅ Pedidos sincronizados com sucesso no GitHub/Lovable!");
-        }
-      });
-    } catch {}
-  }, 2000);
+  // Em ambiente serverless (Cloudflare Workers / Edge), a persistência primária é feita via Supabase
 }
 
 export function writeLocalOrders(userId: string | undefined, orders: OrderItem[]): void {
-  try {
-    const dir = path.resolve(process.cwd(), "data");
-    if (!fs.existsSync(dir)) {
-      try {
-        fs.mkdirSync(dir, { recursive: true });
-      } catch {}
+  for (const o of orders) {
+    if (o && o.id && !deletedOrderIdsSet.has(o.id)) {
+      ordersMemoryStore.set(o.id, o);
     }
-
-    const canonicalId = getCanonicalUserId(userId);
-    const filesToSync = new Set<string>([
-      path.join(dir, `orders_${canonicalId}.json`),
-      path.join(dir, "orders_default.json"),
-      path.join(dir, "orders_ccd7362726074f97.json"),
-      path.join(dir, "orders_ccd73627-2607-4f97-bf96-b333469e38d7.json"),
-    ]);
-
-    if (userId && userId !== "default") {
-      const cleanRaw = userId.replace(/[^a-zA-Z0-9_-]/g, "");
-      filesToSync.add(path.join(dir, `orders_${cleanRaw}.json`));
-    }
-
-    const payload = JSON.stringify(orders, null, 2);
-    for (const filePath of filesToSync) {
-      try {
-        fs.writeFileSync(filePath, payload, "utf-8");
-      } catch {}
-    }
-
-    // Dispara sincronização em segundo plano para o GitHub / Lovable Cloud
-    triggerOrdersGitSync();
-  } catch (err) {
-    console.warn("Aviso ao gravar pedidos no arquivo local:", err);
   }
 }
 
@@ -359,25 +263,7 @@ export async function approveAndReleaseOrderServer(
     wsRow = data;
   } catch {}
 
-  let botCfg: any = null;
-  try {
-    const dir = path.resolve(process.cwd(), "data");
-    const canonicalId = getCanonicalUserId(userId);
-    const cfgFiles = [
-      path.join(dir, `bot_config_${canonicalId}.json`),
-      path.join(dir, "bot_config_default.json"),
-    ];
-    for (const cf of cfgFiles) {
-      if (fs.existsSync(cf)) {
-        botCfg = JSON.parse(fs.readFileSync(cf, "utf-8"));
-        if (botCfg) break;
-      }
-    }
-  } catch {}
-
-  if (!botCfg && defaultBotConfigData) {
-    botCfg = defaultBotConfigData;
-  }
+  let botCfg: any = defaultBotConfigData || null;
 
   const panelUrl = wsRow?.sigma_url || botCfg?.sigma_url || "https://aplicativoz342.click";
   const panelToken = wsRow?.sigma_token || botCfg?.sigma_token || null;
@@ -585,25 +471,7 @@ export async function deleteOrderServer(
   const updatedList = list.filter((o) => o.id !== orderId);
   writeLocalOrders(userId, updatedList);
 
-  // 3. Remove também dos arquivos de dados diretamente no disco
-  try {
-    const dir = path.resolve(process.cwd(), "data");
-    if (fs.existsSync(dir)) {
-      const files = fs.readdirSync(dir);
-      for (const f of files) {
-        if (!f.startsWith("orders_") || !f.endsWith(".json")) continue;
-        try {
-          const filePath = path.join(dir, f);
-          const raw = fs.readFileSync(filePath, "utf-8");
-          const content = JSON.parse(raw);
-          if (Array.isArray(content)) {
-            const filtered = content.filter((item: any) => item && item.id !== orderId);
-            fs.writeFileSync(filePath, JSON.stringify(filtered, null, 2), "utf-8");
-          }
-        } catch {}
-      }
-    }
-  } catch {}
+
 
   // 4. Exclui do banco Supabase se existir
   try {
@@ -632,25 +500,7 @@ export async function bulkDeleteOrdersServer(
   const updatedList = list.filter((o) => !idSet.has(o.id));
   writeLocalOrders(userId, updatedList);
 
-  // 2. Remove de todos os arquivos em data/
-  try {
-    const dir = path.resolve(process.cwd(), "data");
-    if (fs.existsSync(dir)) {
-      const files = fs.readdirSync(dir);
-      for (const f of files) {
-        if (!f.startsWith("orders_") || !f.endsWith(".json")) continue;
-        try {
-          const filePath = path.join(dir, f);
-          const raw = fs.readFileSync(filePath, "utf-8");
-          const content = JSON.parse(raw);
-          if (Array.isArray(content)) {
-            const filtered = content.filter((item: any) => item && !idSet.has(item.id));
-            fs.writeFileSync(filePath, JSON.stringify(filtered, null, 2), "utf-8");
-          }
-        } catch {}
-      }
-    }
-  } catch {}
+
 
   // 3. Exclui do banco de dados
   try {

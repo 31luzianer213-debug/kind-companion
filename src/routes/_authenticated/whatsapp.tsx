@@ -30,6 +30,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  ShieldCheck,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/whatsapp")({
@@ -348,6 +349,38 @@ function WhatsAppPage() {
                 <p className="text-[11px]">Clique no botão "Gerar QR Code" acima para conectar seu WhatsApp.</p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* DICA DE CRIPTOGRAFIA & "AGUARDANDO MENSAGEM" */}
+        <Card className="surface-card border-border/60 bg-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2 text-foreground font-bold">
+              <ShieldCheck className="size-4 text-primary" /> Como resolver: "Aguardando mensagem. Essa ação pode levar alguns instantes"
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Este aviso é emitido pelo WhatsApp oficial quando as chaves de criptografia ponta-a-ponta (E2E) entre o seu aparelho e o destinatário precisam sincronizar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2.5 text-xs text-muted-foreground leading-relaxed">
+            <div className="flex items-start gap-2">
+              <span className="font-bold text-primary">1.</span>
+              <p>
+                <strong>Abra o WhatsApp no celular conectado:</strong> mantenha o app do WhatsApp aberto na tela inicial por cerca de 30 segundos conectado à internet (Wi-Fi ou 4G). Isso força a Meta a trocar as chaves de segurança pendentes com o cliente.
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="font-bold text-primary">2.</span>
+              <p>
+                <strong>Se persistir para novos clientes:</strong> clique no botão <strong>"Desconectar"</strong> acima e leia o QR Code novamente. Ao reconectar, a Evolution API gera um par de chaves Signal novo e limpo.
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="font-bold text-primary">3.</span>
+              <p>
+                <strong>Envio para o número oficial (@s.whatsapp.net):</strong> o sistema já foi otimizado para responder diretamente ao telefone real do cliente, evitando conflitos de privacidade do WhatsApp (@lid).
+              </p>
+            </div>
           </CardContent>
         </Card>
 

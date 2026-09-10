@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { TEMPLATE_VARS, renderTemplate, extractCleanIptvDns, generateM3uUrl, generateEpgUrl } from "@/lib/format";
+import { TEMPLATE_VARS, renderTemplate, extractCleanIptvDns, generateM3uUrl, generateEpgUrl, formatAppsLinksBlock } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -80,6 +80,7 @@ function WhatsAppSimulator({
     m3u: m3u,
     m3u_hls: m3uHls,
     epg: epg,
+    apps: formatAppsLinksBlock(null, serverName || "Servidor Principal"),
     telas: "2",
     empresa: businessName || "IPTV Manager Pro",
     pix: pixKey || "12345678900",

@@ -164,12 +164,31 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
         }
 
         const isLid = remoteJid.endsWith("@lid") || (senderPhone.length >= 14 && !senderPhone.startsWith("55"));
-        const destinationJid = isLid
-          ? (remoteJid.endsWith("@lid") ? remoteJid : `${senderPhone}@lid`)
-          : senderPhone;
+
+        // Procura número de telefone real em outros campos do webhook da Evolution API
+        let realPhone = "";
+        const possiblePhoneCandidates = [
+          payload?.sender,
+          item?.sender,
+          rawData?.sender,
+          key?.participant,
+          item?.participant,
+          rawData?.participant,
+        ].filter(Boolean);
+
+        for (const cand of possiblePhoneCandidates) {
+          const digits = String(cand).replace(/@.*$/, "").replace(/\D/g, "");
+          if (digits.length >= 10 && digits.length <= 13) {
+            realPhone = digits;
+            break;
+          }
+        }
+
+        if (!realPhone) {
+          realPhone = senderPhone;
+        }
 
         // Tenta resolver o número de telefone real caso a mensagem tenha vindo via @lid
-        let realPhone = senderPhone;
         if (isLid) {
           try {
             const { resolvePhoneFromLid } = await import("@/lib/lid.server");
@@ -180,6 +199,13 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
             }
           } catch {}
         }
+
+        // Se realPhone for um número de telefone válido (10 a 13 dígitos),
+        // SEMPRE enviaremos para o número primário (@s.whatsapp.net).
+        // Isso evita a falha de chave Signal que gera "Aguardando mensagem. Essa ação pode levar alguns instantes".
+        const targetSendJid = (!isLid || (realPhone && realPhone.length >= 10 && realPhone.length <= 13))
+          ? realPhone
+          : (remoteJid.endsWith("@lid") ? remoteJid : `${senderPhone}@lid`);
 
         const pushName = item?.pushName || rawData?.pushName || payload?.pushName || "Cliente";
 
@@ -227,7 +253,7 @@ function unwrapMessage(m: any): any {
           return Response.json({ ok: true, ignored: "empty_text" });
         }
 
-        console.log(`[WhatsApp Bot Webhook] Mensagem de ${realPhone} [Jid: ${destinationJid}] (${pushName}): "${incomingText}"`);
+        console.log(`[WhatsApp Bot Webhook] Mensagem de ${realPhone} [Jid: ${targetSendJid}] (${pushName}): "${incomingText}"`);
 
         // Verifica se o bot está ativo para o usuário
         const botConfig = await loadBotConfig(supabaseAdmin, targetUserId);
@@ -244,7 +270,7 @@ function unwrapMessage(m: any): any {
           });
 
           if (botResult?.reply || botResult?.interactive) {
-            console.log(`[WhatsApp Bot Webhook] Respondendo para ${destinationJid}: "${botResult.reply.slice(0, 80)}..."`);
+            console.log(`[WhatsApp Bot Webhook] Respondendo para ${targetSendJid}: "${botResult.reply.slice(0, 80)}..."`);
 
             // Busca configurações da conta para envio
             let settings: any = null;
@@ -267,7 +293,7 @@ function unwrapMessage(m: any): any {
 
               // Envia a resposta em texto formatado oficial (100% de entrega no WhatsApp sem bloqueio da Meta)
               if (botResult.reply) {
-                await sendViaEvolution(settings ?? {}, destinationJid, botResult.reply, targetUserId);
+                await sendViaEvolution(settings ?? {}, targetSendJid, botResult.reply, targetUserId);
               }
 
               // 2. Se houver QR Code em imagem (base64 do Mercado Pago), envia a foto com legenda
@@ -275,7 +301,7 @@ function unwrapMessage(m: any): any {
                 try {
                   await sendMediaViaEvolution(
                     settings ?? {},
-                    destinationJid,
+                    targetSendJid,
                     {
                       base64: botResult.media.base64,
                       ...(botResult.media.caption ? { caption: botResult.media.caption } : {}),
@@ -284,7 +310,7 @@ function unwrapMessage(m: any): any {
                     },
                     targetUserId,
                   );
-                  console.log(`[WhatsApp Bot Webhook] 📸 Foto do QR Code PIX enviada para ${destinationJid}!`);
+                  console.log(`[WhatsApp Bot Webhook] 📸 Foto do QR Code PIX enviada para ${targetSendJid}!`);
                 } catch (mediaErr) {
                   console.warn("[WhatsApp Bot Webhook] Aviso ao enviar QR Code:", mediaErr);
                 }
@@ -294,12 +320,12 @@ function unwrapMessage(m: any): any {
               if (Array.isArray(botResult.extraMessages)) {
                 for (const extra of botResult.extraMessages) {
                   if (extra && extra.trim()) {
-                    await sendViaEvolution(settings ?? {}, destinationJid, extra, targetUserId);
+                    await sendViaEvolution(settings ?? {}, targetSendJid, extra, targetUserId);
                   }
                 }
               }
 
-              console.log(`[WhatsApp Bot Webhook] Resposta completa enviada com sucesso para ${destinationJid}!`);
+              console.log(`[WhatsApp Bot Webhook] Resposta completa enviada com sucesso para ${targetSendJid}!`);
             } catch (sendErr) {
               console.error("[WhatsApp Bot Webhook] Erro ao enviar resposta via Evolution:", sendErr);
             }

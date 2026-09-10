@@ -1,6 +1,5 @@
-import fs from "fs";
-import path from "path";
 import { generateM3uUrl, generateEpgUrl, extractCleanIptvDns } from "./format";
+import defaultBotConfigData from "../../data/bot_config_default.json";
 import type { SigmaConfig } from "./sigma.panel";
 import { createOrderServer, listOrdersServer, approveAndReleaseOrderServer, updateOrderServer } from "./orders.server";
 import { createMercadoPagoPixPayment } from "./mercadopago.server";
@@ -185,6 +184,7 @@ export function generateAppsMessage(config: BotConfigData, serverName: string): 
 
 // Cache em memória para leitura ultrarrápida (0ms) sem bloqueio de RLS
 const botConfigCache = new Map<string, BotConfigData>();
+const paymentSettingsCache = new Map<string, any>();
 
 export function getCanonicalUserId(userId?: string): string {
   if (!userId || userId === "default") return "default";
@@ -194,140 +194,54 @@ export function getCanonicalUserId(userId?: string): string {
 
 export function getLocalPaymentPath(userId?: string): string {
   const canonicalId = getCanonicalUserId(userId);
-  const dir = path.resolve(process.cwd(), "data");
-  if (!fs.existsSync(dir)) {
-    try {
-      fs.mkdirSync(dir, { recursive: true });
-    } catch {}
-  }
-  return path.join(dir, `payment_settings_${canonicalId}.json`);
+  return `payment_settings_${canonicalId}.json`;
 }
 
 export function readLocalPaymentSettings(userId?: string): any {
-  try {
-    const file = getLocalPaymentPath(userId);
-    if (fs.existsSync(file)) {
-      return JSON.parse(fs.readFileSync(file, "utf-8"));
-    }
-  } catch {}
-  return null;
+  const canonicalId = getCanonicalUserId(userId);
+  return paymentSettingsCache.get(canonicalId) || paymentSettingsCache.get(userId || "default") || null;
 }
 
 export function writeLocalPaymentSettings(userId: string | undefined, data: any): void {
-  try {
-    const file = getLocalPaymentPath(userId);
-    fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
-  } catch (err) {
-    console.warn("Aviso ao gravar payment settings local:", err);
-  }
-}
-
-function getLocalConfigPath(userId?: string): string {
-  const safeId = (userId || "default").replace(/[^a-zA-Z0-9_-]/g, "_");
   const canonicalId = getCanonicalUserId(userId);
-  const dir = path.resolve(process.cwd(), "data");
-  if (!fs.existsSync(dir)) {
-    try {
-      fs.mkdirSync(dir, { recursive: true });
-    } catch {}
-  }
-  // Se o arquivo canonical já existir, usa ele para consistência
-  const canonicalPath = path.join(dir, `bot_config_${canonicalId}.json`);
-  if (fs.existsSync(canonicalPath)) return canonicalPath;
-
-  const safePath = path.join(dir, `bot_config_${safeId}.json`);
-  if (fs.existsSync(safePath)) return safePath;
-
-  return canonicalPath;
+  paymentSettingsCache.set(canonicalId, data);
+  if (userId) paymentSettingsCache.set(userId, data);
 }
 
 function readLocalConfig(userId?: string): Partial<BotConfigData> | null {
-  try {
-    const file = getLocalConfigPath(userId);
-    if (fs.existsSync(file)) {
-      const raw = fs.readFileSync(file, "utf-8");
-      return JSON.parse(raw);
-    }
-  } catch {}
-  return null;
+  const canonicalId = getCanonicalUserId(userId);
+  return botConfigCache.get(canonicalId) || botConfigCache.get(userId || "default") || null;
 }
 
 function writeLocalConfig(userId: string | undefined, data: BotConfigData): void {
-  try {
-    const file = getLocalConfigPath(userId);
-    fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
-
-    // Grava também no nome canonical se for diferente para sincronização total
-    const canonicalId = getCanonicalUserId(userId);
-    const canonicalPath = path.join(path.resolve(process.cwd(), "data"), `bot_config_${canonicalId}.json`);
-    if (file !== canonicalPath) {
-      fs.writeFileSync(canonicalPath, JSON.stringify(data, null, 2), "utf-8");
-    }
-  } catch (err) {
-    console.warn("Aviso ao gravar config local do bot:", err);
-  }
+  const canonicalId = getCanonicalUserId(userId);
+  botConfigCache.set(canonicalId, data);
+  if (userId) botConfigCache.set(userId, data);
 }
 
-/** Carrega as configurações do bot com persistência em 3 níveis (Disco -> Memória -> Banco) */
+/** Carrega as configurações do bot com persistência em cache e banco de dados */
 export async function loadBotConfig(supabase: any, userId: string): Promise<BotConfigData> {
   const uid = userId || "default";
 
-  // 1. Arquivo persistente no disco (garante atualização instantânea entre processos)
-  const diskData = readLocalConfig(uid);
-  const localPayment = readLocalPaymentSettings(uid);
-  if (diskData && typeof diskData.enabled === "boolean") {
-    let mpToken = diskData.mercadopago_token || localPayment?.mercadopago_token;
-    let paymentProvider = diskData.payment_provider || localPayment?.payment_provider || (mpToken ? "mercadopago" : "pix");
-
-    // Se o token ainda não estava no disco e recebemos cliente supabase, tenta puxar do banco/metadata
-    if (!mpToken && supabase) {
-      try {
-        const { data } = await supabase
-          .from("whatsapp_settings")
-          .select("mercadopago_token, payment_provider, pix_key, pix_holder, sigma_server_name, sigma_streaming_dns")
-          .eq("user_id", userId)
-          .maybeSingle();
-        if (data?.mercadopago_token) {
-          mpToken = data.mercadopago_token.trim();
-          paymentProvider = data.payment_provider || "mercadopago";
-          // Grava no disco para as próximas chamadas não precisarem de query
-          writeLocalPaymentSettings(uid, {
-            mercadopago_token: mpToken,
-            payment_provider: paymentProvider,
-            pix_key: data.pix_key || diskData.pixKey,
-            pix_holder: data.pix_holder || diskData.pixHolder,
-          });
-        }
-      } catch {}
-    }
-
-    const merged: BotConfigData = {
-      ...DEFAULT_BOT_CONFIG,
-      ...diskData,
-      mercadopago_token: mpToken,
-      payment_provider: paymentProvider,
-      pixKey: diskData.pixKey || localPayment?.pix_key || DEFAULT_BOT_CONFIG.pixKey,
-      pixHolder: diskData.pixHolder || localPayment?.pix_holder || DEFAULT_BOT_CONFIG.pixHolder,
-    };
-    botConfigCache.set(uid, merged);
-    return merged;
-  }
-
-  // 2. Cache em memória
+  // 1. Cache em memória para resposta instantânea
   if (botConfigCache.has(uid)) {
     return botConfigCache.get(uid)!;
   }
 
-  // 3. Fallback para banco de dados e metadata
+  const localPayment = readLocalPaymentSettings(uid);
+
+  // 2. Consulta banco de dados e metadata
   try {
     let wsRow: any = null;
     try {
-      const { data } = await supabase
-        .from("whatsapp_settings")
-        .select("*")
-        .eq("user_id", userId)
-        .maybeSingle();
-      wsRow = data;
+      if (supabase) {
+        const { data } = await supabase
+          .from("whatsapp_settings")
+          .select("*")
+          .eq("user_id", userId)
+          .maybeSingle();
+        wsRow = data;
+      }
     } catch {
       wsRow = null;
     }
@@ -393,7 +307,6 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
     };
 
     botConfigCache.set(uid, config);
-    writeLocalConfig(uid, config);
     return config;
   } catch (err) {
     console.error("[loadBotConfig] Fallback para DEFAULT_BOT_CONFIG:", err);
@@ -401,7 +314,7 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
   }
 }
 
-/** Salva as configurações do bot imediatamente no disco, memória e banco */
+/** Salva as configurações do bot imediatamente em memória e banco de dados */
 export async function saveBotConfigServer(
   supabase: any,
   userId: string,
@@ -411,44 +324,41 @@ export async function saveBotConfigServer(
   const current = await loadBotConfig(supabase, userId);
   const updated: BotConfigData = { ...current, ...config };
 
-  // 1. Atualiza imediatamente cache em memória e arquivo no disco
+  // 1. Atualiza imediatamente cache em memória
   botConfigCache.set(uid, updated);
   writeLocalConfig(uid, updated);
 
-  // Sincroniza também no arquivo local de pagamento para o bot ter 100% de acesso
   if (updated.mercadopago_token || updated.pixKey || updated.pixHolder) {
-    try {
-      const existingP = readLocalPaymentSettings(uid) || {};
-      writeLocalPaymentSettings(uid, {
-        ...existingP,
-        user_id: userId,
-        mercadopago_token: updated.mercadopago_token ?? existingP.mercadopago_token ?? "",
-        payment_provider: updated.payment_provider ?? existingP.payment_provider ?? "mercadopago",
-        pix_key: updated.pixKey ?? existingP.pix_key ?? "",
-        pix_holder: updated.pixHolder ?? existingP.pix_holder ?? "",
-      });
-    } catch {}
+    writeLocalPaymentSettings(uid, {
+      user_id: userId,
+      mercadopago_token: updated.mercadopago_token ?? "",
+      payment_provider: updated.payment_provider ?? "mercadopago",
+      pix_key: updated.pixKey ?? "",
+      pix_holder: updated.pixHolder ?? "",
+    });
   }
 
-  // 2. Atualiza na tabela whatsapp_settings de forma segura (apenas colunas existentes no schema)
+  // 2. Atualiza na tabela whatsapp_settings de forma segura
   try {
-    const updatePayload: Record<string, any> = {
-      business_name: updated.businessName,
-      auto_send_enabled: updated.enabled,
-    };
-    if (updated.mercadopago_token) {
-      updatePayload.mercadopago_token = updated.mercadopago_token.trim();
-      updatePayload.payment_provider = "mercadopago";
-    }
-    if (updated.pixKey) updatePayload.pix_key = updated.pixKey.trim();
-    if (updated.pixHolder) updatePayload.pix_holder = updated.pixHolder.trim();
+    if (supabase) {
+      const updatePayload: Record<string, any> = {
+        business_name: updated.businessName,
+        auto_send_enabled: updated.enabled,
+      };
+      if (updated.mercadopago_token) {
+        updatePayload.mercadopago_token = updated.mercadopago_token.trim();
+        updatePayload.payment_provider = "mercadopago";
+      }
+      if (updated.pixKey) updatePayload.pix_key = updated.pixKey.trim();
+      if (updated.pixHolder) updatePayload.pix_holder = updated.pixHolder.trim();
 
-    await supabase
-      .from("whatsapp_settings")
-      .upsert(
-        { user_id: userId, ...updatePayload },
-        { onConflict: "user_id" }
-      );
+      await supabase
+        .from("whatsapp_settings")
+        .upsert(
+          { user_id: userId, ...updatePayload },
+          { onConflict: "user_id" }
+        );
+    }
   } catch (dbErr) {
     console.warn("Aviso ao salvar whatsapp_settings:", dbErr);
   }
@@ -1236,6 +1146,7 @@ export async function processBotMessage(
       };
     }
 
+    const appsBlock = generateAppsMessage(config, trialRes.serverName);
     const reply =
       `🎉 *SEU TESTE GRÁTIS ESTÁ LIBERADO!* 🍿\n\n` +
       `👤 *Cliente:* ${params.pushName || "Cliente"}\n` +
@@ -1247,10 +1158,8 @@ export async function processBotMessage(
       `⏳ *Validade:* ${config.testDurationHours} Horas\n\n` +
       `🔗 *Lista M3U Plus Completa:*\n${trialRes.m3uUrl}\n\n` +
       `📺 *Guia de Canais (EPG):*\n${trialRes.epgUrl}\n\n` +
-      `📱 *Como Conectar:*\n` +
-      `• No IPTV Smarters Pro, XCIPTV ou TiviMate: use a opção *Xtream Codes API* com o Servidor, Usuário e Senha acima.\n` +
-      `• Em Smart TVs ou SS IPTV: adicione a *Lista M3U Plus* completa acima.\n\n` +
-      `📲 *Precisa baixar o aplicativo?* Digite *4* para receber os links de download!\n` +
+      `━━━━━━━━━━━━━━━━━━━\n` +
+      `${appsBlock}\n\n` +
       `Bom divertimento! Qualquer dúvida, digite *6* para falar conosco. 🍿`;
 
     return {
@@ -1563,6 +1472,7 @@ export async function processBotMessage(
     const m3uUrl = generateM3uUrl(cleanDns, u, p, "ts");
     const epgUrl = generateEpgUrl(cleanDns, u, p);
 
+    const appsBlock = generateAppsMessage(config, serverName);
     const reply =
       `📡 *SEUS DADOS DE ACESSO IPTV* 📡\n\n` +
       `👤 *Cliente:* ${client.name}\n` +
@@ -1574,7 +1484,8 @@ export async function processBotMessage(
       (client.next_due_date ? `📅 *Vencimento:* ${client.next_due_date}\n\n` : "\n") +
       `🔗 *Lista M3U Plus Completa:*\n${m3uUrl}\n\n` +
       `📺 *Guia de Canais (EPG):*\n${epgUrl}\n\n` +
-      `📲 _Precisa instalar o aplicativo no seu aparelho? Digite *4*._\n\n` +
+      `━━━━━━━━━━━━━━━━━━━\n` +
+      `${appsBlock}\n\n` +
       `Bom divertimento! 🍿`;
 
     return {

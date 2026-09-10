@@ -141,6 +141,48 @@ export function generateEpgUrl(
   return `${dns}/xmltv.php?username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`;
 }
 
+export type AppLinksData = {
+  appAndroidApk?: string | null;
+  appAndroidDownloaderCode?: string | null;
+  appIosLink?: string | null;
+  appWindowsLink?: string | null;
+  appWebPlayerLink?: string | null;
+  appSmartTvText?: string | null;
+  appsCustomText?: string | null;
+};
+
+export function formatAppsLinksBlock(config?: AppLinksData | null, serverName = "IPTV"): string {
+  if (config?.appsCustomText && config.appsCustomText.trim().length > 10) {
+    return config.appsCustomText.trim();
+  }
+
+  const apk = config?.appAndroidApk?.trim() || "https://bit.ly/app-xciptv-oficial";
+  const code = config?.appAndroidDownloaderCode?.trim() || "389471";
+  const ios = config?.appIosLink?.trim() || "https://apps.apple.com/app/smarters-player-lite/id1628995509";
+  const win = config?.appWindowsLink?.trim() || "https://www.iptvsmarters.com/download?download=windows";
+  const web = config?.appWebPlayerLink?.trim() || "http://webtv.iptvsmarters.com";
+  const smartTv = config?.appSmartTvText?.trim() || "• Smart TV Samsung / LG: Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.";
+
+  const srv = serverName && !srv.startsWith("http") ? serverName.toUpperCase() : "IPTV";
+
+  return (
+    `📲 *APLICATIVOS OFICIAIS — ${srv}* 🍿\n\n` +
+    `🤖 *TV Box / Android TV / FireStick:*\n` +
+    `• Abra o app *Downloader* na TV e digite o código: *${code}*\n` +
+    `• Ou baixe o APK direto: ${apk}\n\n` +
+    `📱 *Celular & Tablet Android:*\n` +
+    `• Baixar APK Direto: ${apk}\n\n` +
+    `🍏 *iPhone / iPad / Apple TV (iOS):*\n` +
+    `• Baixar na App Store (Smarters Player Lite):\n${ios}\n\n` +
+    `💻 *Computador & Notebook (Windows):*\n` +
+    `• Baixar IPTV Smarters Pro (.exe):\n${win}\n\n` +
+    `🌐 *Assistir no Navegador (Web Player):*\n` +
+    `• Acesso direto sem instalar nada: ${web}\n\n` +
+    `📺 *Smart TV (Samsung, LG e Roku):*\n` +
+    `${smartTv}`
+  );
+}
+
 /**
  * Formata os dados de acesso IPTV completos para envio ou cópia.
  * Garante servidor limpo, usuário, senha, lista M3U Plus, EPG e dicas de aplicativos,
@@ -157,11 +199,45 @@ export function formatIptvAccessMessage(params: {
   businessName?: string | null;
   m3uUrl?: string | null;
   notes?: string | null;
+  appsConfig?: AppLinksData | null;
+  includeApps?: boolean;
 }): string {
-  const directM3u = params.m3uUrl || extractM3uFromNotes(params.notes);
+  return formatCredentialsMessage({
+    name: params.name,
+    serverName: params.serverName,
+    serverDns: params.serverUrl,
+    username: params.username,
+    password: params.password,
+    screens: params.screens,
+    dueDate: params.dueDate,
+    notes: params.notes || (params.m3uUrl ? `M3U: ${params.m3uUrl}` : null),
+    businessName: params.businessName,
+    appsConfig: params.appsConfig,
+    includeApps: params.includeApps,
+  });
+}
+
+/**
+ * Gera a mensagem completa de entrega de credenciais e lista IPTV para WhatsApp.
+ */
+export function formatCredentialsMessage(params: {
+  name?: string | null;
+  serverName?: string | null;
+  serverDns?: string | null;
+  username?: string | null;
+  password?: string | null;
+  screens?: number | null;
+  dueDate?: string | null;
+  notes?: string | null;
+  businessName?: string | null;
+  appLinksText?: string | null;
+  appsConfig?: AppLinksData | null;
+  includeApps?: boolean;
+}): string {
+  const directM3u = extractM3uFromNotes(params.notes);
   const cleanDns =
-    (directM3u ? extractCleanIptvDns(directM3u) : "") ||
-    extractCleanIptvDns(params.serverUrl);
+    extractCleanIptvDns(params.serverDns) ||
+    (directM3u ? extractCleanIptvDns(directM3u) : "");
 
   const isRawDomain = (name?: string | null) =>
     !name ||
@@ -214,6 +290,15 @@ export function formatIptvAccessMessage(params: {
     `• Em Smart TVs ou SS IPTV: adicione a *Lista M3U Plus* completa acima.\n\n` +
     `Bom divertimento! 🍿 Qualquer dúvida, estamos à disposição.`;
 
+  if (params.appLinksText) {
+    msg += `\n\n━━━━━━━━━━━━━━━━━━━\n${params.appLinksText}`;
+  } else if (params.includeApps) {
+    const appsBlock = formatAppsLinksBlock(params.appsConfig, serverLabel);
+    if (appsBlock) {
+      msg += `\n\n━━━━━━━━━━━━━━━━━━━\n${appsBlock}`;
+    }
+  }
+
   return msg;
 }
 
@@ -256,6 +341,11 @@ export function buildTemplateVars(input: TemplateVarInput): Record<string, strin
   const m3uHls = directM3u || generateM3uUrl(effectiveDns, username, password, "m3u8");
   const epg = generateEpgUrl(effectiveDns, username, password);
 
+  const appsBlock = formatAppsLinksBlock(
+    (settings as any)?.bot_settings || null,
+    realServerName,
+  );
+
   return {
     nome: client?.name ?? "",
     telefone: client?.phone ?? "",
@@ -270,6 +360,7 @@ export function buildTemplateVars(input: TemplateVarInput): Record<string, strin
     m3u: m3u,
     m3u_hls: m3uHls,
     epg: epg,
+    apps: appsBlock,
     telas: String(client?.screens ?? 1),
     empresa: settings?.business_name ?? "",
     pix: settings?.pix_key ?? "",
@@ -290,6 +381,7 @@ export const TEMPLATE_VARS: { key: string; label: string }[] = [
   { key: "senha", label: "senha de acesso" },
   { key: "m3u", label: "link completo da lista M3U Plus" },
   { key: "epg", label: "link do guia de programação (EPG)" },
+  { key: "apps", label: "links dos aplicativos oficiais (Android, iOS, PC, Downloader, Smart TV)" },
   { key: "telas", label: "quantidade de telas" },
   { key: "empresa", label: "nome do seu negócio" },
   { key: "pix", label: "sua chave PIX" },
