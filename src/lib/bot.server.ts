@@ -4,6 +4,7 @@ import type { SigmaConfig } from "./sigma.panel";
 import { createOrderServer, listOrdersServer, approveAndReleaseOrderServer, updateOrderServer } from "./orders.server";
 import { createMercadoPagoPixPayment } from "./mercadopago.server";
 import type { ButtonItem, ListSection } from "./billing.server";
+import { phoneVariants, samePhone } from "./phone";
 
 export type BotInteractivePayload =
   | {
