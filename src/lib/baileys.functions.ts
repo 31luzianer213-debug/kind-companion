@@ -59,6 +59,18 @@ export const getBaileysStatus = createServerFn({ method: "POST" })
       const res = await fetch(`${BAILEYS_API}/api/status${q}`, { signal: AbortSignal.timeout(3000) });
       if (res.ok) {
         const state = await res.json();
+        if (state?.status === "open") return { ok: true as const, state };
+
+        // Se essa instância não está conectada, procura outra sessão ativa
+        try {
+          const listRes = await fetch(`${BAILEYS_API}/api/sessions`, { signal: AbortSignal.timeout(3000) });
+          if (listRes.ok) {
+            const list = await listRes.json();
+            const open = (list?.sessions ?? []).find((s: any) => s?.status === "open");
+            if (open) return { ok: true as const, state: open };
+          }
+        } catch {}
+
         return { ok: true as const, state };
       }
     } catch {}
