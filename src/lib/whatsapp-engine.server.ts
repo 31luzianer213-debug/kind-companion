@@ -382,7 +382,9 @@ export async function processIncomingWhatsAppEvent(
   }
 
   // 10. Envia mensagens adicionais (apenas se estritamente configurado e sem botão de cópia)
-  const hasCopyButton = botResult.interactive?.buttons?.some((b) => b.type === "copy" || b.copyCode);
+  const interactiveButtons =
+    botResult.interactive && botResult.interactive.type === "buttons" ? botResult.interactive.buttons : [];
+  const hasCopyButton = interactiveButtons.some((b) => b.type === "copy" || b.copyCode);
   if (!hasCopyButton && Array.isArray(botResult.extraMessages)) {
     for (const extra of botResult.extraMessages) {
       if (extra && extra.trim()) {

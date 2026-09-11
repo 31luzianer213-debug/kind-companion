@@ -299,7 +299,7 @@ export async function approveAndReleaseOrderServer(
       if (order.type === "renewal" && order.target_username) {
         // Tenta renovar a linha existente
         try {
-          await renewSigmaCustomer(sigmaConfig, order.target_username, durationMonths);
+          await renewSigmaCustomer(sigmaConfig, { username: order.target_username }, durationMonths);
         } catch (renErr) {
           console.warn("Aviso ao renovar no Sigma (prosseguindo localmente):", renErr);
         }

@@ -1246,7 +1246,7 @@ export async function processBotMessage(
       };
     }
 
-    const appsBlock = generateAppsMessage(config, trialRes.serverName);
+    const appsBlock = generateAppsMessage(config, trialRes.serverName || "IPTV");
     const reply =
       `🎉 *SEU TESTE GRÁTIS ESTÁ LIBERADO!* 🍿\n\n` +
       `👤 *Cliente:* ${params.pushName || "Cliente"}\n` +
