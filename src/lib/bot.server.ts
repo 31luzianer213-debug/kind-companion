@@ -1601,7 +1601,7 @@ export async function processBotMessage(
         .from("clients")
         .select("*")
         .eq("user_id", userId)
-        .eq("phone", cleanPhone)
+        .in("phone", phoneVariants(cleanPhone))
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
