@@ -422,7 +422,7 @@ export async function createTrialForBot(
       .from("clients")
       .select("id, created_at, iptv_username")
       .eq("user_id", userId)
-      .eq("phone", cleanPhone)
+      .in("phone", phoneVariants(cleanPhone))
       .gte("created_at", cutoffDate);
 
     if (recentTrials && recentTrials.length > 0) {
