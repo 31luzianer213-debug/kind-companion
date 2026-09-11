@@ -7,16 +7,31 @@ async function readLocalStatus(instance = "default") {
   try {
     const fs = await import("node:fs");
     const path = await import("node:path");
-    const instFile = path.resolve(process.cwd(), "data", `baileys_status_${instance}.json`);
+    const dir = path.resolve(process.cwd(), "data");
+    const instFile = path.join(dir, `baileys_status_${instance}.json`);
+
+    let current: any = null;
     if (fs.existsSync(instFile)) {
-      const data = fs.readFileSync(instFile, "utf8");
-      return JSON.parse(data);
+      current = JSON.parse(fs.readFileSync(instFile, "utf8"));
+    } else {
+      const defaultFile = path.join(dir, "baileys_status.json");
+      if (fs.existsSync(defaultFile)) {
+        current = JSON.parse(fs.readFileSync(defaultFile, "utf8"));
+      }
     }
-    const defaultFile = path.resolve(process.cwd(), "data", "baileys_status.json");
-    if (instance === "default" && fs.existsSync(defaultFile)) {
-      const data = fs.readFileSync(defaultFile, "utf8");
-      return JSON.parse(data);
-    }
+
+    if (current?.status === "open") return current;
+
+    // Procura qualquer sessão conectada para exibir o número no painel
+    try {
+      for (const file of fs.readdirSync(dir)) {
+        if (!file.startsWith("baileys_status")) continue;
+        const parsed = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8"));
+        if (parsed?.status === "open") return parsed;
+      }
+    } catch {}
+
+    if (current) return current;
   } catch {}
   return {
     instance,
