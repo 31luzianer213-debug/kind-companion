@@ -1,0 +1,165 @@
+/* Sigma UI polish — visual layer only, no business logic changes. */
+
+.app-aurora {
+  --ui-sidebar-width: 268px;
+  background:
+    radial-gradient(circle at 18% 0%, color-mix(in oklch, var(--primary) 10%, transparent), transparent 34rem),
+    radial-gradient(circle at 92% 78%, color-mix(in oklch, var(--chart-1) 6%, transparent), transparent 30rem),
+    var(--background);
+}
+
+.app-aurora > aside {
+  width: var(--ui-sidebar-width);
+  padding: 1rem;
+  background: color-mix(in oklch, var(--sidebar) 92%, transparent);
+  border-right-color: color-mix(in oklch, var(--border) 72%, transparent);
+  box-shadow: 18px 0 50px -46px rgba(0, 0, 0, 0.8);
+}
+
+.app-aurora > aside > a:first-child {
+  padding: 0.65rem 0.7rem 1rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 55%, transparent);
+}
+
+.app-aurora > main {
+  background: transparent;
+}
+
+.app-aurora > main > div.relative {
+  padding: 1.5rem clamp(1rem, 2.4vw, 2.75rem);
+}
+
+.app-aurora > main > div.relative > div {
+  max-width: 1400px;
+}
+
+/* Navigation: quieter inactive state, stronger active state. */
+.app-aurora aside nav {
+  gap: 0.45rem;
+}
+
+.app-aurora aside nav > div {
+  margin-bottom: 0.65rem;
+}
+
+.app-aurora aside nav > div > p {
+  margin-bottom: 0.45rem;
+  padding-left: 0.7rem;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+}
+
+.app-aurora aside nav a {
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 0.8rem;
+}
+
+.app-aurora aside nav a:not([aria-current="page"]):hover {
+  border-color: color-mix(in oklch, var(--border) 80%, transparent);
+  background: color-mix(in oklch, var(--accent) 62%, transparent);
+  transform: translateX(2px);
+}
+
+.app-aurora aside nav a.bg-primary {
+  box-shadow: 0 10px 24px -14px color-mix(in oklch, var(--primary) 85%, transparent);
+}
+
+/* Common page rhythm. */
+.app-aurora main h1 {
+  letter-spacing: -0.045em;
+}
+
+.app-aurora main h2 {
+  letter-spacing: -0.035em;
+}
+
+.app-aurora main .page-header {
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Cards feel like one coherent design system. */
+.app-aurora main .surface-card,
+.app-aurora main .surface-elevated,
+.app-aurora main .glass-card,
+.app-aurora main .stat-card {
+  border-radius: 1rem;
+  border-color: color-mix(in oklch, var(--border) 78%, transparent);
+}
+
+.app-aurora main .surface-card,
+.app-aurora main .stat-card {
+  box-shadow: 0 12px 35px -28px rgba(0, 0, 0, 0.9);
+}
+
+.app-aurora main .surface-card:hover,
+.app-aurora main .stat-card:hover {
+  border-color: color-mix(in oklch, var(--primary) 30%, var(--border));
+}
+
+/* Improve dense data screens without changing their structure. */
+.app-aurora main table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.app-aurora main thead th {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--muted) 45%, transparent);
+}
+
+.app-aurora main tbody tr {
+  transition: background-color 160ms ease;
+}
+
+.app-aurora main tbody tr:hover {
+  background: color-mix(in oklch, var(--accent) 42%, transparent);
+}
+
+.app-aurora main input,
+.app-aurora main textarea,
+.app-aurora main select {
+  border-radius: 0.7rem;
+}
+
+.app-aurora main input:focus,
+.app-aurora main textarea:focus,
+.app-aurora main select:focus {
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 15%, transparent);
+}
+
+/* Mobile: keep the workspace spacious while avoiding oversized gutters. */
+@media (max-width: 767px) {
+  .app-aurora > main > div.relative {
+    padding: 1rem;
+  }
+
+  .app-aurora main .page-header {
+    margin-bottom: 1.15rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1100px) {
+  .app-aurora {
+    --ui-sidebar-width: 240px;
+  }
+
+  .app-aurora > aside {
+    padding: 0.8rem;
+  }
+
+  .app-aurora > main > div.relative {
+    padding-inline: 1.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-aurora aside nav a:not([aria-current="page"]):hover {
+    transform: none;
+  }
+}
