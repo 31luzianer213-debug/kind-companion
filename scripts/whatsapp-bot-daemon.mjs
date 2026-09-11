@@ -715,11 +715,30 @@ const server = http.createServer(async (req, res) => {
     req.headers["x-instance"] ||
     "default";
 
+  // GET /api/sessions — lista o estado de todas as sessões ativas
+  if (pathname === "/api/sessions" && req.method === "GET") {
+    const list = Array.from(sessions.values()).map((s) => s.state);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true, sessions: list }));
+    return;
+  }
+
   // GET /api/status?instance=<id>
   if (pathname === "/api/status" && req.method === "GET") {
     const session = getOrCreateSession(instanceParam);
+    let state = session.state;
+    // Se essa instância não está conectada, mas existe outra sessão conectada,
+    // devolve a conectada para o painel mostrar o número corretamente.
+    if (state?.status !== "open") {
+      for (const s of sessions.values()) {
+        if (s.state?.status === "open") {
+          state = s.state;
+          break;
+        }
+      }
+    }
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(session.state));
+    res.end(JSON.stringify(state));
     return;
   }
 
