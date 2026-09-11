@@ -1111,11 +1111,30 @@ export async function processBotMessage(
     // Etapa de Escolha do Plano (Opção 3 via texto)
     // -----------------------------------------------------------------------
     if (session.step === "awaiting_plan_choice") {
+      // Se o cliente tocou em outra opção do menu (ex.: "4️⃣ Baixar Aplicativos"),
+      // NÃO interpreta como escolha de plano — encerra a sessão e segue o fluxo normal.
+      const isMenuOptionText =
+        text.includes("baixar") ||
+        text.includes("aplicativ") ||
+        text.includes("teste") ||
+        text.includes("renovar") ||
+        text.includes("acesso") ||
+        text.includes("atendimento") ||
+        text.includes("suporte") ||
+        text.includes("preç") ||
+        text.includes("preco");
+
       let chosenMonths = 0;
-      if (text === "1" || text === "1m" || text === "mensal" || text.includes("mensal")) chosenMonths = 1;
-      else if (text === "2" || text === "3m" || text === "trimestral" || text.includes("trimestral")) chosenMonths = 3;
-      else if (text === "3" || text === "6m" || text === "semestral" || text.includes("semestral")) chosenMonths = 6;
-      else if (text === "4" || text === "12m" || text === "anual" || text.includes("anual")) chosenMonths = 12;
+      if (!isMenuOptionText) {
+        if (text === "1" || text === "1m" || text === "mensal" || text === "plano mensal") chosenMonths = 1;
+        else if (text === "2" || text === "3m" || text === "trimestral" || text === "plano trimestral") chosenMonths = 3;
+        else if (text === "3" || text === "6m" || text === "semestral" || text === "plano semestral") chosenMonths = 6;
+        else if (text === "4" || text === "12m" || text === "anual" || text === "plano anual") chosenMonths = 12;
+      }
+
+      if (isMenuOptionText) {
+        conversationSessions.delete(cleanPhone);
+      }
 
       if (chosenMonths > 0) {
         conversationSessions.delete(cleanPhone);
