@@ -924,7 +924,7 @@ export async function processBotMessage(
     const orders = await listOrdersServer(userId);
     const order = orderId
       ? orders.find((o) => o.id === orderId)
-      : orders.find((o) => o.customer_phone === cleanPhone);
+      : orders.find((o) => samePhone(o.customer_phone, cleanPhone));
 
     if (!order) {
       return {
