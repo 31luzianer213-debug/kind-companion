@@ -41,22 +41,58 @@ async function evoRequest<T = any>(
   }
 }
 
+let cachedInstance: string | null = null;
+let cachedAt = 0;
+
+async function listInstances(): Promise<any[]> {
+  const res = await evoRequest<any[]>(`/instance/fetchInstances`, { method: "GET" }, 10000);
+  const items = Array.isArray(res.data) ? res.data : res.data?.instances || [];
+  return Array.isArray(items) ? items : [];
+}
+
+function instanceNameOf(item: any) {
+  return item?.name || item?.instanceName || item?.instance?.instanceName || "";
+}
+
+/**
+ * Descobre qual instância usar no servidor Evolution:
+ * 1) a definida em EVOLUTION_INSTANCE, se existir; 2) uma sessão conectada;
+ * 3) a primeira instância existente; 4) o nome padrão (será criada).
+ */
+export async function resolveInstance(force = false): Promise<string> {
+  const env = evolutionEnv();
+  if (!env) return "";
+  if (!force && cachedInstance && Date.now() - cachedAt < 60000) return cachedInstance;
+
+  const items = await listInstances();
+  const names = items.map(instanceNameOf).filter(Boolean);
+  let chosen = env.instance;
+
+  if (!names.includes(env.instance)) {
+    const open = items.find(
+      (i) => (i?.connectionStatus || i?.instance?.state) === "open",
+    );
+    chosen = instanceNameOf(open) || names[0] || env.instance;
+  }
+
+  cachedInstance = chosen;
+  cachedAt = Date.now();
+  return chosen;
+}
+
 /** Garante que a instância exista no servidor Evolution. */
 export async function evoEnsureInstance(webhookUrl?: string) {
   const env = evolutionEnv();
   if (!env) return { ok: false, created: false };
 
-  const list = await evoRequest<any[]>(`/instance/fetchInstances`, { method: "GET" }, 10000);
-  const items = Array.isArray(list.data) ? list.data : list.data?.instances || [];
-  const exists = items.some((i: any) => {
-    const name = i?.name || i?.instanceName || i?.instance?.instanceName;
-    return name === env.instance;
-  });
+  const instance = await resolveInstance(true);
+  const items = await listInstances();
+  const exists = items.some((i: any) => instanceNameOf(i) === instance);
 
   if (exists) return { ok: true, created: false };
 
   const body: Record<string, unknown> = {
-    instanceName: env.instance,
+    instanceName: instance,
     qrcode: true,
     integration: "WHATSAPP-BAILEYS",
   };
@@ -76,6 +112,7 @@ export async function evoEnsureInstance(webhookUrl?: string) {
 export async function evoSetWebhook(webhookUrl: string) {
   const env = evolutionEnv();
   if (!env) return { ok: false };
+  const instance = await resolveInstance();
   const payload = {
     webhook: {
       enabled: true,
@@ -85,7 +122,7 @@ export async function evoSetWebhook(webhookUrl: string) {
       events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE"],
     },
   };
-  const res = await evoRequest(`/webhook/set/${encodeURIComponent(env.instance)}`, {
+  const res = await evoRequest(`/webhook/set/${encodeURIComponent(instance)}`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -97,14 +134,14 @@ export type EvoState = "open" | "connecting" | "close" | "none";
 export async function evoState(): Promise<{ state: EvoState; number: string | null; raw: any }> {
   const env = evolutionEnv();
   if (!env) return { state: "none", number: null, raw: null };
-  const res = await evoRequest(`/instance/connectionState/${encodeURIComponent(env.instance)}`, { method: "GET" }, 8000);
+  const instance = await resolveInstance();
+  const res = await evoRequest(`/instance/connectionState/${encodeURIComponent(instance)}`, { method: "GET" }, 8000);
   const state = (res.data?.instance?.state || res.data?.state || "close") as EvoState;
 
   let number: string | null = null;
   if (state === "open") {
-    const list = await evoRequest<any[]>(`/instance/fetchInstances`, { method: "GET" }, 8000);
-    const items = Array.isArray(list.data) ? list.data : list.data?.instances || [];
-    const found = items.find((i: any) => (i?.name || i?.instanceName || i?.instance?.instanceName) === env.instance);
+    const items = await listInstances();
+    const found = items.find((i: any) => instanceNameOf(i) === instance);
     const raw = found?.ownerJid || found?.owner || found?.number || found?.instance?.owner || "";
     number = raw ? String(raw).split("@")[0] || null : null;
   }
@@ -123,7 +160,8 @@ export async function evoConnect(webhookUrl?: string) {
     return { state: "open" as EvoState, base64: null, code: null };
   }
 
-  const res = await evoRequest(`/instance/connect/${encodeURIComponent(env.instance)}`, { method: "GET" }, 20000);
+  const instance = await resolveInstance();
+  const res = await evoRequest(`/instance/connect/${encodeURIComponent(instance)}`, { method: "GET" }, 20000);
   const base64: string | null = res.data?.base64 || res.data?.qrcode?.base64 || null;
   const code: string | null = res.data?.pairingCode || res.data?.code || null;
   return { state: (base64 || code ? "connecting" : current.state) as EvoState, base64, code };
@@ -132,7 +170,8 @@ export async function evoConnect(webhookUrl?: string) {
 export async function evoLogout() {
   const env = evolutionEnv();
   if (!env) return { ok: false };
-  const res = await evoRequest(`/instance/logout/${encodeURIComponent(env.instance)}`, { method: "DELETE" }, 10000);
+  const instance = await resolveInstance();
+  const res = await evoRequest(`/instance/logout/${encodeURIComponent(instance)}`, { method: "DELETE" }, 10000);
   return { ok: res.ok };
 }
 
@@ -140,7 +179,8 @@ export async function evoDeleteInstance() {
   const env = evolutionEnv();
   if (!env) return { ok: false };
   await evoLogout();
-  const res = await evoRequest(`/instance/delete/${encodeURIComponent(env.instance)}`, { method: "DELETE" }, 10000);
+  const instance = await resolveInstance(true);
+  const res = await evoRequest(`/instance/delete/${encodeURIComponent(instance)}`, { method: "DELETE" }, 10000);
   return { ok: res.ok };
 }
 
@@ -154,7 +194,7 @@ export async function evoSendText(to: string, text: string) {
   const env = evolutionEnv();
   if (!env) return { ok: false as const, error: "Evolution API não configurada" };
   const res = await evoRequest(
-    `/message/sendText/${encodeURIComponent(env.instance)}`,
+    `/message/sendText/${encodeURIComponent(await resolveInstance())}`,
     { method: "POST", body: JSON.stringify({ number: toNumber(to), text }) },
     20000,
   );
@@ -173,7 +213,7 @@ export async function evoSendMedia(
   if (!env) return { ok: false as const, error: "Evolution API não configurada" };
   const clean = String(media.base64 || "").replace(/^data:[^;]+;base64,/, "");
   const res = await evoRequest(
-    `/message/sendMedia/${encodeURIComponent(env.instance)}`,
+    `/message/sendMedia/${encodeURIComponent(await resolveInstance())}`,
     {
       method: "POST",
       body: JSON.stringify({
@@ -217,7 +257,7 @@ export async function evoSendButtons(
   });
 
   const res = await evoRequest(
-    `/message/sendButtons/${encodeURIComponent(env.instance)}`,
+    `/message/sendButtons/${encodeURIComponent(await resolveInstance())}`,
     {
       method: "POST",
       body: JSON.stringify({
@@ -247,7 +287,7 @@ export async function evoSendList(
   const env = evolutionEnv();
   if (!env) return { ok: false as const, error: "Evolution API não configurada" };
   const res = await evoRequest(
-    `/message/sendList/${encodeURIComponent(env.instance)}`,
+    `/message/sendList/${encodeURIComponent(await resolveInstance())}`,
     {
       method: "POST",
       body: JSON.stringify({
