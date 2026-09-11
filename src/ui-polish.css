@@ -1,165 +1,46 @@
-/* Sigma UI polish — visual layer only, no business logic changes. */
+/* Sigma UI — shared visual redesign for ALL authenticated screens. */
+:root{--ui-sidebar-width:276px;--ui-page-max:1520px;--ui-radius:16px}
 
-.app-aurora {
-  --ui-sidebar-width: 268px;
-  background:
-    radial-gradient(circle at 18% 0%, color-mix(in oklch, var(--primary) 10%, transparent), transparent 34rem),
-    radial-gradient(circle at 92% 78%, color-mix(in oklch, var(--chart-1) 6%, transparent), transparent 30rem),
-    var(--background);
-}
+/* SHELL */
+.app-aurora{min-height:100dvh;background:radial-gradient(900px 500px at 8% -8%,color-mix(in oklch,var(--primary) 12%,transparent),transparent 68%),radial-gradient(800px 500px at 100% 100%,color-mix(in oklch,var(--chart-1) 7%,transparent),transparent 65%),var(--background)!important}
+.app-aurora>aside{width:var(--ui-sidebar-width)!important;padding:18px 14px!important;background:color-mix(in oklch,var(--sidebar) 94%,transparent)!important;border-right:1px solid color-mix(in oklch,var(--border) 75%,transparent)!important;box-shadow:14px 0 50px -42px rgba(0,0,0,.9)}
+.app-aurora>aside>a:first-child{padding:8px 10px 18px!important;margin-bottom:12px;border-bottom:1px solid color-mix(in oklch,var(--border) 55%,transparent)}
+.app-aurora aside nav{gap:6px!important}.app-aurora aside nav>div{margin-bottom:14px!important}.app-aurora aside nav>div>p{margin:0 0 7px!important;padding:0 10px!important;font-size:9px!important;letter-spacing:.16em!important;font-weight:800!important}
+.app-aurora aside nav a{min-height:44px!important;padding:10px 11px!important;border:1px solid transparent!important;border-radius:12px!important;transition:transform .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease!important}
+.app-aurora aside nav a:not([aria-current=page]):hover{transform:translateX(3px)!important;background:color-mix(in oklch,var(--accent) 70%,transparent)!important;border-color:color-mix(in oklch,var(--border) 85%,transparent)!important}
+.app-aurora aside nav a.bg-primary{box-shadow:0 12px 28px -15px color-mix(in oklch,var(--primary) 90%,transparent)!important}
 
-.app-aurora > aside {
-  width: var(--ui-sidebar-width);
-  padding: 1rem;
-  background: color-mix(in oklch, var(--sidebar) 92%, transparent);
-  border-right-color: color-mix(in oklch, var(--border) 72%, transparent);
-  box-shadow: 18px 0 50px -46px rgba(0, 0, 0, 0.8);
-}
+/* WORKSPACE */
+.app-aurora>main{min-width:0;background:transparent!important}.app-aurora>main>div.relative{padding:26px clamp(16px,3vw,48px) 42px!important}.app-aurora>main>div.relative>div{width:100%!important;max-width:var(--ui-page-max)!important;margin-inline:auto!important}
+.app-aurora main h1{margin:0;font-size:clamp(1.65rem,2.5vw,2.35rem)!important;line-height:1.1!important;letter-spacing:-.045em!important;font-weight:800!important}.app-aurora main h2{letter-spacing:-.035em!important;font-weight:750!important}.app-aurora main h3{letter-spacing:-.025em;font-weight:700}.app-aurora main p{line-height:1.55}
 
-.app-aurora > aside > a:first-child {
-  padding: 0.65rem 0.7rem 1rem;
-  border-bottom: 1px solid color-mix(in oklch, var(--border) 55%, transparent);
-}
+/* CARDS — affects dashboard, clients, orders, billing, Sigma, bot, WhatsApp, messages, payments and settings */
+.app-aurora main [class~=bg-card][class~=border]{border-color:color-mix(in oklch,var(--border) 78%,transparent)!important;border-radius:var(--ui-radius)!important;box-shadow:0 12px 40px -30px rgba(0,0,0,.85),0 1px 0 rgba(255,255,255,.025) inset!important;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+.app-aurora main [class~=bg-card][class~=border]:hover{border-color:color-mix(in oklch,var(--primary) 26%,var(--border))!important}.app-aurora main [class~=bg-card]>[class~=p-6]{padding:20px!important}
 
-.app-aurora > main {
-  background: transparent;
-}
+/* STATS / KPI */
+.app-aurora main [class*=grid]>[class~=bg-card]:has([class*=text-3xl]),.app-aurora main [class*=grid]>[class~=bg-card]:has([class*=text-4xl]){min-height:132px}
 
-.app-aurora > main > div.relative {
-  padding: 1.5rem clamp(1rem, 2.4vw, 2.75rem);
-}
+/* BUTTONS */
+.app-aurora main button,.app-aurora main a[class*=inline-flex][class*=items-center]{border-radius:10px;font-weight:650;transition:transform .15s ease,box-shadow .15s ease,background-color .15s ease}.app-aurora main button:not(:disabled):hover{transform:translateY(-1px)}.app-aurora main button:not(:disabled):active{transform:none}
 
-.app-aurora > main > div.relative > div {
-  max-width: 1400px;
-}
+/* FORMS */
+.app-aurora main input,.app-aurora main textarea,.app-aurora main select{min-height:40px;border-radius:10px!important;border-color:color-mix(in oklch,var(--border) 90%,transparent)!important;background:color-mix(in oklch,var(--background) 65%,var(--card))!important;transition:border-color .15s ease,box-shadow .15s ease,background .15s ease}.app-aurora main input:focus,.app-aurora main textarea:focus,.app-aurora main select:focus{background:var(--card)!important;border-color:color-mix(in oklch,var(--ring) 65%,var(--border))!important;box-shadow:0 0 0 4px color-mix(in oklch,var(--ring) 13%,transparent)!important}
 
-/* Navigation: quieter inactive state, stronger active state. */
-.app-aurora aside nav {
-  gap: 0.45rem;
-}
+/* TABLES */
+.app-aurora main table{width:100%;border-collapse:separate!important;border-spacing:0}.app-aurora main thead th{padding:12px 14px!important;background:color-mix(in oklch,var(--muted) 48%,transparent)!important;color:var(--muted-foreground)!important;font-size:10px!important;font-weight:800!important;letter-spacing:.08em!important;text-transform:uppercase;white-space:nowrap}.app-aurora main tbody td{padding:13px 14px!important;border-bottom:1px solid color-mix(in oklch,var(--border) 58%,transparent)}.app-aurora main tbody tr{transition:background-color .14s ease}.app-aurora main tbody tr:hover{background:color-mix(in oklch,var(--accent) 42%,transparent)!important}
 
-.app-aurora aside nav > div {
-  margin-bottom: 0.65rem;
-}
+/* STATUS / BADGES */
+.app-aurora main [class*=rounded-full][class*=text-xs],.app-aurora main [class*=rounded-md][class*=text-\[10px\]]{font-weight:750}
 
-.app-aurora aside nav > div > p {
-  margin-bottom: 0.45rem;
-  padding-left: 0.7rem;
-  font-size: 9px;
-  letter-spacing: 0.14em;
-}
+/* MODALS / MENUS */
+[data-radix-popper-content-wrapper]>*,[role=dialog]{border-radius:16px!important;border-color:color-mix(in oklch,var(--border) 85%,transparent)!important;box-shadow:0 24px 80px -35px rgba(0,0,0,.9)!important;backdrop-filter:blur(18px)}
 
-.app-aurora aside nav a {
-  min-height: 42px;
-  border: 1px solid transparent;
-  border-radius: 0.8rem;
-}
+/* SCROLLBAR */
+.app-aurora .subtle-scrollbar{scrollbar-width:thin;scrollbar-color:color-mix(in oklch,var(--border) 85%,transparent) transparent}.app-aurora .subtle-scrollbar::-webkit-scrollbar{width:6px;height:6px}.app-aurora .subtle-scrollbar::-webkit-scrollbar-thumb{background:color-mix(in oklch,var(--border) 85%,transparent);border-radius:999px}
 
-.app-aurora aside nav a:not([aria-current="page"]):hover {
-  border-color: color-mix(in oklch, var(--border) 80%, transparent);
-  background: color-mix(in oklch, var(--accent) 62%, transparent);
-  transform: translateX(2px);
-}
-
-.app-aurora aside nav a.bg-primary {
-  box-shadow: 0 10px 24px -14px color-mix(in oklch, var(--primary) 85%, transparent);
-}
-
-/* Common page rhythm. */
-.app-aurora main h1 {
-  letter-spacing: -0.045em;
-}
-
-.app-aurora main h2 {
-  letter-spacing: -0.035em;
-}
-
-.app-aurora main .page-header {
-  padding-bottom: 1.25rem;
-  margin-bottom: 1.5rem;
-}
-
-/* Cards feel like one coherent design system. */
-.app-aurora main .surface-card,
-.app-aurora main .surface-elevated,
-.app-aurora main .glass-card,
-.app-aurora main .stat-card {
-  border-radius: 1rem;
-  border-color: color-mix(in oklch, var(--border) 78%, transparent);
-}
-
-.app-aurora main .surface-card,
-.app-aurora main .stat-card {
-  box-shadow: 0 12px 35px -28px rgba(0, 0, 0, 0.9);
-}
-
-.app-aurora main .surface-card:hover,
-.app-aurora main .stat-card:hover {
-  border-color: color-mix(in oklch, var(--primary) 30%, var(--border));
-}
-
-/* Improve dense data screens without changing their structure. */
-.app-aurora main table {
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-.app-aurora main thead th {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
-  background: color-mix(in oklch, var(--muted) 45%, transparent);
-}
-
-.app-aurora main tbody tr {
-  transition: background-color 160ms ease;
-}
-
-.app-aurora main tbody tr:hover {
-  background: color-mix(in oklch, var(--accent) 42%, transparent);
-}
-
-.app-aurora main input,
-.app-aurora main textarea,
-.app-aurora main select {
-  border-radius: 0.7rem;
-}
-
-.app-aurora main input:focus,
-.app-aurora main textarea:focus,
-.app-aurora main select:focus {
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 15%, transparent);
-}
-
-/* Mobile: keep the workspace spacious while avoiding oversized gutters. */
-@media (max-width: 767px) {
-  .app-aurora > main > div.relative {
-    padding: 1rem;
-  }
-
-  .app-aurora main .page-header {
-    margin-bottom: 1.15rem;
-  }
-}
-
-@media (min-width: 768px) and (max-width: 1100px) {
-  .app-aurora {
-    --ui-sidebar-width: 240px;
-  }
-
-  .app-aurora > aside {
-    padding: 0.8rem;
-  }
-
-  .app-aurora > main > div.relative {
-    padding-inline: 1.25rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-aurora aside nav a:not([aria-current="page"]):hover {
-    transform: none;
-  }
-}
+/* MOBILE */
+@media(max-width:767px){.app-aurora>main>div.relative{padding:18px 14px 30px!important}.app-aurora main h1{font-size:1.55rem!important}.app-aurora main [class~=bg-card][class~=border]{border-radius:14px!important}.app-aurora main [class*=grid]{gap:12px!important}.app-aurora main table{min-width:680px}.app-aurora main [class*=overflow-x-auto]{border-radius:14px}}
+@media(min-width:768px) and (max-width:1150px){:root{--ui-sidebar-width:248px}.app-aurora>aside{padding:14px 10px!important}.app-aurora>main>div.relative{padding-inline:20px!important}}
+@media(min-width:1600px){.app-aurora>main>div.relative{padding-inline:56px!important}}
+@media(prefers-reduced-motion:reduce){.app-aurora *{transition-duration:.01ms!important;animation-duration:.01ms!important}}
