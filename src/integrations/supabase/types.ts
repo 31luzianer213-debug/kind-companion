@@ -243,6 +243,69 @@ export type Database = {
           },
         ]
       }
+      orders: {
+        Row: {
+          amount: number
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          duration_months: number
+          gateway_payment_id: string | null
+          id: string
+          notes: string | null
+          order_number: number
+          payment_method: string
+          pix_code: string | null
+          plan_name: string
+          screens: number
+          status: string
+          target_username: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          customer_name?: string
+          customer_phone: string
+          duration_months?: number
+          gateway_payment_id?: string | null
+          id: string
+          notes?: string | null
+          order_number?: number
+          payment_method?: string
+          pix_code?: string | null
+          plan_name: string
+          screens?: number
+          status?: string
+          target_username?: string | null
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          duration_months?: number
+          gateway_payment_id?: string | null
+          id?: string
+          notes?: string | null
+          order_number?: number
+          payment_method?: string
+          pix_code?: string | null
+          plan_name?: string
+          screens?: number
+          status?: string
+          target_username?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
