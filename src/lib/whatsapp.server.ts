@@ -34,6 +34,12 @@ export async function sendWhatsapp(to: string, text: string, instance?: string) 
     };
   }
 
+  const { isEvolutionEnabled, evoSendText } = await import("./evolution-api.server");
+  if (isEvolutionEnabled()) {
+    const res = await evoSendText(normalized, text);
+    return res.ok ? { ok: true as const } : { ok: false as const, error: res.error || "Falha no envio pela Evolution API" };
+  }
+
   try {
     const response = await fetch(`${BAILEYS_URL}/api/send-message`, {
       method: "POST",
