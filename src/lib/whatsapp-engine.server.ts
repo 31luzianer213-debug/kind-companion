@@ -13,6 +13,16 @@ import {
   normalizePhone,
 } from "./whatsapp-connection.server";
 import { resolvePhoneFromLid } from "./lid.server";
+import { instanceNameFor } from "./evolution.server";
+
+// Ações em que faz sentido enviar a imagem do QR Code PIX
+const PIX_MEDIA_ACTIONS = new Set([
+  "order_created_mp",
+  "order_created_manual",
+  "renew_pix_mp_sent",
+  "renew_pix_manual_sent",
+  "order_status_checked",
+]);
 
 // Cache de IDs de mensagens já processadas (evita responder à mesma mensagem mais de uma vez)
 const processedMessageIds = new Set<string>();
