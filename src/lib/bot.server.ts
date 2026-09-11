@@ -1954,7 +1954,12 @@ export async function pollAndProcessWhatsAppMessages(userId?: string): Promise<{
         console.log(`[Bot Auto-Poll] 📤 Resposta enviada para ${targetSendJid}: "${botResult.reply.slice(0, 60)}..."`);
 
         // Envia QR Code se houver
-        if (botResult.media?.base64) {
+        if (
+          botResult.media?.base64 &&
+          ["order_created_mp", "order_created_manual", "renew_pix_mp_sent", "renew_pix_manual_sent", "order_status_checked"].includes(
+            String(botResult.action),
+          )
+        ) {
           try {
             await sendMediaViaEvolution(
               settings ?? {},
