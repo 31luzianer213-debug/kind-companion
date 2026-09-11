@@ -363,7 +363,7 @@ export async function processIncomingWhatsAppEvent(
   }
 
   // 9. Envia imagem do QR Code PIX separada da mensagem de botão
-  if (botResult.media?.base64) {
+  if (botResult.media?.base64 && PIX_MEDIA_ACTIONS.has(String(botResult.action))) {
     try {
       console.log(`[WhatsApp Engine] 📸 Enviando QR Code PIX separado para ${destinationJid}...`);
       await sendWhatsAppMedia(
