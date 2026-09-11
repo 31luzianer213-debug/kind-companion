@@ -23,6 +23,10 @@ export function evolutionConfig(_userId?: string) {
 
 /** open | connecting | close | none */
 export async function fetchState(_userId?: string): Promise<"open" | "connecting" | "close" | "none"> {
+  const { isEvolutionEnabled, evoState } = await import("./evolution-api.server");
+  if (isEvolutionEnabled()) {
+    return (await evoState()).state;
+  }
   try {
     const res = await fetch(`${BAILEYS_URL}/api/status`, { signal: AbortSignal.timeout(2500) });
     if (res.ok) {
@@ -35,6 +39,11 @@ export async function fetchState(_userId?: string): Promise<"open" | "connecting
 }
 
 export async function ensureInstanceWebhook(_userId?: string, _publicAppUrl?: string) {
+  const { isEvolutionEnabled, evoSetWebhook } = await import("./evolution-api.server");
+  if (isEvolutionEnabled()) {
+    const { botWebhookUrl } = await import("./whatsapp-connection.server");
+    return await evoSetWebhook(botWebhookUrl());
+  }
   // Baileys processa mensagens em tempo real via WebSocket
   return { ok: true };
 }
@@ -44,6 +53,12 @@ export async function setInstanceWebhook(_userId?: string, _webhookUrl?: string)
 }
 
 export async function connectInstance(_userId?: string, _publicAppUrl?: string, _forceNew = false) {
+  const { isEvolutionEnabled, evoConnect } = await import("./evolution-api.server");
+  if (isEvolutionEnabled()) {
+    const { botWebhookUrl } = await import("./whatsapp-connection.server");
+    const res = await evoConnect(_publicAppUrl ? `${_publicAppUrl.replace(/\/+$/, "")}/api/public/hooks/whatsapp-bot` : botWebhookUrl());
+    return { state: res.state, base64: res.base64, code: res.code };
+  }
   try {
     const res = await fetch(`${BAILEYS_URL}/api/connect`, {
       method: "POST",
@@ -65,6 +80,11 @@ export async function connectInstance(_userId?: string, _publicAppUrl?: string, 
 }
 
 export async function deleteInstance(_userId?: string) {
+  const { isEvolutionEnabled, evoLogout } = await import("./evolution-api.server");
+  if (isEvolutionEnabled()) {
+    await evoLogout();
+    return { ok: true };
+  }
   try {
     await fetch(`${BAILEYS_URL}/api/logout`, {
       method: "POST",

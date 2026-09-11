@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const BAILEYS_API = process.env.BAILEYS_API_URL || "http://localhost:3001";
+const BAILEYS_API = process.env["BAILEYS_API_URL"] || "http://localhost:3001";
 
 async function readLocalStatus(instance = "default") {
   try {
@@ -53,6 +53,26 @@ export const getBaileysStatus = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const instance = data?.instance || "default";
 
+    // 0. Evolution API (VPS do usuário) tem prioridade quando configurada
+    const evo = await import("./evolution-api.server");
+    if (evo.isEvolutionEnabled()) {
+      const st = await evo.evoState();
+      return {
+        ok: true as const,
+        state: {
+          instance: evo.evolutionEnv()?.instance || instance,
+          provider: "evolution",
+          status: st.state,
+          mode: "qr",
+          qrCode: null,
+          pairingCode: null,
+          phone: st.number,
+          userName: null,
+          lastError: null,
+        },
+      };
+    }
+
     // 1. Tenta buscar via API HTTP local do daemon
     try {
       const q = `?instance=${encodeURIComponent(instance)}`;
@@ -94,6 +114,27 @@ export const connectBaileys = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const instance = data?.instance || "default";
+
+    const evo = await import("./evolution-api.server");
+    if (evo.isEvolutionEnabled()) {
+      const { botWebhookUrl } = await import("./whatsapp-connection.server");
+      const res = await evo.evoConnect(botWebhookUrl());
+      return {
+        ok: true as const,
+        state: {
+          instance: evo.evolutionEnv()?.instance || instance,
+          provider: "evolution",
+          status: res.state,
+          mode: data?.mode || "qr",
+          qrCode: res.base64,
+          pairingCode: res.code,
+          phone: null,
+          userName: null,
+          lastError: null,
+        },
+      };
+    }
+
     try {
       const res = await fetch(`${BAILEYS_API}/api/connect`, {
         method: "POST",
@@ -125,6 +166,13 @@ export const disconnectBaileys = createServerFn({ method: "POST" })
   .inputValidator((input?: { instance?: string }) => input)
   .handler(async ({ data }) => {
     const instance = data?.instance || "default";
+
+    const evo = await import("./evolution-api.server");
+    if (evo.isEvolutionEnabled()) {
+      await evo.evoLogout();
+      return { ok: true as const };
+    }
+
     try {
       await fetch(`${BAILEYS_API}/api/logout`, {
         method: "POST",
@@ -152,6 +200,14 @@ export const sendBaileysTest = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const instance = data.instance || "default";
+
+    const evo = await import("./evolution-api.server");
+    if (evo.isEvolutionEnabled()) {
+      const sent = await evo.evoSendText(data.to, data.text || "Mensagem de teste ✅");
+      if (!sent.ok) throw new Error(sent.error || "Falha ao enviar pela Evolution API");
+      return { ok: true as const };
+    }
+
     try {
       const res = await fetch(`${BAILEYS_API}/api/send-test`, {
         method: "POST",

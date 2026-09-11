@@ -300,7 +300,7 @@ function Painel() {
 
   const isSigmaOk = Boolean(sigmaSettings?.isConfigured);
   const isWaOk = waStatus?.state === "open";
-  const isPixOk = Boolean(data?.settings?.pix_key || data?.settings?.asaas_api_key || data?.settings?.mp_access_token);
+  const isPixOk = Boolean(data?.settings?.pix_key || data?.settings?.asaas_token || data?.settings?.mercadopago_token);
   const completedSteps = (isSigmaOk ? 1 : 0) + (isWaOk ? 1 : 0) + (isPixOk ? 1 : 0);
 
   return (

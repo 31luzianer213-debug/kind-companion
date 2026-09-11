@@ -40,10 +40,24 @@ export async function findInstanceToken(_instanceName?: string) {
   return "baileys_token";
 }
 
+export function publicAppUrl() {
+  const raw = process.env["PUBLIC_APP_URL"] || "https://embrace-essence-app.lovable.app";
+  return raw.replace(/\/+$/, "");
+}
+
+export function botWebhookUrl() {
+  return `${publicAppUrl()}/api/public/hooks/whatsapp-bot`;
+}
+
 export async function fetchConnectionState(instanceName?: string): Promise<{
   state: ConnectionState;
   raw: any;
 }> {
+  const { isEvolutionEnabled, evoState } = await import("./evolution-api.server");
+  if (isEvolutionEnabled()) {
+    const res = await evoState();
+    return { state: res.state as ConnectionState, raw: { ...res.raw, number: res.number, provider: "evolution" } };
+  }
   try {
     const q = instanceName ? `?instance=${encodeURIComponent(instanceName)}` : "";
     const res = await fetch(`${BAILEYS_URL}/api/status${q}`, { signal: AbortSignal.timeout(3000) });
@@ -61,6 +75,17 @@ export async function ensureAndConnectInstance(
   mode: "qr" | "pairing" = "qr",
   phone?: string,
 ): Promise<ConnectResult> {
+  const { isEvolutionEnabled, evoConnect } = await import("./evolution-api.server");
+  if (isEvolutionEnabled()) {
+    const res = await evoConnect(botWebhookUrl());
+    return {
+      instance: instanceName || DEFAULT_INSTANCE_NAME,
+      created: true,
+      status: res.state as ConnectionState,
+      base64: res.base64,
+      code: res.code,
+    };
+  }
   try {
     const res = await fetch(`${BAILEYS_URL}/api/connect`, {
       method: "POST",
@@ -90,7 +115,11 @@ export async function ensureAndConnectInstance(
   };
 }
 
-export async function ensureWebhookConfigured(_instanceName: string, _webhookUrl: string) {
+export async function ensureWebhookConfigured(_instanceName: string, webhookUrl?: string) {
+  const { isEvolutionEnabled, evoSetWebhook } = await import("./evolution-api.server");
+  if (isEvolutionEnabled()) {
+    return await evoSetWebhook(webhookUrl || botWebhookUrl());
+  }
   return { ok: true };
 }
 
@@ -119,6 +148,11 @@ export async function sendWhatsAppText(to: string, text: string, instance?: stri
   const normalized = normalizePhone(to);
   if (!normalized) {
     return { ok: false as const, error: "Número inválido ou não informado." };
+  }
+
+  const evo = await import("./evolution-api.server");
+  if (evo.isEvolutionEnabled()) {
+    return await evo.evoSendText(normalized, text);
   }
 
   try {
@@ -163,6 +197,24 @@ export async function sendWhatsAppButtons(
 ) {
   const normalized = normalizePhone(to);
   if (!normalized) return { ok: false as const, error: "Número inválido." };
+
+  const evoMod = await import("./evolution-api.server");
+  if (evoMod.isEvolutionEnabled()) {
+    if (options.media?.base64) {
+      await evoMod.evoSendMedia(normalized, {
+        base64: options.media.base64,
+        caption: options.media.caption || "",
+        mimetype: options.media.mimetype || "image/png",
+        fileName: options.media.fileName || "imagem.png",
+      });
+    }
+    return await evoMod.evoSendButtons(normalized, {
+      title: options.title || "",
+      description: options.description,
+      footer: options.footer || "",
+      buttons: options.buttons,
+    });
+  }
 
   const formattedButtons = options.buttons.map((b) => {
     if (b.type === "copy" || b.copyCode) {
@@ -235,6 +287,11 @@ export async function sendWhatsAppList(
   const normalized = normalizePhone(to);
   if (!normalized) return { ok: false as const, error: "Número inválido." };
 
+  const evoList = await import("./evolution-api.server");
+  if (evoList.isEvolutionEnabled()) {
+    return await evoList.evoSendList(normalized, options);
+  }
+
   try {
     const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
       method: "POST",
@@ -273,6 +330,11 @@ export async function sendWhatsAppMedia(
 ) {
   const normalized = normalizePhone(to);
   if (!normalized) return { ok: false as const, error: "Número inválido." };
+
+  const evoMedia = await import("./evolution-api.server");
+  if (evoMedia.isEvolutionEnabled()) {
+    return await evoMedia.evoSendMedia(normalized, mediaOptions);
+  }
 
   try {
     const res = await fetch(`${BAILEYS_URL}/api/send-message`, {

@@ -32,6 +32,7 @@ export type TemplateVarInput = {
     iptv_username?: string | null;
     iptv_password?: string | null;
     screens?: number | null;
+    notes?: string | null;
   } | null;
   list?: {
     name?: string | null;
@@ -163,7 +164,7 @@ export function formatAppsLinksBlock(config?: AppLinksData | null, serverName = 
   const web = config?.appWebPlayerLink?.trim() || "http://webtv.iptvsmarters.com";
   const smartTv = config?.appSmartTvText?.trim() || "• Smart TV Samsung / LG: Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.";
 
-  const srv = serverName && !srv.startsWith("http") ? serverName.toUpperCase() : "IPTV";
+  const srv = serverName && !serverName.startsWith("http") ? serverName.toUpperCase() : "IPTV";
 
   return (
     `📲 *APLICATIVOS OFICIAIS — ${srv}* 🍿\n\n` +
