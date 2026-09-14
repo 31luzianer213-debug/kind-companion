@@ -1,52 +1,34 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState, useId } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useId, useState } from "react";
+import { ArrowLeft, Check, KeyRound, Loader2, Lock, Mail, Send, ShieldCheck, User, X } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
+import { AuthField } from "@/components/auth/AuthField";
+import { AuthShowcase } from "@/components/auth/AuthShowcase";
+import { SigmaLogo } from "@/components/SigmaLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { SigmaLogo } from "@/components/SigmaLogo";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  Loader2,
-  Lock,
-  Mail,
-  ShieldCheck,
-  User,
-  Sparkles,
-  Check,
-  X,
-  KeyRound,
-  Send,
-  Star,
-  MessageCircle,
-  Zap,
-  TrendingUp,
-} from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { lovable } from "@/integrations/lovable";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Entrar ou Cadastrar — IPTV Manager" },
-      { name: "description", content: "Acesse o painel de clientes, listas IPTV e cobranças automáticas pelo WhatsApp." },
-      { property: "og:title", content: "Entrar — IPTV Manager" },
-      { property: "og:description", content: "Acesse seu painel inteligente de gestão e automação IPTV." },
+      { title: "Acessar — Painel Sigma" },
+      { name: "description", content: "Entre ou crie gratuitamente sua conta no Painel Sigma." },
+      { property: "og:title", content: "Acessar — Painel Sigma" },
+      { property: "og:description", content: "Gestão de clientes e cobranças automáticas em um só lugar." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -54,148 +36,109 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-function GoogleIcon({ className = "h-5 w-5" }: { className?: string }) {
+function GoogleIcon() {
   return (
-    <svg className={className} viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+    <svg className="size-5" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#4285F4" d="M22.6 12.2c0-.7-.1-1.5-.2-2.2H12v4.3h5.9a5 5 0 0 1-2.2 3.3v2.8h3.6c2.1-2 3.3-4.8 3.3-8.2Z" />
+      <path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1-3.7 1a6.4 6.4 0 0 1-6.2-4.5H2.2V17A11 11 0 0 0 12 23Z" />
+      <path fill="#FBBC05" d="M5.8 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.2a11 11 0 0 0 0 9.8l3.6-2.8Z" />
+      <path fill="#EA4335" d="M12 5.4c1.6 0 3.1.5 4.2 1.6l3.2-3.1A10.6 10.6 0 0 0 12 1a11 11 0 0 0-9.8 6.1l3.6 2.8A6.4 6.4 0 0 1 12 5.4Z" />
     </svg>
   );
 }
 
-function getFriendlyErrorMessage(errorMsg: string): string {
-  if (!errorMsg) return "Ocorreu um erro inesperado. Tente novamente.";
-  if (errorMsg.includes("Invalid login credentials") || errorMsg.includes("invalid_grant")) {
-    return "E-mail ou senha incorretos. Verifique seus dados e tente novamente.";
-  }
-  if (errorMsg.includes("User already registered") || errorMsg.includes("already registered")) {
-    return "Este e-mail já está cadastrado. Tente entrar ou recupere sua senha.";
-  }
-  if (errorMsg.includes("Password should be at least") || errorMsg.includes("password is too short")) {
-    return "A senha deve conter no mínimo 6 caracteres.";
-  }
-  if (errorMsg.includes("Email not confirmed")) {
-    return "E-mail ainda não confirmado. Verifique a caixa de entrada ou spam.";
-  }
-  if (errorMsg.includes("rate limit") || errorMsg.includes("over_email_send_rate_limit")) {
-    return "Muitas tentativas em pouco tempo. Aguarde um instante antes de tentar novamente.";
-  }
-  return errorMsg;
+function friendlyError(message: string) {
+  if (/Invalid login credentials|invalid_grant/i.test(message)) return "E-mail ou senha incorretos.";
+  if (/already registered/i.test(message)) return "Este e-mail já possui uma conta.";
+  if (/Password should be at least|password is too short/i.test(message)) return "Use uma senha com pelo menos 6 caracteres.";
+  if (/Email not confirmed|not confirmed/i.test(message)) return "Confirme seu e-mail antes de entrar.";
+  if (/rate limit|over_email_send_rate_limit/i.test(message)) return "Muitas tentativas. Aguarde um pouco e tente novamente.";
+  return message || "Não foi possível concluir. Tente novamente.";
 }
 
-function evaluatePassword(password: string) {
-  if (!password) return { score: 0, label: "", color: "bg-muted", text: "text-muted-foreground" };
-  let score = 0;
-  if (password.length >= 6) score += 1;
-  if (password.length >= 8) score += 1;
-  if (/[0-9]/.test(password)) score += 1;
-  if (/[A-Z]/.test(password) || /[^a-zA-Z0-9]/.test(password)) score += 1;
-
-  if (score === 1) return { score: 1, label: "Fraca", color: "bg-rose-500", text: "text-rose-400" };
-  if (score === 2) return { score: 2, label: "Média", color: "bg-amber-500", text: "text-amber-400" };
-  if (score === 3) return { score: 3, label: "Forte", color: "bg-emerald-500", text: "text-emerald-400" };
-  return { score: 4, label: "Excelente", color: "bg-emerald-400", text: "text-emerald-300" };
+function passwordStrength(password: string) {
+  const checks = [
+    password.length >= 6,
+    password.length >= 8,
+    /[0-9]/.test(password),
+    /[A-Z]|[^a-zA-Z0-9]/.test(password),
+  ];
+  const score = checks.filter(Boolean).length;
+  return {
+    score,
+    label: ["", "Fraca", "Boa", "Forte", "Excelente"][score],
+    color: score <= 1 ? "bg-rose-500" : score === 2 ? "bg-amber-500" : "bg-emerald-500",
+  };
 }
 
 function AuthPage() {
   const navigate = useNavigate();
   const rememberId = useId();
-
-  // Form states
+  const [tab, setTab] = useState("login");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
-  const [rememberMe, setRememberMe] = useState(true);
-
-  // Status & toggles
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [remember, setRemember] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [showPass, setShowPass] = useState(false);
-  const [showConfirmPass, setShowConfirmPass] = useState(false);
-  const [tab, setTab] = useState("login");
-
-  // Forgot password dialog
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       const url = new URL(window.location.href);
-
-      // Check for password recovery callback
-      if (url.searchParams.get("type") === "recovery" || url.hash.includes("type=recovery")) {
-        toast.info("Você está acessando pelo link de recuperação de senha.");
-      }
-
-      // Check for Supabase confirmation code
       if (url.searchParams.has("code")) {
         const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
         url.searchParams.delete("code");
         url.searchParams.delete("state");
         window.history.replaceState({}, "", url.pathname + url.search + url.hash);
         if (!error) {
-          toast.success("E-mail confirmado com sucesso! Bem-vindo ao painel.");
+          toast.success("E-mail confirmado. Sua conta está pronta!");
           navigate({ to: "/painel" });
           return;
         }
       }
-
       const { data } = await supabase.auth.getSession();
       if (data.session) navigate({ to: "/painel" });
     })();
   }, [navigate]);
 
-  async function signIn(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email.trim() || !password) {
-      toast.error("Por favor, preencha todos os campos.");
-      return;
-    }
+  function openRecovery() {
+    if (email.trim()) setForgotEmail(email.trim());
+    setForgotSent(false);
+    setForgotOpen(true);
+  }
+
+  async function signIn(event: React.FormEvent) {
+    event.preventDefault();
+    if (!email.trim() || !password) return toast.error("Preencha seu e-mail e senha.");
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
 
     if (error) {
-      const isInvalidCredentials =
-        error.message.includes("Invalid login credentials") || error.message.includes("invalid_grant");
-      const isEmailNotConfirmed =
-        error.message.includes("Email not confirmed") || error.message.includes("not confirmed");
-
-      if (isInvalidCredentials) {
+      if (/Invalid login credentials|invalid_grant/i.test(error.message)) {
         toast.error("E-mail ou senha incorretos.", {
-          description: "Não lembra sua senha? Clique em 'Recuperar' para receber um link.",
-          action: {
-            label: "Recuperar",
-            onClick: () => {
-              if (email.trim()) setForgotEmail(email.trim());
-              setForgotOpen(true);
-            },
-          },
+          description: "Confira os dados ou recupere sua senha.",
+          action: { label: "Recuperar", onClick: openRecovery },
         });
-      } else if (isEmailNotConfirmed) {
-        toast.error("E-mail ainda não confirmado.", {
-          description: "Verifique sua caixa de entrada e spam, ou reenvie o e-mail.",
+      } else if (/Email not confirmed|not confirmed/i.test(error.message)) {
+        toast.error("Seu e-mail ainda não foi confirmado.", {
           action: {
             label: "Reenviar",
             onClick: async () => {
-              const res = await supabase.auth.resend({ type: "signup", email: email.trim() });
-              if (res.error) toast.error(getFriendlyErrorMessage(res.error.message));
-              else toast.success("E-mail de confirmação reenviado!");
+              const result = await supabase.auth.resend({ type: "signup", email: email.trim() });
+              result.error ? toast.error(friendlyError(result.error.message)) : toast.success("Confirmação reenviada!");
             },
           },
         });
-      } else {
-        toast.error(getFriendlyErrorMessage(error.message));
-      }
+      } else toast.error(friendlyError(error.message));
       return;
     }
 
@@ -203,92 +146,52 @@ function AuthPage() {
     navigate({ to: "/painel" });
   }
 
-  async function signUp(e: React.FormEvent) {
-    e.preventDefault();
-
-    if (!name.trim()) {
-      toast.error("Por favor, digite seu nome completo.");
-      return;
-    }
-
-    if (!email.trim()) {
-      toast.error("Por favor, informe seu e-mail.");
-      return;
-    }
-
-    if (password.length < 6) {
-      toast.error("A senha deve ter no mínimo 6 caracteres.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      toast.error("As senhas não coincidem. Verifique a confirmação.");
-      return;
-    }
+  async function signUp(event: React.FormEvent) {
+    event.preventDefault();
+    if (!name.trim()) return toast.error("Informe seu nome.");
+    if (!email.trim()) return toast.error("Informe seu e-mail.");
+    if (password.length < 6) return toast.error("A senha precisa ter pelo menos 6 caracteres.");
+    if (password !== confirmation) return toast.error("As senhas não coincidem.");
 
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: {
-        data: { display_name: name.trim() },
-      },
+      options: { data: { display_name: name.trim() } },
     });
 
     if (error) {
       setLoading(false);
-      const isAlreadyRegistered =
-        error.message.includes("User already registered") || error.message.includes("already registered");
-
-      if (isAlreadyRegistered) {
-        toast.info("Este e-mail já possui uma conta!", {
-          description: "Redirecionamos você para a aba de login. Não lembra a senha?",
-          action: {
-            label: "Recuperar Senha",
-            onClick: () => {
-              if (email.trim()) setForgotEmail(email.trim());
-              setForgotOpen(true);
-            },
-          },
-        });
+      if (/already registered/i.test(error.message)) {
         setTab("login");
-      } else {
-        toast.error(getFriendlyErrorMessage(error.message));
-      }
+        toast.info("Este e-mail já possui uma conta.", {
+          action: { label: "Recuperar senha", onClick: openRecovery },
+        });
+      } else toast.error(friendlyError(error.message));
       return;
     }
 
     if (!data.session) {
       setLoading(false);
-      toast.success("Conta criada! Se o seu projeto exigir confirmação por e-mail, verifique sua caixa de entrada.");
+      toast.success("Conta criada! Confira seu e-mail para confirmar o acesso.");
+      setTab("login");
       return;
     }
 
-    await supabase.from("profiles").upsert({
-      id: data.session.user.id,
-      display_name: name.trim(),
-    });
-
+    await supabase.from("profiles").upsert({ id: data.session.user.id, display_name: name.trim() });
     setLoading(false);
-    toast.success("Conta criada com sucesso! Bem-vindo ao painel.");
+    toast.success("Conta criada com sucesso!");
     navigate({ to: "/painel" });
   }
 
-  async function handleGoogleLogin() {
+  async function signInWithGoogle() {
     setGoogleLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: `${window.location.origin}/auth`,
       });
-
-      if (result.error) {
-        toast.error("Não foi possível entrar com o Google.");
-        return;
-      }
-
-      if (!result.redirected) {
-        navigate({ to: "/painel" });
-      }
+      if (result.error) toast.error("Não foi possível entrar com o Google.");
+      else if (!result.redirected) navigate({ to: "/painel" });
     } catch {
       toast.error("Erro ao autenticar com o Google.");
     } finally {
@@ -296,574 +199,183 @@ function AuthPage() {
     }
   }
 
-  async function handleForgotPassword(e: React.FormEvent) {
-    e.preventDefault();
-    if (!forgotEmail.trim()) {
-      toast.error("Digite o e-mail da sua conta.");
-      return;
-    }
-
+  async function recoverPassword(event: React.FormEvent) {
+    event.preventDefault();
+    if (!forgotEmail.trim()) return toast.error("Digite o e-mail da sua conta.");
     setForgotLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
       redirectTo: `${window.location.origin}/auth?reset=true`,
     });
     setForgotLoading(false);
-
-    if (error) {
-      toast.error(getFriendlyErrorMessage(error.message));
-      return;
-    }
-
+    if (error) return toast.error(friendlyError(error.message));
     setForgotSent(true);
-    toast.success("E-mail de recuperação enviado com sucesso!");
   }
 
-  const strength = evaluatePassword(password);
-  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
-  const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+  const strength = passwordStrength(password);
+  const mismatch = confirmation.length > 0 && password !== confirmation;
+  const matches = confirmation.length > 0 && password === confirmation;
 
   return (
-    <main className="relative flex min-h-screen bg-background text-foreground selection:bg-primary/20">
-      {/* Lado Esquerdo - Showcase Visual & Prova Social (Desktop) */}
-      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-black p-12 text-white lg:flex xl:p-16 border-r border-white/10">
-        {/* Background Gradients & Glow Mesh - Strict Monochrome */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.06),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.03),transparent_50%)]" />
-        <div className="absolute -left-36 -top-36 h-[560px] w-[560px] rounded-full bg-white/[0.04] blur-[140px] pointer-events-none" />
-        <div className="absolute -bottom-36 -right-36 h-[560px] w-[560px] rounded-full bg-white/[0.03] blur-[150px] pointer-events-none" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:36px_36px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,black_70%,transparent_100%)]" />
+    <main className="auth-page min-h-[100dvh] bg-background text-foreground lg:flex">
+      <AuthShowcase />
 
-        {/* Top Header - Logo */}
-        <div className="relative z-10 flex items-center justify-between">
-          <Link to="/" className="group flex items-center gap-3 text-xl font-bold tracking-tight">
-            <SigmaLogo size="lg" className="transition-transform duration-300 group-hover:scale-105" />
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="text-lg font-black leading-none text-white">Painel Sigma</span>
-                <span className="rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 text-[9px] font-black tracking-wider">
-                  GRÁTIS
-                </span>
-              </div>
-              <span className="text-[11px] font-medium text-zinc-400">Gestão & Cobrança Automática</span>
-            </div>
-          </Link>
-
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold text-white backdrop-blur-md">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
-            </span>
-            Disparos WhatsApp Ativos
-          </div>
-        </div>
-
-        {/* Center - Value Proposition & Live Simulated Notification Card */}
-        <div className="relative z-10 my-auto max-w-xl space-y-8 py-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-zinc-300 backdrop-blur-sm">
-            <Sparkles className="h-3.5 w-3.5 text-white" />
-            <span>Versão 2.0 • Painel em Tempo Real</span>
-          </div>
-
-          <h2 className="text-4xl font-black leading-[1.12] tracking-tight sm:text-5xl">
-            Sua operação de IPTV{" "}
-            <span className="block bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
-              100% no automático.
-            </span>
-          </h2>
-
-          <p className="text-base leading-relaxed text-zinc-300 sm:text-lg">
-            Esqueça o estresse de conferir comprovantes e cobrar clientes um por um.
-            Automatize faturas Pix e lembretes amigáveis no WhatsApp em segundos.
-          </p>
-
-          {/* Floating Showcase Cards */}
-          <div className="space-y-3.5 pt-2">
-            {/* Card 1: Simulação WhatsApp */}
-            <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:border-white/30 hover:bg-white/[0.07]">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 text-white border border-white/20">
-                    <MessageCircle className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-white">Notificação de Cobrança</p>
-                      <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold text-black">
-                        WhatsApp
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-300">
-                      "Olá Carlos, sua mensalidade vence hoje. Pague via Pix copia e cola em 1 clique!"
-                    </p>
-                  </div>
-                </div>
-                <span className="text-[11px] font-mono text-zinc-400">Agora</span>
-              </div>
-            </div>
-
-            {/* Card 2: Metrics / Highlights */}
-            <div className="grid grid-cols-2 gap-3.5">
-              <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 backdrop-blur-md">
-                <div className="flex items-center gap-2 text-xs font-semibold text-zinc-400">
-                  <TrendingUp className="h-4 w-4 text-white" />
-                  Inadimplência
-                </div>
-                <p className="mt-1 text-2xl font-bold text-white">-68%</p>
-                <p className="text-[11px] text-zinc-400">com alertas automáticos</p>
-              </div>
-
-              <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 backdrop-blur-md">
-                <div className="flex items-center gap-2 text-xs font-semibold text-zinc-400">
-                  <Zap className="h-4 w-4 text-white" />
-                  Tempo Economizado
-                </div>
-                <p className="mt-1 text-2xl font-bold text-white">+18 hrs</p>
-                <p className="text-[11px] text-zinc-400">livres toda semana</p>
-              </div>
-            </div>
-
-            {/* Card 3: Testimonial */}
-            <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-3.5 backdrop-blur-sm">
-              <div className="flex items-center gap-1 text-white mb-1.5">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-3.5 w-3.5 fill-white text-white" />
-                ))}
-              </div>
-              <p className="text-xs italic text-zinc-300 leading-relaxed">
-                "Antes eu passava o dia cobrando no WhatsApp. Agora o sistema faz tudo sozinho e meus clientes adoram o Pix instantâneo."
-              </p>
-              <p className="mt-1.5 text-[11px] font-semibold text-zinc-400">
-                — Lucas R., revendedor com +380 clientes ativos
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Trust Badges */}
-        <div className="relative z-10 flex flex-wrap items-center gap-6 border-t border-white/10 pt-6 text-xs text-zinc-400">
-          <span className="flex items-center gap-1.5">
-            <ShieldCheck className="h-4 w-4 text-white" />
-            Criptografia de Ponta a Ponta
-          </span>
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="h-4 w-4 text-white" />
-            Backup Diário na Nuvem
-          </span>
-        </div>
-      </div>
-
-      {/* Lado Direito - Formulários de Autenticação */}
-      <div className="flex w-full flex-col p-6 sm:p-10 lg:w-1/2 lg:overflow-y-auto subtle-scrollbar">
-        {/* Header Superior */}
-        <header className="flex items-center justify-between">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="group gap-2 rounded-xl text-muted-foreground hover:text-foreground"
-          >
-            <Link to="/">
-              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-              <span>Voltar ao Início</span>
-            </Link>
+      <section className="relative flex min-h-[100dvh] flex-1 flex-col overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_0%,color-mix(in_oklch,var(--primary)_10%,transparent),transparent_34%)]" />
+        <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-8">
+          <Button asChild variant="ghost" size="sm" className="gap-2 rounded-xl text-muted-foreground">
+            <Link to="/"><ArrowLeft className="size-4" /> Voltar</Link>
           </Button>
-
-          <div className="flex items-center gap-3">
-            <div className="lg:hidden">
-              <SigmaLogo size="sm" />
-            </div>
-            <ThemeToggle />
-          </div>
+          <ThemeToggle />
         </header>
 
-        {/* Card Principal */}
-        <div className="mx-auto my-auto flex w-full max-w-[420px] flex-col justify-center py-8">
-          {/* Título & Descrição com animação suave */}
-          <div className="mb-6 space-y-1.5 text-center sm:text-left animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <h1 className="text-3xl font-black tracking-tight text-foreground">
-              {tab === "login" ? "Acessar Plataforma" : "Criar sua conta"}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {tab === "login"
-                ? "Insira seus dados para entrar no painel de gestão."
-                : "Preencha as informações para automatizar suas cobranças."}
-            </p>
+        <div className="relative z-10 mx-auto flex w-full max-w-[520px] flex-1 flex-col justify-center px-4 pb-8 pt-2 sm:px-8 sm:pb-12">
+          <div className="mb-7 lg:hidden">
+            <Link to="/" className="inline-flex items-center gap-2.5">
+              <SigmaLogo size="md" />
+              <div>
+                <p className="text-sm font-black tracking-tight">Painel Sigma</p>
+                <p className="text-[10px] font-medium text-muted-foreground">Gestão e automação</p>
+              </div>
+            </Link>
           </div>
 
-          {/* Abas Alternadoras */}
-          <Tabs value={tab} onValueChange={setTab} className="w-full">
-            <TabsList className="mb-6 grid h-12 w-full grid-cols-2 rounded-2xl bg-muted/70 p-1 border border-border/50">
-              <TabsTrigger
-                value="login"
-                className="rounded-xl font-semibold data-[state=checked]:bg-background data-[state=checked]:shadow-sm transition-all"
-              >
-                Entrar
-              </TabsTrigger>
-              <TabsTrigger
-                value="signup"
-                className="rounded-xl font-semibold data-[state=checked]:bg-background data-[state=checked]:shadow-sm transition-all"
-              >
-                Cadastrar
-              </TabsTrigger>
-            </TabsList>
+          <div className="rounded-[24px] border border-border/70 bg-card/85 p-5 shadow-[0_24px_80px_-48px_rgba(0,0,0,.7)] backdrop-blur-xl sm:p-7">
+            <div className="mb-6">
+              <p className="mb-2 inline-flex items-center gap-1.5 text-xs font-bold text-primary">
+                <ShieldCheck className="size-3.5" /> Acesso seguro
+              </p>
+              <h1 className="text-2xl font-black tracking-[-0.04em] sm:text-3xl">
+                {tab === "login" ? "Que bom ter você de volta" : "Comece gratuitamente"}
+              </h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {tab === "login" ? "Entre para continuar gerenciando sua operação." : "Crie sua conta e configure seu painel em poucos minutos."}
+              </p>
+            </div>
 
-            {/* ABA DE LOGIN */}
-            <TabsContent value="login" className="mt-0 focus-visible:outline-none">
-              <form onSubmit={signIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    E-mail
-                  </Label>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      <Mail className="h-4 w-4" />
-                    </span>
-                    <Input
-                      id="login-email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="seu@email.com"
-                      autoComplete="email"
-                      className="h-12 rounded-xl pl-10 transition-colors focus-visible:ring-primary"
-                    />
-                  </div>
-                </div>
+            <Tabs value={tab} onValueChange={(value) => { setTab(value); setPassword(""); setConfirmation(""); }} className="w-full">
+              <TabsList className="mb-6 grid h-12 w-full grid-cols-2 rounded-xl border border-border/60 bg-muted/60 p-1">
+                <TabsTrigger value="login" className="rounded-lg font-bold data-[state=checked]:bg-background data-[state=checked]:shadow-sm">Entrar</TabsTrigger>
+                <TabsTrigger value="signup" className="rounded-lg font-bold data-[state=checked]:bg-background data-[state=checked]:shadow-sm">Criar conta</TabsTrigger>
+              </TabsList>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="login-password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Senha
-                    </Label>
-                    <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
-                      <DialogTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (email.trim()) setForgotEmail(email.trim());
-                          }}
-                          className="text-xs font-semibold text-primary hover:underline transition-colors focus:outline-none"
-                        >
-                          Esqueceu a senha?
-                        </button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md rounded-2xl">
-                        <DialogHeader>
-                          <div className="mx-auto mb-2 grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
-                            <KeyRound className="h-6 w-6" />
-                          </div>
-                          <DialogTitle className="text-center text-xl font-bold">
-                            Recuperar Senha
-                          </DialogTitle>
-                          <DialogDescription className="text-center text-sm text-muted-foreground">
-                            Informe seu e-mail cadastrado. Enviaremos um link seguro para redefinir sua senha.
-                          </DialogDescription>
-                        </DialogHeader>
-
-                        {forgotSent ? (
-                          <div className="space-y-4 py-4 text-center animate-in fade-in zoom-in-95">
-                            <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white/10 text-white border border-white/20">
-                              <Check className="h-6 w-6" />
-                            </div>
-                            <p className="text-sm font-medium text-foreground">
-                              E-mail de recuperação enviado para <br />
-                              <strong className="text-white">{forgotEmail}</strong>
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Verifique sua caixa de entrada e spam. Siga as instruções no e-mail para definir uma nova senha.
-                            </p>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="w-full rounded-xl border-border hover:bg-muted"
-                              onClick={() => {
-                                setForgotSent(false);
-                                setForgotOpen(false);
-                              }}
-                            >
-                              Fechar
-                            </Button>
-                          </div>
-                        ) : (
-                          <form onSubmit={handleForgotPassword} className="space-y-4 pt-2">
-                            <div className="space-y-2">
-                              <Label htmlFor="forgot-email">Seu e-mail</Label>
-                              <div className="relative">
-                                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                  <Mail className="h-4 w-4" />
-                                </span>
-                                <Input
-                                  id="forgot-email"
-                                  type="email"
-                                  required
-                                  value={forgotEmail}
-                                  onChange={(e) => setForgotEmail(e.target.value)}
-                                  placeholder="seu@email.com"
-                                  className="h-12 rounded-xl pl-10"
-                                />
-                              </div>
-                            </div>
-
-                            <Button
-                              type="submit"
-                              className="h-12 w-full rounded-xl font-bold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
-                              disabled={forgotLoading}
-                            >
-                              {forgotLoading ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Send className="h-4 w-4" />
-                              )}
-                              {forgotLoading ? "Enviando..." : "Enviar link de recuperação"}
-                            </Button>
-                          </form>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      <Lock className="h-4 w-4" />
-                    </span>
-                    <Input
-                      id="login-password"
-                      type={showPass ? "text" : "password"}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      autoComplete="current-password"
-                      className="h-12 rounded-xl pl-10 pr-11 transition-colors focus-visible:ring-white"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPass((v) => !v)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      title={showPass ? "Ocultar senha" : "Ver senha"}
-                    >
-                      {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2 pt-1">
-                  <Checkbox
-                    id={rememberId}
-                    checked={rememberMe}
-                    onCheckedChange={(c) => setRememberMe(c === true)}
+              <TabsContent value="login" className="mt-0">
+                <form onSubmit={signIn} className="space-y-4">
+                  <AuthField id="login-email" label="E-mail" icon={<Mail className="size-4" />} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" autoComplete="email" />
+                  <AuthField
+                    id="login-password"
+                    label="Senha"
+                    icon={<Lock className="size-4" />}
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Digite sua senha"
+                    autoComplete="current-password"
+                    revealable
+                    revealed={showPassword}
+                    onReveal={() => setShowPassword((value) => !value)}
+                    hint={<button type="button" onClick={openRecovery} className="text-xs font-bold text-primary hover:underline">Esqueci minha senha</button>}
                   />
-                  <Label
-                    htmlFor={rememberId}
-                    className="text-xs font-normal text-muted-foreground cursor-pointer select-none"
-                  >
-                    Manter-me conectado neste dispositivo
-                  </Label>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="h-12 w-full rounded-xl font-semibold text-base bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md hover-lift"
-                  disabled={loading}
-                >
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {loading ? "Entrando..." : "Entrar no sistema"}
-                </Button>
-              </form>
-            </TabsContent>
-
-            {/* ABA DE CADASTRO */}
-            <TabsContent value="signup" className="mt-0 focus-visible:outline-none">
-              <form onSubmit={signUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Nome Completo
-                  </Label>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      <User className="h-4 w-4" />
-                    </span>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Ex: João da Silva"
-                      autoComplete="name"
-                      className="h-12 rounded-xl pl-10 transition-colors focus-visible:ring-primary"
-                    />
+                  <div className="flex items-center gap-2 py-1">
+                    <Checkbox id={rememberId} checked={remember} onCheckedChange={(value) => setRemember(value === true)} />
+                    <Label htmlFor={rememberId} className="cursor-pointer text-xs font-normal text-muted-foreground">Manter conectado neste dispositivo</Label>
                   </div>
-                </div>
+                  <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl text-sm font-bold shadow-lg shadow-primary/15">
+                    {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
+                    {loading ? "Entrando…" : "Entrar no painel"}
+                  </Button>
+                </form>
+              </TabsContent>
 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    E-mail
-                  </Label>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      <Mail className="h-4 w-4" />
-                    </span>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="seu@email.com"
-                      autoComplete="email"
-                      className="h-12 rounded-xl pl-10 transition-colors focus-visible:ring-primary"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="signup-password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Crie uma Senha
-                    </Label>
-                    {password && (
-                      <span className={`text-[11px] font-semibold ${strength.text}`}>
-                        Força: {strength.label}
-                      </span>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      <Lock className="h-4 w-4" />
-                    </span>
-                    <Input
-                      id="signup-password"
-                      type={showPass ? "text" : "password"}
-                      required
-                      minLength={6}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Mínimo 6 caracteres"
-                      autoComplete="new-password"
-                      className="h-12 rounded-xl pl-10 pr-11 transition-colors focus-visible:ring-primary"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPass((v) => !v)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      title={showPass ? "Ocultar senha" : "Ver senha"}
-                    >
-                      {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-
-                  {/* Barra de Força da Senha */}
-                  {password.length > 0 && (
-                    <div className="space-y-1 pt-1">
-                      <div className="flex h-1.5 w-full gap-1 overflow-hidden rounded-full bg-muted">
-                        <div className={`h-full flex-1 rounded-full transition-all ${strength.score >= 1 ? strength.color : "bg-transparent"}`} />
-                        <div className={`h-full flex-1 rounded-full transition-all ${strength.score >= 2 ? strength.color : "bg-transparent"}`} />
-                        <div className={`h-full flex-1 rounded-full transition-all ${strength.score >= 3 ? strength.color : "bg-transparent"}`} />
-                        <div className={`h-full flex-1 rounded-full transition-all ${strength.score >= 4 ? strength.color : "bg-transparent"}`} />
-                      </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        Use 8+ caracteres misturando letras maiúsculas, minúsculas e números.
-                      </p>
+              <TabsContent value="signup" className="mt-0">
+                <form onSubmit={signUp} className="space-y-4">
+                  <AuthField id="signup-name" label="Seu nome" icon={<User className="size-4" />} required value={name} onChange={(e) => setName(e.target.value)} placeholder="Como podemos chamar você?" autoComplete="name" />
+                  <AuthField id="signup-email" label="E-mail" icon={<Mail className="size-4" />} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" autoComplete="email" />
+                  <AuthField
+                    id="signup-password"
+                    label="Crie uma senha"
+                    icon={<Lock className="size-4" />}
+                    type={showPassword ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Mínimo de 6 caracteres"
+                    autoComplete="new-password"
+                    revealable
+                    revealed={showPassword}
+                    onReveal={() => setShowPassword((value) => !value)}
+                    hint={password ? <span className="text-[11px] font-bold text-muted-foreground">{strength.label}</span> : null}
+                  />
+                  {password && (
+                    <div className="grid grid-cols-4 gap-1" aria-label={`Força da senha: ${strength.label}`}>
+                      {[1, 2, 3, 4].map((level) => <span key={level} className={cn("h-1 rounded-full bg-muted", strength.score >= level && strength.color)} />)}
                     </div>
                   )}
-                </div>
+                  <AuthField
+                    id="signup-confirmation"
+                    label="Confirme a senha"
+                    icon={<Lock className="size-4" />}
+                    type={showConfirmation ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={confirmation}
+                    onChange={(e) => setConfirmation(e.target.value)}
+                    placeholder="Repita a senha"
+                    autoComplete="new-password"
+                    invalid={mismatch}
+                    revealable
+                    revealed={showConfirmation}
+                    onReveal={() => setShowConfirmation((value) => !value)}
+                    hint={matches ? <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-500"><Check className="size-3" /> Confere</span> : mismatch ? <span className="flex items-center gap-1 text-[11px] font-bold text-destructive"><X className="size-3" /> Diferente</span> : null}
+                  />
+                  <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl text-sm font-bold shadow-lg shadow-primary/15">
+                    {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
+                    {loading ? "Criando conta…" : "Criar minha conta grátis"}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="signup-confirm-password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Confirme sua Senha
-                    </Label>
-                    {passwordsMatch && (
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-white">
-                        <Check className="h-3.5 w-3.5" /> Senhas conferem
-                      </span>
-                    )}
-                    {passwordsMismatch && (
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-zinc-400">
-                        <X className="h-3.5 w-3.5" /> Senhas não coincidem
-                      </span>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      <Lock className="h-4 w-4" />
-                    </span>
-                    <Input
-                      id="signup-confirm-password"
-                      type={showConfirmPass ? "text" : "password"}
-                      required
-                      minLength={6}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Repita sua senha"
-                      autoComplete="new-password"
-                      className={`h-12 rounded-xl pl-10 pr-11 transition-colors focus-visible:ring-white ${
-                        passwordsMismatch ? "border-zinc-500 focus-visible:ring-zinc-400" : ""
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPass((v) => !v)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      title={showConfirmPass ? "Ocultar senha" : "Ver senha"}
-                    >
-                      {showConfirmPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
+            <div className="my-5 flex items-center gap-3"><span className="h-px flex-1 bg-border" /><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">ou</span><span className="h-px flex-1 bg-border" /></div>
 
-                <Button
-                  type="submit"
-                  className="h-12 w-full rounded-xl font-semibold text-base bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md hover-lift"
-                  disabled={loading}
-                >
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {loading ? "Criando conta..." : "Criar minha conta"}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-
-          {/* Divisor Social */}
-          <div className="my-6 flex items-center gap-3">
-            <span className="h-px flex-1 bg-border/70" />
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              Ou acesse com
-            </span>
-            <span className="h-px flex-1 bg-border/70" />
+            <Button type="button" variant="outline" onClick={signInWithGoogle} disabled={googleLoading} className="h-12 w-full gap-3 rounded-xl bg-background/55 font-bold">
+              {googleLoading ? <Loader2 className="size-4 animate-spin" /> : <GoogleIcon />}
+              {googleLoading ? "Conectando…" : "Continuar com Google"}
+            </Button>
           </div>
 
-          {/* Botão Oficial do Google */}
-          <Button
-            type="button"
-            variant="outline"
-            className="h-12 w-full gap-3 rounded-xl border-border/80 bg-card hover:bg-muted/50 font-semibold transition-all hover:shadow-sm"
-            onClick={handleGoogleLogin}
-            disabled={googleLoading}
-          >
-            {googleLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            ) : (
-              <GoogleIcon className="h-5 w-5 shrink-0" />
-            )}
-            <span>Continuar com o Google</span>
-          </Button>
+          <p className="px-4 pt-5 text-center text-[11px] leading-relaxed text-muted-foreground">
+            Ao continuar, você concorda com os termos de uso e a política de privacidade.
+          </p>
         </div>
+      </section>
 
-        {/* Rodapé de Termos */}
-        <p className="mt-auto pt-6 text-center text-xs text-muted-foreground">
-          Ao continuar, você concorda com os{" "}
-          <Link to="/" className="font-medium text-foreground underline hover:text-primary transition-colors">
-            Termos de Serviço
-          </Link>{" "}
-          e com a{" "}
-          <Link to="/" className="font-medium text-foreground underline hover:text-primary transition-colors">
-            Política de Privacidade
-          </Link>
-          .
-        </p>
-      </div>
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="w-[calc(100%_-_2rem)] rounded-2xl sm:max-w-md">
+          <DialogHeader className="text-center sm:text-center">
+            <span className="mx-auto mb-2 grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary"><KeyRound className="size-5" /></span>
+            <DialogTitle>Recuperar senha</DialogTitle>
+            <DialogDescription>Enviaremos um link seguro para o e-mail da sua conta.</DialogDescription>
+          </DialogHeader>
+          {forgotSent ? (
+            <div className="space-y-4 py-2 text-center">
+              <span className="mx-auto grid size-12 place-items-center rounded-full bg-emerald-500/10 text-emerald-500"><Check className="size-5" /></span>
+              <p className="text-sm">Link enviado para <strong>{forgotEmail}</strong>.</p>
+              <p className="text-xs text-muted-foreground">Confira também sua caixa de spam.</p>
+              <Button variant="outline" className="w-full" onClick={() => setForgotOpen(false)}>Entendi</Button>
+            </div>
+          ) : (
+            <form onSubmit={recoverPassword} className="space-y-4 pt-2">
+              <AuthField id="forgot-email" label="E-mail da conta" icon={<Mail className="size-4" />} type="email" required value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="voce@email.com" autoComplete="email" />
+              <Button type="submit" disabled={forgotLoading} className="h-12 w-full gap-2 rounded-xl font-bold">
+                {forgotLoading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                {forgotLoading ? "Enviando…" : "Enviar link de recuperação"}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
