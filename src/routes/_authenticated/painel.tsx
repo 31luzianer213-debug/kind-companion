@@ -5,7 +5,7 @@ import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { runAutoBilling, sendWhatsAppMessage, getWhatsAppStatus } from "@/lib/whatsapp.functions";
-import { getSigmaSettings, syncSigmaClients } from "@/lib/sigma.functions";
+import { listSigmaServers, syncAllSigmaServers } from "@/lib/sigma-servers.functions";
 import { approveOrder, type OrderItem } from "@/lib/orders.functions";
 import defaultOrdersSeed from "../../../data/orders_default.json";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -79,8 +79,8 @@ function Painel() {
   const queryClient = useQueryClient();
   const billing = useServerFn(runAutoBilling);
   const send = useServerFn(sendWhatsAppMessage);
-  const syncSigma = useServerFn(syncSigmaClients);
-  const getSigma = useServerFn(getSigmaSettings);
+  const syncSigma = useServerFn(syncAllSigmaServers);
+  const getSigma = useServerFn(listSigmaServers);
   const approveFn = useServerFn(approveOrder);
   const getStatus = useServerFn(getWhatsAppStatus);
 
@@ -142,7 +142,7 @@ function Painel() {
         supabase.from("invoices").select("*, clients(name, phone)").order("due_date", { ascending: true }),
         supabase.from("message_logs").select("*, clients(name)").order("created_at", { ascending: false }).limit(6),
         supabase.from("whatsapp_settings").select("*").maybeSingle(),
-        getSigma({}).catch(() => ({ ok: false, settings: null })),
+        getSigma({}).catch(() => ({ ok: false as const, servers: [] })),
       ]);
 
       return {
@@ -150,7 +150,7 @@ function Painel() {
         invoices: invoices.data ?? [],
         logs: logs.data ?? [],
         settings: settings.data,
-        sigma: sigmaRes?.ok ? sigmaRes.settings : null,
+        sigmaServers: sigmaRes?.ok ? sigmaRes.servers : [],
         orders: ordersList,
       };
     },
@@ -165,7 +165,8 @@ function Painel() {
   const rawOrders = (data?.orders ?? (defaultOrdersSeed as unknown as OrderItem[])) ?? [];
   const orders = rawOrders.filter((o) => !deletedIds.has(o.id));
   const pendingOrders = orders.filter((o) => o.status === "pending");
-  const sigmaSettings = data?.sigma;
+  const sigmaServers = data?.sigmaServers ?? [];
+  const defaultSigmaServer = sigmaServers.find((server) => server.is_default) ?? sigmaServers[0];
 
   // Financial calculations
   const activeClients = useMemo(() => clients.filter((c) => c.status === "active"), [clients]);
@@ -197,10 +198,9 @@ function Painel() {
     [pendingInvoices],
   );
 
-  const serverDisplayName =
-    sigmaSettings?.sigma_server_name?.trim() ||
-    sigmaSettings?.sigma_server_display_name ||
-    (sigmaSettings?.sigma_url ? sigmaSettings.sigma_url.replace(/^https?:\/\//i, "").split("/")[0] : "Servidor Sigma");
+  const serverDisplayName = sigmaServers.length > 1
+    ? `${sigmaServers.length} painéis Sigma`
+    : defaultSigmaServer?.name || "Servidor Sigma";
 
   // Clientes que vencem hoje ou nos próximos 3 dias
   const todayStr = new Date().toISOString().split("T")[0] ?? "";
@@ -275,7 +275,7 @@ function Painel() {
   async function handleSyncSigma() {
     setSyncingSigma(true);
     try {
-      const res = await syncSigma({ data: {} });
+      const res = await syncSigma({});
       if (res.ok) {
         toast.success(`Sigma sincronizado: ${res.created} novos e ${res.updated} atualizados!`);
         queryClient.invalidateQueries();
@@ -298,7 +298,7 @@ function Painel() {
     }
   }
 
-  const isSigmaOk = Boolean(sigmaSettings?.isConfigured);
+  const isSigmaOk = sigmaServers.some((server) => server.enabled);
   const isWaOk = waStatus?.state === "open";
   const isPixOk = Boolean(data?.settings?.pix_key || data?.settings?.asaas_token || data?.settings?.mercadopago_token);
   const completedSteps = (isSigmaOk ? 1 : 0) + (isWaOk ? 1 : 0) + (isPixOk ? 1 : 0);
