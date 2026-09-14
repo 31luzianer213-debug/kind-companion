@@ -109,6 +109,81 @@ function formatTargetJid(raw) {
   return `${digits}@s.whatsapp.net`;
 }
 
+/**
+ * Gera variações BR (com/sem o nono dígito) para um número.
+ */
+function brVariants(digits) {
+  const out = new Set([digits]);
+  if (digits.startsWith("55")) {
+    const ddd = digits.slice(2, 4);
+    const rest = digits.slice(4);
+    if (rest.length === 9 && rest.startsWith("9")) out.add(`55${ddd}${rest.slice(1)}`);
+    if (rest.length === 8) out.add(`55${ddd}9${rest}`);
+  }
+  return Array.from(out);
+}
+
+/**
+ * Descobre o JID real registrado no WhatsApp.
+ * Enviar para um JID inexistente/errado é a causa principal
+ * do aviso "mensagem indisponível" no celular do cliente.
+ */
+async function resolveJid(sock, jid) {
+  if (!jid || jid.endsWith("@g.us") || jid.endsWith("@lid")) return jid;
+  const digits = jid.split("@")[0].replace(/\D/g, "");
+  try {
+    for (const variant of brVariants(digits)) {
+      const found = await sock.onWhatsApp(variant);
+      const hit = Array.isArray(found) ? found.find((f) => f?.exists && f?.jid) : null;
+      if (hit) return hit.jid;
+    }
+  } catch {}
+  return jid;
+}
+
+/** Converte botões em um menu de texto simples (100% compatível). */
+function buttonsToText(text, buttons, footer) {
+  const lines = [];
+  if (text) lines.push(text);
+  const items = (buttons || []).map((b, i) => {
+    if (b?.name === "cta_copy" || b?.name === "cta_url") {
+      try {
+        const p = JSON.parse(b.buttonParamsJson || "{}");
+        if (p.copy_code) return `${p.display_text || "Código"}:\n${p.copy_code}`;
+        if (p.url) return `${p.display_text || "Link"}: ${p.url}`;
+      } catch {}
+      return null;
+    }
+    const label = b?.text || b?.displayText || b?.title || `Opção ${i + 1}`;
+    return `*${i + 1}* - ${label}`;
+  });
+  const valid = items.filter(Boolean);
+  if (valid.length) lines.push("", valid.join("\n"));
+  if (footer) lines.push("", `_${footer}_`);
+  return lines.join("\n").trim();
+}
+
+/** Converte listas em um menu de texto simples. */
+function listToText(text, sections, footer) {
+  const lines = [];
+  if (text) lines.push(text);
+  let n = 0;
+  for (const sec of sections || []) {
+    if (sec?.title) lines.push("", `*${sec.title}*`);
+    for (const row of sec?.rows || []) {
+      n += 1;
+      const id = row?.rowId || String(n);
+      lines.push(`*${id}* - ${row?.title || ""}${row?.description ? `\n   ${row.description}` : ""}`);
+    }
+  }
+  if (footer) lines.push("", `_${footer}_`);
+  return lines.join("\n").trim();
+}
+
+// Mensagens interativas só quando explicitamente habilitadas —
+// por padrão o bot usa texto puro, que nunca aparece como indisponível.
+const INTERACTIVE_ENABLED = process.env.BAILEYS_INTERACTIVE === "1";
+
 function extractCleanText(messageObj) {
   if (!messageObj || typeof messageObj !== "object") return "";
   const unwrapped =
