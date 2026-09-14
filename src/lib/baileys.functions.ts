@@ -124,8 +124,9 @@ export const connectBaileys = createServerFn({ method: "POST" })
 
     const evo = await import("./evolution-api.server");
     if (evo.isEvolutionEnabled()) {
-      const configuredOrigin = process.env["PUBLIC_APP_URL"]?.trim();
-      if (data?.origin && configuredOrigin) {
+      const configuredOrigin =
+        process.env["PUBLIC_APP_URL"]?.trim() || "https://embrace-essence-app.lovable.app";
+      if (data?.origin) {
         try {
           const requested = new URL(data.origin).origin;
           const allowed = new URL(configuredOrigin).origin;
