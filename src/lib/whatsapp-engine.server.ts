@@ -63,9 +63,10 @@ export async function resolveTargetUserId(
 
 function interactiveAsText(interactive: BotInteractivePayload): string {
   if (interactive.type === "buttons") {
-    const options = interactive.buttons.map((button, index) => {
+    const options = interactive.buttons.map((button) => {
       const value = button.copyCode || button.url;
-      return `${index + 1}. ${button.displayText}${value ? `\n${value}` : ""}`;
+      const command = button.type === "reply" || (!button.copyCode && !button.url) ? `${button.id}. ` : "";
+      return `${command}${button.displayText}${value ? `\n${value}` : ""}`;
     });
     return options.length ? options.join("\n\n") : "";
   }
@@ -179,7 +180,10 @@ export async function processIncomingWhatsAppEvent(
       else await sendWhatsAppMedia(message.phone, media, message.instance || undefined);
     }
 
-    for (const extra of result.extraMessages ?? []) {
+    const hasCopyValue =
+      result.interactive?.type === "buttons" &&
+      result.interactive.buttons.some((button) => Boolean(button.copyCode));
+    for (const extra of hasCopyValue ? [] : result.extraMessages ?? []) {
       if (!extra.trim()) continue;
       if (isEvolutionEnabled()) await evoSendText(message.phone, extra);
       else await sendWhatsAppText(message.phone, extra, message.instance || undefined);
