@@ -942,7 +942,8 @@ const server = http.createServer(async (req, res) => {
         // Disparo de Mídia (ex: QR Code PIX em foto separada)
         if (payload.media && payload.media.base64) {
           const buffer = Buffer.from(payload.media.base64.replace(/^data:[^;]+;base64,/, ""), "base64");
-          await session.sock.sendMessage(jid, {
+          const target = await resolveJid(session.sock, jid);
+          await session.sock.sendMessage(target, {
             image: buffer,
             caption: text || payload.media.caption || "",
             mimetype: payload.media.mimetype || "image/png",
