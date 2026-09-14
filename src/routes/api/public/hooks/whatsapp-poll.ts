@@ -47,21 +47,17 @@ async function runPoll(request: Request) {
     const messageId = String(record?.key?.id || "");
     if (!messageId) continue;
 
-    const { error: claimError } = await supabaseAdmin
-      .from("whatsapp_processed_messages")
-      .insert({ message_id: messageId });
-    if (claimError) continue; // já processada por webhook ou execução anterior
-
     try {
       const result = await processIncomingWhatsAppEvent(
         { event: "messages.upsert", instance: record?.instance || instance, data: record },
         null,
       );
-      results.push({ messageId, ...result });
+      if (result.handled) results.push({ messageId, ...result });
     } catch (error: any) {
       results.push({ messageId, handled: false, error: error?.message || "falha" });
     }
   }
+
 
   return Response.json({ ok: true, checked: pending.length, processed: results.length, results });
 }
