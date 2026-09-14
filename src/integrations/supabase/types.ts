@@ -337,6 +337,54 @@ export type Database = {
         }
         Relationships: []
       }
+      sigma_panels: {
+        Row: {
+          auto_renew: boolean
+          created_at: string
+          enabled: boolean
+          id: string
+          last_sync_at: string | null
+          name: string
+          password: string | null
+          streaming_dns: string | null
+          token: string | null
+          updated_at: string
+          url: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          auto_renew?: boolean
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_sync_at?: string | null
+          name?: string
+          password?: string | null
+          streaming_dns?: string | null
+          token?: string | null
+          updated_at?: string
+          url: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          auto_renew?: boolean
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_sync_at?: string | null
+          name?: string
+          password?: string | null
+          streaming_dns?: string | null
+          token?: string | null
+          updated_at?: string
+          url?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_settings: {
         Row: {
           api_key: string | null
