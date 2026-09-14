@@ -108,6 +108,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { data: whatsappStatus } = useQuery({
     queryKey: ["layout-whatsapp-status"],
     queryFn: () => statusFn({ data: { origin: typeof window !== "undefined" ? window.location.origin : undefined } }),
+    enabled: pathname === "/painel" || pathname.startsWith("/whatsapp"),
     staleTime: 60_000,
     refetchInterval: 120_000,
     refetchOnWindowFocus: false,
