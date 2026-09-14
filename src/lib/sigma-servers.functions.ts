@@ -139,6 +139,67 @@ export const deleteSigmaServer = createServerFn({ method: "POST" })
       : { ok: true as const, deletedClients: clientIds.length, error: null };
   });
 
+async function deleteLocalClients(supabase: any, userId: string, clientIds: string[]) {
+  if (clientIds.length === 0) return null;
+  const { error: logsError } = await supabase.from("message_logs").delete().eq("user_id", userId).in("client_id", clientIds);
+  if (logsError) return `Falha ao remover históricos: ${logsError.message}`;
+  const { error: invoicesError } = await supabase.from("invoices").delete().eq("user_id", userId).in("client_id", clientIds);
+  if (invoicesError) return `Falha ao remover cobranças: ${invoicesError.message}`;
+  const { error: clientsError } = await supabase.from("clients").delete().eq("user_id", userId).in("id", clientIds);
+  return clientsError ? `Falha ao remover clientes: ${clientsError.message}` : null;
+}
+
+/**
+ * Repara vínculos antigos e remove somente clientes Sigma órfãos de painéis
+ * que já não existem. É idempotente e seguro para executar ao abrir Clientes.
+ */
+export const cleanupOrphanSigmaClients = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const [{ data: panels, error: panelsError }, { data: orphans, error: clientsError }] = await Promise.all([
+      context.supabase.from("sigma_panels").select("id, name").eq("user_id", context.userId),
+      context.supabase
+        .from("clients")
+        .select("id, notes")
+        .eq("user_id", context.userId)
+        .not("sigma_customer_id", "is", null)
+        .is("panel_id", null),
+    ]);
+    if (panelsError || clientsError) {
+      return { ok: false as const, removed: 0, repaired: 0, error: panelsError?.message || clientsError?.message };
+    }
+
+    const activePanels = panels ?? [];
+    const toDelete: string[] = [];
+    let repaired = 0;
+
+    for (const client of orphans ?? []) {
+      const recordedName = String(client.notes || "").match(/(?:^|\n)Servidor:\s*([^\n]+)/i)?.[1]?.trim();
+      const matchingPanel = recordedName
+        ? activePanels.find((panel) => panel.name.trim().toLowerCase() === recordedName.toLowerCase())
+        : activePanels.length === 1 ? activePanels[0] : null;
+
+      if (matchingPanel) {
+        const { error } = await context.supabase
+          .from("clients")
+          .update({ panel_id: matchingPanel.id })
+          .eq("id", client.id)
+          .eq("user_id", context.userId);
+        if (!error) repaired++;
+        continue;
+      }
+
+      // With no panels every Sigma client is orphaned. With remaining panels,
+      // delete only rows that explicitly name a server that no longer exists.
+      if (activePanels.length === 0 || recordedName) toDelete.push(client.id);
+    }
+
+    const deleteError = await deleteLocalClients(context.supabase, context.userId, toDelete);
+    return deleteError
+      ? { ok: false as const, removed: 0, repaired, error: deleteError }
+      : { ok: true as const, removed: toDelete.length, repaired, error: null };
+  });
+
 export const testSigmaServer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: SigmaServerInput) => input)
