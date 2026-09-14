@@ -77,14 +77,9 @@ function interactiveAsText(interactive: BotInteractivePayload): string {
   return rows.join("\n");
 }
 
-function completeReply(reply: string, interactive?: BotInteractivePayload, action?: string): string {
-  // O menu principal já contém as opções no texto. Não acrescente a mesma lista
-  // novamente quando a Evolution API precisar usar o fallback em texto.
-  if (action === "menu_shown") return reply.trim();
-
-  const options = interactive ? interactiveAsText(interactive) : "";
-  if (!options || reply.includes(options)) return reply.trim();
-  return `${reply.trim()}\n\n${options}`.trim();
+function completeReply(reply: string, _interactive?: BotInteractivePayload, _action?: string): string {
+  // O bot usa texto puro. Opções interativas nunca devem ser anexadas à resposta.
+  return reply.trim();
 }
 
 async function recordMessage(params: {
