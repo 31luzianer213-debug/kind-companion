@@ -177,6 +177,8 @@ export function generateAppsMessage(config: BotConfigData, serverName: string): 
 
 // Cache em memória para leitura ultrarrápida (0ms) sem bloqueio de RLS
 const botConfigCache = new Map<string, BotConfigData>();
+const botConfigCacheAt = new Map<string, number>();
+
 const paymentSettingsCache = new Map<string, any>();
 
 export function getCanonicalUserId(userId?: string): string {
@@ -209,17 +211,24 @@ function readLocalConfig(userId?: string): Partial<BotConfigData> | null {
 function writeLocalConfig(userId: string | undefined, data: BotConfigData): void {
   const canonicalId = getCanonicalUserId(userId);
   botConfigCache.set(canonicalId, data);
-  if (userId) botConfigCache.set(userId, data);
+  botConfigCacheAt.set(canonicalId, Date.now());
+  if (userId) {
+    botConfigCache.set(userId, data);
+    botConfigCacheAt.set(userId, Date.now());
+  }
+
 }
 
 /** Carrega as configurações do bot com persistência em cache e banco de dados */
 export async function loadBotConfig(supabase: any, userId: string): Promise<BotConfigData> {
   const uid = userId || "default";
 
-  // 1. Cache em memória para resposta instantânea
-  if (botConfigCache.has(uid)) {
+  // 1. Cache em memória de curta duração (30s) para resposta instantânea
+  const cachedAt = botConfigCacheAt.get(uid) || 0;
+  if (botConfigCache.has(uid) && Date.now() - cachedAt < 30_000) {
     return botConfigCache.get(uid)!;
   }
+
 
   const localPayment = readLocalPaymentSettings(uid);
 
@@ -254,12 +263,11 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
       metaBot?.businessName?.trim() ||
       DEFAULT_BOT_CONFIG.businessName;
 
+    // O robô de atendimento é independente da cobrança automática:
+    // só fica desligado se o painel desligar explicitamente.
     const enabled =
-      metaBot?.enabled !== undefined
-        ? Boolean(metaBot.enabled)
-        : wsRow?.auto_send_enabled !== undefined
-          ? Boolean(wsRow.auto_send_enabled)
-          : DEFAULT_BOT_CONFIG.enabled;
+      metaBot?.enabled !== undefined ? Boolean(metaBot.enabled) : DEFAULT_BOT_CONFIG.enabled;
+
 
     const config: BotConfigData = {
       enabled,
@@ -300,6 +308,8 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
     };
 
     botConfigCache.set(uid, config);
+    botConfigCacheAt.set(uid, Date.now());
+
     return config;
   } catch (err) {
     console.error("[loadBotConfig] Fallback para DEFAULT_BOT_CONFIG:", err);
@@ -319,6 +329,8 @@ export async function saveBotConfigServer(
 
   // 1. Atualiza imediatamente cache em memória
   botConfigCache.set(uid, updated);
+  botConfigCacheAt.set(uid, Date.now());
+
   writeLocalConfig(uid, updated);
 
   if (updated.mercadopago_token || updated.pixKey || updated.pixHolder) {

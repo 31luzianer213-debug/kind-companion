@@ -168,15 +168,20 @@ export async function resolveTargetUserId(
     } catch {}
   }
 
-  // Fallback: primeira conta de usuário no banco
+  // Fallback: prioriza a conta realmente configurada (robô/automação ativa)
   try {
-    const { data: firstAccount } = await supabaseAdmin
+    const { data: accounts } = await supabaseAdmin
       .from("whatsapp_settings")
-      .select("user_id")
-      .limit(1)
-      .maybeSingle();
-    if (firstAccount?.user_id) return firstAccount.user_id;
+      .select("user_id, auto_send_enabled, business_name, updated_at");
+    const list = accounts ?? [];
+    const best =
+      list.find((a: any) => a.auto_send_enabled && a.business_name?.trim()) ||
+      list.find((a: any) => a.auto_send_enabled) ||
+      list.find((a: any) => a.business_name?.trim()) ||
+      list[0];
+    if (best?.user_id) return best.user_id;
   } catch {}
+
 
   try {
     const { data: firstProf } = await supabaseAdmin.from("profiles").select("id").limit(1).maybeSingle();
