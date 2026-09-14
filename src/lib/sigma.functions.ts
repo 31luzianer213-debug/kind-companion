@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { CreateSigmaCustomerInput, SigmaConfig } from "./sigma.panel";
 import { extractCleanIptvDns, generateM3uUrl, generateEpgUrl } from "./format";
+import { loadDefaultSigmaServer, loadSigmaServerForClient } from "./sigma-servers.functions";
 
 export type SigmaSettingsPayload = {
   sigma_url: string;
@@ -748,6 +749,7 @@ export const createSigmaClient = createServerFn({ method: "POST" })
   .inputValidator(
     (input: {
       clientId?: string;
+      serverId?: string;
       name: string;
       username: string;
       password?: string;
@@ -762,7 +764,7 @@ export const createSigmaClient = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { createSigmaCustomer, ensureSigmaToken } = await import("./sigma.server");
     const { supabase, userId, claims } = context;
-    const config = await loadConfig(supabase, userId, claims);
+    const config = await loadDefaultSigmaServer(supabase, userId, data.serverId);
 
     if (!hasSigmaAccess(config)) {
       return { ok: false as const, error: "Painel Sigma não configurado. Verifique as Configurações." };
@@ -792,6 +794,7 @@ export const createSigmaClient = createServerFn({ method: "POST" })
         await supabase
           .from("clients")
           .update({
+            sigma_server_id: config.id,
             sigma_customer_id: created.id,
             sigma_username: created.username,
             sigma_synced_at: now,
@@ -838,7 +841,7 @@ export const updateSigmaClient = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { updateSigmaCustomer, ensureSigmaToken } = await import("./sigma.server");
     const { supabase, userId, claims } = context;
-    const config = await loadConfig(supabase, userId, claims);
+    const config = await loadSigmaServerForClient(supabase, userId, data.clientId);
 
     const { data: client } = await supabase
       .from("clients")
@@ -926,7 +929,7 @@ export const deleteSigmaClient = createServerFn({ method: "POST" })
     let sigmaError: string | null = null;
 
     if (data.deleteFromSigma && (client.sigma_customer_id || client.sigma_username || client.iptv_username)) {
-      const config = await loadConfig(supabase, userId, claims);
+      const config = await loadSigmaServerForClient(supabase, userId, data.clientId);
       if (hasSigmaAccess(config)) {
         try {
           const token = await ensureSigmaToken(config);
@@ -971,7 +974,7 @@ export const renewSigmaClient = createServerFn({ method: "POST" })
     const { renewSigmaCustomer, ensureSigmaToken } = await import("./sigma.server");
     const { supabase, userId, claims } = context;
 
-    const config = await loadConfig(supabase, userId, claims);
+    const config = await loadSigmaServerForClient(supabase, userId, data.clientId);
     const { data: client } = await supabase
       .from("clients")
       .select("id, next_due_date, sigma_customer_id, sigma_username, iptv_username")
@@ -1029,7 +1032,7 @@ export const toggleSigmaClientBlock = createServerFn({ method: "POST" })
     const { toggleSigmaCustomerStatus, ensureSigmaToken } = await import("./sigma.server");
     const { supabase, userId, claims } = context;
 
-    const config = await loadConfig(supabase, userId, claims);
+    const config = await loadSigmaServerForClient(supabase, userId, data.clientId);
     const { data: client } = await supabase
       .from("clients")
       .select("id, sigma_customer_id, sigma_username, iptv_username, status")
@@ -1074,12 +1077,12 @@ export const toggleSigmaClientBlock = createServerFn({ method: "POST" })
  */
 export const createSigmaQuickTest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input?: { hours?: number; name?: string; phone?: string; packageId?: string | number }) => input ?? {})
+  .inputValidator((input?: { hours?: number; name?: string; phone?: string; packageId?: string | number; serverId?: string }) => input ?? {})
   .handler(async ({ data, context }) => {
     const { createSigmaCustomer, ensureSigmaToken } = await import("./sigma.server");
     const { supabase, userId, claims } = context;
 
-    const config = await loadConfig(supabase, userId, claims);
+    const config = await loadDefaultSigmaServer(supabase, userId, data?.serverId);
     if (!hasSigmaAccess(config)) {
       return { ok: false as const, error: "Painel Sigma não configurado. Acesse Configurações -> Servidor Sigma." };
     }
