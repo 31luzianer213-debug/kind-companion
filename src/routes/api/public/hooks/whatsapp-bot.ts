@@ -23,17 +23,13 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
         }
 
         const url = new URL(request.url);
-        const queryUserId =
-          url.searchParams.get("userId") ||
-          url.searchParams.get("user_id") ||
-          payload?.instance ||
-          payload?.data?.instance;
+        const queryUserId = url.searchParams.get("userId") || url.searchParams.get("user_id");
 
         try {
           const result = await processIncomingWhatsAppEvent(payload, queryUserId);
           return Response.json({ ok: true, ...result });
         } catch (error: any) {
-          console.error("[WhatsApp Bot Webhook] Erro ao processar evento:", error);
+          console.error("[WhatsApp Bot Webhook] Erro ao processar evento:", error?.message || error);
           return Response.json(
             { ok: false, error: error?.message || "Erro interno no servidor" },
             { status: 500 },
