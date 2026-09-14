@@ -211,7 +211,12 @@ function readLocalConfig(userId?: string): Partial<BotConfigData> | null {
 function writeLocalConfig(userId: string | undefined, data: BotConfigData): void {
   const canonicalId = getCanonicalUserId(userId);
   botConfigCache.set(canonicalId, data);
-  if (userId) botConfigCache.set(userId, data);
+  botConfigCacheAt.set(canonicalId, Date.now());
+  if (userId) {
+    botConfigCache.set(userId, data);
+    botConfigCacheAt.set(userId, Date.now());
+  }
+
 }
 
 /** Carrega as configurações do bot com persistência em cache e banco de dados */
