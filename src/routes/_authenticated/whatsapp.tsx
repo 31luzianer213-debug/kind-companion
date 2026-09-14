@@ -19,8 +19,6 @@ import {
   Clock,
   Copy,
   KeyRound,
-  Layers,
-  List,
   Loader2,
   LogOut,
   MessageCircle,
@@ -31,7 +29,6 @@ import {
   ShieldCheck,
   Smartphone,
   Wifi,
-  Zap,
 } from "lucide-react";
 import {
   getBaileysStatus,
@@ -337,7 +334,7 @@ function WhatsAppPage() {
     setTimeout(() => setCopiedCode(false), 2000);
   }
 
-  async function handleSendTest(type: "text" | "buttons" | "list" | "pix_copy") {
+  async function handleSendTest() {
     const cleanNum = testNumber.replace(/\D/g, "");
     if (cleanNum.length < 10) {
       toast.error("Informe o número de teste com DDD (ex: 5593991614242)");
@@ -351,7 +348,7 @@ function WhatsAppPage() {
         const direct = await fetch("http://localhost:3001/api/send-test", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ instance: instanceId, to: cleanNum, text: testText, type }),
+          body: JSON.stringify({ instance: instanceId, to: cleanNum, text: testText, type: "text" }),
           signal: AbortSignal.timeout(6000),
         });
         if (direct.ok) sent = true;
@@ -363,18 +360,12 @@ function WhatsAppPage() {
             instance: instanceId,
             to: cleanNum,
             text: testText,
-            type,
+            type: "text",
           },
         });
       }
 
-      const typeLabels = {
-        text: "Texto simples",
-        buttons: "Botões rápidos",
-        list: "Lista interativa",
-        pix_copy: "Botão Copiar PIX",
-      };
-      toast.success(`Teste (${typeLabels[type]}) enviado! Confira seu WhatsApp.`);
+      toast.success("Mensagem de texto enviada! Confira seu WhatsApp.");
       qc.invalidateQueries({ queryKey: ["whatsapp-recent-logs"] });
     } catch (err: any) {
       toast.error(err.message || "Falha ao enviar mensagem de teste");
@@ -656,18 +647,10 @@ function WhatsAppPage() {
               placeholder="Digite a mensagem de teste"
             />
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <Button id="test-send-text-btn" onClick={() => handleSendTest("text")} disabled={sendingTest || !isConnected} className="h-11 gap-2 rounded-xl">
-              {sendingTest ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Texto
-            </Button>
-            <Button id="test-send-buttons-btn" variant="outline" onClick={() => handleSendTest("buttons")} disabled={sendingTest || !isConnected} className="h-11 gap-2 rounded-xl">
-              <Layers className="size-4" /> Botões
-            </Button>
-            <Button id="test-send-list-btn" variant="outline" onClick={() => handleSendTest("list")} disabled={sendingTest || !isConnected} className="h-11 gap-2 rounded-xl">
-              <List className="size-4" /> Lista
-            </Button>
-            <Button id="test-send-pix-btn" variant="outline" onClick={() => handleSendTest("pix_copy")} disabled={sendingTest || !isConnected} className="h-11 gap-2 rounded-xl">
-              <Zap className="size-4" /> Copiar PIX
+          <div className="flex justify-end">
+            <Button id="test-send-text-btn" onClick={handleSendTest} disabled={sendingTest || !isConnected} className="h-11 w-full gap-2 rounded-xl sm:w-auto sm:min-w-44">
+              {sendingTest ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+              Enviar mensagem
             </Button>
           </div>
           {!isConnected && (
