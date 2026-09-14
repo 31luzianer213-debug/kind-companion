@@ -883,12 +883,12 @@ function normalizeBotInput(value: string): string {
   return value
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/1️⃣/g, "1").replace(/2️⃣/g, "2").replace(/3️⃣/g, "3")
     .replace(/4️⃣/g, "4").replace(/5️⃣/g, "5").replace(/6️⃣/g, "6")
-    .replace(/[\\u200b-\\u200d\\ufeff]/g, "")
+    .replace(/[\u200b-\u200d\ufeff]/g, "")
     .replace(/[.!?,;:]+$/g, "")
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
