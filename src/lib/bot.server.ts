@@ -1954,8 +1954,15 @@ export async function pollAndProcessWhatsAppMessages(userId?: string): Promise<{
       continue;
     }
 
+    // Nunca tente inferir telefone a partir de @lid: sem senderPn a mensagem não é roteável com segurança.
+    const resolvedJid = String(keyObj.senderPn || item.senderPn || keyObj.remoteJidAlt || item.remoteJidAlt || remoteJid);
+    if (resolvedJid.endsWith("@lid")) {
+      globalHandledMessageIds.add(msgId);
+      console.warn("[Bot Auto-Poll] Ignorando mensagem LID sem telefone resolvido", msgId);
+      continue;
+    }
     // Extrai número do cliente e garante envio no JID primário (@s.whatsapp.net)
-    const cleanDigits = remoteJid.replace(/@.*$/, "").replace(/\D/g, "");
+    const cleanDigits = resolvedJid.replace(/@.*$/, "").replace(/\D/g, "");
     let realPhone = cleanDigits;
     if (realPhone.length > 13 && realPhone.startsWith("55")) realPhone = realPhone.slice(-13);
     if (!realPhone.startsWith("55") && realPhone.length >= 10 && realPhone.length <= 11) {
