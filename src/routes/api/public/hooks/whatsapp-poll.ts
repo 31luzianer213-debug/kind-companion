@@ -19,7 +19,7 @@ async function runPoll(request: Request) {
     return Response.json({ ok: false, error: "Não autorizado" }, { status: 401 });
   }
 
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  
   const { evoFetchRecentMessages, isEvolutionEnabled, evolutionEnv } = await import(
     "@/lib/evolution-api.server"
   );
