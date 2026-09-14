@@ -152,11 +152,14 @@ function SigmaServersPage() {
   }
 
   async function remove(server: any) {
-    if (!window.confirm(`Remover o servidor "${server.name}"? Esta ação só será aceita se ele não tiver clientes vinculados.`)) return;
+    if (!window.confirm(`Remover o servidor "${server.name}"? Todos os clientes, cobranças e históricos vinculados a ele também serão excluídos deste sistema. Esta ação não pode ser desfeita.`)) return;
     const result = await deleteFn({ data: { serverId: server.id } });
     if (!result.ok) return toast.error(result.error);
-    toast.success("Servidor removido.");
+    toast.success(result.deletedClients ? `Servidor removido com ${result.deletedClients} cliente(s) vinculado(s).` : "Servidor removido.");
     queryClient.invalidateQueries({ queryKey: ["sigma-servers"] });
+    queryClient.invalidateQueries({ queryKey: ["clients"] });
+    queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    queryClient.invalidateQueries({ queryKey: ["sidebar-counts"] });
   }
 
   return (
