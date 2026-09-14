@@ -879,10 +879,23 @@ async function handleRenewOrderCreation({
  * Processador central de mensagens do Bot.
  * Recebe o texto que o cliente mandou, decide o fluxo e devolve a resposta formatada.
  */
+function normalizeBotInput(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/1️⃣/g, "1").replace(/2️⃣/g, "2").replace(/3️⃣/g, "3")
+    .replace(/4️⃣/g, "4").replace(/5️⃣/g, "5").replace(/6️⃣/g, "6")
+    .replace(/[\\u200b-\\u200d\\ufeff]/g, "")
+    .replace(/[.!?,;:]+$/g, "")
+    .replace(/\\s+/g, " ")
+    .trim();
+}
+
 function buildMainMenu(config: BotConfigData, serverName: string): BotProcessResult {
   const greeting =
     `👋 *Olá! Seja muito bem-vindo(a) à ${config.businessName || "Central IPTV"}!* 🍿\n\n` +
-    `Como podemos te ajudar hoje? Digite o *número* da opção ou clique no botão abaixo:\n\n` +
+    `Como podemos te ajudar? Digite apenas o *número* da opção:\n\n` +
     `1️⃣ *TESTE GRÁTIS* — Teste imediato de ${config.testDurationHours} horas\n` +
     `2️⃣ *RENOVAÇÃO* — Renove seu acesso com PIX Automático\n` +
     `3️⃣ *PLANOS & PREÇOS* — Conheça nossos planos e valores\n` +
@@ -958,11 +971,11 @@ export async function processBotMessage(
   }
 
   const cleanPhone = params.phone.replace(/\D/g, "");
-  const text = (params.text ?? "").trim().toLowerCase();
+  const text = normalizeBotInput(params.text ?? "");
 
   // Saudações e pedido explícito de menu não precisam de uma segunda consulta
   // ao banco: loadBotConfig já trouxe nome, servidor e duração do teste.
-  if (["oi", "olá", "ola", "menu", "início", "inicio", "start", "0"].includes(text)) {
+  if (["oi", "olá", "ola", "menu", "início", "inicio", "start", "0", "voltar ao menu", "voltar menu", "menu inicial", "menu principal"].includes(text)) {
     const quickServerName = config.serverName || config.businessName || "Alpha server IPTV";
     return buildMainMenu(config, quickServerName);
   }
@@ -1173,6 +1186,8 @@ export async function processBotMessage(
   const now = Date.now();
   const session = conversationSessions.get(cleanPhone);
   const isSessionValid = session && now - session.timestamp < 15 * 60 * 1000;
+  if (session && !isSessionValid) conversationSessions.delete(cleanPhone);
+  if (isSessionValid && session) session.timestamp = now;
 
   // Se o cliente digitou comando para trocar de opção, limpa o estado anterior
   if (
