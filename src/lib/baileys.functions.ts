@@ -73,6 +73,11 @@ export const getBaileysStatus = createServerFn({ method: "POST" })
       };
     }
 
+    // Sem Evolution e sem URL externa, localhost só funciona em desenvolvimento.
+    if (!process.env["BAILEYS_API_URL"]) {
+      return { ok: false as const, state: { instance, provider: "unconfigured", status: "none", mode: "qr", qrCode: null, pairingCode: null, phone: null, userName: null, lastError: "WhatsApp não configurado: defina EVOLUTION_API_URL + EVOLUTION_API_KEY (VPS) ou BAILEYS_API_URL." } };
+    }
+
     // 1. Tenta buscar via API HTTP local do daemon
     try {
       const q = `?instance=${encodeURIComponent(instance)}`;
@@ -135,6 +140,10 @@ export const connectBaileys = createServerFn({ method: "POST" })
           lastError: null,
         },
       };
+    }
+
+    if (!process.env["BAILEYS_API_URL"]) {
+      return { ok: false as const, state: { instance, provider: "unconfigured", status: "none", mode: data?.mode || "qr", qrCode: null, pairingCode: null, phone: null, userName: null, lastError: "WhatsApp não configurado: defina EVOLUTION_API_URL + EVOLUTION_API_KEY (VPS) ou BAILEYS_API_URL." } };
     }
 
     try {
