@@ -77,7 +77,11 @@ function interactiveAsText(interactive: BotInteractivePayload): string {
   return rows.join("\n");
 }
 
-function completeReply(reply: string, interactive?: BotInteractivePayload): string {
+function completeReply(reply: string, interactive?: BotInteractivePayload, action?: string): string {
+  // O menu principal já contém as opções no texto. Não acrescente a mesma lista
+  // novamente quando a Evolution API precisar usar o fallback em texto.
+  if (action === "menu_shown") return reply.trim();
+
   const options = interactive ? interactiveAsText(interactive) : "";
   if (!options || reply.includes(options)) return reply.trim();
   return `${reply.trim()}\n\n${options}`.trim();
@@ -163,7 +167,7 @@ export async function processIncomingWhatsAppEvent(
       text: message.text,
       pushName: message.pushName,
     });
-    const reply = completeReply(result.reply, result.interactive);
+    const reply = completeReply(result.reply, result.interactive, result.action);
     if (!reply) {
       lastResult = { handled: true, action: result.action, phone: message.phone };
       continue;
