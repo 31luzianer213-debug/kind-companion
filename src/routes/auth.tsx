@@ -352,7 +352,7 @@ function AuthPage() {
       </section>
 
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] rounded-2xl sm:max-w-md">
+        <DialogContent className="w-[calc(100%_-_2rem)] rounded-2xl sm:max-w-md">
           <DialogHeader className="text-center sm:text-center">
             <span className="mx-auto mb-2 grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary"><KeyRound className="size-5" /></span>
             <DialogTitle>Recuperar senha</DialogTitle>
