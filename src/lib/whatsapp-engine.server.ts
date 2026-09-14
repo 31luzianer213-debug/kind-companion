@@ -133,6 +133,16 @@ export async function processIncomingWhatsAppEvent(
       lastResult = { handled: false, ignored: "duplicate" };
       continue;
     }
+    if (message.messageId) {
+      const { error: claimError } = await supabaseAdmin
+        .from("whatsapp_processed_messages")
+        .insert({ message_id: message.messageId });
+      if (claimError) {
+        lastResult = { handled: false, ignored: "duplicate" };
+        continue;
+      }
+    }
+
 
     const userId = await resolveTargetUserId(queryUserId, message.instance);
     const config = await loadBotConfig(supabaseAdmin, userId);

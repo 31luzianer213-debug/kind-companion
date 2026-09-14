@@ -29,6 +29,7 @@ import { Route as ApiPublicHooksCobrancaDiariaRouteImport } from './routes/api/p
 import { Route as ApiPublicHooksMercadopagoRouteImport } from './routes/api/public/hooks/mercadopago'
 import { Route as ApiPublicHooksSigmaSyncRouteImport } from './routes/api/public/hooks/sigma-sync'
 import { Route as ApiPublicHooksWhatsappBotRouteImport } from './routes/api/public/hooks/whatsapp-bot'
+import { Route as ApiPublicHooksWhatsappPollRouteImport } from './routes/api/public/hooks/whatsapp-poll'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -133,6 +134,12 @@ const ApiPublicHooksWhatsappBotRoute =
     path: '/api/public/hooks/whatsapp-bot',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksWhatsappPollRoute =
+  ApiPublicHooksWhatsappPollRouteImport.update({
+    id: '/api/public/hooks/whatsapp-poll',
+    path: '/api/public/hooks/whatsapp-poll',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
+  '/api/public/hooks/whatsapp-poll': typeof ApiPublicHooksWhatsappPollRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -175,6 +183,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
+  '/api/public/hooks/whatsapp-poll': typeof ApiPublicHooksWhatsappPollRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -198,6 +207,7 @@ export interface FileRoutesById {
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
+  '/api/public/hooks/whatsapp-poll': typeof ApiPublicHooksWhatsappPollRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/mercadopago'
     | '/api/public/hooks/sigma-sync'
     | '/api/public/hooks/whatsapp-bot'
+    | '/api/public/hooks/whatsapp-poll'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -242,6 +253,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/mercadopago'
     | '/api/public/hooks/sigma-sync'
     | '/api/public/hooks/whatsapp-bot'
+    | '/api/public/hooks/whatsapp-poll'
   id:
     | '__root__'
     | '/'
@@ -264,6 +276,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/mercadopago'
     | '/api/public/hooks/sigma-sync'
     | '/api/public/hooks/whatsapp-bot'
+    | '/api/public/hooks/whatsapp-poll'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -276,6 +289,7 @@ export interface RootRouteChildren {
   ApiPublicHooksMercadopagoRoute: typeof ApiPublicHooksMercadopagoRoute
   ApiPublicHooksSigmaSyncRoute: typeof ApiPublicHooksSigmaSyncRoute
   ApiPublicHooksWhatsappBotRoute: typeof ApiPublicHooksWhatsappBotRoute
+  ApiPublicHooksWhatsappPollRoute: typeof ApiPublicHooksWhatsappPollRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -420,6 +434,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksWhatsappBotRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/whatsapp-poll': {
+      id: '/api/public/hooks/whatsapp-poll'
+      path: '/api/public/hooks/whatsapp-poll'
+      fullPath: '/api/public/hooks/whatsapp-poll'
+      preLoaderRoute: typeof ApiPublicHooksWhatsappPollRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -464,6 +485,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksMercadopagoRoute: ApiPublicHooksMercadopagoRoute,
   ApiPublicHooksSigmaSyncRoute: ApiPublicHooksSigmaSyncRoute,
   ApiPublicHooksWhatsappBotRoute: ApiPublicHooksWhatsappBotRoute,
+  ApiPublicHooksWhatsappPollRoute: ApiPublicHooksWhatsappPollRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
