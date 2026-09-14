@@ -4,6 +4,7 @@
  * Caso contrário, o sistema continua usando o motor Baileys local.
  */
 import { evolutionBaseUrl } from "./evolution-url";
+import { phoneVariants } from "./phone";
 
 export function evolutionEnv() {
   const rawUrl = process.env["EVOLUTION_API_URL"] || "";
@@ -190,12 +191,49 @@ function toNumber(jidOrPhone: string) {
   return value.replace(/\D/g, "");
 }
 
+const resolvedNumberCache = new Map<string, { number: string; expiresAt: number }>();
+
+/**
+ * Confirma no próprio WhatsApp qual JID existe antes do envio. No Brasil, a
+ * mesma conta pode chegar no webhook com o nono dígito e estar registrada sem
+ * ele (ou vice-versa). Enviar ao número recebido sem esta consulta pode gerar
+ * HTTP 200 na Evolution sem a mensagem aparecer no celular.
+ */
+async function resolveWhatsAppNumber(raw: string): Promise<string> {
+  const original = toNumber(raw).replace(/@.*$/, "");
+  if (!original) return "";
+
+  const cached = resolvedNumberCache.get(original);
+  if (cached && cached.expiresAt > Date.now()) return cached.number;
+
+  const candidates = phoneVariants(original)
+    .filter((number) => number.startsWith("55") && number.length >= 12 && number.length <= 13);
+  const numbers = Array.from(new Set(candidates.length ? candidates : [original]));
+  const instance = await resolveInstance();
+  const lookup = await evoRequest<any[]>(
+    `/chat/whatsappNumbers/${encodeURIComponent(instance)}`,
+    { method: "POST", body: JSON.stringify({ numbers }) },
+    10000,
+  );
+
+  const rows = Array.isArray(lookup.data) ? lookup.data : [];
+  const match = rows.find((row: any) => row?.exists && (row?.jid || row?.number));
+  const resolved = String(match?.jid ?? match?.number ?? original).replace(/@.*$/, "");
+
+  for (const candidate of numbers) {
+    resolvedNumberCache.set(candidate, { number: resolved, expiresAt: Date.now() + 10 * 60_000 });
+  }
+  return resolved;
+}
+
 export async function evoSendText(to: string, text: string) {
   const env = evolutionEnv();
   if (!env) return { ok: false as const, error: "Evolution API não configurada" };
+  const number = await resolveWhatsAppNumber(to);
+  if (!number) return { ok: false as const, error: "Número do WhatsApp inválido" };
   const res = await evoRequest(
     `/message/sendText/${encodeURIComponent(await resolveInstance())}`,
-    { method: "POST", body: JSON.stringify({ number: toNumber(to), text }) },
+    { method: "POST", body: JSON.stringify({ number, text }) },
     20000,
   );
   if (!res.ok) {
@@ -211,13 +249,15 @@ export async function evoSendMedia(
 ) {
   const env = evolutionEnv();
   if (!env) return { ok: false as const, error: "Evolution API não configurada" };
+  const number = await resolveWhatsAppNumber(to);
+  if (!number) return { ok: false as const, error: "Número do WhatsApp inválido" };
   const clean = String(media.base64 || "").replace(/^data:[^;]+;base64,/, "");
   const res = await evoRequest(
     `/message/sendMedia/${encodeURIComponent(await resolveInstance())}`,
     {
       method: "POST",
       body: JSON.stringify({
-        number: toNumber(to),
+        number,
         mediatype: "image",
         mimetype: media.mimetype || "image/png",
         media: clean,
@@ -245,6 +285,8 @@ export async function evoSendButtons(
 ) {
   const env = evolutionEnv();
   if (!env) return { ok: false as const, error: "Evolution API não configurada" };
+  const number = await resolveWhatsAppNumber(to);
+  if (!number) return { ok: false as const, error: "Número do WhatsApp inválido" };
 
   const buttons = options.buttons.slice(0, 3).map((b) => {
     if (b.copyCode || b.type === "copy") {
@@ -261,7 +303,7 @@ export async function evoSendButtons(
     {
       method: "POST",
       body: JSON.stringify({
-        number: toNumber(to),
+        number,
         title: options.title || "",
         description: options.description,
         footer: options.footer || "",
@@ -286,12 +328,14 @@ export async function evoSendList(
 ) {
   const env = evolutionEnv();
   if (!env) return { ok: false as const, error: "Evolution API não configurada" };
+  const number = await resolveWhatsAppNumber(to);
+  if (!number) return { ok: false as const, error: "Número do WhatsApp inválido" };
   const res = await evoRequest(
     `/message/sendList/${encodeURIComponent(await resolveInstance())}`,
     {
       method: "POST",
       body: JSON.stringify({
-        number: toNumber(to),
+        number,
         title: options.title,
         description: options.description,
         buttonText: options.buttonText,
