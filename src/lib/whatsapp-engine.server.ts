@@ -173,8 +173,8 @@ export async function processIncomingWhatsAppEvent(
       continue;
     }
 
-    // Responde pelo JID exato recebido no webhook. Isso evita escolher a
-    // variação errada de números brasileiros com/sem o nono dígito.
+    // senderJid já prefere o senderPn (número real) quando a Evolution alterna
+    // o remoteJid para @lid. Isso mantém a mesma sessão Signal na conversa.
     const replyTarget = message.senderJid || message.phone;
     const sent = isEvolutionEnabled()
       ? await evoSendText(replyTarget, reply)
