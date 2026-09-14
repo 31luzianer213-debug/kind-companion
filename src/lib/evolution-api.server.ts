@@ -193,6 +193,19 @@ function toNumber(jidOrPhone: string) {
 
 const resolvedNumberCache = new Map<string, { number: string; expiresAt: number }>();
 
+function lookupRows(data: any): any[] {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.numbers)) return data.numbers;
+  return [];
+}
+
+function lookupNumber(row: any): string {
+  return String(row?.jid ?? row?.number ?? row?.phone ?? "")
+    .replace(/@.*$/, "")
+    .replace(/\D/g, "");
+}
+
 /**
  * Confirma no próprio WhatsApp qual JID existe antes do envio. No Brasil, a
  * mesma conta pode chegar no webhook com o nono dígito e estar registrada sem
@@ -210,15 +223,28 @@ async function resolveWhatsAppNumber(raw: string): Promise<string> {
     .filter((number) => number.startsWith("55") && number.length >= 12 && number.length <= 13);
   const numbers = Array.from(new Set(candidates.length ? candidates : [original]));
   const instance = await resolveInstance();
-  const lookup = await evoRequest<any[]>(
-    `/chat/whatsappNumbers/${encodeURIComponent(instance)}`,
-    { method: "POST", body: JSON.stringify({ numbers }) },
-    10000,
-  );
 
-  const rows = Array.isArray(lookup.data) ? lookup.data : [];
-  const match = rows.find((row: any) => row?.exists && (row?.jid || row?.number));
-  const resolved = String(match?.jid ?? match?.number ?? original).replace(/@.*$/, "");
+  // A Evolution pode responder 400 para o lote inteiro quando apenas uma
+  // variação brasileira não existe. Consulte uma por vez para que um número
+  // com o nono dígito incorreto nunca esconda a variação realmente registrada.
+  let resolved = "";
+  for (const candidate of numbers) {
+    const lookup = await evoRequest<any>(
+      `/chat/whatsappNumbers/${encodeURIComponent(instance)}`,
+      { method: "POST", body: JSON.stringify({ numbers: [candidate] }) },
+      8000,
+    );
+    if (!lookup.ok) continue;
+
+    const match = lookupRows(lookup.data).find((row: any) => row?.exists === true);
+    const found = lookupNumber(match);
+    if (found) {
+      resolved = found;
+      break;
+    }
+  }
+
+  if (!resolved) return "";
 
   for (const candidate of numbers) {
     resolvedNumberCache.set(candidate, { number: resolved, expiresAt: Date.now() + 10 * 60_000 });
@@ -239,6 +265,14 @@ export async function evoSendText(to: string, text: string) {
   if (!res.ok) {
     const detail = res.data?.response?.message || res.data?.message || res.data?.error || `HTTP ${res.status}`;
     return { ok: false as const, error: `Evolution: ${JSON.stringify(detail)}` };
+  }
+  const messageId =
+    res.data?.key?.id ??
+    res.data?.message?.key?.id ??
+    res.data?.data?.key?.id ??
+    res.data?.id;
+  if (!messageId) {
+    return { ok: false as const, error: "Evolution aceitou a chamada, mas não confirmou a criação da mensagem" };
   }
   return { ok: true as const, data: res.data };
 }
