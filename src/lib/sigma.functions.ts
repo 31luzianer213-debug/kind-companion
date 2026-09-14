@@ -794,7 +794,7 @@ export const createSigmaClient = createServerFn({ method: "POST" })
         await supabase
           .from("clients")
           .update({
-            sigma_server_id: config.id,
+            panel_id: config.id,
             sigma_customer_id: created.id,
             sigma_username: created.username,
             sigma_synced_at: now,
