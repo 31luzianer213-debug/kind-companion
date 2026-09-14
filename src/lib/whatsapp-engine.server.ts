@@ -137,9 +137,14 @@ export async function processIncomingWhatsAppEvent(
       const { error: claimError } = await supabaseAdmin
         .from("whatsapp_processed_messages")
         .insert({ message_id: message.messageId });
-      if (claimError) {
+      if (claimError?.code === "23505") {
         lastResult = { handled: false, ignored: "duplicate" };
         continue;
+      }
+      if (claimError) {
+        // A tabela de deduplicação é uma proteção extra. Falha de schema/RLS
+        // não pode impedir o bot inteiro de responder.
+        console.warn("[WhatsApp Bot] Deduplicação persistente indisponível:", claimError.message);
       }
     }
 
