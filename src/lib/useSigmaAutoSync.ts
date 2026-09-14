@@ -42,7 +42,7 @@ export function useSigmaAutoSync() {
 
     isSyncingRef.current = true;
     try {
-      const res = await syncSigma({ data: {} });
+      const res = await syncSigma({});
       lastSyncTimeRef.current = Date.now();
 
       if (res.ok) {
