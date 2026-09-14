@@ -154,7 +154,7 @@ type ClientForm = {
   screens: string;
   activated_at: string;
   create_in_sigma: boolean;
-  sigma_server_id: string;
+  panel_id: string;
 };
 
 const empty: ClientForm = {
@@ -171,7 +171,7 @@ const empty: ClientForm = {
   screens: "1",
   activated_at: "",
   create_in_sigma: true,
-  sigma_server_id: "",
+  panel_id: "",
 };
 
 function formatPhoneInput(value?: string | null) {
@@ -493,7 +493,7 @@ function Clientes() {
           try {
             const createPayload: any = {
               clientId: values.id,
-              serverId: values.sigma_server_id || defaultSigmaServer?.id,
+              serverId: values.panel_id || defaultSigmaServer?.id,
               name: values.name.trim(),
               username: values.iptv_username.trim(),
               password: values.iptv_password?.trim() || "",
@@ -550,7 +550,7 @@ function Clientes() {
           try {
             const createPayload: any = {
               clientId: savedRow.id,
-              serverId: values.sigma_server_id || defaultSigmaServer?.id,
+              serverId: values.panel_id || defaultSigmaServer?.id,
               name: values.name.trim(),
               username: values.iptv_username.trim(),
               password: values.iptv_password?.trim() || "",
@@ -903,7 +903,7 @@ function Clientes() {
       screens: String(client.screens ?? 1),
       activated_at: client.activated_at ?? "",
       create_in_sigma: Boolean(client.sigma_customer_id || isSigmaConfigured),
-      sigma_server_id: client.sigma_server_id ?? "",
+      panel_id: client.panel_id ?? "",
     });
     setOpen(true);
   }
@@ -1734,9 +1734,9 @@ function Clientes() {
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Painel Sigma de origem *</Label>
                 <Select
-                  value={form.sigma_server_id || defaultSigmaServer?.id || ""}
-                  onValueChange={(value) => setForm({ ...form, sigma_server_id: value })}
-                  disabled={Boolean(form.id && form.sigma_server_id)}
+                  value={form.panel_id || defaultSigmaServer?.id || ""}
+                  onValueChange={(value) => setForm({ ...form, panel_id: value })}
+                  disabled={Boolean(form.id && form.panel_id)}
                 >
                   <SelectTrigger className="rounded-md">
                     <SelectValue placeholder="Selecione o painel Sigma" />
@@ -1749,7 +1749,7 @@ function Clientes() {
                     ))}
                   </SelectContent>
                 </Select>
-                {form.id && form.sigma_server_id ? (
+                {form.id && form.panel_id ? (
                   <p className="text-[11px] text-muted-foreground">O painel de origem fica bloqueado para preservar as operações deste cliente.</p>
                 ) : null}
               </div>
