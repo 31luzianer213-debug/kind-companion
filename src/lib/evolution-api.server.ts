@@ -138,6 +138,19 @@ export async function evoState(): Promise<{ state: EvoState; number: string | nu
   return { state, number, raw: res.data };
 }
 
+/** Retorna o QR/código atualmente válido sem alterar webhook ou instância. */
+export async function evoCurrentConnectionCode() {
+  const env = evolutionEnv();
+  if (!env) return { base64: null as string | null, code: null as string | null, count: null as number | null };
+  const instance = await resolveInstance();
+  const res = await evoRequest<any>(`/instance/connect/${encodeURIComponent(instance)}`, { method: "GET" }, 10000);
+  return {
+    base64: (res.data?.base64 || res.data?.qrcode?.base64 || null) as string | null,
+    code: (res.data?.pairingCode || res.data?.code || null) as string | null,
+    count: typeof res.data?.count === "number" ? res.data.count : null,
+  };
+}
+
 export async function evoConnect(webhookUrl?: string) {
   const env = evolutionEnv();
   if (!env) return { state: "close" as EvoState, base64: null, code: null };
