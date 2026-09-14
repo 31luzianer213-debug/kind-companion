@@ -308,6 +308,8 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
     };
 
     botConfigCache.set(uid, config);
+    botConfigCacheAt.set(uid, Date.now());
+
     return config;
   } catch (err) {
     console.error("[loadBotConfig] Fallback para DEFAULT_BOT_CONFIG:", err);
