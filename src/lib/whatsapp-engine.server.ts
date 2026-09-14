@@ -133,23 +133,25 @@ export async function processIncomingWhatsAppEvent(
       lastResult = { handled: false, ignored: "duplicate" };
       continue;
     }
-    if (message.messageId) {
-      const { error: claimError } = await supabaseAdmin
-        .from("whatsapp_processed_messages")
-        .insert({ message_id: message.messageId });
-      if (claimError?.code === "23505") {
-        lastResult = { handled: false, ignored: "duplicate" };
-        continue;
-      }
-      if (claimError) {
-        // A tabela de deduplicação é uma proteção extra. Falha de schema/RLS
-        // não pode impedir o bot inteiro de responder.
-        console.warn("[WhatsApp Bot] Deduplicação persistente indisponível:", claimError.message);
-      }
+    // A identificação da conta e a deduplicação não dependem uma da outra.
+    // Executá-las em paralelo reduz a latência do webhook no primeiro acesso.
+    const userPromise = resolveTargetUserId(queryUserId, message.instance);
+    const claimPromise = message.messageId
+      ? supabaseAdmin.from("whatsapp_processed_messages").insert({ message_id: message.messageId })
+      : Promise.resolve({ error: null } as any);
+
+    const [userId, claimResult] = await Promise.all([userPromise, claimPromise]);
+    const claimError = claimResult?.error;
+    if (claimError?.code === "23505") {
+      lastResult = { handled: false, ignored: "duplicate" };
+      continue;
+    }
+    if (claimError) {
+      // A tabela de deduplicação é uma proteção extra. Falha de schema/RLS
+      // não pode impedir o bot inteiro de responder.
+      console.warn("[WhatsApp Bot] Deduplicação persistente indisponível:", claimError.message);
     }
 
-
-    const userId = await resolveTargetUserId(queryUserId, message.instance);
     const config = await loadBotConfig(supabaseAdmin, userId);
     if (!config.enabled) {
       lastResult = { handled: false, ignored: "bot_disabled" };
