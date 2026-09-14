@@ -45,8 +45,11 @@ export function publicAppUrl() {
   return raw.replace(/\/+$/, "");
 }
 
-export function botWebhookUrl() {
-  return `${publicAppUrl()}/api/public/hooks/whatsapp-bot`;
+export function botWebhookUrl(appUrl?: string, userId?: string) {
+  const base = (appUrl?.trim() || publicAppUrl()).replace(/\/+$/, "");
+  const url = new URL(`${base}/api/public/hooks/whatsapp-bot`);
+  if (userId) url.searchParams.set("userId", userId);
+  return url.toString();
 }
 
 export async function fetchConnectionState(instanceName?: string): Promise<{

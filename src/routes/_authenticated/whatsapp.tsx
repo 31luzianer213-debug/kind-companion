@@ -196,6 +196,9 @@ function WhatsAppPage() {
           setIsRequestingQr(false);
           setLoadingAction(false);
           toast.success("QR Code gerado! Aponte a câmera do WhatsApp.", { id: "qr-toast" });
+          await connectBaileys({
+            data: { instance: instanceId, mode: "qr", force, origin: window.location.origin, userId: currentUser?.id },
+          }).catch(() => null);
           qc.invalidateQueries({ queryKey: ["baileys"] });
           return;
         }
@@ -204,7 +207,7 @@ function WhatsAppPage() {
 
     // 2. Fallback: via Server Function
     try {
-      const res = await connectBaileys({ data: { instance: instanceId, mode: "qr", force } });
+      const res = await connectBaileys({ data: { instance: instanceId, mode: "qr", force, origin: window.location.origin, userId: currentUser?.id } });
       if (res?.state?.qrCode) {
         setLocalQr(res.state.qrCode);
         setIsRequestingQr(false);
@@ -243,6 +246,9 @@ function WhatsAppPage() {
         if (json?.state?.pairingCode) {
           setLocalPairingCode(json.state.pairingCode);
           toast.success("Código de pareamento gerado!", { id: "pairing-toast" });
+          await connectBaileys({
+            data: { instance: instanceId, mode: "pairing", phone: clean, origin: window.location.origin, userId: currentUser?.id },
+          }).catch(() => null);
           qc.invalidateQueries({ queryKey: ["baileys"] });
           setLoadingAction(false);
           return;
@@ -252,7 +258,7 @@ function WhatsAppPage() {
 
     // 2. Fallback: via Server Function
     try {
-      const res = await connectBaileys({ data: { instance: instanceId, mode: "pairing", phone: clean } });
+      const res = await connectBaileys({ data: { instance: instanceId, mode: "pairing", phone: clean, origin: window.location.origin, userId: currentUser?.id } });
       if (res?.state?.pairingCode) {
         setLocalPairingCode(res.state.pairingCode);
         toast.success("Código de pareamento gerado!", { id: "pairing-toast" });

@@ -49,12 +49,16 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
 export const getWhatsAppStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input?: { origin?: string }) => input)
-  .handler(async () => {
+  .handler(async ({ data, context }) => {
     try {
       const { getBaileysStatus } = await import("./baileys.functions");
       const res = await getBaileysStatus({ data: { instance: "default" } });
       const rawStatus = String(res?.state?.status || "close").toLowerCase();
       const st = rawStatus === "open" || rawStatus === "connected" ? "open" : rawStatus;
+      if (st === "open") {
+        const { ensureInstanceWebhook } = await import("./evolution.server");
+        await ensureInstanceWebhook(context.userId, data?.origin).catch(() => null);
+      }
       return { ok: true as const, state: st, error: null };
     } catch (error) {
       return {
