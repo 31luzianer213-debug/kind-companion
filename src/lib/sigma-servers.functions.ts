@@ -18,7 +18,7 @@ export interface SigmaServerInput {
 
 function toConfig(server: any): SigmaConfig & { streaming_dns: string; server_name: string } {
   return {
-    url: server.panel_url,
+    url: server.url,
     username: server.username ?? "",
     password: server.password ?? "",
     token: server.token ?? null,
@@ -29,7 +29,7 @@ function toConfig(server: any): SigmaConfig & { streaming_dns: string; server_na
 
 async function getOwnedServer(supabase: any, userId: string, serverId: string) {
   const { data, error } = await supabase
-    .from("sigma_servers")
+    .from("sigma_panels")
     .select("*")
     .eq("id", serverId)
     .eq("user_id", userId)
@@ -42,13 +42,12 @@ export const listSigmaServers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
-      .from("sigma_servers")
+      .from("sigma_panels")
       .select("*")
       .eq("user_id", context.userId)
-      .order("is_default", { ascending: false })
       .order("created_at", { ascending: true });
     if (error) return { ok: false as const, servers: [], error: error.message };
-    return { ok: true as const, servers: data ?? [], error: null };
+    return { ok: true as const, servers: (data ?? []).map((server, index) => ({ ...server, panel_url: server.url, is_default: index === 0, last_sync_status: null, last_sync_error: null })), error: null };
   });
 
 export const saveSigmaServer = createServerFn({ method: "POST" })
@@ -58,23 +57,22 @@ export const saveSigmaServer = createServerFn({ method: "POST" })
     const payload = {
       user_id: context.userId,
       name: data.name.trim() || "Servidor Sigma",
-      panel_url: data.panel_url.trim().replace(/\/$/, ""),
+      url: data.panel_url.trim().replace(/\/$/, ""),
       streaming_dns: data.streaming_dns?.trim() || null,
       username: data.username?.trim() || null,
       password: data.password || null,
       token: data.token?.trim() || null,
       enabled: data.enabled ?? true,
       auto_renew: data.auto_renew ?? true,
-      is_default: data.is_default ?? false,
     };
-    if (!payload.panel_url) return { ok: false as const, server: null, error: "Informe a URL do painel." };
+    if (!payload.url) return { ok: false as const, server: null, error: "Informe a URL do painel." };
     if (!payload.token && (!payload.username || !payload.password)) {
       return { ok: false as const, server: null, error: "Informe usuário e senha ou um token." };
     }
 
     if (data.id) {
       const { data: server, error } = await context.supabase
-        .from("sigma_servers")
+        .from("sigma_panels")
         .update(payload)
         .eq("id", data.id)
         .eq("user_id", context.userId)
@@ -82,16 +80,12 @@ export const saveSigmaServer = createServerFn({ method: "POST" })
         .single();
       return error
         ? { ok: false as const, server: null, error: error.message }
-        : { ok: true as const, server, error: null };
+        : { ok: true as const, server: { ...server, panel_url: server.url, is_default: false }, error: null };
     }
 
-    const { count } = await context.supabase
-      .from("sigma_servers")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", context.userId);
     const { data: server, error } = await context.supabase
-      .from("sigma_servers")
-      .insert({ ...payload, is_default: (count ?? 0) === 0 ? true : payload.is_default })
+      .from("sigma_panels")
+      .insert(payload)
       .select("*")
       .single();
     return error
@@ -108,12 +102,12 @@ export const deleteSigmaServer = createServerFn({ method: "POST" })
       .from("clients")
       .select("id", { count: "exact", head: true })
       .eq("user_id", context.userId)
-      .eq("sigma_server_id", data.serverId);
+      .eq("panel_id", data.serverId);
     if ((count ?? 0) > 0) {
       return { ok: false as const, error: `Este servidor possui ${count} cliente(s) vinculado(s). Desative-o em vez de excluir.` };
     }
     const { error } = await context.supabase
-      .from("sigma_servers")
+      .from("sigma_panels")
       .delete()
       .eq("id", server.id)
       .eq("user_id", context.userId);
@@ -165,7 +159,7 @@ async function syncOneServer(supabase: any, userId: string, server: any) {
     .from("clients")
     .select("id, sigma_customer_id, iptv_username")
     .eq("user_id", userId)
-    .eq("sigma_server_id", server.id);
+    .eq("panel_id", server.id);
 
   const byId = new Map((existing ?? []).filter((row: any) => row.sigma_customer_id).map((row: any) => [String(row.sigma_customer_id), row]));
   const byUsername = new Map((existing ?? []).filter((row: any) => row.iptv_username).map((row: any) => [String(row.iptv_username).toLowerCase(), row]));
@@ -188,7 +182,7 @@ async function syncOneServer(supabase: any, userId: string, server: any) {
     ].filter(Boolean).join("\n");
 
     const values: Record<string, unknown> = {
-      sigma_server_id: server.id,
+      panel_id: server.id,
       sigma_customer_id: customer.id,
       sigma_username: customer.username,
       sigma_synced_at: now,
@@ -216,13 +210,11 @@ async function syncOneServer(supabase: any, userId: string, server: any) {
     }
   }
 
-  await supabase.from("sigma_servers").update({
+  await supabase.from("sigma_panels").update({
     token,
     name: detectedName,
     streaming_dns: detectedDns || null,
     last_sync_at: now,
-    last_sync_status: "success",
-    last_sync_error: null,
   }).eq("id", server.id).eq("user_id", userId);
 
   return { serverId: server.id, serverName: detectedName, created, updated, total: customers.length };
@@ -238,11 +230,6 @@ export const syncSigmaServer = createServerFn({ method: "POST" })
       return { ok: true as const, ...result, error: null };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Falha ao sincronizar.";
-      await context.supabase.from("sigma_servers").update({
-        last_sync_at: new Date().toISOString(),
-        last_sync_status: "error",
-        last_sync_error: message,
-      }).eq("id", server.id).eq("user_id", context.userId);
       return { ok: false as const, error: message };
     }
   });
@@ -251,11 +238,11 @@ export const syncAllSigmaServers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data: servers, error } = await context.supabase
-      .from("sigma_servers")
+      .from("sigma_panels")
       .select("*")
       .eq("user_id", context.userId)
       .eq("enabled", true)
-      .order("is_default", { ascending: false });
+      .order("created_at", { ascending: true });
     if (error) return { ok: false as const, results: [], error: error.message };
 
     const results = [];
@@ -265,7 +252,7 @@ export const syncAllSigmaServers = createServerFn({ method: "POST" })
       } catch (error) {
         const message = error instanceof Error ? error.message : "Falha ao sincronizar.";
         results.push({ ok: false, serverId: server.id, serverName: server.name, created: 0, updated: 0, total: 0, error: message });
-        await context.supabase.from("sigma_servers").update({
+        await context.supabase.from("sigma_panels").update({
           last_sync_at: new Date().toISOString(),
           last_sync_status: "error",
           last_sync_error: message,
@@ -284,21 +271,21 @@ export const syncAllSigmaServers = createServerFn({ method: "POST" })
 export async function loadSigmaServerForClient(supabase: any, userId: string, clientId: string) {
   const { data: client } = await supabase
     .from("clients")
-    .select("sigma_server_id")
+    .select("panel_id")
     .eq("id", clientId)
     .eq("user_id", userId)
     .maybeSingle();
 
-  let query = supabase.from("sigma_servers").select("*").eq("user_id", userId).eq("enabled", true);
-  query = client?.sigma_server_id ? query.eq("id", client.sigma_server_id) : query.eq("is_default", true);
+  let query = supabase.from("sigma_panels").select("*").eq("user_id", userId).eq("enabled", true);
+  query = client?.panel_id ? query.eq("id", client.panel_id) : query.order("created_at", { ascending: true }).limit(1);
   const { data: server } = await query.maybeSingle();
   if (!server) throw new Error("Nenhum servidor Sigma válido foi encontrado para este cliente.");
   return toConfig(server);
 }
 
 export async function loadDefaultSigmaServer(supabase: any, userId: string, serverId?: string) {
-  let query = supabase.from("sigma_servers").select("*").eq("user_id", userId).eq("enabled", true);
-  query = serverId ? query.eq("id", serverId) : query.eq("is_default", true);
+  let query = supabase.from("sigma_panels").select("*").eq("user_id", userId).eq("enabled", true);
+  query = serverId ? query.eq("id", serverId) : query.order("created_at", { ascending: true }).limit(1);
   const { data: server } = await query.maybeSingle();
   if (!server) throw new Error("Configure ao menos um servidor Sigma.");
   return { ...toConfig(server), id: server.id };
