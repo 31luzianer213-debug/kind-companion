@@ -465,29 +465,41 @@ class WhatsAppSession {
     this.saveState();
   }
 
+  /** Envio de texto seguro: resolve o JID real e trata erros. */
+  async sendTextSafe(jid, text) {
+    if (!this.sock) return false;
+    const target = await resolveJid(this.sock, jid);
+    try {
+      await this.sock.presenceSubscribe(target).catch(() => {});
+      await this.sock.sendMessage(target, { text: String(text || "").trim() || "..." });
+      return true;
+    } catch (e) {
+      console.error(`[${this.instanceId}] Erro ao enviar texto:`, e.message);
+      return false;
+    }
+  }
+
   async sendButtonsMessage(jid, { text, footer, buttons }) {
     if (!this.sock) return false;
     const cleanButtons = normalizeButtons(buttons);
+    const baseText = text || "🤖 *ASSISTENTE IPTV*\n\nEscolha uma opção:";
+    const fallbackText = buttonsToText(baseText, cleanButtons, footer || "Suporte 24h");
+
+    if (!INTERACTIVE_ENABLED) {
+      return await this.sendTextSafe(jid, fallbackText);
+    }
+
+    const target = await resolveJid(this.sock, jid);
     try {
-      await sendButtons(this.sock, jid, {
-        text: text || "🤖 *ASSISTENTE IPTV*\n\nEscolha uma opção:",
+      await sendButtons(this.sock, target, {
+        text: baseText,
         footer: footer || "Suporte 24h",
         buttons: cleanButtons,
       });
       return true;
     } catch (e) {
-      console.warn(`[${this.instanceId}] Fallback sendButtons helper:`, e.message);
-      try {
-        await this.sock.sendMessage(jid, {
-          text: text || "🤖 *ASSISTENTE IPTV*\n\nEscolha uma opção:",
-          footer: footer || "Suporte 24h",
-          buttons: cleanButtons,
-        });
-        return true;
-      } catch (e2) {
-        console.error(`[${this.instanceId}] Erro ao enviar botões:`, e2.message);
-        return false;
-      }
+      console.warn(`[${this.instanceId}] Botões indisponíveis, enviando texto:`, e.message);
+      return await this.sendTextSafe(target, fallbackText);
     }
   }
 
@@ -500,10 +512,17 @@ class WhatsAppSession {
       { rowId: "4", title: "4️⃣ Baixar Aplicativos", description: "Links oficiais TV Box, Celular e PC" },
     ];
     const sections = options.sections || [{ title: options.title || "Menu IPTV", rows }];
+    const baseText = options.text || "📋 *MENU IPTV*\n\nSelecione uma opção:";
+    const fallbackText = listToText(baseText, sections, options.footer || "Responda com o número da opção");
 
+    if (!INTERACTIVE_ENABLED) {
+      return await this.sendTextSafe(jid, fallbackText);
+    }
+
+    const target = await resolveJid(this.sock, jid);
     try {
-      await this.sock.sendMessage(jid, {
-        text: options.text || "📋 *MENU IPTV*\n\nSelecione uma opção:",
+      await this.sock.sendMessage(target, {
+        text: baseText,
         footer: options.footer || "Suporte 24h",
         title: options.title || "Planos & Opções",
         buttonText: options.buttonText || "📋 Abrir Menu",
@@ -511,13 +530,19 @@ class WhatsAppSession {
       });
       return true;
     } catch (e) {
-      console.error(`[${this.instanceId}] Erro ao enviar lista:`, e.message);
-      return false;
+      console.warn(`[${this.instanceId}] Lista indisponível, enviando texto:`, e.message);
+      return await this.sendTextSafe(target, fallbackText);
     }
   }
 
   async sendCopyButtonMessage(jid, code, text) {
     if (!this.sock) return false;
+    const body = text || "📋 *Código PIX Copia e Cola:*";
+    // Código PIX sempre em mensagem de texto pura, para o cliente
+    // conseguir copiar mesmo em aparelhos sem suporte a botões.
+    if (!INTERACTIVE_ENABLED) {
+      return await this.sendTextSafe(jid, `${body}\n\n${code}`);
+    }
     const buttons = [
       {
         name: "cta_copy",
@@ -527,11 +552,12 @@ class WhatsAppSession {
         }),
       },
     ];
-    return await this.sendButtonsMessage(jid, {
-      text: text || `📋 *Código PIX Copia e Cola:*\n\n\`${code}\``,
+    const ok = await this.sendButtonsMessage(jid, {
+      text: `${body}\n\n${code}`,
       footer: "Toque no botão para copiar automaticamente",
       buttons,
     });
+    return ok;
   }
 
   async handleIncomingMessage(msg) {
