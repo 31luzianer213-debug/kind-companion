@@ -38,11 +38,11 @@ export async function fetchState(_userId?: string): Promise<"open" | "connecting
   return "close";
 }
 
-export async function ensureInstanceWebhook(_userId?: string, _publicAppUrl?: string) {
+export async function ensureInstanceWebhook(userId?: string, publicAppUrl?: string) {
   const { isEvolutionEnabled, evoSetWebhook } = await import("./evolution-api.server");
   if (isEvolutionEnabled()) {
     const { botWebhookUrl } = await import("./whatsapp-connection.server");
-    return await evoSetWebhook(botWebhookUrl());
+    return await evoSetWebhook(botWebhookUrl(publicAppUrl, userId));
   }
   // Baileys processa mensagens em tempo real via WebSocket
   return { ok: true };
