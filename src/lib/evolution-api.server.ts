@@ -224,7 +224,7 @@ async function resolveWhatsAppNumber(raw: string): Promise<string> {
     return "";
   }
   if (destination.endsWith("@s.whatsapp.net")) {
-    const digits = destination.replace(/@.*$/, "").replace(/\\D/g, "");
+    const digits = destination.replace(/@.*$/, "").replace(/\D/g, "");
     return digits || "";
   }
 
