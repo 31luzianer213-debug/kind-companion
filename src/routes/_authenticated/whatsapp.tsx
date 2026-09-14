@@ -149,8 +149,9 @@ function WhatsAppPage() {
   const isConnected = status === "open";
   const info = statusBadge(status);
 
-  const activeQr = localQr || state?.qrCode;
-  const activePairing = localPairingCode || state?.pairingCode;
+  // O código vindo da consulta mais recente tem prioridade sobre o cache local.
+  const activeQr = state?.qrCode || localQr;
+  const activePairing = state?.pairingCode || localPairingCode;
 
   // Toast quando conecta
   useEffect(() => {
