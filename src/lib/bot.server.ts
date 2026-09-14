@@ -879,6 +879,67 @@ async function handleRenewOrderCreation({
  * Processador central de mensagens do Bot.
  * Recebe o texto que o cliente mandou, decide o fluxo e devolve a resposta formatada.
  */
+function buildMainMenu(config: BotConfigData, serverName: string): BotProcessResult {
+  const greeting =
+    `👋 *Olá! Seja muito bem-vindo(a) à ${config.businessName || "Central IPTV"}!* 🍿\n\n` +
+    `Como podemos te ajudar hoje? Digite o *número* da opção ou clique no botão abaixo:\n\n` +
+    `1️⃣ *TESTE GRÁTIS* — Teste imediato de ${config.testDurationHours} horas\n` +
+    `2️⃣ *RENOVAÇÃO* — Renove seu acesso com PIX Automático\n` +
+    `3️⃣ *PLANOS & PREÇOS* — Conheça nossos planos e valores\n` +
+    `4️⃣ *BAIXAR APLICATIVOS* — Links oficiais Android, iOS, PC e TV\n` +
+    `5️⃣ *MEUS DADOS* — Receber login, senha e lista M3U\n` +
+    `6️⃣ *SUPORTE* — Falar com atendente humano\n\n` +
+    `_👇 Toque no botão abaixo para abrir as opções ou envie o número desejado:_`;
+
+  return {
+    reply: greeting,
+    action: "menu_shown",
+    interactive: {
+      type: "list",
+      title: config.businessName || "Menu IPTV",
+      description: greeting,
+      buttonText: "📋 Abrir Menu de Opções",
+      footerText: `${serverName} • Auto-Atendimento 24h`,
+      sections: [
+        {
+          title: "Auto-Atendimento Rápido",
+          rows: [
+            {
+              rowId: "1",
+              title: "1️⃣ Gerar Teste Grátis",
+              description: `Acesso liberado na hora por ${config.testDurationHours} horas`,
+            },
+            {
+              rowId: "2",
+              title: "2️⃣ Renovar Assinatura",
+              description: "Pagar via PIX com ativação imediata",
+            },
+            {
+              rowId: "3",
+              title: "3️⃣ Planos e Preços",
+              description: "Ver opções Mensal, Trimestral, Semestral e Anual",
+            },
+            {
+              rowId: "4",
+              title: "4️⃣ Baixar Aplicativos",
+              description: "Links de download para TV Box, Celular, iOS e PC 📲",
+            },
+            {
+              rowId: "5",
+              title: "5️⃣ Reenviar Meus Acessos",
+              description: "Receber login, senha e lista M3U",
+            },
+            {
+              rowId: "6",
+              title: "6️⃣ Atendimento Humano",
+              description: "Tirar dúvidas com nossa equipe de suporte",
+            },
+          ],
+        },
+      ],
+    },
+  };
+
 export async function processBotMessage(
   supabase: any,
   userId: string,
@@ -897,6 +958,13 @@ export async function processBotMessage(
 
   const cleanPhone = params.phone.replace(/\D/g, "");
   const text = (params.text ?? "").trim().toLowerCase();
+
+  // Saudações e pedido explícito de menu não precisam de uma segunda consulta
+  // ao banco: loadBotConfig já trouxe nome, servidor e duração do teste.
+  if (["oi", "olá", "ola", "menu", "início", "inicio", "start", "0"].includes(text)) {
+    const quickServerName = config.serverName || config.businessName || "Alpha server IPTV";
+    return buildMainMenu(config, quickServerName);
+  }
 
   // Carrega dados do servidor IPTV
   let wsRow: any = null;
@@ -1715,68 +1783,8 @@ export async function processBotMessage(
     };
   }
 
-  // =========================================================================
-  // MENU PRINCIPAL (PADRÃO PARA SAUDAÇÃO OU RESPOSTA NÃO RECONHECIDA)
-  // =========================================================================
-  const greeting =
-    `👋 *Olá! Seja muito bem-vindo(a) à ${config.businessName || "Central IPTV"}!* 🍿\n\n` +
-    `Como podemos te ajudar hoje? Digite o *número* da opção ou clique no botão abaixo:\n\n` +
-    `1️⃣ *TESTE GRÁTIS* — Teste imediato de ${config.testDurationHours} horas\n` +
-    `2️⃣ *RENOVAÇÃO* — Renove seu acesso com PIX Automático\n` +
-    `3️⃣ *PLANOS & PREÇOS* — Conheça nossos planos e valores\n` +
-    `4️⃣ *BAIXAR APLICATIVOS* — Links oficiais Android, iOS, PC e TV\n` +
-    `5️⃣ *MEUS DADOS* — Receber login, senha e lista M3U\n` +
-    `6️⃣ *SUPORTE* — Falar com atendente humano\n\n` +
-    `_👇 Toque no botão abaixo para abrir as opções ou envie o número desejado:_`;
+  return buildMainMenu(config, serverName);
 
-  return {
-    reply: greeting,
-    action: "menu_shown",
-    interactive: {
-      type: "list",
-      title: config.businessName || "Menu IPTV",
-      description: greeting,
-      buttonText: "📋 Abrir Menu de Opções",
-      footerText: `${serverName} • Auto-Atendimento 24h`,
-      sections: [
-        {
-          title: "Auto-Atendimento Rápido",
-          rows: [
-            {
-              rowId: "1",
-              title: "1️⃣ Gerar Teste Grátis",
-              description: `Acesso liberado na hora por ${config.testDurationHours} horas`,
-            },
-            {
-              rowId: "2",
-              title: "2️⃣ Renovar Assinatura",
-              description: "Pagar via PIX com ativação imediata",
-            },
-            {
-              rowId: "3",
-              title: "3️⃣ Planos e Preços",
-              description: "Ver opções Mensal, Trimestral, Semestral e Anual",
-            },
-            {
-              rowId: "4",
-              title: "4️⃣ Baixar Aplicativos",
-              description: "Links de download para TV Box, Celular, iOS e PC 📲",
-            },
-            {
-              rowId: "5",
-              title: "5️⃣ Reenviar Meus Acessos",
-              description: "Receber login, senha e lista M3U",
-            },
-            {
-              rowId: "6",
-              title: "6️⃣ Atendimento Humano",
-              description: "Tirar dúvidas com nossa equipe de suporte",
-            },
-          ],
-        },
-      ],
-    },
-  };
 }
 
 // Conjunto de IDs de mensagens já tratadas pelo bot para evitar respostas duplicadas
