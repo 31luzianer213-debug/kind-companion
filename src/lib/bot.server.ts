@@ -329,6 +329,8 @@ export async function saveBotConfigServer(
 
   // 1. Atualiza imediatamente cache em memória
   botConfigCache.set(uid, updated);
+  botConfigCacheAt.set(uid, Date.now());
+
   writeLocalConfig(uid, updated);
 
   if (updated.mercadopago_token || updated.pixKey || updated.pixHolder) {
