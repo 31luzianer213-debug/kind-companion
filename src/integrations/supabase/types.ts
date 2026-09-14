@@ -28,7 +28,6 @@ export type Database = {
           name: string
           next_due_date: string | null
           notes: string | null
-          panel_id: string | null
           phone: string
           screens: number
           sigma_customer_id: string | null
@@ -51,7 +50,6 @@ export type Database = {
           name: string
           next_due_date?: string | null
           notes?: string | null
-          panel_id?: string | null
           phone: string
           screens?: number
           sigma_customer_id?: string | null
@@ -74,7 +72,6 @@ export type Database = {
           name?: string
           next_due_date?: string | null
           notes?: string | null
-          panel_id?: string | null
           phone?: string
           screens?: number
           sigma_customer_id?: string | null
@@ -85,13 +82,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "clients_panel_id_fkey"
-            columns: ["panel_id"]
-            isOneToOne: false
-            referencedRelation: "sigma_panels"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "clients_list_id_fkey"
             columns: ["list_id"]
@@ -334,54 +324,6 @@ export type Database = {
           display_name?: string | null
           id?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      sigma_panels: {
-        Row: {
-          auto_renew: boolean
-          created_at: string
-          enabled: boolean
-          id: string
-          last_sync_at: string | null
-          name: string
-          password: string | null
-          streaming_dns: string | null
-          token: string | null
-          updated_at: string
-          url: string
-          user_id: string
-          username: string | null
-        }
-        Insert: {
-          auto_renew?: boolean
-          created_at?: string
-          enabled?: boolean
-          id?: string
-          last_sync_at?: string | null
-          name?: string
-          password?: string | null
-          streaming_dns?: string | null
-          token?: string | null
-          updated_at?: string
-          url: string
-          user_id: string
-          username?: string | null
-        }
-        Update: {
-          auto_renew?: boolean
-          created_at?: string
-          enabled?: boolean
-          id?: string
-          last_sync_at?: string | null
-          name?: string
-          password?: string | null
-          streaming_dns?: string | null
-          token?: string | null
-          updated_at?: string
-          url?: string
-          user_id?: string
-          username?: string | null
         }
         Relationships: []
       }
