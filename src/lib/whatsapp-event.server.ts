@@ -51,6 +51,22 @@ function textFromMessage(raw: any, fallback = ""): string {
   return text;
 }
 
+const lidPhoneCache = new Map<string, { phone: string; expiresAt: number }>();
+
+function rememberLidPhone(lid: unknown, phone: string) {
+  const lidDigits = onlyDigits(String(lid ?? "").replace(/@.*$/, ""));
+  if (!String(lid ?? "").endsWith("@lid") || !lidDigits || !phone) return;
+  lidPhoneCache.set(lidDigits, { phone, expiresAt: Date.now() + 60 * 60_000 });
+}
+
+function cachedPhoneFromLid(lid: unknown): string {
+  const value = String(lid ?? "").trim();
+  if (!value.endsWith("@lid")) return "";
+  const cached = lidPhoneCache.get(onlyDigits(value.replace(/@.*$/, "")));
+  if (!cached || cached.expiresAt <= Date.now()) return "";
+  return cached.phone;
+}
+
 function phoneFromJids(...values: unknown[]): string {
   const candidates = values
     .map((value) => String(value ?? "").trim())
@@ -65,11 +81,8 @@ function phoneFromJids(...values: unknown[]): string {
     }
   }
 
-  // Contas recentes do WhatsApp podem chegar somente com o identificador LID,
-  // sem remoteJidAlt ou telefone. A Evolution aceita esse JID diretamente no
-  // envio; descartá-lo aqui fazia o webhook ignorar mensagens reais.
-  const lid = candidates.find((value) => value.endsWith("@lid"));
-  if (lid && onlyDigits(lid.replace(/@.*$/, "")).length >= 10) return lid;
+  // Nunca use @lid como telefone ou destino. Sem um número real, o evento
+  // será ignorado em vez de abrir uma sessão Signal incompatível.
   return "";
 }
 
@@ -86,20 +99,12 @@ export function parseEvolutionMessages(payload: any): IncomingWhatsAppMessage[] 
 
   return entries.map((entry: any) => {
     const key = entry?.key ?? {};
-    // A Evolution v2 informa o número real em senderPn quando remoteJid muda
-    // para @lid. Responder ao LID pode abrir outra sessão Signal e causar
-    // "Bad MAC" / "Aguardando mensagem" no meio da conversa.
-    const senderJid = String(
-      key.senderPn ??
-        entry.senderPn ??
-        key.remoteJidAlt ??
-        entry.remoteJidAlt ??
-        key.remoteJid ??
-        entry.remoteJid ??
-        "",
+    const originalJid = String(key.remoteJid ?? entry.remoteJid ?? "").trim();
+    const previousRemoteJid = String(
+      key.previousRemoteJid ?? entry.previousRemoteJid ?? key.remoteJidAlt ?? entry.remoteJidAlt ?? "",
     ).trim();
-    const originalJid = String(key.remoteJid ?? entry.remoteJid ?? senderJid).trim();
-    const phone = phoneFromJids(
+
+    let phone = phoneFromJids(
       key.senderPn,
       entry.senderPn,
       key.remoteJidAlt,
@@ -108,6 +113,17 @@ export function parseEvolutionMessages(payload: any): IncomingWhatsAppMessage[] 
       entry.participant,
       originalJid,
     );
+
+    // Quando a Evolution entrega número + previousRemoteJid, guarda a relação
+    // apenas para resolver eventos seguintes. O envio continua sempre no PN.
+    if (phone) {
+      rememberLidPhone(previousRemoteJid, phone);
+      rememberLidPhone(originalJid, phone);
+    } else {
+      phone = cachedPhoneFromLid(originalJid) || cachedPhoneFromLid(previousRemoteJid);
+    }
+
+    const senderJid = phone ? `${phone}@s.whatsapp.net` : "";
 
     return {
       event,
