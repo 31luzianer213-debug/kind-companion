@@ -29,6 +29,7 @@ import {
   getBaileysStatus,
   connectBaileys,
   disconnectBaileys,
+  resetBaileysSession,
   sendBaileysTest,
 } from "@/lib/baileys.functions";
 
@@ -273,6 +274,28 @@ function WhatsAppPage() {
     }
   }
 
+  async function handleResetSession() {
+    if (!confirm("A sessão do WhatsApp parece corrompida. Isso apagará a sessão atual da VPS e exigirá um novo QR Code. Continuar?")) return;
+    setLoadingAction(true);
+    setLocalQr(null);
+    setLocalPairingCode(null);
+    toast.loading("Limpando sessão corrompida e gerando novo QR Code...", { id: "reset-wa-toast" });
+    try {
+      const res = await resetBaileysSession({ data: { origin: window.location.origin, userId: currentUser?.id } });
+      if (res?.state?.qrCode) {
+        setLocalQr(res.state.qrCode);
+        toast.success("Sessão limpa. Escaneie o novo QR Code.", { id: "reset-wa-toast" });
+      } else {
+        toast.info("Sessão limpa. Solicite o QR Code novamente.", { id: "reset-wa-toast" });
+      }
+      qc.invalidateQueries({ queryKey: ["baileys"] });
+    } catch (err: any) {
+      toast.error(err?.message || "Não foi possível limpar a sessão da VPS.", { id: "reset-wa-toast" });
+    } finally {
+      setLoadingAction(false);
+    }
+  }
+
   async function handleLogout() {
     if (!confirm("Deseja realmente desconectar o WhatsApp? Será necessário escanear o QR Code novamente.")) return;
     setLoadingAction(true);
@@ -420,6 +443,15 @@ function WhatsAppPage() {
                 disabled={loadingAction}
               >
                 <RefreshCw className="size-3.5" /> Reconectar / Novo QR Code
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full font-bold text-xs gap-1.5"
+                onClick={handleResetSession}
+                disabled={loadingAction}
+              >
+                <RefreshCw className="size-3.5" /> Corrigir sessão da VPS
               </Button>
               <Button
                 variant="destructive"
