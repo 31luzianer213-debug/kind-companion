@@ -28,7 +28,7 @@ function NotFoundComponent() {
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Go home
+            Ir ao início
           </Link>
         </div>
       </div>
@@ -40,8 +40,17 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    try {
+      reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    } catch {
+      // Telemetry must never cause a second failure inside the error boundary.
+    }
   }, [error]);
+
+  const errorMessage =
+    error instanceof Response
+      ? `Falha HTTP ${error.status}`
+      : error?.message || "Erro inesperado sem detalhes.";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -50,8 +59,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           This page didn't load
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          O sistema encontrou uma falha temporária. Tente novamente; se continuar, copie o detalhe abaixo.
         </p>
+        <details className="mt-4 rounded-lg border border-border bg-muted/30 p-3 text-left">
+          <summary className="cursor-pointer text-xs font-semibold text-foreground">Ver detalhe técnico</summary>
+          <code className="mt-2 block break-words text-xs text-muted-foreground">{errorMessage}</code>
+        </details>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -60,7 +73,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            Tentar novamente
           </button>
           <a
             href="/"
