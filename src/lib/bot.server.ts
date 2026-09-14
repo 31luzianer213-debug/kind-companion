@@ -939,6 +939,7 @@ function buildMainMenu(config: BotConfigData, serverName: string): BotProcessRes
       ],
     },
   };
+}
 
 export async function processBotMessage(
   supabase: any,
