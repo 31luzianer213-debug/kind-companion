@@ -110,6 +110,8 @@ export const connectBaileys = createServerFn({ method: "POST" })
       mode?: "qr" | "pairing";
       phone?: string;
       force?: boolean;
+      origin?: string;
+      userId?: string;
     }) => input,
   )
   .handler(async ({ data }) => {
@@ -118,7 +120,7 @@ export const connectBaileys = createServerFn({ method: "POST" })
     const evo = await import("./evolution-api.server");
     if (evo.isEvolutionEnabled()) {
       const { botWebhookUrl } = await import("./whatsapp-connection.server");
-      const res = await evo.evoConnect(botWebhookUrl());
+      const res = await evo.evoConnect(botWebhookUrl(data?.origin, data?.userId));
       return {
         ok: true as const,
         state: {
