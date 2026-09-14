@@ -12,10 +12,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type NavigationBadge = "orders" | "clients" | "invoices" | "sigma" | "whatsapp";
+export type AppRoute =\n  | "/painel"\n  | "/pedidos"\n  | "/clientes"\n  | "/cobrancas"\n  | "/sigma"\n  | "/bot"\n  | "/whatsapp"\n  | "/pagamentos"\n  | "/mensagens"\n  | "/configuracoes";\n\nexport type NavigationBadge = "orders" | "clients" | "invoices" | "sigma" | "whatsapp";
 
 export interface NavigationItem {
-  to: string;
+  to: AppRoute;
   label: string;
   shortLabel: string;
   icon: LucideIcon;
