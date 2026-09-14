@@ -153,16 +153,16 @@ export function generateAppsMessage(config: BotConfigData, serverName: string): 
 
   return (
     `📲 *APLICATIVOS OFICIAIS — ${serverName.toUpperCase()}* 🍿\n\n` +
-    `Toque no botão abaixo correspondente ao seu aparelho para fazer o download:\n\n` +
+    `Escolha o aplicativo compatível com seu aparelho e siga as instruções de instalação:\n\n` +
     `🤖 *TV BOX / ANDROID TV / FIRESTICK:*\n` +
     `• No aplicativo *Downloader* da TV, digite o código rápido: *${code}*\n` +
-    `• Ou toque no botão *Baixar APK Android* abaixo.\n\n` +
+    `• Instale o APK Android disponibilizado no painel.\n\n` +
     `📱 *CELULAR & TABLET ANDROID:*\n` +
-    `• Toque no botão *Baixar APK Android* abaixo.\n\n` +
+    `• Baixe o APK Android pelo link configurado no painel.\n\n` +
     `🍏 *IPHONE / IPAD / APPLE TV (iOS):*\n` +
-    `• Toque no botão *App iPhone / iPad* abaixo.\n\n` +
+    `• Use o aplicativo indicado para iPhone/iPad conforme o link configurado.\n\n` +
     `💻 *COMPUTADOR & NOTEBOOK (WINDOWS):*\n` +
-    `• Toque no botão *App Windows (PC)* abaixo.\n\n` +
+    `• Baixe o aplicativo para Windows pelo link configurado no painel.\n\n` +
     `📺 *SMART TV (SAMSUNG / LG / ROKU):*\n` +
     `${smartTv}\n\n` +
     `━━━━━━━━━━━━━━━━━━━\n` +
