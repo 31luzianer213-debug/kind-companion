@@ -124,6 +124,44 @@ export const connectBaileys = createServerFn({ method: "POST" })
 
     const evo = await import("./evolution-api.server");
     if (evo.isEvolutionEnabled()) {
+      const configuredOrigin = process.env["PUBLIC_APP_URL"]?.trim();
+      if (data?.origin && configuredOrigin) {
+        try {
+          const requested = new URL(data.origin).origin;
+          const allowed = new URL(configuredOrigin).origin;
+          if (requested !== allowed) {
+            return {
+              ok: false as const,
+              state: {
+                instance,
+                provider: "evolution",
+                status: "none",
+                mode: data?.mode || "qr",
+                qrCode: null,
+                pairingCode: null,
+                phone: null,
+                userName: null,
+                lastError: "Conexão bloqueada: use o site oficial configurado em PUBLIC_APP_URL.",
+              },
+            };
+          }
+        } catch {
+          return {
+            ok: false as const,
+            state: {
+              instance,
+              provider: "evolution",
+              status: "none",
+              mode: data?.mode || "qr",
+              qrCode: null,
+              pairingCode: null,
+              phone: null,
+              userName: null,
+              lastError: "Origem inválida para conexão do WhatsApp.",
+            },
+          };
+        }
+      }
       const { botWebhookUrl } = await import("./whatsapp-connection.server");
       const res = await evo.evoConnect(botWebhookUrl(data?.origin, data?.userId));
       return {
