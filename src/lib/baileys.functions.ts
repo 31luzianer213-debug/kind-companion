@@ -132,9 +132,12 @@ export const connectBaileys = createServerFn({ method: "POST" })
         process.env["PUBLIC_APP_URL"]?.trim() || "https://embrace-essence-app.lovable.app";
       if (data?.origin) {
         try {
-          const requested = new URL(data.origin).origin;
-          const allowed = new URL(configuredOrigin).origin;
-          if (requested !== allowed) {
+          const requestedUrl = new URL(data.origin);
+          const allowedUrl = new URL(configuredOrigin);
+          const requested = requestedUrl.origin;
+          const allowed = allowedUrl.origin;
+          const lovablePreview = requestedUrl.hostname.endsWith(".lovable.app") && allowedUrl.hostname.endsWith(".lovable.app");
+          if (requested !== allowed && !lovablePreview) {
             return {
               ok: false as const,
               state: {
