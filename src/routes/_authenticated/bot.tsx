@@ -401,6 +401,35 @@ function BotPage() {
         </div>
       </div>
 
+      <Card className="surface-card border-border/60 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Layers className="size-4 text-primary" /> Menus automáticos do WhatsApp
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Cada opção possui uma função clara e pode ser conferida no simulador antes de ativar.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            ["1", "Teste grátis", "Gera acesso temporário no Sigma"],
+            ["2", "Renovação", "Localiza o cliente e prepara o PIX"],
+            ["3", "Planos", "Apresenta preços e períodos"],
+            ["4", "Aplicativos", "Envia links para cada aparelho"],
+            ["5", "Reenviar acesso", "Entrega usuário, senha e lista M3U"],
+            ["6", "Atendimento", "Encaminha para uma pessoa"],
+          ].map(([number, title, description]) => (
+            <div key={number} className="rounded-xl border border-border/60 bg-muted/20 p-3">
+              <div className="flex items-center gap-2">
+                <span className="grid size-7 place-items-center rounded-lg bg-primary/15 text-xs font-black text-primary">{number}</span>
+                <strong className="text-xs text-foreground">{title}</strong>
+              </div>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">{description}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
       {/* Grid Principal */}
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Coluna Esquerda: Configurações do Robô (7 colunas) */}
