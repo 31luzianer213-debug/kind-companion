@@ -174,7 +174,7 @@ async function cleanupOrphanRows(supabase: any, userId: string) {
   for (const client of orphans ?? []) {
     const recordedName = String(client.notes || "").match(/(?:^|\n)Servidor:\s*([^\n]+)/i)?.[1]?.trim();
     const matchingPanel = recordedName
-      ? activePanels.find((panel) => panel.name.trim().toLowerCase() === recordedName.toLowerCase())
+      ? activePanels.find((panel: { id: string; name: string }) => panel.name.trim().toLowerCase() === recordedName.toLowerCase())
       : activePanels.length === 1 ? activePanels[0] : null;
 
     if (matchingPanel) {

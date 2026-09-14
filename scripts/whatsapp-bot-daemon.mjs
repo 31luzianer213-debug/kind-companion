@@ -109,6 +109,81 @@ function formatTargetJid(raw) {
   return `${digits}@s.whatsapp.net`;
 }
 
+/**
+ * Gera variações BR (com/sem o nono dígito) para um número.
+ */
+function brVariants(digits) {
+  const out = new Set([digits]);
+  if (digits.startsWith("55")) {
+    const ddd = digits.slice(2, 4);
+    const rest = digits.slice(4);
+    if (rest.length === 9 && rest.startsWith("9")) out.add(`55${ddd}${rest.slice(1)}`);
+    if (rest.length === 8) out.add(`55${ddd}9${rest}`);
+  }
+  return Array.from(out);
+}
+
+/**
+ * Descobre o JID real registrado no WhatsApp.
+ * Enviar para um JID inexistente/errado é a causa principal
+ * do aviso "mensagem indisponível" no celular do cliente.
+ */
+async function resolveJid(sock, jid) {
+  if (!jid || jid.endsWith("@g.us") || jid.endsWith("@lid")) return jid;
+  const digits = jid.split("@")[0].replace(/\D/g, "");
+  try {
+    for (const variant of brVariants(digits)) {
+      const found = await sock.onWhatsApp(variant);
+      const hit = Array.isArray(found) ? found.find((f) => f?.exists && f?.jid) : null;
+      if (hit) return hit.jid;
+    }
+  } catch {}
+  return jid;
+}
+
+/** Converte botões em um menu de texto simples (100% compatível). */
+function buttonsToText(text, buttons, footer) {
+  const lines = [];
+  if (text) lines.push(text);
+  const items = (buttons || []).map((b, i) => {
+    if (b?.name === "cta_copy" || b?.name === "cta_url") {
+      try {
+        const p = JSON.parse(b.buttonParamsJson || "{}");
+        if (p.copy_code) return `${p.display_text || "Código"}:\n${p.copy_code}`;
+        if (p.url) return `${p.display_text || "Link"}: ${p.url}`;
+      } catch {}
+      return null;
+    }
+    const label = b?.text || b?.displayText || b?.title || `Opção ${i + 1}`;
+    return `*${i + 1}* - ${label}`;
+  });
+  const valid = items.filter(Boolean);
+  if (valid.length) lines.push("", valid.join("\n"));
+  if (footer) lines.push("", `_${footer}_`);
+  return lines.join("\n").trim();
+}
+
+/** Converte listas em um menu de texto simples. */
+function listToText(text, sections, footer) {
+  const lines = [];
+  if (text) lines.push(text);
+  let n = 0;
+  for (const sec of sections || []) {
+    if (sec?.title) lines.push("", `*${sec.title}*`);
+    for (const row of sec?.rows || []) {
+      n += 1;
+      const id = row?.rowId || String(n);
+      lines.push(`*${id}* - ${row?.title || ""}${row?.description ? `\n   ${row.description}` : ""}`);
+    }
+  }
+  if (footer) lines.push("", `_${footer}_`);
+  return lines.join("\n").trim();
+}
+
+// Mensagens interativas só quando explicitamente habilitadas —
+// por padrão o bot usa texto puro, que nunca aparece como indisponível.
+const INTERACTIVE_ENABLED = process.env.BAILEYS_INTERACTIVE === "1";
+
 function extractCleanText(messageObj) {
   if (!messageObj || typeof messageObj !== "object") return "";
   const unwrapped =
@@ -390,29 +465,41 @@ class WhatsAppSession {
     this.saveState();
   }
 
+  /** Envio de texto seguro: resolve o JID real e trata erros. */
+  async sendTextSafe(jid, text) {
+    if (!this.sock) return false;
+    const target = await resolveJid(this.sock, jid);
+    try {
+      await this.sock.presenceSubscribe(target).catch(() => {});
+      await this.sock.sendMessage(target, { text: String(text || "").trim() || "..." });
+      return true;
+    } catch (e) {
+      console.error(`[${this.instanceId}] Erro ao enviar texto:`, e.message);
+      return false;
+    }
+  }
+
   async sendButtonsMessage(jid, { text, footer, buttons }) {
     if (!this.sock) return false;
     const cleanButtons = normalizeButtons(buttons);
+    const baseText = text || "🤖 *ASSISTENTE IPTV*\n\nEscolha uma opção:";
+    const fallbackText = buttonsToText(baseText, cleanButtons, footer || "Suporte 24h");
+
+    if (!INTERACTIVE_ENABLED) {
+      return await this.sendTextSafe(jid, fallbackText);
+    }
+
+    const target = await resolveJid(this.sock, jid);
     try {
-      await sendButtons(this.sock, jid, {
-        text: text || "🤖 *ASSISTENTE IPTV*\n\nEscolha uma opção:",
+      await sendButtons(this.sock, target, {
+        text: baseText,
         footer: footer || "Suporte 24h",
         buttons: cleanButtons,
       });
       return true;
     } catch (e) {
-      console.warn(`[${this.instanceId}] Fallback sendButtons helper:`, e.message);
-      try {
-        await this.sock.sendMessage(jid, {
-          text: text || "🤖 *ASSISTENTE IPTV*\n\nEscolha uma opção:",
-          footer: footer || "Suporte 24h",
-          buttons: cleanButtons,
-        });
-        return true;
-      } catch (e2) {
-        console.error(`[${this.instanceId}] Erro ao enviar botões:`, e2.message);
-        return false;
-      }
+      console.warn(`[${this.instanceId}] Botões indisponíveis, enviando texto:`, e.message);
+      return await this.sendTextSafe(target, fallbackText);
     }
   }
 
@@ -425,10 +512,17 @@ class WhatsAppSession {
       { rowId: "4", title: "4️⃣ Baixar Aplicativos", description: "Links oficiais TV Box, Celular e PC" },
     ];
     const sections = options.sections || [{ title: options.title || "Menu IPTV", rows }];
+    const baseText = options.text || "📋 *MENU IPTV*\n\nSelecione uma opção:";
+    const fallbackText = listToText(baseText, sections, options.footer || "Responda com o número da opção");
 
+    if (!INTERACTIVE_ENABLED) {
+      return await this.sendTextSafe(jid, fallbackText);
+    }
+
+    const target = await resolveJid(this.sock, jid);
     try {
-      await this.sock.sendMessage(jid, {
-        text: options.text || "📋 *MENU IPTV*\n\nSelecione uma opção:",
+      await this.sock.sendMessage(target, {
+        text: baseText,
         footer: options.footer || "Suporte 24h",
         title: options.title || "Planos & Opções",
         buttonText: options.buttonText || "📋 Abrir Menu",
@@ -436,13 +530,19 @@ class WhatsAppSession {
       });
       return true;
     } catch (e) {
-      console.error(`[${this.instanceId}] Erro ao enviar lista:`, e.message);
-      return false;
+      console.warn(`[${this.instanceId}] Lista indisponível, enviando texto:`, e.message);
+      return await this.sendTextSafe(target, fallbackText);
     }
   }
 
   async sendCopyButtonMessage(jid, code, text) {
     if (!this.sock) return false;
+    const body = text || "📋 *Código PIX Copia e Cola:*";
+    // Código PIX sempre em mensagem de texto pura, para o cliente
+    // conseguir copiar mesmo em aparelhos sem suporte a botões.
+    if (!INTERACTIVE_ENABLED) {
+      return await this.sendTextSafe(jid, `${body}\n\n${code}`);
+    }
     const buttons = [
       {
         name: "cta_copy",
@@ -452,11 +552,12 @@ class WhatsAppSession {
         }),
       },
     ];
-    return await this.sendButtonsMessage(jid, {
-      text: text || `📋 *Código PIX Copia e Cola:*\n\n\`${code}\``,
+    const ok = await this.sendButtonsMessage(jid, {
+      text: `${body}\n\n${code}`,
       footer: "Toque no botão para copiar automaticamente",
       buttons,
     });
+    return ok;
   }
 
   async handleIncomingMessage(msg) {
@@ -841,7 +942,8 @@ const server = http.createServer(async (req, res) => {
         // Disparo de Mídia (ex: QR Code PIX em foto separada)
         if (payload.media && payload.media.base64) {
           const buffer = Buffer.from(payload.media.base64.replace(/^data:[^;]+;base64,/, ""), "base64");
-          await session.sock.sendMessage(jid, {
+          const target = await resolveJid(session.sock, jid);
+          await session.sock.sendMessage(target, {
             image: buffer,
             caption: text || payload.media.caption || "",
             mimetype: payload.media.mimetype || "image/png",
@@ -869,8 +971,13 @@ const server = http.createServer(async (req, res) => {
             text,
           );
         } else {
-          await session.sock.sendMessage(jid, { text });
-          ok = true;
+          ok = await session.sendTextSafe(jid, text);
+        }
+
+        if (!ok) {
+          res.writeHead(502, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "Falha ao entregar a mensagem no WhatsApp." }));
+          return;
         }
 
         res.writeHead(200, { "Content-Type": "application/json" });
