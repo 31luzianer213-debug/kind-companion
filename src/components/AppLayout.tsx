@@ -54,7 +54,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
   useSigmaAutoSync();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+    let active = true;
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (active) setEmail(data.user?.email ?? null);
+      })
+      .catch(() => {
+        if (active) setEmail(null);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
