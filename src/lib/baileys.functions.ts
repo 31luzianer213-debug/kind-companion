@@ -57,6 +57,10 @@ export const getBaileysStatus = createServerFn({ method: "POST" })
     const evo = await import("./evolution-api.server");
     if (evo.isEvolutionEnabled()) {
       const st = await evo.evoState();
+      // Enquanto conecta, busca sempre o QR atual. A Evolution troca o código
+      // periodicamente e manter o primeiro QR na tela faz o WhatsApp rejeitá-lo.
+      const connectionCode =
+        st.state === "connecting" ? await evo.evoCurrentConnectionCode() : null;
       return {
         ok: true as const,
         state: {
@@ -64,8 +68,8 @@ export const getBaileysStatus = createServerFn({ method: "POST" })
           provider: "evolution",
           status: st.state,
           mode: "qr",
-          qrCode: null,
-          pairingCode: null,
+          qrCode: connectionCode?.base64 ?? null,
+          pairingCode: connectionCode?.code ?? null,
           phone: st.number,
           userName: null,
           lastError: null,
