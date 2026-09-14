@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
 import {
   getBotSettings,
   saveBotSettings,
@@ -96,6 +97,7 @@ function BotPage() {
   const getSettings = useServerFn(getBotSettings);
   const saveSettings = useServerFn(saveBotSettings);
   const simulate = useServerFn(simulateBotMessage);
+  const getStatus = useServerFn(getWhatsAppStatus);
 
   const [saving, setSaving] = useState(false);
   const [showMpToken, setShowMpToken] = useState(false);
@@ -120,7 +122,7 @@ function BotPage() {
     supportMessage: "",
     pixKey: "",
     pixHolder: "Alpha IPTV",
-    mercadopago_token: "APP_USR-3160859496295692-031614-d4b7df3cf7507800baabef77d641c0f2-1487021055",
+    mercadopago_token: "",
     payment_provider: "mercadopago",
     appAndroidApk: "https://bit.ly/app-xciptv-oficial",
     appAndroidDownloaderCode: "389471",
@@ -152,6 +154,15 @@ function BotPage() {
       time: "Agora",
     },
   ]);
+
+  const { data: whatsappStatus } = useQuery({
+    queryKey: ["layout-whatsapp-status"],
+    queryFn: () => getStatus({ data: { origin: typeof window !== "undefined" ? window.location.origin : undefined } }),
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+    retry: 1,
+  });
+  const whatsappConnected = whatsappStatus?.state === "open";
 
   const { data: botData, isLoading } = useQuery({
     queryKey: ["bot-settings"],
@@ -189,8 +200,7 @@ function BotPage() {
         supportMessage: c.supportMessage || "",
         pixKey: c.pixKey || "",
         pixHolder: c.pixHolder || "Alpha IPTV",
-        mercadopago_token:
-          c.mercadopago_token || "APP_USR-3160859496295692-031614-d4b7df3cf7507800baabef77d641c0f2-1487021055",
+        mercadopago_token: c.mercadopago_token || "",
         payment_provider: c.payment_provider || "mercadopago",
         appAndroidApk: c.appAndroidApk || "https://bit.ly/app-xciptv-oficial",
         appAndroidDownloaderCode: c.appAndroidDownloaderCode || "389471",
@@ -350,6 +360,13 @@ function BotPage() {
             >
               <span className={`size-1.5 rounded-full ${form.enabled ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground"}`} />
               {form.enabled ? "Robô 24h Ativo" : "Robô Pausado"}
+            </Badge>
+            <Badge
+              variant={whatsappConnected ? "success" : "destructive"}
+              className="text-xs py-0.5 px-2.5 gap-1.5"
+            >
+              <span className={`size-1.5 rounded-full ${whatsappConnected ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`} />
+              {whatsappConnected ? "WhatsApp conectado" : "WhatsApp desconectado"}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -952,7 +969,7 @@ function BotPage() {
               <div className="leading-tight flex-1">
                 <p className="text-xs font-bold truncate text-foreground">{form.businessName || "Alpha IPTV"}</p>
                 <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" /> online 24h
+                  <span className={`size-1.5 rounded-full inline-block ${whatsappConnected ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`} /> {whatsappConnected ? "WhatsApp conectado" : "WhatsApp desconectado"}
                 </p>
               </div>
               <Badge variant="outline" className={isMpActive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px]" : "border-border bg-muted/40 text-muted-foreground text-[10px]"}>
