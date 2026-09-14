@@ -46,7 +46,10 @@ export function publicAppUrl() {
 }
 
 export function botWebhookUrl(appUrl?: string, userId?: string) {
-  const base = (appUrl?.trim() || publicAppUrl()).replace(/\/+$/, "");
+  // A URL pública fixa deve vencer a origem do navegador. Assim o preview
+  // nunca sobrescreve o webhook da produção na mesma instância Evolution.
+  const configured = process.env["PUBLIC_APP_URL"]?.trim();
+  const base = (configured || appUrl?.trim() || publicAppUrl()).replace(/\/+$/, "");
   const url = new URL(`${base}/api/public/hooks/whatsapp-bot`);
   if (userId) url.searchParams.set("userId", userId);
   return url.toString();
