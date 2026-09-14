@@ -46,6 +46,7 @@ function SigmaServersPage() {
   const listFn = useServerFn(listSigmaServers);
   const saveFn = useServerFn(saveSigmaServer);
   const deleteFn = useServerFn(deleteSigmaServer);
+  const cleanupFn = useServerFn(cleanupOrphanSigmaClients);
   const testFn = useServerFn(testSigmaServer);
   const syncOneFn = useServerFn(syncSigmaServer);
   const syncAllFn = useServerFn(syncAllSigmaServers);
@@ -153,6 +154,7 @@ function SigmaServersPage() {
 
   async function remove(server: any) {
     if (!window.confirm(`Remover o servidor "${server.name}"? Todos os clientes, cobranças e históricos vinculados a ele também serão excluídos deste sistema. Esta ação não pode ser desfeita.`)) return;
+    await cleanupFn({}).catch(() => null);
     const result = await deleteFn({ data: { serverId: server.id } });
     if (!result.ok) return toast.error(result.error);
     toast.success(result.deletedClients ? `Servidor removido com ${result.deletedClients} cliente(s) vinculado(s).` : "Servidor removido.");
