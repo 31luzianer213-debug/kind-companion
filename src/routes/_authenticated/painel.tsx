@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { runAutoBilling, sendWhatsAppMessage, getWhatsAppStatus } from "@/lib/whatsapp.functions";
 import { listSigmaServers, syncAllSigmaServers } from "@/lib/sigma-servers.functions";
+import { useSigmaAutoSync } from "@/lib/useSigmaAutoSync";
 import { approveOrder, type OrderItem } from "@/lib/orders.functions";
 import defaultOrdersSeed from "../../../data/orders_default.json";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -76,6 +77,7 @@ export const Route = createFileRoute("/_authenticated/painel")({
 });
 
 function Painel() {
+  useSigmaAutoSync();
   const queryClient = useQueryClient();
   const billing = useServerFn(runAutoBilling);
   const send = useServerFn(sendWhatsAppMessage);
