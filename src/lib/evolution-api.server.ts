@@ -220,8 +220,12 @@ async function resolveWhatsAppNumber(raw: string): Promise<string> {
   // Ao responder um webhook, o JID já foi resolvido pelo próprio WhatsApp.
   // Revalidá-lo em whatsappNumbers pode retornar verify=[] e perder a resposta,
   // especialmente em números brasileiros com/sem o nono dígito.
-  if (destination.endsWith("@s.whatsapp.net") || destination.endsWith("@lid")) {
-    return destination;
+  if (destination.endsWith("@lid")) {
+    return "";
+  }
+  if (destination.endsWith("@s.whatsapp.net")) {
+    const digits = destination.replace(/@.*$/, "").replace(/\\D/g, "");
+    return digits || "";
   }
 
   const isLid = destination.endsWith("@lid");
