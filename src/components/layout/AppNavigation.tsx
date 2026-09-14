@@ -81,7 +81,7 @@ export function AppBrand({ compact = false }: { compact?: boolean }) {
       <div className="min-w-0 leading-tight">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-black tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-[15px]">
-            Painel Sigma
+            Sigma Control
           </span>
           {!compact && (
             <span className="rounded-md border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-emerald-500">
@@ -91,7 +91,7 @@ export function AppBrand({ compact = false }: { compact?: boolean }) {
         </div>
         {!compact && (
           <span className="block truncate text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Gestão e automação
+            Operação inteligente
           </span>
         )}
       </div>
@@ -123,7 +123,7 @@ export function DesktopNavigation(props: AppNavigationProps) {
                     className={cn(
                       "group flex min-h-11 items-center gap-3 rounded-xl border border-transparent px-3 text-sm font-semibold transition-all",
                       active
-                        ? "border-primary/30 bg-primary text-primary-foreground shadow-lg shadow-primary/15"
+                        ? "border-primary/25 bg-primary text-primary-foreground shadow-lg shadow-primary/15"
                         : "text-muted-foreground hover:border-border/70 hover:bg-accent/60 hover:text-foreground",
                     )}
                   >
@@ -195,8 +195,8 @@ export function MobileBottomNavigation(props: Pick<AppNavigationProps, "pathname
             to={item.to}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-bold transition-colors",
-              active ? "bg-primary/12 text-primary" : "text-muted-foreground active:bg-accent",
+              "relative flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-bold transition-all",
+              active ? "bg-primary/10 text-primary" : "text-muted-foreground active:bg-accent",
             )}
           >
             <Icon className="size-[19px]" />

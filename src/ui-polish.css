@@ -2,7 +2,7 @@
 :root {
   --ui-sidebar-width: 276px;
   --ui-page-max: 1600px;
-  --ui-radius: 16px;
+  --ui-radius: 18px;
 }
 
 .app-aurora {
@@ -208,5 +208,81 @@
   .app-aurora * {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* Professional teal/navy refresh — shared by every authenticated page. */
+.app-aurora {
+  background:
+    radial-gradient(900px 520px at 18% -12%, color-mix(in oklch, var(--primary) 13%, transparent), transparent 68%),
+    radial-gradient(780px 520px at 96% 108%, color-mix(in oklch, var(--chart-2) 8%, transparent), transparent 66%),
+    var(--background) !important;
+}
+
+.app-aurora > aside {
+  border-right-color: color-mix(in oklch, var(--border) 72%, transparent) !important;
+  box-shadow: 18px 0 55px -48px rgb(5 15 30 / 75%) !important;
+}
+
+.app-aurora main [class~="bg-card"][class~="border"] {
+  background: color-mix(in oklch, var(--card) 96%, transparent) !important;
+  box-shadow:
+    0 1px 2px rgb(16 24 40 / 4%),
+    0 14px 38px -30px rgb(16 24 40 / 32%) !important;
+}
+
+.dark .app-aurora main [class~="bg-card"][class~="border"] {
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 3%) inset,
+    0 18px 48px -34px rgb(0 0 0 / 75%) !important;
+}
+
+.app-aurora main [role="tablist"] {
+  border: 1px solid color-mix(in oklch, var(--border) 75%, transparent);
+  background: color-mix(in oklch, var(--muted) 72%, transparent);
+  padding: 3px;
+}
+
+.app-aurora main [role="tab"][data-state="active"] {
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 3px 10px -6px rgb(16 24 40 / 35%);
+}
+
+.app-aurora main [class*="rounded-full"][class*="bg-primary"],
+.app-aurora main button[class*="bg-primary"] {
+  box-shadow: 0 8px 20px -12px color-mix(in oklch, var(--primary) 72%, transparent);
+}
+
+.app-aurora main [data-slot="badge"] {
+  letter-spacing: -0.01em;
+}
+
+.app-aurora main table {
+  font-size: 0.875rem;
+}
+
+.app-aurora main tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (max-width: 767px) {
+  .app-aurora main h1 {
+    font-size: 1.55rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .app-aurora main [class~="bg-card"][class~="border"] {
+    border-radius: 16px !important;
+  }
+
+  .app-aurora main button {
+    min-height: 40px;
+  }
+
+  .app-aurora main [role="dialog"] {
+    max-width: calc(100vw - 1rem) !important;
+    max-height: calc(100dvh - 1rem) !important;
   }
 }
