@@ -199,6 +199,26 @@ export const disconnectBaileys = createServerFn({ method: "POST" })
 /**
  * Envia uma mensagem de teste pelo Baileys (Texto, Botões Rápidos, Lista ou PIX).
  */
+/**
+ * Limpa uma sessão Evolution corrompida (Bad MAC / No matching sessions)
+ * e devolve um novo QR Code para pareamento.
+ */
+export const resetBaileysSession = createServerFn({ method: "POST" })
+  .inputValidator((input?: { origin?: string; userId?: string }) => input)
+  .handler(async ({ data }) => {
+    const evo = await import("./evolution-api.server");
+    if (!evo.isEvolutionEnabled()) {
+      throw new Error("Evolution API não está configurada na VPS.");
+    }
+    await evo.evoDeleteInstance();
+    const { botWebhookUrl } = await import("./whatsapp-connection.server");
+    const res = await evo.evoConnect(botWebhookUrl(data?.origin, data?.userId));
+    return {
+      ok: true as const,
+      state: { provider: "evolution", status: res.state, mode: "qr", qrCode: res.base64, pairingCode: res.code, phone: null, userName: null, lastError: null },
+    };
+  });
+
 export const sendBaileysTest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
