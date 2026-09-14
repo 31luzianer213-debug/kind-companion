@@ -1565,7 +1565,7 @@ export async function processBotMessage(
 
     const reply =
       `${config.plansText}${pixBlock}\n\n` +
-      `👇 *Para assinar agora, toque em uma opção na lista abaixo ou responda com o número:*\n\n` +
+      `👇 *Para assinar agora, responda apenas com o número do plano:*\n\n` +
       `👉 Digite *1* para *Plano Mensal (${p1})*\n` +
       `👉 Digite *2* para *Plano Trimestral (${p2})*\n` +
       `👉 Digite *3* para *Plano Semestral (${p3})*\n` +
