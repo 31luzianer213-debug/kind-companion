@@ -167,9 +167,12 @@ export async function processIncomingWhatsAppEvent(
       continue;
     }
 
+    // Responde pelo JID exato recebido no webhook. Isso evita escolher a
+    // variação errada de números brasileiros com/sem o nono dígito.
+    const replyTarget = message.senderJid || message.phone;
     const sent = isEvolutionEnabled()
-      ? await evoSendText(message.phone, reply)
-      : await sendWhatsAppText(message.phone, reply, message.instance || undefined);
+      ? await evoSendText(replyTarget, reply)
+      : await sendWhatsAppText(replyTarget, reply, message.instance || undefined);
 
     if (!sent.ok) {
       await recordMessage({
@@ -191,8 +194,8 @@ export async function processIncomingWhatsAppEvent(
         mimetype: "image/png",
         fileName: "qrcode-pix.png",
       };
-      if (isEvolutionEnabled()) await evoSendMedia(message.phone, media);
-      else await sendWhatsAppMedia(message.phone, media, message.instance || undefined);
+      if (isEvolutionEnabled()) await evoSendMedia(replyTarget, media);
+      else await sendWhatsAppMedia(replyTarget, media, message.instance || undefined);
     }
 
     const hasCopyValue =
@@ -200,8 +203,8 @@ export async function processIncomingWhatsAppEvent(
       result.interactive.buttons.some((button) => Boolean(button.copyCode));
     for (const extra of hasCopyValue ? [] : result.extraMessages ?? []) {
       if (!extra.trim()) continue;
-      if (isEvolutionEnabled()) await evoSendText(message.phone, extra);
-      else await sendWhatsAppText(message.phone, extra, message.instance || undefined);
+      if (isEvolutionEnabled()) await evoSendText(replyTarget, extra);
+      else await sendWhatsAppText(replyTarget, extra, message.instance || undefined);
     }
 
     lastResult = {
