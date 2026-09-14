@@ -6,8 +6,8 @@ function authorized(request: Request) {
     url.searchParams.get("secret") || url.searchParams.get("key") || url.searchParams.get("token");
   const match = /^Bearer ([^\s,]+)$/i.exec(request.headers.get("authorization") ?? "");
   const provided = querySecret || match?.[1];
-  const configured = process.env["BILLING_CRON_SECRET"] || "cron_iptv_seguro";
-  return Boolean(provided) && (provided === configured || provided === "cron_iptv_seguro");
+  const configured = process.env["BILLING_CRON_SECRET"];
+  return Boolean(configured) && Boolean(provided) && provided === configured;
 }
 
 /**
@@ -15,6 +15,12 @@ function authorized(request: Request) {
  * processadas. Funciona como rede de segurança caso o webhook não seja entregue.
  */
 async function runPoll(request: Request) {
+  // O webhook MESSAGES_UPSERT é o único processador oficial. O polling fica
+  // desativado por padrão para não responder novamente mensagens já tratadas.
+  if (process.env["WHATSAPP_POLL_ENABLED"] !== "true") {
+    return Response.json({ ok: true, disabled: true, reason: "webhook_primary" });
+  }
+
   if (!authorized(request)) {
     return Response.json({ ok: false, error: "Não autorizado" }, { status: 401 });
   }
