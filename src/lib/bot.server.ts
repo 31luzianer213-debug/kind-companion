@@ -177,6 +177,8 @@ export function generateAppsMessage(config: BotConfigData, serverName: string): 
 
 // Cache em memória para leitura ultrarrápida (0ms) sem bloqueio de RLS
 const botConfigCache = new Map<string, BotConfigData>();
+const botConfigCacheAt = new Map<string, number>();
+
 const paymentSettingsCache = new Map<string, any>();
 
 export function getCanonicalUserId(userId?: string): string {
