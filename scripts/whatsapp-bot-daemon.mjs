@@ -971,8 +971,13 @@ const server = http.createServer(async (req, res) => {
             text,
           );
         } else {
-          await session.sock.sendMessage(jid, { text });
-          ok = true;
+          ok = await session.sendTextSafe(jid, text);
+        }
+
+        if (!ok) {
+          res.writeHead(502, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "Falha ao entregar a mensagem no WhatsApp." }));
+          return;
         }
 
         res.writeHead(200, { "Content-Type": "application/json" });
