@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { getSigmaSettings, syncSigmaClients } from "./sigma.functions";
+import { listSigmaServers, syncAllSigmaServers } from "./sigma-servers.functions";
 
 /**
  * Hook global que mantém o sistema 100% sincronizado com o Painel Sigma:
@@ -13,23 +13,23 @@ import { getSigmaSettings, syncSigmaClients } from "./sigma.functions";
  */
 export function useSigmaAutoSync() {
   const queryClient = useQueryClient();
-  const getSigma = useServerFn(getSigmaSettings);
-  const syncSigma = useServerFn(syncSigmaClients);
+  const getServers = useServerFn(listSigmaServers);
+  const syncSigma = useServerFn(syncAllSigmaServers);
 
   const isSyncingRef = useRef(false);
   const lastSyncTimeRef = useRef<number>(Date.now());
 
   // Consulta se o Sigma está configurado
   const { data: sigmaSettings } = useQuery({
-    queryKey: ["sigma-settings"],
+    queryKey: ["sigma-servers"],
     queryFn: async () => {
-      const res = await getSigma({});
-      return res.ok ? res.settings : null;
+      const res = await getServers({});
+      return res.ok ? res.servers : [];
     },
     staleTime: 60000,
   });
 
-  const isConfigured = Boolean(sigmaSettings?.isConfigured);
+  const isConfigured = Boolean(sigmaSettings?.some((server) => server.enabled));
 
   async function runSync(options: { silent?: boolean; reason?: string } = {}) {
     if (!isConfigured || isSyncingRef.current) return;
@@ -47,11 +47,9 @@ export function useSigmaAutoSync() {
 
       if (res.ok) {
         if (res.created > 0) {
-          const names = res.createdNames?.slice(0, 3).join(", ") || "";
-          const msg =
-            res.created === 1
-              ? `🎉 Novo cliente importado do Sigma: ${names}`
-              : `🎉 ${res.created} novos clientes importados do Painel Sigma! (${names})`;
+          const msg = res.created === 1
+            ? "🎉 Novo cliente importado dos painéis Sigma."
+            : `🎉 ${res.created} novos clientes importados dos painéis Sigma!`;
           toast.success(msg, { duration: 6000 });
         }
 
