@@ -216,10 +216,12 @@ function writeLocalConfig(userId: string | undefined, data: BotConfigData): void
 export async function loadBotConfig(supabase: any, userId: string): Promise<BotConfigData> {
   const uid = userId || "default";
 
-  // 1. Cache em memória para resposta instantânea
-  if (botConfigCache.has(uid)) {
+  // 1. Cache em memória de curta duração (30s) para resposta instantânea
+  const cachedAt = botConfigCacheAt.get(uid) || 0;
+  if (botConfigCache.has(uid) && Date.now() - cachedAt < 30_000) {
     return botConfigCache.get(uid)!;
   }
+
 
   const localPayment = readLocalPaymentSettings(uid);
 
