@@ -153,16 +153,16 @@ export function generateAppsMessage(config: BotConfigData, serverName: string): 
 
   return (
     `📲 *APLICATIVOS OFICIAIS — ${serverName.toUpperCase()}* 🍿\n\n` +
-    `Toque no botão abaixo correspondente ao seu aparelho para fazer o download:\n\n` +
+    `Escolha o aplicativo compatível com seu aparelho e siga as instruções de instalação:\n\n` +
     `🤖 *TV BOX / ANDROID TV / FIRESTICK:*\n` +
     `• No aplicativo *Downloader* da TV, digite o código rápido: *${code}*\n` +
-    `• Ou toque no botão *Baixar APK Android* abaixo.\n\n` +
+    `• Instale o APK Android disponibilizado no painel.\n\n` +
     `📱 *CELULAR & TABLET ANDROID:*\n` +
-    `• Toque no botão *Baixar APK Android* abaixo.\n\n` +
+    `• Baixe o APK Android pelo link configurado no painel.\n\n` +
     `🍏 *IPHONE / IPAD / APPLE TV (iOS):*\n` +
-    `• Toque no botão *App iPhone / iPad* abaixo.\n\n` +
+    `• Use o aplicativo indicado para iPhone/iPad conforme o link configurado.\n\n` +
     `💻 *COMPUTADOR & NOTEBOOK (WINDOWS):*\n` +
-    `• Toque no botão *App Windows (PC)* abaixo.\n\n` +
+    `• Baixe o aplicativo para Windows pelo link configurado no painel.\n\n` +
     `📺 *SMART TV (SAMSUNG / LG / ROKU):*\n` +
     `${smartTv}\n\n` +
     `━━━━━━━━━━━━━━━━━━━\n` +
@@ -879,10 +879,23 @@ async function handleRenewOrderCreation({
  * Processador central de mensagens do Bot.
  * Recebe o texto que o cliente mandou, decide o fluxo e devolve a resposta formatada.
  */
+function normalizeBotInput(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/1️⃣/g, "1").replace(/2️⃣/g, "2").replace(/3️⃣/g, "3")
+    .replace(/4️⃣/g, "4").replace(/5️⃣/g, "5").replace(/6️⃣/g, "6")
+    .replace(/[\\u200b-\\u200d\\ufeff]/g, "")
+    .replace(/[.!?,;:]+$/g, "")
+    .replace(/\\s+/g, " ")
+    .trim();
+}
+
 function buildMainMenu(config: BotConfigData, serverName: string): BotProcessResult {
   const greeting =
     `👋 *Olá! Seja muito bem-vindo(a) à ${config.businessName || "Central IPTV"}!* 🍿\n\n` +
-    `Como podemos te ajudar hoje? Digite o *número* da opção ou clique no botão abaixo:\n\n` +
+    `Como podemos te ajudar? Digite apenas o *número* da opção:\n\n` +
     `1️⃣ *TESTE GRÁTIS* — Teste imediato de ${config.testDurationHours} horas\n` +
     `2️⃣ *RENOVAÇÃO* — Renove seu acesso com PIX Automático\n` +
     `3️⃣ *PLANOS & PREÇOS* — Conheça nossos planos e valores\n` +
@@ -958,11 +971,11 @@ export async function processBotMessage(
   }
 
   const cleanPhone = params.phone.replace(/\D/g, "");
-  const text = (params.text ?? "").trim().toLowerCase();
+  const text = normalizeBotInput(params.text ?? "");
 
   // Saudações e pedido explícito de menu não precisam de uma segunda consulta
   // ao banco: loadBotConfig já trouxe nome, servidor e duração do teste.
-  if (["oi", "olá", "ola", "menu", "início", "inicio", "start", "0"].includes(text)) {
+  if (["oi", "olá", "ola", "menu", "início", "inicio", "start", "0", "voltar ao menu", "voltar menu", "menu inicial", "menu principal"].includes(text)) {
     const quickServerName = config.serverName || config.businessName || "Alpha server IPTV";
     return buildMainMenu(config, quickServerName);
   }
@@ -1173,6 +1186,8 @@ export async function processBotMessage(
   const now = Date.now();
   const session = conversationSessions.get(cleanPhone);
   const isSessionValid = session && now - session.timestamp < 15 * 60 * 1000;
+  if (session && !isSessionValid) conversationSessions.delete(cleanPhone);
+  if (isSessionValid && session) session.timestamp = now;
 
   // Se o cliente digitou comando para trocar de opção, limpa o estado anterior
   if (
@@ -1939,8 +1954,15 @@ export async function pollAndProcessWhatsAppMessages(userId?: string): Promise<{
       continue;
     }
 
+    // Nunca tente inferir telefone a partir de @lid: sem senderPn a mensagem não é roteável com segurança.
+    const resolvedJid = String(keyObj.senderPn || item.senderPn || keyObj.remoteJidAlt || item.remoteJidAlt || remoteJid);
+    if (resolvedJid.endsWith("@lid")) {
+      globalHandledMessageIds.add(msgId);
+      console.warn("[Bot Auto-Poll] Ignorando mensagem LID sem telefone resolvido", msgId);
+      continue;
+    }
     // Extrai número do cliente e garante envio no JID primário (@s.whatsapp.net)
-    const cleanDigits = remoteJid.replace(/@.*$/, "").replace(/\D/g, "");
+    const cleanDigits = resolvedJid.replace(/@.*$/, "").replace(/\D/g, "");
     let realPhone = cleanDigits;
     if (realPhone.length > 13 && realPhone.startsWith("55")) realPhone = realPhone.slice(-13);
     if (!realPhone.startsWith("55") && realPhone.length >= 10 && realPhone.length <= 11) {
