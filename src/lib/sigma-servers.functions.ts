@@ -98,20 +98,45 @@ export const deleteSigmaServer = createServerFn({ method: "POST" })
   .inputValidator((input: { serverId: string }) => input)
   .handler(async ({ data, context }) => {
     const server = await getOwnedServer(context.supabase, context.userId, data.serverId);
-    const { count } = await context.supabase
+    const { data: linkedClients, error: clientsError } = await context.supabase
       .from("clients")
-      .select("id", { count: "exact", head: true })
+      .select("id")
       .eq("user_id", context.userId)
       .eq("panel_id", data.serverId);
-    if ((count ?? 0) > 0) {
-      return { ok: false as const, error: `Este servidor possui ${count} cliente(s) vinculado(s). Desative-o em vez de excluir.` };
+    if (clientsError) return { ok: false as const, error: clientsError.message };
+
+    const clientIds = (linkedClients ?? []).map((client) => client.id);
+    if (clientIds.length > 0) {
+      const { error: logsError } = await context.supabase
+        .from("message_logs")
+        .delete()
+        .eq("user_id", context.userId)
+        .in("client_id", clientIds);
+      if (logsError) return { ok: false as const, error: `Falha ao remover mensagens dos clientes: ${logsError.message}` };
+
+      const { error: invoicesError } = await context.supabase
+        .from("invoices")
+        .delete()
+        .eq("user_id", context.userId)
+        .in("client_id", clientIds);
+      if (invoicesError) return { ok: false as const, error: `Falha ao remover cobranças dos clientes: ${invoicesError.message}` };
+
+      const { error: deleteClientsError } = await context.supabase
+        .from("clients")
+        .delete()
+        .eq("user_id", context.userId)
+        .eq("panel_id", data.serverId);
+      if (deleteClientsError) return { ok: false as const, error: `Falha ao remover clientes: ${deleteClientsError.message}` };
     }
+
     const { error } = await context.supabase
       .from("sigma_panels")
       .delete()
       .eq("id", server.id)
       .eq("user_id", context.userId);
-    return error ? { ok: false as const, error: error.message } : { ok: true as const, error: null };
+    return error
+      ? { ok: false as const, error: error.message }
+      : { ok: true as const, deletedClients: clientIds.length, error: null };
   });
 
 export const testSigmaServer = createServerFn({ method: "POST" })
