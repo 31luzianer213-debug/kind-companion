@@ -394,3 +394,24 @@ export async function evoSendList(
   if (!res.ok) return await evoSendText(to, options.description);
   return { ok: true as const, data: res.data };
 }
+
+/**
+ * Busca as mensagens mais recentes diretamente do banco da Evolution.
+ * Usado pelo polling, que garante resposta mesmo se o webhook não chegar.
+ */
+export async function evoFetchRecentMessages(limit = 30): Promise<any[]> {
+  const env = evolutionEnv();
+  if (!env) return [];
+  const instance = await resolveInstance();
+  const res = await evoRequest(
+    `/chat/findMessages/${encodeURIComponent(instance)}`,
+    { method: "POST", body: JSON.stringify({ where: {}, limit }) },
+    20000,
+  );
+  if (!res.ok) return [];
+  const records =
+    res.data?.messages?.records ??
+    res.data?.records ??
+    (Array.isArray(res.data) ? res.data : []);
+  return Array.isArray(records) ? records : [];
+}
