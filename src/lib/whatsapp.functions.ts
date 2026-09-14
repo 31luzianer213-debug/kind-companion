@@ -52,8 +52,9 @@ export const getWhatsAppStatus = createServerFn({ method: "POST" })
   .handler(async () => {
     try {
       const { getBaileysStatus } = await import("./baileys.functions");
-      const res = await getBaileysStatus();
-      const st = res?.state?.status || "close";
+      const res = await getBaileysStatus({ data: { instance: "default" } });
+      const rawStatus = String(res?.state?.status || "close").toLowerCase();
+      const st = rawStatus === "open" || rawStatus === "connected" ? "open" : rawStatus;
       return { ok: true as const, state: st, error: null };
     } catch (error) {
       return {

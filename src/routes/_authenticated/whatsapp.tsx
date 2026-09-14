@@ -153,12 +153,14 @@ function WhatsAppPage() {
 
   // Toast quando conecta
   useEffect(() => {
-    if (isConnected && state?.phone) {
-      toast.success(`WhatsApp conectado com sucesso no número +${state.phone}!`, {
-        id: "baileys-connected-toast",
-      });
-    }
-  }, [isConnected, state?.phone]);
+    if (!isConnected) return;
+    toast.success(
+      state?.phone ? `WhatsApp conectado com sucesso no número +${state.phone}!` : "WhatsApp conectado com sucesso!",
+      { id: "baileys-connected-toast" },
+    );
+    qc.invalidateQueries({ queryKey: ["layout-whatsapp-status"] });
+    qc.invalidateQueries({ queryKey: ["painel-wa-status"] });
+  }, [isConnected, state?.phone, qc]);
 
   // Histórico Recente de Disparos do Supabase
   const { data: logsData } = useQuery({
