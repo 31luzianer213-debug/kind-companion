@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
-import { useSigmaAutoSync } from "@/lib/useSigmaAutoSync";
 
 function getDeletedOrderIds() {
   const ids = new Set<string>();
@@ -51,7 +50,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
 
-  useSigmaAutoSync();
 
   useEffect(() => {
     let active = true;
