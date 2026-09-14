@@ -54,15 +54,22 @@ function textFromMessage(raw: any, fallback = ""): string {
 function phoneFromJids(...values: unknown[]): string {
   const candidates = values
     .map((value) => String(value ?? "").trim())
-    .filter((value) => value && !value.endsWith("@lid"));
+    .filter(Boolean);
 
   for (const value of candidates) {
+    if (value.endsWith("@lid")) continue;
     let digits = onlyDigits(value.replace(/@.*$/, ""));
     if (digits.length >= 10 && digits.length <= 13) {
       if (!digits.startsWith("55") && digits.length <= 11) digits = `55${digits}`;
       return digits;
     }
   }
+
+  // Contas recentes do WhatsApp podem chegar somente com o identificador LID,
+  // sem remoteJidAlt ou telefone. A Evolution aceita esse JID diretamente no
+  // envio; descartá-lo aqui fazia o webhook ignorar mensagens reais.
+  const lid = candidates.find((value) => value.endsWith("@lid"));
+  if (lid && onlyDigits(lid.replace(/@.*$/, "")).length >= 10) return lid;
   return "";
 }
 
