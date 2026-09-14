@@ -30,6 +30,7 @@ export type Database = {
           notes: string | null
           phone: string
           screens: number
+          panel_id: string | null
           sigma_customer_id: string | null
           sigma_synced_at: string | null
           sigma_username: string | null
@@ -50,6 +51,7 @@ export type Database = {
           name: string
           next_due_date?: string | null
           notes?: string | null
+          panel_id?: string | null
           phone: string
           screens?: number
           sigma_customer_id?: string | null
@@ -72,6 +74,7 @@ export type Database = {
           name?: string
           next_due_date?: string | null
           notes?: string | null
+          panel_id?: string | null
           phone?: string
           screens?: number
           sigma_customer_id?: string | null
@@ -87,6 +90,13 @@ export type Database = {
             columns: ["list_id"]
             isOneToOne: false
             referencedRelation: "iptv_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "sigma_panels"
             referencedColumns: ["id"]
           },
         ]
