@@ -161,8 +161,8 @@ async function syncOneServer(supabase: any, userId: string, server: any) {
     .eq("user_id", userId)
     .eq("panel_id", server.id);
 
-  const byId = new Map((existing ?? []).filter((row: any) => row.sigma_customer_id).map((row: any) => [String(row.sigma_customer_id), row]));
-  const byUsername = new Map((existing ?? []).filter((row: any) => row.iptv_username).map((row: any) => [String(row.iptv_username).toLowerCase(), row]));
+  const byId = new Map<string, any>((existing ?? []).filter((row: any) => row.sigma_customer_id).map((row: any) => [String(row.sigma_customer_id), row]));
+  const byUsername = new Map<string, any>((existing ?? []).filter((row: any) => row.iptv_username).map((row: any) => [String(row.iptv_username).toLowerCase(), row]));
   let created = 0;
   let updated = 0;
   const now = new Date().toISOString();
@@ -254,8 +254,6 @@ export const syncAllSigmaServers = createServerFn({ method: "POST" })
         results.push({ ok: false, serverId: server.id, serverName: server.name, created: 0, updated: 0, total: 0, error: message });
         await context.supabase.from("sigma_panels").update({
           last_sync_at: new Date().toISOString(),
-          last_sync_status: "error",
-          last_sync_error: message,
         }).eq("id", server.id).eq("user_id", context.userId);
       }
     }
