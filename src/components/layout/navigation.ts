@@ -12,7 +12,19 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type AppRoute =\n  | "/painel"\n  | "/pedidos"\n  | "/clientes"\n  | "/cobrancas"\n  | "/sigma"\n  | "/bot"\n  | "/whatsapp"\n  | "/pagamentos"\n  | "/mensagens"\n  | "/configuracoes";\n\nexport type NavigationBadge = "orders" | "clients" | "invoices" | "sigma" | "whatsapp";
+export type AppRoute =
+  | "/painel"
+  | "/pedidos"
+  | "/clientes"
+  | "/cobrancas"
+  | "/sigma"
+  | "/bot"
+  | "/whatsapp"
+  | "/pagamentos"
+  | "/mensagens"
+  | "/configuracoes";
+
+export type NavigationBadge = "orders" | "clients" | "invoices" | "sigma" | "whatsapp";
 
 export interface NavigationItem {
   to: AppRoute;
