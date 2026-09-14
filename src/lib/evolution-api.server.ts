@@ -200,10 +200,10 @@ function lookupRows(data: any): any[] {
   return [];
 }
 
-function lookupNumber(row: any): string {
-  return String(row?.jid ?? row?.number ?? row?.phone ?? "")
-    .replace(/@.*$/, "")
-    .replace(/\D/g, "");
+function lookupDestination(row: any): string {
+  const value = String(row?.jid ?? row?.number ?? row?.phone ?? "").trim();
+  if (value.endsWith("@lid")) return value;
+  return value.replace(/@.*$/, "").replace(/\D/g, "");
 }
 
 /**
@@ -213,14 +213,19 @@ function lookupNumber(row: any): string {
  * HTTP 200 na Evolution sem a mensagem aparecer no celular.
  */
 async function resolveWhatsAppNumber(raw: string): Promise<string> {
-  const original = toNumber(raw).replace(/@.*$/, "");
+  const destination = toNumber(raw);
+  const isLid = destination.endsWith("@lid");
+  const original = isLid ? destination : destination.replace(/@.*$/, "");
   if (!original) return "";
 
   const cached = resolvedNumberCache.get(original);
   if (cached && cached.expiresAt > Date.now()) return cached.number;
 
-  const candidates = phoneVariants(original)
-    .filter((number) => number.startsWith("55") && number.length >= 12 && number.length <= 13);
+  const candidates = isLid
+    ? [original]
+    : phoneVariants(original).filter(
+        (number) => number.startsWith("55") && number.length >= 12 && number.length <= 13,
+      );
   const numbers = Array.from(new Set(candidates.length ? candidates : [original]));
   const instance = await resolveInstance();
 
@@ -237,7 +242,7 @@ async function resolveWhatsAppNumber(raw: string): Promise<string> {
     if (!lookup.ok) continue;
 
     const match = lookupRows(lookup.data).find((row: any) => row?.exists === true);
-    const found = lookupNumber(match);
+    const found = lookupDestination(match);
     if (found) {
       resolved = found;
       break;
