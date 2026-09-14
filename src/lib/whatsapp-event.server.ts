@@ -86,16 +86,26 @@ export function parseEvolutionMessages(payload: any): IncomingWhatsAppMessage[] 
 
   return entries.map((entry: any) => {
     const key = entry?.key ?? {};
+    // A Evolution v2 informa o número real em senderPn quando remoteJid muda
+    // para @lid. Responder ao LID pode abrir outra sessão Signal e causar
+    // "Bad MAC" / "Aguardando mensagem" no meio da conversa.
     const senderJid = String(
-      key.remoteJidAlt ?? entry.remoteJidAlt ?? key.remoteJid ?? entry.remoteJid ?? entry.sender ?? payload.sender ?? "",
+      key.senderPn ??
+        entry.senderPn ??
+        key.remoteJidAlt ??
+        entry.remoteJidAlt ??
+        key.remoteJid ??
+        entry.remoteJid ??
+        "",
     ).trim();
     const originalJid = String(key.remoteJid ?? entry.remoteJid ?? senderJid).trim();
     const phone = phoneFromJids(
+      key.senderPn,
+      entry.senderPn,
       key.remoteJidAlt,
       entry.remoteJidAlt,
-      entry.sender,
-      payload.sender,
       key.participant,
+      entry.participant,
       originalJid,
     );
 
