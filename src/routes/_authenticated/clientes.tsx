@@ -15,7 +15,7 @@ import {
   toggleSigmaClientBlock,
   createSigmaQuickTest,
 } from "@/lib/sigma.functions";
-import { listSigmaServers, syncAllSigmaServers } from "@/lib/sigma-servers.functions";
+import { cleanupOrphanSigmaClients, listSigmaServers, syncAllSigmaServers } from "@/lib/sigma-servers.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -263,6 +263,7 @@ function Clientes() {
   const renewSigma = useServerFn(renewSigmaClient);
   const toggleBlock = useServerFn(toggleSigmaClientBlock);
   const getSigma = useServerFn(listSigmaServers);
+  const cleanupOrphans = useServerFn(cleanupOrphanSigmaClients);
   const quickTest = useServerFn(createSigmaQuickTest);
   const getBot = useServerFn(getBotSettings);
 
@@ -343,13 +344,24 @@ function Clientes() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["clients"],
     queryFn: async () => {
+      try {
+        await cleanupOrphans({});
+      } catch {
+        // A manutenção não deve impedir a lista de clientes de abrir.
+      }
+
       const { data, error } = await supabase
         .from("clients")
         .select("*")
         .order("name", { ascending: true });
-      if (error) throw error;
+      if (error) {
+        console.warn("Falha temporária ao carregar clientes:", error.message);
+        return [];
+      }
       return data ?? [];
     },
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 4000),
   });
 
   const sigmaServersQuery = useQuery({
