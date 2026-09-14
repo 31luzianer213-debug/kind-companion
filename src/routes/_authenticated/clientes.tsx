@@ -8,15 +8,14 @@ import type { Tables } from "@/integrations/supabase/types";
 import { sendAccessDetails, sendWhatsAppMessage } from "@/lib/whatsapp.functions";
 import { getBotSettings } from "@/lib/bot.functions";
 import {
-  syncSigmaClients,
   createSigmaClient,
   updateSigmaClient,
   deleteSigmaClient,
   renewSigmaClient,
   toggleSigmaClientBlock,
-  getSigmaSettings,
   createSigmaQuickTest,
 } from "@/lib/sigma.functions";
+import { listSigmaServers, syncAllSigmaServers } from "@/lib/sigma-servers.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -155,6 +154,7 @@ type ClientForm = {
   screens: string;
   activated_at: string;
   create_in_sigma: boolean;
+  sigma_server_id: string;
 };
 
 const empty: ClientForm = {
@@ -171,6 +171,7 @@ const empty: ClientForm = {
   screens: "1",
   activated_at: "",
   create_in_sigma: true,
+  sigma_server_id: "",
 };
 
 function formatPhoneInput(value?: string | null) {
@@ -255,13 +256,13 @@ function Clientes() {
   const queryClient = useQueryClient();
   const send = useServerFn(sendWhatsAppMessage);
   const sendAccess = useServerFn(sendAccessDetails);
-  const syncSigma = useServerFn(syncSigmaClients);
+  const syncSigma = useServerFn(syncAllSigmaServers);
   const createSigma = useServerFn(createSigmaClient);
   const updateSigma = useServerFn(updateSigmaClient);
   const deleteSigma = useServerFn(deleteSigmaClient);
   const renewSigma = useServerFn(renewSigmaClient);
   const toggleBlock = useServerFn(toggleSigmaClientBlock);
-  const getSigma = useServerFn(getSigmaSettings);
+  const getSigma = useServerFn(listSigmaServers);
   const quickTest = useServerFn(createSigmaQuickTest);
   const getBot = useServerFn(getBotSettings);
 
@@ -282,6 +283,7 @@ function Clientes() {
   const [testHours, setTestHours] = useState(4);
   const [testClientName, setTestClientName] = useState("");
   const [testClientPhone, setTestClientPhone] = useState("");
+  const [testServerId, setTestServerId] = useState("");
 
   const [open, setOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -350,14 +352,14 @@ function Clientes() {
     },
   });
 
-  const sigmaConfigQuery = useQuery({
-    queryKey: ["sigma-settings"],
+  const sigmaServersQuery = useQuery({
+    queryKey: ["sigma-servers"],
     queryFn: async () => {
       try {
         const res = await getSigma({});
-        return res?.ok ? res.settings : null;
+        return res?.ok ? res.servers : [];
       } catch {
-        return null;
+        return [];
       }
     },
     retry: 0,
@@ -365,24 +367,24 @@ function Clientes() {
   });
 
   const clients = data ?? [];
-  const isSigmaConfigured = Boolean(sigmaConfigQuery.data?.isConfigured);
+  const sigmaServers = sigmaServersQuery.data ?? [];
+  const defaultSigmaServer = sigmaServers.find((server) => server.is_default) ?? sigmaServers[0];
+  const isSigmaConfigured = sigmaServers.some((server) => server.enabled);
   const isRawDomain = (name?: string | null) =>
     !name ||
     name.trim().startsWith("http") ||
     /\.(click|com|net|org|xyz|st|top|io|tv|online|site|app|live)\b/i.test(name);
 
-  const rawConfigServerName =
-    sigmaConfigQuery.data?.sigma_server_name?.trim() ||
-    sigmaConfigQuery.data?.sigma_server_display_name;
+  const rawConfigServerName = defaultSigmaServer?.name?.trim();
 
   const sigmaServerName =
     rawConfigServerName && !isRawDomain(rawConfigServerName)
       ? rawConfigServerName
-      : "Servidor Principal";
+      : sigmaServers.length > 1 ? `${sigmaServers.length} servidores` : "Servidor Principal";
 
   const sigmaServerUrl =
-    sigmaConfigQuery.data?.sigma_streaming_dns?.trim() ||
-    sigmaConfigQuery.data?.sigma_url ||
+    defaultSigmaServer?.streaming_dns?.trim() ||
+    defaultSigmaServer?.panel_url ||
     "";
 
   function getClientServerLabel(client?: ClientRow | null): string {
@@ -491,6 +493,7 @@ function Clientes() {
           try {
             const createPayload: any = {
               clientId: values.id,
+              serverId: values.sigma_server_id || defaultSigmaServer?.id,
               name: values.name.trim(),
               username: values.iptv_username.trim(),
               password: values.iptv_password?.trim() || "",
@@ -547,6 +550,7 @@ function Clientes() {
           try {
             const createPayload: any = {
               clientId: savedRow.id,
+              serverId: values.sigma_server_id || defaultSigmaServer?.id,
               name: values.name.trim(),
               username: values.iptv_username.trim(),
               password: values.iptv_password?.trim() || "",
@@ -759,6 +763,7 @@ function Clientes() {
       const res = await quickTest({
         data: {
           hours: testHours,
+          serverId: testServerId || defaultSigmaServer?.id,
           name: testClientName.trim() || undefined,
           phone: cleanPhoneDigits(testClientPhone) || undefined,
         },
@@ -898,13 +903,14 @@ function Clientes() {
       screens: String(client.screens ?? 1),
       activated_at: client.activated_at ?? "",
       create_in_sigma: Boolean(client.sigma_customer_id || isSigmaConfigured),
+      sigma_server_id: client.sigma_server_id ?? "",
     });
     setOpen(true);
   }
 
   async function sincronizar() {
     setSyncing(true);
-    const result = await syncSigma({ data: {} });
+    const result = await syncSigma({});
     setSyncing(false);
     if (result.ok) {
       if (result.created > 0) {
@@ -915,7 +921,7 @@ function Clientes() {
         toast.info("Tudo sincronizado! Nenhuma alteração pendente no servidor.");
       }
       queryClient.invalidateQueries({ queryKey: ["clients"] });
-      queryClient.invalidateQueries({ queryKey: ["sigma-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["sigma-servers"] });
     } else {
       toast.error(result.error ?? "Falha ao sincronizar.");
     }
@@ -1042,6 +1048,22 @@ function Clientes() {
 
           {!testCredentials ? (
             <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Gerar teste no painel</Label>
+                <Select value={testServerId || defaultSigmaServer?.id || ""} onValueChange={setTestServerId}>
+                  <SelectTrigger className="rounded-md">
+                    <SelectValue placeholder="Selecione o painel Sigma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sigmaServers.filter((server) => server.enabled).map((server) => (
+                      <SelectItem key={server.id} value={server.id}>
+                        {server.name}{server.is_default ? " (padrão)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Duração do Teste</Label>
@@ -1707,6 +1729,29 @@ function Clientes() {
                   required
                   className="text-sm"
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Painel Sigma de origem *</Label>
+                <Select
+                  value={form.sigma_server_id || defaultSigmaServer?.id || ""}
+                  onValueChange={(value) => setForm({ ...form, sigma_server_id: value })}
+                  disabled={Boolean(form.id && form.sigma_server_id)}
+                >
+                  <SelectTrigger className="rounded-md">
+                    <SelectValue placeholder="Selecione o painel Sigma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sigmaServers.filter((server) => server.enabled).map((server) => (
+                      <SelectItem key={server.id} value={server.id}>
+                        {server.name}{server.is_default ? " (padrão)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.id && form.sigma_server_id ? (
+                  <p className="text-[11px] text-muted-foreground">O painel de origem fica bloqueado para preservar as operações deste cliente.</p>
+                ) : null}
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">

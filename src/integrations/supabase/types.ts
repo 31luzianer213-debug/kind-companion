@@ -30,8 +30,8 @@ export type Database = {
           notes: string | null
           phone: string
           screens: number
-          panel_id: string | null
           sigma_customer_id: string | null
+          sigma_server_id: string | null
           sigma_synced_at: string | null
           sigma_username: string | null
           status: string
@@ -51,10 +51,11 @@ export type Database = {
           name: string
           next_due_date?: string | null
           notes?: string | null
-          panel_id?: string | null
           phone: string
           screens?: number
           sigma_customer_id?: string | null
+          sigma_server_id?: string | null
+          sigma_server_id?: string | null
           sigma_synced_at?: string | null
           sigma_username?: string | null
           status?: string
@@ -74,7 +75,6 @@ export type Database = {
           name?: string
           next_due_date?: string | null
           notes?: string | null
-          panel_id?: string | null
           phone?: string
           screens?: number
           sigma_customer_id?: string | null
@@ -86,17 +86,17 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "clients_sigma_server_id_fkey"
+            columns: ["sigma_server_id"]
+            isOneToOne: false
+            referencedRelation: "sigma_servers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "clients_list_id_fkey"
             columns: ["list_id"]
             isOneToOne: false
             referencedRelation: "iptv_lists"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "clients_panel_id_fkey"
-            columns: ["panel_id"]
-            isOneToOne: false
-            referencedRelation: "sigma_panels"
             referencedColumns: ["id"]
           },
         ]
@@ -380,6 +380,63 @@ export type Database = {
           token?: string | null
           updated_at?: string
           url?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      sigma_servers: {
+        Row: {
+          auto_renew: boolean
+          created_at: string
+          enabled: boolean
+          id: string
+          is_default: boolean
+          last_sync_at: string | null
+          last_sync_error: string | null
+          last_sync_status: string | null
+          name: string
+          panel_url: string
+          password: string | null
+          streaming_dns: string | null
+          token: string | null
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          auto_renew?: boolean
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          is_default?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          name?: string
+          panel_url: string
+          password?: string | null
+          streaming_dns?: string | null
+          token?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          auto_renew?: boolean
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          is_default?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          name?: string
+          panel_url?: string
+          password?: string | null
+          streaming_dns?: string | null
+          token?: string | null
+          updated_at?: string
           user_id?: string
           username?: string | null
         }
