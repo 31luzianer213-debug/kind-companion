@@ -31,6 +31,7 @@ export type Database = {
           phone: string
           screens: number
           sigma_customer_id: string | null
+          sigma_server_id: string | null
           sigma_synced_at: string | null
           sigma_username: string | null
           status: string
@@ -53,6 +54,8 @@ export type Database = {
           phone: string
           screens?: number
           sigma_customer_id?: string | null
+          sigma_server_id?: string | null
+          sigma_server_id?: string | null
           sigma_synced_at?: string | null
           sigma_username?: string | null
           status?: string
@@ -82,6 +85,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "clients_sigma_server_id_fkey"
+            columns: ["sigma_server_id"]
+            isOneToOne: false
+            referencedRelation: "sigma_servers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clients_list_id_fkey"
             columns: ["list_id"]
@@ -324,6 +334,63 @@ export type Database = {
           display_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      sigma_servers: {
+        Row: {
+          auto_renew: boolean
+          created_at: string
+          enabled: boolean
+          id: string
+          is_default: boolean
+          last_sync_at: string | null
+          last_sync_error: string | null
+          last_sync_status: string | null
+          name: string
+          panel_url: string
+          password: string | null
+          streaming_dns: string | null
+          token: string | null
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          auto_renew?: boolean
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          is_default?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          name?: string
+          panel_url: string
+          password?: string | null
+          streaming_dns?: string | null
+          token?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          auto_renew?: boolean
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          is_default?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          name?: string
+          panel_url?: string
+          password?: string | null
+          streaming_dns?: string | null
+          token?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
         }
         Relationships: []
       }
