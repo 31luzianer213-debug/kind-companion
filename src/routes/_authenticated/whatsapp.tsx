@@ -90,7 +90,7 @@ function WhatsAppPage() {
 
   // Testes
   const [testNumber, setTestNumber] = useState("");
-  const [testText, setTestText] = useState("Teste IPTV Manager — WhatsApp conectado com Baileys nativo!");
+  const [testText, setTestText] = useState("Teste do Sigma Control — WhatsApp conectado e pronto para enviar mensagens!");
   const [sendingTest, setSendingTest] = useState(false);
 
   useEffect(() => {

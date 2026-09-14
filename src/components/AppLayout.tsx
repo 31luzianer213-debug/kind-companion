@@ -129,7 +129,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="app-aurora min-h-[100dvh] bg-background text-foreground md:flex">
-      <header className="mobile-app-header sticky top-0 z-30 flex min-h-[60px] items-center justify-between border-b border-border/60 bg-background/88 px-4 py-2.5 backdrop-blur-xl md:hidden">
+      <header className="mobile-app-header sticky top-0 z-30 flex min-h-[64px] items-center justify-between border-b border-border/60 bg-background/90 px-4 py-2.5 shadow-sm backdrop-blur-xl md:hidden">
         <AppBrand compact />
         <div className="flex items-center gap-1.5">
           <ThemeToggle />
@@ -170,13 +170,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <aside className="sticky top-0 hidden h-[100dvh] w-[276px] shrink-0 flex-col border-r border-border/60 bg-sidebar/88 p-4 backdrop-blur-xl md:flex">
+      <aside className="sticky top-0 hidden h-[100dvh] w-[276px] shrink-0 flex-col border-r border-border/60 bg-sidebar/92 p-4 backdrop-blur-xl md:flex">
         <DesktopNavigation {...navigationProps} />
       </aside>
 
       <main className="relative min-w-0 flex-1 overflow-x-hidden">
         <div className="pointer-events-none absolute inset-0 hidden app-grid opacity-[0.14] md:block" />
-        <div className="relative mx-auto min-h-full w-full max-w-[1600px] px-3.5 pb-24 pt-5 sm:px-6 md:px-8 md:pb-10 md:pt-8 lg:px-10 xl:px-12">
+        <div className="relative mx-auto min-h-full w-full max-w-[1600px] px-4 pb-24 pt-5 sm:px-6 md:px-8 md:pb-12 md:pt-8 lg:px-10 xl:px-12">
           {children}
         </div>
       </main>
