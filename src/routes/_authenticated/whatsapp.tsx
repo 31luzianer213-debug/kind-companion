@@ -11,19 +11,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateTime } from "@/lib/format";
 import {
+  Activity,
+  AlertTriangle,
+  Bot,
+  Check,
+  CheckCircle2,
+  Clock,
+  Copy,
+  KeyRound,
+  Layers,
+  List,
+  Loader2,
   LogOut,
+  MessageCircle,
   QrCode,
   RefreshCw,
   Send,
-  CheckCircle2,
-  Clock,
-  Loader2,
+  Server,
+  ShieldCheck,
+  Smartphone,
+  Wifi,
   Zap,
-  Copy,
-  Check,
-  List,
-  Layers,
-  KeyRound,
 } from "lucide-react";
 import {
   getBaileysStatus,
@@ -36,10 +44,10 @@ import {
 export const Route = createFileRoute("/_authenticated/whatsapp")({
   head: () => ({
     meta: [
-      { title: "WhatsApp — Baileys Nativo & Botões Interativos" },
+      { title: "WhatsApp — Conexão e Automação" },
       {
         name: "description",
-        content: "Conecte seu WhatsApp via Baileys nativo por QR Code ou Código de Pareamento com suporte a botões e listas interativas.",
+        content: "Conecte, acompanhe e teste seu robô de atendimento do WhatsApp.",
       },
     ],
   }),
@@ -50,15 +58,15 @@ function statusBadge(status: string) {
   const s = String(status ?? "").toLowerCase();
   if (s === "open") {
     return {
-      label: "Conectado (Baileys)",
+      label: "Conectado",
       color: "bg-emerald-500",
       variant: "default" as const,
-      desc: "WhatsApp conectado via Baileys! Botões e listas interativas 24h ativos.",
+      desc: "Instância online e pronta para receber e responder mensagens.",
     };
   }
   if (s === "connecting") {
     return {
-      label: "Conectando / Aguardando Leitura",
+      label: "Aguardando conexão",
       color: "bg-amber-500",
       variant: "secondary" as const,
       desc: "Escaneie o QR Code ou insira o Código de Pareamento no seu WhatsApp.",
@@ -68,7 +76,7 @@ function statusBadge(status: string) {
     label: "Desconectado",
     color: "bg-red-500",
     variant: "destructive" as const,
-    desc: "Gere o QR Code ou solicite o Código de Pareamento para conectar.",
+    desc: "Conecte pelo QR Code ou pelo código de pareamento.",
   };
 }
 
@@ -376,361 +384,334 @@ function WhatsAppPage() {
   }
 
   return (
-    <div className="space-y-4 max-w-4xl animate-in fade-in duration-300">
-      {/* Banner de Destaque: Baileys Nativo */}
-      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-4 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
-              <Zap className="size-5" />
+    <div className="mx-auto w-full max-w-6xl space-y-5 pb-10 animate-in fade-in duration-300">
+      <section className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/15 via-card to-card p-5 shadow-sm sm:p-7">
+        <div className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+              <MessageCircle className="size-6" />
             </div>
-            <div>
-              <p className="text-sm font-extrabold text-foreground flex items-center gap-2">
-                WhatsApp Baileys Nativo
-                <Badge variant="outline" className="text-emerald-400 border-emerald-500/40 text-[10px]">
-                  24h Ativo
+            <div className="min-w-0">
+              <div className="mb-1 flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-black tracking-tight sm:text-2xl">Central do WhatsApp</h1>
+                <Badge variant={info.variant} className="gap-1.5">
+                  <span className={`size-1.5 rounded-full ${info.color} ${status === "connecting" ? "animate-pulse" : ""}`} />
+                  {info.label}
                 </Badge>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Conexão direta sem intermediários. Suporta <strong>botões clicáveis</strong>, <strong>listas interativas</strong> e <strong>botão de copiar PIX</strong>.
+              </div>
+              <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                Conecte sua instância, acompanhe a saúde do robô e faça testes de envio em um só lugar.
               </p>
             </div>
           </div>
           <Button
             variant="outline"
-            size="sm"
             onClick={() => qc.invalidateQueries({ queryKey: ["baileys"] })}
-            className="rounded-full text-xs font-bold gap-1.5 self-start sm:self-auto"
+            disabled={baileysQuery.isFetching}
+            className="w-full gap-2 rounded-xl sm:w-auto"
           >
-            <RefreshCw className="size-3.5" /> Atualizar Status
+            <RefreshCw className={`size-4 ${baileysQuery.isFetching ? "animate-spin" : ""}`} />
+            Atualizar agora
           </Button>
         </div>
-      </div>
+      </section>
 
-      {/* Card Principal: Status da Conexão e Métodos de Pareamento */}
-      <div className="rounded-2xl border-2 border-primary/30 bg-card p-4 shadow-md space-y-4">
-        <div className="flex items-center gap-3">
-          <span className={`size-3 shrink-0 rounded-full ${info.color} ${status === "connecting" ? "animate-pulse" : ""}`} />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="text-base font-extrabold text-foreground">Conexão WhatsApp (Baileys)</p>
-              <Badge variant={info.variant}>{info.label}</Badge>
+      <section className="grid gap-3 sm:grid-cols-3">
+        <Card className="rounded-2xl border-border/70 shadow-sm">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className={`flex size-10 items-center justify-center rounded-xl ${isConnected ? "bg-emerald-500/15 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
+              <Wifi className="size-5" />
             </div>
-            <p className="text-xs text-muted-foreground">{info.desc}</p>
-          </div>
-          {state?.phone && (
-            <div className="text-right">
-              <span className="text-[11px] text-muted-foreground block">Número Conectado:</span>
-              <span className="font-mono font-bold text-sm text-primary">+{state.phone}</span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Conexão</p>
+              <p className="truncate text-sm font-extrabold">{info.label}</p>
             </div>
-          )}
-        </div>
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl border-border/70 shadow-sm">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Server className="size-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Motor</p>
+              <p className="truncate text-sm font-extrabold">{state?.provider === "evolution" ? "Evolution API" : "WhatsApp Web"}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl border-border/70 shadow-sm">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-sky-500/10 text-sky-500">
+              <Smartphone className="size-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Número conectado</p>
+              <p className="truncate text-sm font-extrabold">{state?.phone ? `+${state.phone}` : "Nenhum número"}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
 
-        {/* Se já está conectado */}
-        {isConnected && (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-3">
-            <div className="flex items-center gap-2.5 text-emerald-400">
-              <CheckCircle2 className="size-5 shrink-0" />
-              <div className="text-xs font-semibold">
-                WhatsApp conectado via Baileys! O robô com botões interativos e listas está 100% operacional 24 horas por dia.
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(300px,.6fr)]">
+        <Card className="overflow-hidden rounded-3xl border-border/70 shadow-sm">
+          <CardHeader className="border-b bg-muted/20 p-5 sm:p-6">
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-500">
+                <QrCode className="size-5" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Conectar WhatsApp</CardTitle>
+                <CardDescription className="mt-1">{info.desc}</CardDescription>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-full font-bold text-xs gap-1.5"
-                onClick={() => handleStartQr(true)}
-                disabled={loadingAction}
-              >
-                <RefreshCw className="size-3.5" /> Reconectar / Novo QR Code
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-full font-bold text-xs gap-1.5"
-                onClick={handleResetSession}
-                disabled={loadingAction}
-              >
-                <RefreshCw className="size-3.5" /> Corrigir sessão da VPS
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="rounded-full font-bold text-xs gap-1.5"
-                onClick={handleLogout}
-                disabled={loadingAction}
-              >
-                <LogOut className="size-3.5" /> Desconectar WhatsApp
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Se NÃO está conectado, exibe Abas de Conexão: QR Code ou Pairing Code */}
-        {!isConnected && (
-          <div className="space-y-4 pt-2">
-            <Tabs value={connectTab} onValueChange={(v) => setConnectTab(v as "qr" | "pairing")}>
-              <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
-                <TabsTrigger value="qr" className="font-bold text-xs gap-1.5">
-                  <QrCode className="size-3.5" /> 1. Escanear QR Code
-                </TabsTrigger>
-                <TabsTrigger value="pairing" className="font-bold text-xs gap-1.5">
-                  <KeyRound className="size-3.5" /> 2. Código de Pareamento
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Aba QR Code */}
-              <TabsContent value="qr" className="space-y-4 pt-3">
-                <div className="text-center space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    Clique em <strong>Gerar QR Code</strong> e aponte a câmera do WhatsApp (Aparelhos Conectados &rarr; Conectar Aparelho).
-                  </p>
-                  <Button
-                    onClick={() => handleStartQr(true)}
-                    disabled={loadingAction}
-                    className="rounded-full font-bold gap-1.5 shadow-md px-6"
-                  >
-                    {loadingAction ? <Loader2 className="size-4 animate-spin" /> : <QrCode className="size-4" />}
-                    {activeQr ? "Gerar Novo QR Code" : "Gerar QR Code Agora"}
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6">
+            {isConnected ? (
+              <div className="space-y-5">
+                <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-0.5 size-6 shrink-0 text-emerald-500" />
+                    <div>
+                      <p className="font-extrabold">Tudo pronto para atender</p>
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                        A instância está conectada. Mensagens recebidas pelo webhook podem ser processadas pelo bot imediatamente.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                {state?.lastError && (
+                  <div className="flex gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
+                    <AlertTriangle className="size-5 shrink-0 text-amber-500" />
+                    <div className="min-w-0">
+                      <p className="font-bold">Último aviso da conexão</p>
+                      <p className="mt-1 break-words text-muted-foreground">{String(state.lastError)}</p>
+                    </div>
+                  </div>
+                )}
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button variant="outline" onClick={() => handleStartQr(true)} disabled={loadingAction} className="h-11 justify-start gap-2 rounded-xl">
+                    <RefreshCw className="size-4" /> Gerar nova conexão
+                  </Button>
+                  <Button variant="outline" onClick={handleResetSession} disabled={loadingAction} className="h-11 justify-start gap-2 rounded-xl">
+                    <ShieldCheck className="size-4" /> Reparar sessão
+                  </Button>
+                  <Button variant="destructive" onClick={handleLogout} disabled={loadingAction} className="h-11 justify-start gap-2 rounded-xl sm:col-span-2">
+                    <LogOut className="size-4" /> Desconectar este WhatsApp
                   </Button>
                 </div>
+              </div>
+            ) : (
+              <Tabs value={connectTab} onValueChange={(value) => setConnectTab(value as "qr" | "pairing")} className="space-y-5">
+                <TabsList className="grid h-11 w-full grid-cols-2 rounded-xl">
+                  <TabsTrigger value="qr" className="gap-2 rounded-lg text-xs sm:text-sm">
+                    <QrCode className="size-4" /> QR Code
+                  </TabsTrigger>
+                  <TabsTrigger value="pairing" className="gap-2 rounded-lg text-xs sm:text-sm">
+                    <KeyRound className="size-4" /> Código
+                  </TabsTrigger>
+                </TabsList>
 
-                {/* Card de exibição do QR Code */}
-                {activeQr && (
-                  <div className="grid place-items-center rounded-2xl border-2 border-emerald-500/40 bg-card/90 p-5 space-y-3 shadow-lg animate-in zoom-in-95 duration-200">
-                    <div className="p-2.5 bg-white rounded-2xl shadow-md border border-emerald-500/20">
-                      <img
-                        src={activeQr}
-                        alt="QR Code WhatsApp Baileys"
-                        className="size-64 rounded-xl bg-white object-contain"
-                      />
-                    </div>
-                    <div className="text-center space-y-1 max-w-sm">
-                      <p className="text-xs font-bold text-foreground flex items-center justify-center gap-1.5">
-                        <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                        Aguardando leitura do WhatsApp...
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        No WhatsApp do celular: Toque em <strong>Mais opções (⋮)</strong> &rarr; <strong>Aparelhos conectados</strong> &rarr; <strong>Conectar aparelho</strong>.
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleStartQr(true)}
-                      disabled={loadingAction}
-                      className="rounded-full text-xs font-bold gap-1.5"
-                    >
-                      <RefreshCw className="size-3" /> Atualizar / Novo QR
-                    </Button>
+                <TabsContent value="qr" className="mt-0 space-y-4">
+                  <div className="rounded-2xl border bg-muted/20 p-4 text-sm text-muted-foreground">
+                    No celular, abra <strong className="text-foreground">WhatsApp → Aparelhos conectados → Conectar aparelho</strong>.
                   </div>
-                )}
-
-                {/* Feedback visual durante a solicitação caso o QR ainda não tenha retornado */}
-                {!activeQr && (loadingAction || isRequestingQr || status === "connecting") && (
-                  <div className="grid place-items-center rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-8 space-y-3 text-center animate-in fade-in duration-300">
-                    <Loader2 className="size-10 animate-spin text-primary" />
-                    <div className="space-y-1">
-                      <p className="font-bold text-sm text-foreground">
-                        Gerando QR Code com o WhatsApp...
-                      </p>
-                      <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-                        Aguarde alguns instantes. O motor Baileys está comunicando com os servidores do WhatsApp e renderizará a chave na tela.
-                      </p>
+                  {activeQr ? (
+                    <div className="flex flex-col items-center gap-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-4 sm:p-6">
+                      <div className="w-full max-w-[280px] rounded-2xl bg-white p-3 shadow-lg">
+                        <img src={activeQr} alt="QR Code para conectar o WhatsApp" className="aspect-square w-full object-contain" />
+                      </div>
+                      <div className="text-center">
+                        <p className="flex items-center justify-center gap-2 text-sm font-bold">
+                          <span className="size-2 rounded-full bg-emerald-500 animate-pulse" /> Aguardando leitura
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">O código atualiza automaticamente. Leia apenas o mais recente.</p>
+                      </div>
+                      <Button variant="outline" onClick={() => handleStartQr(true)} disabled={loadingAction} className="w-full gap-2 rounded-xl sm:w-auto">
+                        <RefreshCw className="size-4" /> Gerar outro QR
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => qc.invalidateQueries({ queryKey: ["baileys"] })}
-                      className="text-xs text-primary font-semibold gap-1"
-                    >
-                      <RefreshCw className="size-3" /> Verificar agora
-                    </Button>
-                  </div>
-                )}
-              </TabsContent>
+                  ) : (
+                    <div className="flex min-h-64 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed bg-muted/10 p-6 text-center">
+                      {loadingAction || isRequestingQr || status === "connecting" ? (
+                        <>
+                          <Loader2 className="size-10 animate-spin text-emerald-500" />
+                          <div>
+                            <p className="font-bold">Gerando QR Code seguro...</p>
+                            <p className="mt-1 text-xs text-muted-foreground">Aguarde a resposta da instância.</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <QrCode className="size-12 text-muted-foreground/50" />
+                          <div>
+                            <p className="font-bold">Nenhum QR Code ativo</p>
+                            <p className="mt-1 text-xs text-muted-foreground">Gere um novo código para iniciar a conexão.</p>
+                          </div>
+                        </>
+                      )}
+                      <Button onClick={() => handleStartQr(true)} disabled={loadingAction} className="w-full gap-2 rounded-xl sm:w-auto">
+                        {loadingAction ? <Loader2 className="size-4 animate-spin" /> : <QrCode className="size-4" />}
+                        Gerar QR Code
+                      </Button>
+                    </div>
+                  )}
+                </TabsContent>
 
-              {/* Aba Pairing Code */}
-              <TabsContent value="pairing" className="space-y-4 pt-3">
-                <div className="max-w-md mx-auto space-y-3 text-center">
-                  <p className="text-xs text-muted-foreground">
-                    Conecte digitando o número do seu chip. Você receberá um código de 8 dígitos para digitar no WhatsApp.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-2">
+                <TabsContent value="pairing" className="mt-0 space-y-4">
+                  <div className="rounded-2xl border bg-muted/20 p-4 text-sm text-muted-foreground">
+                    Informe o número com país e DDD. Depois escolha <strong className="text-foreground">Conectar com número de telefone</strong> no WhatsApp.
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
                     <Input
-                      placeholder="55 + DDD + número (ex: 5593991614242)"
+                      placeholder="55 + DDD + número"
                       value={pairingPhone}
-                      onChange={(e) => setPairingPhone(e.target.value)}
-                      className="font-mono text-xs rounded-xl flex-1 text-center sm:text-left"
+                      onChange={(event) => setPairingPhone(event.target.value)}
+                      className="h-11 rounded-xl font-mono"
                     />
-                    <Button
-                      onClick={handleStartPairing}
-                      disabled={loadingAction}
-                      className="rounded-full font-bold gap-1.5 shadow-sm shrink-0"
-                    >
-                      {loadingAction ? <Loader2 className="size-3.5 animate-spin" /> : <KeyRound className="size-3.5" />}
-                      Gerar Código
+                    <Button onClick={handleStartPairing} disabled={loadingAction} className="h-11 gap-2 rounded-xl">
+                      {loadingAction ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
+                      Gerar código
                     </Button>
                   </div>
-
                   {activePairing && (
-                    <div className="rounded-2xl border-2 border-primary/50 bg-primary/10 p-5 text-center space-y-3 animate-in zoom-in-95">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                        Seu Código de Pareamento:
-                      </p>
-                      <div className="flex items-center justify-center gap-3">
-                        <span className="font-mono font-extrabold text-3xl tracking-widest text-primary bg-background/80 px-4 py-2 rounded-xl border border-primary/30 shadow-inner">
+                    <div className="rounded-2xl border border-primary/25 bg-primary/5 p-5 text-center">
+                      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Código de pareamento</p>
+                      <div className="mt-3 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                        <span className="max-w-full break-all rounded-xl border bg-background px-4 py-3 font-mono text-2xl font-black tracking-[0.2em] text-primary sm:text-3xl">
                           {activePairing}
                         </span>
-                        <Button
-                          variant="secondary"
-                          size="icon"
-                          className="rounded-xl size-11"
-                          onClick={() => handleCopyPairingCode(activePairing)}
-                        >
-                          {copiedCode ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
+                        <Button variant="outline" size="icon" onClick={() => handleCopyPairingCode(activePairing)} className="size-11 shrink-0 rounded-xl">
+                          {copiedCode ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
                         </Button>
                       </div>
-                      <div className="text-[11px] text-muted-foreground text-left bg-background/50 p-3 rounded-xl space-y-1">
-                        <p className="font-bold text-foreground">Como conectar:</p>
-                        <p>1. No celular, abra o <strong>WhatsApp</strong>.</p>
-                        <p>2. Toque nos 3 pontinhos &rarr; <strong>Aparelhos Conectados</strong> &rarr; <strong>Conectar Aparelho</strong>.</p>
-                        <p>3. Na tela da câmera, toque em <strong>"Conectar com número de telefone"</strong>.</p>
-                        <p>4. Digite o código de 8 dígitos exibido acima.</p>
-                      </div>
                     </div>
                   )}
+                </TabsContent>
+              </Tabs>
+            )}
+          </CardContent>
+        </Card>
 
-                  {!activePairing && loadingAction && (
-                    <div className="grid place-items-center rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-6 space-y-2 text-center">
-                      <Loader2 className="size-8 animate-spin text-primary" />
-                      <p className="text-xs font-semibold text-foreground">Solicitando código ao WhatsApp...</p>
-                    </div>
-                  )}
+        <div className="space-y-5">
+          <Card className="rounded-3xl border-border/70 shadow-sm">
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Activity className="size-4 text-emerald-500" /> Saúde do robô
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 px-5 pb-5">
+              {[
+                { label: "Instância", value: isConnected ? "Online" : "Offline", ok: isConnected },
+                { label: "Atualização", value: baileysQuery.isFetching ? "Verificando" : "Automática", ok: true },
+                { label: "Canal", value: "Webhook oficial", ok: true },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center justify-between gap-3 rounded-xl border bg-muted/20 px-3 py-2.5 text-sm">
+                  <span className="text-muted-foreground">{item.label}</span>
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <span className={`size-2 rounded-full ${item.ok ? "bg-emerald-500" : "bg-red-500"}`} />
+                    {item.value}
+                  </span>
                 </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        )}
+              ))}
+            </CardContent>
+          </Card>
 
-        {/* Testador Interativo de Envio */}
-        <div className="mt-4 rounded-xl border bg-secondary/30 p-3.5 space-y-3">
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            <Send className="size-3.5 text-primary" /> Testar Recursos Interativos Baileys
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Input
-              id="baileys-test-number"
-              placeholder="Número com DDD (ex: 5593991614242)"
-              value={testNumber}
-              onChange={(e) => setTestNumber(e.target.value)}
-              className="font-mono text-xs rounded-xl flex-1"
-            />
-          </div>
-          <Textarea
-            id="baileys-test-message"
-            value={testText}
-            onChange={(e) => setTestText(e.target.value)}
-            rows={2}
-            className="rounded-xl text-xs font-sans resize-none"
-            placeholder="Texto da mensagem de teste..."
-          />
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <Button
-              id="test-send-text-btn"
-              variant="outline"
-              size="sm"
-              disabled={sendingTest || !isConnected}
-              onClick={() => handleSendTest("text")}
-              className="rounded-full text-xs font-bold gap-1.5"
-            >
-              {sendingTest ? <Loader2 className="size-3 animate-spin" /> : <Send className="size-3" />}
-              Texto Simples
-            </Button>
-            <Button
-              id="test-send-buttons-btn"
-              variant="secondary"
-              size="sm"
-              disabled={sendingTest || !isConnected}
-              onClick={() => handleSendTest("buttons")}
-              className="rounded-full text-xs font-bold gap-1.5 shadow-sm"
-            >
-              {sendingTest ? <Loader2 className="size-3 animate-spin" /> : <Layers className="size-3 text-primary" />}
-              🔘 Testar Botões Clicáveis
-            </Button>
-            <Button
-              id="test-send-list-btn"
-              variant="secondary"
-              size="sm"
-              disabled={sendingTest || !isConnected}
-              onClick={() => handleSendTest("list")}
-              className="rounded-full text-xs font-bold gap-1.5 shadow-sm"
-            >
-              {sendingTest ? <Loader2 className="size-3 animate-spin" /> : <List className="size-3 text-primary" />}
-              📋 Testar Lista Interativa
-            </Button>
-            <Button
-              id="test-send-pix-btn"
-              variant="secondary"
-              size="sm"
-              disabled={sendingTest || !isConnected}
-              onClick={() => handleSendTest("pix_copy")}
-              className="rounded-full text-xs font-bold gap-1.5 shadow-sm"
-            >
-              {sendingTest ? <Loader2 className="size-3 animate-spin" /> : <Zap className="size-3 text-amber-400" />}
-              💳 Testar Botão Copiar PIX
-            </Button>
-          </div>
+          <Card className="rounded-3xl border-border/70 shadow-sm">
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Bot className="size-4 text-primary" /> Antes de testar
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 px-5 pb-5 text-sm text-muted-foreground">
+              <p className="leading-relaxed">Envie <strong className="text-foreground">oi</strong> de outro número para abrir o menu. As opções agora aparecem apenas uma vez.</p>
+              <p className="leading-relaxed">Se uma resposta ficar indisponível, use <strong className="text-foreground">Reparar sessão</strong> e conecte novamente.</p>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* Card: Histórico Recente de Disparos */}
-      <Card className="surface-card border-border/60 rounded-2xl">
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <div>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="size-4 text-primary" /> Registro Recente de Disparos
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Últimas mensagens enviadas pelo robô Baileys e cobranças automáticas.
-            </CardDescription>
-          </div>
-          <Badge variant="secondary" className="font-mono text-xs">
-            {logsData?.length ?? 0} registros
-          </Badge>
+      <Card className="rounded-3xl border-border/70 shadow-sm">
+        <CardHeader className="p-5 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Send className="size-5 text-primary" /> Testar envio
+          </CardTitle>
+          <CardDescription>Confirme a entrega antes de liberar o robô para seus clientes.</CardDescription>
         </CardHeader>
-        <CardContent>
-          {!logsData || logsData.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-muted-foreground text-xs">
-              Nenhuma mensagem disparada recentemente.
+        <CardContent className="space-y-4 px-5 pb-5 sm:px-6 sm:pb-6">
+          <div className="grid gap-3 lg:grid-cols-[minmax(220px,.7fr)_minmax(0,1.3fr)]">
+            <Input
+              id="baileys-test-number"
+              placeholder="55 + DDD + número"
+              value={testNumber}
+              onChange={(event) => setTestNumber(event.target.value)}
+              className="h-11 rounded-xl font-mono"
+            />
+            <Textarea
+              id="baileys-test-message"
+              value={testText}
+              onChange={(event) => setTestText(event.target.value)}
+              rows={3}
+              className="min-h-24 resize-none rounded-xl"
+              placeholder="Digite a mensagem de teste"
+            />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <Button id="test-send-text-btn" onClick={() => handleSendTest("text")} disabled={sendingTest || !isConnected} className="h-11 gap-2 rounded-xl">
+              {sendingTest ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Texto
+            </Button>
+            <Button id="test-send-buttons-btn" variant="outline" onClick={() => handleSendTest("buttons")} disabled={sendingTest || !isConnected} className="h-11 gap-2 rounded-xl">
+              <Layers className="size-4" /> Botões
+            </Button>
+            <Button id="test-send-list-btn" variant="outline" onClick={() => handleSendTest("list")} disabled={sendingTest || !isConnected} className="h-11 gap-2 rounded-xl">
+              <List className="size-4" /> Lista
+            </Button>
+            <Button id="test-send-pix-btn" variant="outline" onClick={() => handleSendTest("pix_copy")} disabled={sendingTest || !isConnected} className="h-11 gap-2 rounded-xl">
+              <Zap className="size-4" /> Copiar PIX
+            </Button>
+          </div>
+          {!isConnected && (
+            <p className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="size-4 shrink-0" /> Conecte o WhatsApp para liberar os testes.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-3xl border-border/70 shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between gap-3 p-5 sm:p-6">
+          <div>
+            <CardTitle className="text-lg">Atividade recente</CardTitle>
+            <CardDescription className="mt-1">Últimas mensagens registradas pelo sistema.</CardDescription>
+          </div>
+          <Badge variant="secondary">{logsData?.length ?? 0}</Badge>
+        </CardHeader>
+        <CardContent className="px-5 pb-5 sm:px-6 sm:pb-6">
+          {!logsData?.length ? (
+            <div className="flex min-h-32 flex-col items-center justify-center rounded-2xl border border-dashed bg-muted/10 p-6 text-center">
+              <Clock className="mb-2 size-8 text-muted-foreground/50" />
+              <p className="text-sm font-bold">Nenhuma mensagem recente</p>
+              <p className="mt-1 text-xs text-muted-foreground">Os próximos envios aparecerão aqui.</p>
             </div>
           ) : (
-            <div className="space-y-2.5">
-              {logsData.map((log) => (
-                <div
-                  key={log.id}
-                  className="flex items-start justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 p-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-xs text-foreground">
-                        {(log as any).clients?.name || log.phone}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground font-mono">
-                        {log.created_at ? formatDateTime(log.created_at) : ""}
-                      </span>
+            <div className="space-y-2">
+              {logsData.map((log: any) => (
+                <div key={log.id} className="grid gap-3 rounded-2xl border bg-muted/10 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl ${log.status === "sent" ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
+                      {log.status === "sent" ? <CheckCircle2 className="size-4" /> : <Clock className="size-4" />}
                     </div>
-                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground font-sans">
-                      {log.body}
-                    </p>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold">{log.clients?.name || log.phone || "Destinatário"}</p>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{log.body || "Mensagem sem conteúdo"}</p>
+                    </div>
                   </div>
-                  <Badge
-                    variant={log.status === "sent" ? "default" : "destructive"}
-                    className="shrink-0 text-[10px] font-bold"
-                  >
-                    {log.status === "sent" ? "Enviado" : "Falhou"}
-                  </Badge>
+                  <div className="flex items-center justify-between gap-2 pl-12 text-[11px] text-muted-foreground sm:block sm:pl-0 sm:text-right">
+                    <Badge variant={log.status === "sent" ? "default" : "secondary"} className="mb-0 sm:mb-1">
+                      {log.status === "sent" ? "Enviada" : log.status || "Pendente"}
+                    </Badge>
+                    <p>{formatDateTime(log.created_at)}</p>
+                  </div>
                 </div>
               ))}
             </div>
