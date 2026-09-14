@@ -56,29 +56,18 @@ function instanceNameOf(item: any) {
 }
 
 /**
- * Descobre qual instância usar no servidor Evolution:
- * 1) a definida em EVOLUTION_INSTANCE, se existir; 2) uma sessão conectada;
- * 3) a primeira instância existente; 4) o nome padrão (será criada).
+ * Usa exclusivamente a instância definida em EVOLUTION_INSTANCE.
+ * Nunca seleciona automaticamente uma sessão antiga: isso evita que preview,
+ * produção ou instalações anteriores disputem chaves Signal e webhooks.
  */
 export async function resolveInstance(force = false): Promise<string> {
   const env = evolutionEnv();
   if (!env) return "";
   if (!force && cachedInstance && Date.now() - cachedAt < 60000) return cachedInstance;
 
-  const items = await listInstances();
-  const names = items.map(instanceNameOf).filter(Boolean);
-  let chosen = env.instance;
-
-  if (!names.includes(env.instance)) {
-    const open = items.find(
-      (i) => (i?.connectionStatus || i?.instance?.state) === "open",
-    );
-    chosen = instanceNameOf(open) || names[0] || env.instance;
-  }
-
-  cachedInstance = chosen;
+  cachedInstance = env.instance;
   cachedAt = Date.now();
-  return chosen;
+  return env.instance;
 }
 
 /** Garante que a instância exista no servidor Evolution. */
