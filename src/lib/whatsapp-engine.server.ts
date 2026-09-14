@@ -1,21 +1,10 @@
-/**
- * Motor central de processamento e resposta de mensagens de WhatsApp.
- * Unificado, à prova de duplicatas (anti-debounce de 4s e dedup por ID de mensagem)
- * e compatível com Baileys (@lid e @s.whatsapp.net).
- */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { processBotMessage, loadBotConfig } from "./bot.server";
-import {
-  sendWhatsAppText,
-  sendWhatsAppMedia,
-  sendWhatsAppButtons,
-  sendWhatsAppList,
-  normalizePhone,
-} from "./whatsapp-connection.server";
-import { resolvePhoneFromLid } from "./lid.server";
+import { processBotMessage, loadBotConfig, type BotInteractivePayload } from "./bot.server";
+import { evoSendMedia, evoSendText, isEvolutionEnabled } from "./evolution-api.server";
+import { sendWhatsAppMedia, sendWhatsAppText } from "./whatsapp-connection.server";
 import { instanceNameFor } from "./evolution.server";
+import { parseEvolutionMessages } from "./whatsapp-event.server";
 
-// Ações em que faz sentido enviar a imagem do QR Code PIX
 const PIX_MEDIA_ACTIONS = new Set([
   "order_created_mp",
   "order_created_manual",
@@ -24,394 +13,185 @@ const PIX_MEDIA_ACTIONS = new Set([
   "order_status_checked",
 ]);
 
-// Cache de IDs de mensagens já processadas (evita responder à mesma mensagem mais de uma vez)
-const processedMessageIds = new Set<string>();
+const processedMessages = new Map<string, number>();
 
-// Cache de debounce por telefone (evita duplicatas disparadas pelo Baileys lid + phone simultâneos)
-const recentPhoneTimestamps = new Map<string, number>();
-
-function pruneIdCache() {
-  if (processedMessageIds.size > 3000) {
-    const list = Array.from(processedMessageIds);
-    processedMessageIds.clear();
-    list.slice(-1500).forEach((id) => processedMessageIds.add(id));
+function pruneProcessedMessages(now: number) {
+  for (const [key, timestamp] of processedMessages) {
+    if (now - timestamp > 10 * 60_000) processedMessages.delete(key);
   }
 }
 
-/**
- * Verifica se a mensagem ou telefone já foi atendido recentemente (janela rápida de 1.2 segundos).
- */
 export function isDuplicateMessage(messageId: string, phone: string): boolean {
+  const key = messageId || `${phone}:${Math.floor(Date.now() / 2000)}`;
   const now = Date.now();
-
-  // 1. Checagem por ID único da mensagem (stanza ID)
-  if (messageId) {
-    if (processedMessageIds.has(messageId)) {
-      return true;
-    }
-    processedMessageIds.add(messageId);
-    pruneIdCache();
-  }
-
-  // 2. Checagem por debounce do número de telefone (1200ms - elimina delay excessivo)
-  if (phone) {
-    const cleanPhone = normalizePhone(phone);
-    const lastTimestamp = recentPhoneTimestamps.get(cleanPhone) ?? 0;
-    if (now - lastTimestamp < 1200) {
-      return true;
-    }
-    recentPhoneTimestamps.set(cleanPhone, now);
-  }
-
+  pruneProcessedMessages(now);
+  if (processedMessages.has(key)) return true;
+  processedMessages.set(key, now);
   return false;
 }
 
-/**
- * Desembrulha mensagens aninhadas do Baileys (viewOnce, ephemeral, etc.).
- */
-export function unwrapMessagePayload(raw: any): any {
-  if (!raw || typeof raw !== "object") return {};
-  if (raw.ephemeralMessage?.message) return unwrapMessagePayload(raw.ephemeralMessage.message);
-  if (raw.viewOnceMessage?.message) return unwrapMessagePayload(raw.viewOnceMessage.message);
-  if (raw.viewOnceMessageV2?.message) return unwrapMessagePayload(raw.viewOnceMessageV2.message);
-  if (raw.viewOnceMessageV2Extension?.message) return unwrapMessagePayload(raw.viewOnceMessageV2Extension.message);
-  if (raw.documentWithCaptionMessage?.message) return unwrapMessagePayload(raw.documentWithCaptionMessage.message);
-  return raw;
-}
-
-/**
- * Extrai o texto limpo da mensagem recebida em qualquer um dos formatos suportados pelo Baileys / Evolution.
- */
-export function extractMessageText(messageObj: any, fallbackBody?: string): string {
-  const unwrapped = unwrapMessagePayload(messageObj);
-
-  let text = String(
-    unwrapped?.conversation ||
-    unwrapped?.extendedTextMessage?.text ||
-    unwrapped?.buttonsResponseMessage?.selectedButtonId ||
-    unwrapped?.buttonsResponseMessage?.selectedDisplayText ||
-    unwrapped?.listResponseMessage?.singleSelectReply?.selectedRowId ||
-    unwrapped?.listResponseMessage?.title ||
-    unwrapped?.templateButtonReplyMessage?.selectedId ||
-    unwrapped?.interactiveResponseMessage?.body?.text ||
-    fallbackBody ||
-    ""
-  ).trim();
-
-  if (!text) {
-    const nativeFlow = unwrapped?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson;
-    if (nativeFlow) {
-      try {
-        const parsed = JSON.parse(nativeFlow);
-        text = String(parsed.id || parsed.selectedId || parsed.rowId || nativeFlow).trim();
-      } catch {
-        text = String(nativeFlow).trim();
-      }
-    }
-  }
-
-  return text;
-}
-
-/**
- * Resolve o usuário dono da conta no sistema para carregar a configuração correta do bot.
- */
 export async function resolveTargetUserId(
   explicitUserId?: string | null,
   instanceName?: string | null,
 ): Promise<string> {
-  let target = explicitUserId?.trim() || "";
+  const explicit = String(explicitUserId ?? "").trim();
+  if (/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(explicit)) return explicit;
 
-  // Se foi passado prefixo curto (hexadecimal da instância)
-  if (target && target.length < 32) {
-    try {
-      const { data: accounts } = await supabaseAdmin.from("whatsapp_settings").select("user_id");
-      for (const acc of accounts ?? []) {
-        if (acc.user_id.replace(/[^a-zA-Z0-9]/g, "").startsWith(target)) {
-          return acc.user_id;
-        }
-      }
-    } catch {}
+  const { data: settings, error } = await supabaseAdmin
+    .from("whatsapp_settings")
+    .select("user_id, instance_name, auto_send_enabled, business_name, updated_at")
+    .order("updated_at", { ascending: false });
 
-    try {
-      const { data: profs } = await supabaseAdmin.from("profiles").select("id");
-      for (const p of profs ?? []) {
-        if (p.id.replace(/[^a-zA-Z0-9]/g, "").startsWith(target)) {
-          return p.id;
-        }
-      }
-    } catch {}
-  }
+  if (error) throw new Error(`Não foi possível carregar a conta do WhatsApp: ${error.message}`);
+  const rows = settings ?? [];
 
-  if (target && target.length >= 32) {
-    return target;
-  }
-
-  // Tenta localizar pela instância registrada
   if (instanceName) {
-    try {
-      const { data: accounts } = await supabaseAdmin.from("whatsapp_settings").select("user_id");
-      for (const acc of accounts ?? []) {
-        if (instanceNameFor(acc.user_id) === instanceName) {
-          return acc.user_id;
-        }
-      }
-    } catch {}
-
-    try {
-      const { data: profs } = await supabaseAdmin.from("profiles").select("id");
-      for (const p of profs ?? []) {
-        if (instanceNameFor(p.id) === instanceName) {
-          return p.id;
-        }
-      }
-    } catch {}
+    const exact = rows.find(
+      (row: any) => row.instance_name === instanceName || instanceNameFor(row.user_id) === instanceName,
+    );
+    if (exact?.user_id) return exact.user_id;
   }
 
-  // Fallback: prioriza a conta realmente configurada (robô/automação ativa)
-  try {
-    const { data: accounts } = await supabaseAdmin
-      .from("whatsapp_settings")
-      .select("user_id, auto_send_enabled, business_name, updated_at");
-    const list = accounts ?? [];
-    const best =
-      list.find((a: any) => a.auto_send_enabled && a.business_name?.trim()) ||
-      list.find((a: any) => a.auto_send_enabled) ||
-      list.find((a: any) => a.business_name?.trim()) ||
-      list[0];
-    if (best?.user_id) return best.user_id;
-  } catch {}
+  const configured =
+    rows.find((row: any) => row.auto_send_enabled && row.business_name?.trim()) ??
+    rows.find((row: any) => row.business_name?.trim()) ??
+    rows[0];
 
-
-  try {
-    const { data: firstProf } = await supabaseAdmin.from("profiles").select("id").limit(1).maybeSingle();
-    if (firstProf?.id) return firstProf.id;
-  } catch {}
-
-  return "00000000-0000-0000-0000-000000000000";
+  if (!configured?.user_id) throw new Error("Nenhuma conta configurada para atender no WhatsApp.");
+  return configured.user_id;
 }
 
-/**
- * Processa um payload completo da Evolution API v1 / v2.
- */
-export async function processIncomingWhatsAppEvent(
-  payload: any,
-  queryUserId?: string | null,
-): Promise<{
-  handled: boolean;
-  ignored?: string;
-  action?: string;
-  reply?: string;
-  phone?: string;
-}> {
-  if (!payload || typeof payload !== "object") {
-    return { handled: false, ignored: "invalid_payload" };
-  }
-
-  const rawData = payload.data ?? payload;
-  const item = Array.isArray(rawData?.messages)
-    ? rawData.messages[0]
-    : (rawData?.message ? rawData : (payload?.message ? payload : rawData));
-
-  const instance = String(payload?.instance ?? item?.instance ?? rawData?.instance ?? "").trim();
-  const key = item?.key ?? rawData?.key ?? payload?.key ?? {};
-
-  // 1. Filtra mensagens próprias (fromMe)
-  const fromMe = Boolean(key?.fromMe ?? item?.fromMe ?? rawData?.fromMe);
-  if (fromMe) {
-    return { handled: false, ignored: "from_me" };
-  }
-
-  // 2. Filtra grupos e transmissões
-  const rawRemoteJid = String(
-    key?.remoteJid ||
-    key?.participant ||
-    item?.remoteJid ||
-    rawData?.remoteJid ||
-    payload?.sender ||
-    ""
-  ).trim();
-
-  if (!rawRemoteJid || rawRemoteJid.includes("@g.us") || rawRemoteJid.includes("@broadcast")) {
-    return { handled: false, ignored: "group_or_broadcast" };
-  }
-
-  const senderDigits = rawRemoteJid.replace(/@.+$/, "").replace(/\D/g, "");
-  if (!senderDigits || senderDigits.length < 8) {
-    return { handled: false, ignored: "invalid_sender" };
-  }
-
-  const isLid = rawRemoteJid.endsWith("@lid") || (senderDigits.length >= 14 && !senderDigits.startsWith("55"));
-
-  // 3. Resolve telefone real caso seja LID (para banco, Mercado Pago e Sigma)
-  let realPhone = "";
-  const candidates = [
-    payload?.sender,
-    item?.sender,
-    rawData?.sender,
-    key?.participant,
-    item?.participant,
-  ].filter(Boolean);
-
-  for (const c of candidates) {
-    const d = String(c).replace(/@.*$/, "").replace(/\D/g, "");
-    if (d.length >= 10 && d.length <= 13) {
-      realPhone = d;
-      break;
-    }
-  }
-
-  if (!realPhone) {
-    realPhone = senderDigits;
-  }
-
-  if (isLid) {
-    try {
-      const resolved = await resolvePhoneFromLid(instance, rawRemoteJid);
-      if (resolved) {
-        realPhone = resolved;
-        console.log(`[WhatsApp Engine] 🔗 LID ${rawRemoteJid} resolvido para número real: ${realPhone}`);
-      }
-    } catch {}
-  }
-
-  // Número limpo com DDD apenas dígitos (usado em consultas ao Sigma, PIX e BD)
-  let customerDigits = realPhone.replace(/\D/g, "");
-  if (!customerDigits.startsWith("55") && customerDigits.length >= 10 && customerDigits.length <= 11) {
-    customerDigits = `55${customerDigits}`;
-  }
-
-  // Destino exato de envio no WhatsApp: mantém @lid ou @s.whatsapp.net para evitar 'Aguardando mensagem'
-  const destinationJid = isLid
-    ? (rawRemoteJid.endsWith("@lid") ? rawRemoteJid : `${senderDigits}@lid`)
-    : (rawRemoteJid.endsWith("@s.whatsapp.net") ? rawRemoteJid : `${customerDigits}@s.whatsapp.net`);
-
-  // 4. Extrai texto da mensagem
-  const rawMsg = item?.message ?? rawData?.message ?? payload?.message ?? {};
-  const incomingText = extractMessageText(rawMsg, item?.body || rawData?.body || payload?.body);
-
-  if (!incomingText) {
-    return { handled: false, ignored: "empty_text" };
-  }
-
-  // 5. Anti-Duplicação rápida (1.2s debounce por telefone + dedup por ID)
-  const messageId = String(key?.id || item?.id || "");
-  if (isDuplicateMessage(messageId, customerDigits)) {
-    console.log(`[WhatsApp Engine] 🛡️ Mensagem duplicada ignorada para ${customerDigits} (ID: ${messageId}).`);
-    return { handled: false, ignored: "duplicate_suppressed" };
-  }
-
-  const pushName = item?.pushName || rawData?.pushName || payload?.pushName || "Cliente";
-  console.log(`[WhatsApp Engine] 📩 Mensagem de ${customerDigits} [${destinationJid}] (${pushName}): "${incomingText}"`);
-
-  // 6. Carrega usuário do sistema e configurações
-  const targetUserId = await resolveTargetUserId(queryUserId, instance);
-  const botConfig = await loadBotConfig(supabaseAdmin, targetUserId);
-
-  if (!botConfig.enabled) {
-    console.log(`[WhatsApp Engine] Robô desativado no painel para usuário ${targetUserId}.`);
-    return { handled: false, ignored: "bot_disabled" };
-  }
-
-  // 7. Processa a mensagem e gera a resposta oficial
-  const botResult = await processBotMessage(supabaseAdmin, targetUserId, {
-    phone: customerDigits,
-    text: incomingText,
-    pushName,
-  });
-
-  if (!botResult?.reply && !botResult?.interactive) {
-    return { handled: true, action: "no_reply_needed" };
-  }
-
-  // 8. Envia mensagem interativa (Botões ou Lista) ou mensagem de texto oficial
-  if (botResult.interactive) {
-    if (botResult.interactive.type === "buttons") {
-      console.log(`[WhatsApp Engine] 🔘 Enviando botões interativos para ${destinationJid}...`);
-      const btns = botResult.interactive.buttons.map((b) => ({
-        id: b.id,
-        displayText: b.displayText,
-        type: (b.type || (b.copyCode ? "copy" : b.url ? "url" : "reply")) as "reply" | "copy" | "url",
-        copyCode: b.copyCode,
-        url: b.url,
-      }));
-      await sendWhatsAppButtons(
-        destinationJid,
-        {
-          title: botResult.interactive.title,
-          description: botResult.reply,
-          footer: botResult.interactive.footer,
-          buttons: btns,
-        },
-        instance || undefined,
-      );
-    } else if (botResult.interactive.type === "list") {
-      console.log(`[WhatsApp Engine] 📋 Enviando lista interativa para ${destinationJid}...`);
-      await sendWhatsAppList(
-        destinationJid,
-        {
-          title: botResult.interactive.title,
-          description: botResult.reply,
-          buttonText: botResult.interactive.buttonText,
-          footerText: botResult.interactive.footerText,
-          sections: botResult.interactive.sections,
-        },
-        instance || undefined,
-      );
-    }
-  } else if (botResult.reply) {
-    console.log(`[WhatsApp Engine] 📤 Enviando resposta texto para ${destinationJid} (${customerDigits})...`);
-    const sendRes = await sendWhatsAppText(destinationJid, botResult.reply, instance || undefined, key);
-    if (!sendRes.ok) {
-      console.warn(`[WhatsApp Engine] ⚠️ Aviso ao enviar texto:`, sendRes.error);
-    }
-  }
-
-  // 9. Envia imagem do QR Code PIX separada da mensagem de botão
-  if (botResult.media?.base64 && PIX_MEDIA_ACTIONS.has(String(botResult.action))) {
-    try {
-      console.log(`[WhatsApp Engine] 📸 Enviando QR Code PIX separado para ${destinationJid}...`);
-      await sendWhatsAppMedia(
-        destinationJid,
-        {
-          base64: botResult.media.base64,
-          caption: botResult.media.caption || "📱 *QR Code PIX*\nAponte a câmera do app do seu banco para pagar!",
-          mimetype: "image/png",
-          fileName: "qrcode-pix.png",
-        },
-        instance || undefined,
-      );
-    } catch (mediaErr) {
-      console.warn(`[WhatsApp Engine] Aviso ao enviar mídia:`, mediaErr);
-    }
-  }
-
-  // 10. Envia mensagens adicionais (apenas se estritamente configurado e sem botão de cópia)
-  const interactiveButtons =
-    botResult.interactive && botResult.interactive.type === "buttons" ? botResult.interactive.buttons : [];
-  const hasCopyButton = interactiveButtons.some((b) => b.type === "copy" || b.copyCode);
-  if (!hasCopyButton && Array.isArray(botResult.extraMessages)) {
-    for (const extra of botResult.extraMessages) {
-      if (extra && extra.trim()) {
-        await sendWhatsAppText(destinationJid, extra, instance || undefined);
-      }
-    }
-  }
-
-  // 11. Registra no banco de dados para auditoria do revendedor
-  try {
-    await supabaseAdmin.from("message_logs").insert({
-      user_id: targetUserId,
-      phone: customerDigits,
-      body: botResult.reply,
-      status: "sent",
+function interactiveAsText(interactive: BotInteractivePayload): string {
+  if (interactive.type === "buttons") {
+    const options = interactive.buttons.map((button, index) => {
+      const value = button.copyCode || button.url;
+      return `${index + 1}. ${button.displayText}${value ? `\n${value}` : ""}`;
     });
-  } catch {}
+    return options.length ? options.join("\n\n") : "";
+  }
 
-  return {
-    handled: true,
-    action: botResult.action,
-    reply: botResult.reply,
-    phone: customerDigits,
+  const rows = interactive.sections.flatMap((section) =>
+    section.rows.map((row) => `${row.rowId}. ${row.title}${row.description ? ` — ${row.description}` : ""}`),
+  );
+  return rows.join("\n");
+}
+
+function completeReply(reply: string, interactive?: BotInteractivePayload): string {
+  const options = interactive ? interactiveAsText(interactive) : "";
+  if (!options || reply.includes(options)) return reply.trim();
+  return `${reply.trim()}\n\n${options}`.trim();
+}
+
+async function recordMessage(params: {
+  userId: string;
+  phone: string;
+  body: string;
+  status: "sent" | "failed";
+  error?: string;
+}) {
+  const { error } = await supabaseAdmin.from("message_logs").insert({
+    user_id: params.userId,
+    phone: params.phone,
+    body: params.body,
+    status: params.status,
+    error: params.error ?? null,
+  });
+  if (error) console.error("[WhatsApp] Falha ao registrar mensagem:", error.message);
+}
+
+export async function processIncomingWhatsAppEvent(
+  payload: unknown,
+  queryUserId?: string | null,
+): Promise<{ handled: boolean; ignored?: string; action?: string; reply?: string; phone?: string }> {
+  const messages = parseEvolutionMessages(payload);
+  if (!messages.length) return { handled: false, ignored: "unsupported_event" };
+
+  let lastResult: { handled: boolean; ignored?: string; action?: string; reply?: string; phone?: string } = {
+    handled: false,
+    ignored: "no_eligible_message",
   };
+
+  for (const message of messages) {
+    if (message.fromMe) {
+      lastResult = { handled: false, ignored: "from_me" };
+      continue;
+    }
+    if (message.isGroup) {
+      lastResult = { handled: false, ignored: "group_or_broadcast" };
+      continue;
+    }
+    if (!message.phone || message.phone.length < 12) {
+      lastResult = { handled: false, ignored: "phone_not_resolved" };
+      continue;
+    }
+    if (!message.text) {
+      lastResult = { handled: false, ignored: "empty_text" };
+      continue;
+    }
+    if (isDuplicateMessage(message.messageId, message.phone)) {
+      lastResult = { handled: false, ignored: "duplicate" };
+      continue;
+    }
+
+    const userId = await resolveTargetUserId(queryUserId, message.instance);
+    const config = await loadBotConfig(supabaseAdmin, userId);
+    if (!config.enabled) {
+      lastResult = { handled: false, ignored: "bot_disabled" };
+      continue;
+    }
+
+    const result = await processBotMessage(supabaseAdmin, userId, {
+      phone: message.phone,
+      text: message.text,
+      pushName: message.pushName,
+    });
+    const reply = completeReply(result.reply, result.interactive);
+    if (!reply) {
+      lastResult = { handled: true, action: result.action, phone: message.phone };
+      continue;
+    }
+
+    const sent = isEvolutionEnabled()
+      ? await evoSendText(message.phone, reply)
+      : await sendWhatsAppText(message.phone, reply, message.instance || undefined);
+
+    if (!sent.ok) {
+      await recordMessage({
+        userId,
+        phone: message.phone,
+        body: reply,
+        status: "failed",
+        error: sent.error,
+      });
+      throw new Error(`A resposta foi gerada, mas o WhatsApp recusou o envio: ${sent.error}`);
+    }
+
+    await recordMessage({ userId, phone: message.phone, body: reply, status: "sent" });
+
+    if (result.media?.base64 && PIX_MEDIA_ACTIONS.has(result.action)) {
+      const media = {
+        base64: result.media.base64,
+        caption: result.media.caption || "QR Code PIX",
+        mimetype: "image/png",
+        fileName: "qrcode-pix.png",
+      };
+      if (isEvolutionEnabled()) await evoSendMedia(message.phone, media);
+      else await sendWhatsAppMedia(message.phone, media, message.instance || undefined);
+    }
+
+    for (const extra of result.extraMessages ?? []) {
+      if (!extra.trim()) continue;
+      if (isEvolutionEnabled()) await evoSendText(message.phone, extra);
+      else await sendWhatsAppText(message.phone, extra, message.instance || undefined);
+    }
+
+    lastResult = {
+      handled: true,
+      action: result.action,
+      reply,
+      phone: message.phone,
+    };
+  }
+
+  return lastResult;
 }
