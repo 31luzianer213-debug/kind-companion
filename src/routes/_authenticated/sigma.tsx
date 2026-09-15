@@ -1,11 +1,19 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  Activity, CheckCircle2, Crown, Eye, EyeOff, Loader2, Plus, RefreshCw,
-  Server, Settings2, Trash2, Users, Wifi, WifiOff,
+  Eye,
+  EyeOff,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Server,
+  Settings2,
+  Trash2,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,15 +23,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
-  deleteSigmaServer, listSigmaServers, saveSigmaServer, syncAllSigmaServers,
-  syncSigmaServer, testSigmaServer, type SigmaServerInput,
+  deleteSigmaServer,
+  listSigmaServers,
+  saveSigmaServer,
+  syncAllSigmaServers,
+  syncSigmaServer,
+  type SigmaServerInput,
 } from "@/lib/sigma-servers.functions";
 
 export const Route = createFileRoute("/_authenticated/sigma")({
   head: () => ({
     meta: [
-      { title: "Servidores Sigma — Conexões & Sincronização" },
-      { name: "description", content: "Gerencie e sincronize vários painéis Sigma na mesma operação." },
+      { title: "Sigma — IPTV Manager Pro" },
+      { name: "description", content: "Conecte seu Sigma e traga os clientes automaticamente." },
     ],
   }),
   component: SigmaServersPage,
@@ -46,7 +58,6 @@ function SigmaServersPage() {
   const listFn = useServerFn(listSigmaServers);
   const saveFn = useServerFn(saveSigmaServer);
   const deleteFn = useServerFn(deleteSigmaServer);
-  const testFn = useServerFn(testSigmaServer);
   const syncOneFn = useServerFn(syncSigmaServer);
   const syncAllFn = useServerFn(syncAllSigmaServers);
 
@@ -54,7 +65,6 @@ function SigmaServersPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [syncingAll, setSyncingAll] = useState(false);
 
@@ -63,9 +73,9 @@ function SigmaServersPage() {
     queryFn: () => listFn({}),
     staleTime: 30_000,
   });
-  const servers = data?.ok ? data.servers : [];
+
+  const servers = data?.ok && Array.isArray(data.servers) ? data.servers : [];
   const activeCount = servers.filter((server) => server.enabled).length;
-  const totalClients = servers.reduce((sum, server) => sum + Number((server as any).clients_count ?? 0), 0);
 
   function openNew() {
     setForm({ ...emptyForm, is_default: servers.length === 0 });
@@ -76,53 +86,61 @@ function SigmaServersPage() {
   function openEdit(server: any) {
     setForm({
       id: server.id,
-      name: server.name,
-      panel_url: server.panel_url,
+      name: server.name ?? "",
+      panel_url: server.panel_url ?? server.url ?? "",
       streaming_dns: server.streaming_dns ?? "",
       username: server.username ?? "",
       password: server.password ?? "",
       token: server.token ?? "",
-      enabled: server.enabled,
-      auto_renew: server.auto_renew,
-      is_default: server.is_default,
+      enabled: server.enabled ?? true,
+      auto_renew: server.auto_renew ?? true,
+      is_default: server.is_default ?? false,
     });
     setShowPassword(false);
     setEditorOpen(true);
   }
 
-  async function save(event: React.FormEvent) {
-    event.preventDefault();
-    setSaving(true);
-    try {
-      const result = await saveFn({ data: form });
-      if (!result.ok) return toast.error(result.error);
-      toast.success(form.id ? "Servidor atualizado." : "Novo servidor Sigma adicionado.");
-      setEditorOpen(false);
-      await queryClient.invalidateQueries({ queryKey: ["sigma-servers"] });
-      await queryClient.invalidateQueries({ queryKey: ["sidebar-counts"] });
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha ao salvar servidor.");
-    } finally {
-      setSaving(false);
-    }
+  async function refreshAfterSync() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["sigma-servers"] }),
+      queryClient.invalidateQueries({ queryKey: ["clients"] }),
+      queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] }),
+      queryClient.invalidateQueries({ queryKey: ["sidebar-counts"] }),
+      queryClient.invalidateQueries({ queryKey: ["operational-dashboard"] }),
+    ]);
   }
 
-  async function test() {
-    setTesting(true);
+  async function saveAndSync(event: React.FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+
     try {
-      const result = await testFn({ data: form });
-      if (!result.ok) return toast.error(result.error);
-      setForm((current) => ({
-        ...current,
-        token: result.token || current.token,
-        name: current.name || result.serverName || "Servidor Sigma",
-        streaming_dns: current.streaming_dns || result.streamingDns || "",
-      }));
-      toast.success(`Conexão aprovada: ${result.customersCount} cliente(s) encontrados.`);
+      const saved = await saveFn({ data: form });
+      if (!saved.ok || !saved.server?.id) {
+        toast.error(saved.error || "Não foi possível salvar o servidor.");
+        return;
+      }
+
+      const synced = await syncOneFn({ data: { serverId: saved.server.id } });
+      if (!synced.ok) {
+        await queryClient.invalidateQueries({ queryKey: ["sigma-servers"] });
+        toast.error(`Servidor salvo, mas a sincronização falhou: ${synced.error || "verifique os dados de acesso."}`, {
+          duration: 10000,
+        });
+        return;
+      }
+
+      await refreshAfterSync();
+      setEditorOpen(false);
+      setForm(emptyForm);
+      toast.success(
+        `Pronto! ${synced.created} cliente(s) importado(s) e ${synced.updated} atualizado(s). Eles já estão no Painel e em Clientes.`,
+        { duration: 7000 },
+      );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível testar.");
+      toast.error(error instanceof Error ? error.message : "Falha ao salvar e sincronizar o Sigma.");
     } finally {
-      setTesting(false);
+      setSaving(false);
     }
   }
 
@@ -130,9 +148,14 @@ function SigmaServersPage() {
     setSyncingId(serverId);
     try {
       const result = await syncOneFn({ data: { serverId } });
-      if (!result.ok) return toast.error(result.error);
-      toast.success(`${result.serverName}: ${result.created} novo(s), ${result.updated} atualizado(s).`);
-      queryClient.invalidateQueries();
+      if (!result.ok) {
+        toast.error(result.error || "Falha ao sincronizar.");
+        return;
+      }
+      await refreshAfterSync();
+      toast.success(`${result.serverName}: ${result.created} novo(s) e ${result.updated} atualizado(s).`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao sincronizar.");
     } finally {
       setSyncingId(null);
     }
@@ -142,73 +165,78 @@ function SigmaServersPage() {
     setSyncingAll(true);
     try {
       const result = await syncAllFn({});
-      if (result.results.length === 0) return toast.info("Nenhum servidor ativo para sincronizar.");
-      if (result.ok) toast.success(`Todos os painéis sincronizados: ${result.created} novo(s) e ${result.updated} atualizado(s).`);
-      else toast.warning(`Sincronização parcial: ${result.results.filter((item) => item.ok).length} de ${result.results.length} painéis concluídos.`);
-      queryClient.invalidateQueries();
+      const results = Array.isArray(result.results) ? result.results : [];
+      if (results.length === 0) {
+        toast.info("Nenhum servidor ativo para sincronizar.");
+        return;
+      }
+      await refreshAfterSync();
+      if (result.ok) {
+        toast.success(`Sincronização concluída: ${result.created} novo(s) e ${result.updated} atualizado(s).`);
+      } else {
+        toast.warning(`Alguns servidores não sincronizaram. ${results.filter((item) => item.ok).length} de ${results.length} concluídos.`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao sincronizar os servidores.");
     } finally {
       setSyncingAll(false);
     }
   }
 
   async function remove(server: any) {
-    if (!window.confirm(`Remover o servidor "${server.name}"? Todos os clientes, cobranças e históricos vinculados a ele também serão excluídos deste sistema. Esta ação não pode ser desfeita.`)) return;
+    if (!window.confirm(`Remover o servidor "${server.name}"? Os clientes e dados vinculados a ele também serão removidos deste sistema.`)) return;
+
     const result = await deleteFn({ data: { serverId: server.id } });
-    if (!result.ok) return toast.error(result.error);
-    toast.success(result.deletedClients ? `Servidor removido com ${result.deletedClients} cliente(s) vinculado(s).` : "Servidor removido.");
-    queryClient.invalidateQueries({ queryKey: ["sigma-servers"] });
-    queryClient.invalidateQueries({ queryKey: ["clients"] });
-    queryClient.invalidateQueries({ queryKey: ["invoices"] });
-    queryClient.invalidateQueries({ queryKey: ["sidebar-counts"] });
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+
+    await refreshAfterSync();
+    toast.success(result.deletedClients ? `Servidor e ${result.deletedClients} cliente(s) removidos.` : "Servidor removido.");
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 animate-in fade-in duration-300">
+    <div className="mx-auto max-w-5xl space-y-5 animate-in fade-in duration-300">
       <header className="flex flex-col gap-4 border-b border-border/60 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="mb-1.5 flex flex-wrap items-center gap-2">
+          <div className="mb-1.5 flex items-center gap-2">
             <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight">
-              <Server className="size-6 text-primary" /> Meus painéis Sigma
+              <Server className="size-6 text-primary" /> Sigma
             </h1>
-            <Badge variant={activeCount ? "success" : "secondary"}>{activeCount} ativo(s)</Badge>
+            <Badge variant={activeCount ? "success" : "secondary"}>{activeCount ? "Conectado" : "Não conectado"}</Badge>
           </div>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Conecte quantos painéis precisar. Cada cliente permanece vinculado ao servidor correto para sincronização, renovação e bloqueio.
+            Cadastre o servidor uma vez. Ao salvar, os clientes são sincronizados automaticamente e já aparecem no painel.
           </p>
         </div>
-        <div className="flex flex-col gap-2 min-[420px]:flex-row">
-          <Button variant="outline" onClick={syncAll} disabled={syncingAll || activeCount === 0} className="gap-2">
-            <RefreshCw className={`size-4 ${syncingAll ? "animate-spin" : ""}`} />
-            Sincronizar todos
+
+        <div className="flex gap-2">
+          {activeCount > 1 && (
+            <Button variant="outline" onClick={syncAll} disabled={syncingAll} className="gap-2">
+              <RefreshCw className={`size-4 ${syncingAll ? "animate-spin" : ""}`} />
+              Sincronizar todos
+            </Button>
+          )}
+          <Button onClick={openNew} className="gap-2">
+            <Plus className="size-4" /> Adicionar Sigma
           </Button>
-          <Button onClick={openNew} className="gap-2"><Plus className="size-4" /> Adicionar Sigma</Button>
         </div>
       </header>
-
-      <section className="grid gap-3 sm:grid-cols-3">
-        <Card><CardContent className="flex items-center justify-between p-4">
-          <div><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Painéis cadastrados</p><p className="mt-1 text-2xl font-black">{servers.length}</p></div>
-          <span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary"><Server className="size-5" /></span>
-        </CardContent></Card>
-        <Card><CardContent className="flex items-center justify-between p-4">
-          <div><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Conexões ativas</p><p className="mt-1 text-2xl font-black">{activeCount}</p></div>
-          <span className="grid size-10 place-items-center rounded-xl bg-emerald-500/10 text-emerald-500"><Wifi className="size-5" /></span>
-        </CardContent></Card>
-        <Card><CardContent className="flex items-center justify-between p-4">
-          <div><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Clientes vinculados</p><p className="mt-1 text-2xl font-black">{totalClients || "—"}</p></div>
-          <span className="grid size-10 place-items-center rounded-xl bg-sky-500/10 text-sky-500"><Users className="size-5" /></span>
-        </CardContent></Card>
-      </section>
 
       {isLoading ? (
         <div className="grid min-h-64 place-items-center"><Loader2 className="size-7 animate-spin text-primary" /></div>
       ) : servers.length === 0 ? (
-        <Card className="border-dashed"><CardContent className="flex min-h-72 flex-col items-center justify-center p-8 text-center">
-          <span className="mb-4 grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary"><Server className="size-7" /></span>
-          <h2 className="text-lg font-bold">Adicione seu primeiro painel Sigma</h2>
-          <p className="mt-2 max-w-md text-sm text-muted-foreground">Depois você poderá adicionar Sigma 2, Sigma 3 e quantos servidores sua operação utilizar.</p>
-          <Button onClick={openNew} className="mt-5 gap-2"><Plus className="size-4" /> Conectar primeiro painel</Button>
-        </CardContent></Card>
+        <Card className="border-dashed">
+          <CardContent className="flex min-h-64 flex-col items-center justify-center p-8 text-center">
+            <span className="mb-4 grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary"><Server className="size-7" /></span>
+            <h2 className="text-lg font-bold">Conecte seu Sigma</h2>
+            <p className="mt-2 max-w-md text-sm text-muted-foreground">
+              Informe os dados do painel e clique em Salvar e sincronizar. O sistema faz o restante sozinho.
+            </p>
+            <Button onClick={openNew} className="mt-5 gap-2"><Plus className="size-4" /> Conectar Sigma</Button>
+          </CardContent>
+        </Card>
       ) : (
         <section className="grid gap-4 md:grid-cols-2">
           {servers.map((server) => (
@@ -220,30 +248,31 @@ function SigmaServersPage() {
                       {server.enabled ? <Wifi className="size-5" /> : <WifiOff className="size-5" />}
                     </span>
                     <div className="min-w-0">
-                      <CardTitle className="flex items-center gap-2 truncate text-base">
-                        {server.name}
-                        {server.is_default && <Crown className="size-4 shrink-0 text-amber-500" />}
-                      </CardTitle>
+                      <CardTitle className="truncate text-base">{server.name}</CardTitle>
                       <CardDescription className="truncate font-mono text-[11px]">{server.panel_url}</CardDescription>
                     </div>
                   </div>
-                  <Badge variant={server.last_sync_status === "error" ? "destructive" : server.enabled ? "success" : "secondary"}>
-                    {server.last_sync_status === "error" ? "Com erro" : server.enabled ? "Ativo" : "Pausado"}
-                  </Badge>
+                  <Badge variant={server.enabled ? "success" : "secondary"}>{server.enabled ? "Ativo" : "Pausado"}</Badge>
                 </div>
               </CardHeader>
+
               <CardContent className="space-y-4 p-4">
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="rounded-xl bg-muted/45 p-3"><p className="text-muted-foreground">Usuário</p><p className="mt-1 truncate font-bold">{server.username || "Token da API"}</p></div>
-                  <div className="rounded-xl bg-muted/45 p-3"><p className="text-muted-foreground">Última sincronização</p><p className="mt-1 font-bold">{server.last_sync_at ? new Date(server.last_sync_at).toLocaleString("pt-BR") : "Nunca"}</p></div>
+                <div className="rounded-xl bg-muted/45 p-3 text-xs">
+                  <p className="text-muted-foreground">Última sincronização</p>
+                  <p className="mt-1 font-bold">{server.last_sync_at ? new Date(server.last_sync_at).toLocaleString("pt-BR") : "Ainda não sincronizado"}</p>
                 </div>
-                {server.last_sync_error && <p className="rounded-xl bg-destructive/10 p-3 text-xs text-destructive">{server.last_sync_error}</p>}
-                <div className="flex flex-wrap gap-2">
+
+                {server.last_sync_error && (
+                  <p className="rounded-xl bg-destructive/10 p-3 text-xs text-destructive">{server.last_sync_error}</p>
+                )}
+
+                <div className="flex gap-2">
                   <Button onClick={() => syncOne(server.id)} disabled={!server.enabled || syncingId === server.id} size="sm" className="flex-1 gap-2">
-                    <RefreshCw className={`size-3.5 ${syncingId === server.id ? "animate-spin" : ""}`} /> Sincronizar
+                    <RefreshCw className={`size-3.5 ${syncingId === server.id ? "animate-spin" : ""}`} />
+                    {syncingId === server.id ? "Sincronizando..." : "Sincronizar"}
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => openEdit(server)} className="gap-2"><Settings2 className="size-3.5" /> Editar</Button>
-                  <Button variant="ghost" size="icon" onClick={() => remove(server)} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" /></Button>
+                  <Button variant="outline" size="icon" onClick={() => openEdit(server)} aria-label="Editar servidor"><Settings2 className="size-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => remove(server)} aria-label="Remover servidor" className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" /></Button>
                 </div>
               </CardContent>
             </Card>
@@ -251,39 +280,43 @@ function SigmaServersPage() {
         </section>
       )}
 
-      <div className="text-center"><Button asChild variant="ghost" size="sm"><Link to="/clientes">Ver todos os clientes sincronizados →</Link></Button></div>
-
-      <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
+      <Dialog open={editorOpen} onOpenChange={(open) => !saving && setEditorOpen(open)}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{form.id ? "Editar painel Sigma" : "Adicionar painel Sigma"}</DialogTitle>
-            <DialogDescription>Use os mesmos dados utilizados para entrar no painel de revenda.</DialogDescription>
+            <DialogTitle>{form.id ? "Editar Sigma" : "Adicionar Sigma"}</DialogTitle>
+            <DialogDescription>
+              Use os mesmos dados do painel de revenda. Ao salvar, os clientes serão importados automaticamente.
+            </DialogDescription>
           </DialogHeader>
-          <form onSubmit={save} className="space-y-5">
+
+          <form onSubmit={saveAndSync} className="space-y-5">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nome para identificar"><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Sigma Principal" /></Field>
+              <Field label="Nome do servidor"><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Sigma Principal" /></Field>
               <Field label="URL do painel"><Input required type="url" value={form.panel_url} onChange={(e) => setForm({ ...form, panel_url: e.target.value })} placeholder="https://painel.exemplo.com" /></Field>
               <Field label="Usuário"><Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} autoComplete="username" /></Field>
               <Field label="Senha">
-                <div className="relative"><Input type={showPassword ? "text" : "password"} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} autoComplete="current-password" className="pr-10" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-muted-foreground">{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button>
+                <div className="relative">
+                  <Input type={showPassword ? "text" : "password"} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} autoComplete="current-password" className="pr-10" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-muted-foreground" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
                 </div>
               </Field>
-              <Field label="DNS de streaming (opcional)"><Input value={form.streaming_dns} onChange={(e) => setForm({ ...form, streaming_dns: e.target.value })} placeholder="http://dns.exemplo.com:8080" /></Field>
               <Field label="Token da API (opcional)"><Input value={form.token} onChange={(e) => setForm({ ...form, token: e.target.value })} /></Field>
+              <Field label="DNS de streaming (opcional)"><Input value={form.streaming_dns} onChange={(e) => setForm({ ...form, streaming_dns: e.target.value })} placeholder="http://dns.exemplo.com:8080" /></Field>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
+
+            <div className="grid gap-3 sm:grid-cols-2">
               <Toggle label="Servidor ativo" checked={form.enabled ?? true} onChange={(checked) => setForm({ ...form, enabled: checked })} />
               <Toggle label="Renovação automática" checked={form.auto_renew ?? true} onChange={(checked) => setForm({ ...form, auto_renew: checked })} />
-              <Toggle label="Servidor padrão" checked={form.is_default ?? false} onChange={(checked) => setForm({ ...form, is_default: checked })} />
             </div>
-            <div className="flex flex-col-reverse gap-2 border-t border-border/60 pt-4 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" onClick={test} disabled={testing || saving} className="gap-2">
-                {testing ? <Loader2 className="size-4 animate-spin" /> : <Activity className="size-4" />} Testar conexão
+
+            <div className="border-t border-border/60 pt-4">
+              <Button type="submit" disabled={saving} className="w-full gap-2 sm:w-auto sm:min-w-52">
+                {saving ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                {saving ? "Salvando e sincronizando..." : "Salvar e sincronizar"}
               </Button>
-              <Button type="submit" disabled={saving || testing} className="gap-2">
-                {saving ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />} Salvar servidor
-              </Button>
+              <p className="mt-2 text-xs text-muted-foreground">Depois disso, os clientes já aparecem automaticamente no Painel e em Clientes.</p>
             </div>
           </form>
         </DialogContent>
@@ -297,5 +330,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
-  return <div className="flex items-center justify-between rounded-xl border border-border/60 p-3"><Label className="text-xs font-semibold">{label}</Label><Switch checked={checked} onCheckedChange={onChange} /></div>;
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-border/60 p-3">
+      <Label className="text-xs font-semibold">{label}</Label>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </div>
+  );
 }
