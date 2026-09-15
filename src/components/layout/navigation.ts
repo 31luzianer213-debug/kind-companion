@@ -1,4 +1,6 @@
 import {
+  Activity,
+  BellRing,
   Bot,
   CreditCard,
   LayoutDashboard,
@@ -17,6 +19,8 @@ export type AppRoute =
   | "/pedidos"
   | "/clientes"
   | "/cobrancas"
+  | "/atividades"
+  | "/cobranca-automatica"
   | "/sigma"
   | "/bot"
   | "/whatsapp"
@@ -80,6 +84,12 @@ export const navigationGroups: NavigationGroup[] = [
         badgeKey: "invoices",
         mobilePrimary: true,
       },
+      {
+        to: "/atividades",
+        label: "Atividades",
+        shortLabel: "Atividades",
+        icon: Activity,
+      },
     ],
   },
   {
@@ -104,6 +114,12 @@ export const navigationGroups: NavigationGroup[] = [
         shortLabel: "WhatsApp",
         icon: MessageCircle,
         badgeKey: "whatsapp",
+      },
+      {
+        to: "/cobranca-automatica",
+        label: "Cobrança automática",
+        shortLabel: "Automação",
+        icon: BellRing,
       },
     ],
   },
