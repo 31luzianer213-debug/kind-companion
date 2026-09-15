@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
+import { ResellerContextEnhancements } from "@/components/ResellerContextEnhancements";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/_authenticated")({
   },
   component: () => (
     <AppLayout>
+      <ResellerContextEnhancements />
       <Outlet />
     </AppLayout>
   ),
