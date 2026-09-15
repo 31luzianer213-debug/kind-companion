@@ -4,13 +4,14 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const getResellerTrialServerSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const supabase = context.supabase as any;
     const [{ data: servers, error: serversError }, { data: settings, error: settingsError }] = await Promise.all([
-      context.supabase
+      supabase
         .from("sigma_panels")
         .select("id, name, url, streaming_dns, enabled, created_at")
         .eq("user_id", context.userId)
         .order("created_at", { ascending: true }),
-      context.supabase
+      supabase
         .from("whatsapp_settings")
         .select("test_server_id")
         .eq("user_id", context.userId)
@@ -43,7 +44,8 @@ export const setResellerTrialServer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { serverId: string }) => input)
   .handler(async ({ data, context }) => {
-    const { data: server, error: serverError } = await context.supabase
+    const supabase = context.supabase as any;
+    const { data: server, error: serverError } = await supabase
       .from("sigma_panels")
       .select("id, name, url, streaming_dns, username, password, token, enabled")
       .eq("id", data.serverId)
@@ -70,7 +72,7 @@ export const setResellerTrialServer = createServerFn({ method: "POST" })
       sigma_streaming_dns: server.streaming_dns ?? null,
     };
 
-    const { error: saveError } = await context.supabase
+    const { error: saveError } = await supabase
       .from("whatsapp_settings")
       .upsert(payload, { onConflict: "user_id" });
 
