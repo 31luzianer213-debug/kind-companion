@@ -371,8 +371,8 @@ function Clientes() {
     staleTime: 60000,
   });
 
-  const clients = data ?? [];
-  const sigmaServers = sigmaServersQuery.data ?? [];
+  const clients = Array.isArray(data) ? data : [];
+  const sigmaServers = Array.isArray(sigmaServersQuery.data) ? sigmaServersQuery.data : [];
   const defaultSigmaServer = sigmaServers.find((server) => server.is_default) ?? sigmaServers[0];
   const isSigmaConfigured = sigmaServers.some((server) => server.enabled);
   const isRawDomain = (name?: string | null) =>
@@ -585,7 +585,7 @@ function Clientes() {
 
       if (savedRow) {
         queryClient.setQueryData(["clients"], (old: any[] | undefined) => {
-          if (!old) return [savedRow];
+          if (!Array.isArray(old)) return [savedRow];
           const exists = old.some((c) => c.id === savedRow.id);
           if (exists) {
             return old.map((c) => (c.id === savedRow.id ? { ...c, ...savedRow } : c));
