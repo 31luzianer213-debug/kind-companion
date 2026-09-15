@@ -1,19 +1,11 @@
 import {
-  Activity,
-  BellRing,
-  Bot,
   CreditCard,
-  Gauge,
   LayoutDashboard,
-  ListChecks,
   MessageCircle,
-  Radio,
   Receipt,
-  RefreshCw,
   Server,
   Settings,
   ShoppingBag,
-  Sparkles,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -52,43 +44,36 @@ export interface NavigationGroup {
   items: NavigationItem[];
 }
 
+/**
+ * O menu principal mostra apenas as áreas que o usuário realmente precisa
+ * escolher no dia a dia. Recursos avançados continuam disponíveis dentro
+ * das áreas correspondentes, sem poluir a navegação.
+ */
 export const navigationGroups: NavigationGroup[] = [
   {
-    title: "Visão geral",
+    title: "Principal",
     items: [
-      { to: "/painel", label: "Painel Geral", shortLabel: "Início", icon: LayoutDashboard, mobilePrimary: true },
-      { to: "/indicadores", label: "Indicadores", shortLabel: "Indicadores", icon: Gauge },
-    ],
-  },
-  {
-    title: "Operação",
-    items: [
-      { to: "/pedidos", label: "Pedidos & PIX", shortLabel: "Pedidos", icon: ShoppingBag, badgeKey: "orders", mobilePrimary: true },
-      { to: "/clientes", label: "Clientes & Acessos", shortLabel: "Clientes", icon: Users, badgeKey: "clients", mobilePrimary: true },
-      { to: "/clientes-operacao", label: "Operação de Clientes", shortLabel: "Operação", icon: ListChecks },
+      { to: "/painel", label: "Painel", shortLabel: "Início", icon: LayoutDashboard, mobilePrimary: true },
+      { to: "/clientes", label: "Clientes", shortLabel: "Clientes", icon: Users, badgeKey: "clients", mobilePrimary: true },
+      { to: "/pedidos", label: "Pedidos", shortLabel: "Pedidos", icon: ShoppingBag, badgeKey: "orders", mobilePrimary: true },
       { to: "/cobrancas", label: "Cobranças", shortLabel: "Cobrar", icon: Receipt, badgeKey: "invoices", mobilePrimary: true },
-      { to: "/atividades", label: "Atividades", shortLabel: "Atividades", icon: Activity },
     ],
   },
   {
-    title: "Automação",
+    title: "Conexões",
     items: [
-      { to: "/sigma", label: "Servidor Sigma", shortLabel: "Sigma", icon: Server, badgeKey: "sigma" },
-      { to: "/sigma-sincronizacao", label: "Sincronização Sigma", shortLabel: "Sincronizar", icon: RefreshCw },
-      { to: "/bot", label: "Robô WhatsApp", shortLabel: "Robô", icon: Bot },
-      { to: "/whatsapp", label: "Conexão WhatsApp", shortLabel: "WhatsApp", icon: MessageCircle, badgeKey: "whatsapp" },
-      { to: "/whatsapp-diagnostico", label: "Diagnóstico WhatsApp", shortLabel: "Diagnóstico", icon: Radio },
-      { to: "/cobranca-automatica", label: "Cobrança automática", shortLabel: "Automação", icon: BellRing },
+      { to: "/sigma", label: "Sigma", shortLabel: "Sigma", icon: Server, badgeKey: "sigma" },
+      { to: "/whatsapp", label: "WhatsApp", shortLabel: "WhatsApp", icon: MessageCircle, badgeKey: "whatsapp" },
     ],
   },
   {
-    title: "Preferências",
+    title: "Conta",
     items: [
-      { to: "/pagamentos", label: "Formas de Pagamento", shortLabel: "Pagamentos", icon: CreditCard },
-      { to: "/mensagens", label: "Modelos de Mensagem", shortLabel: "Mensagens", icon: Sparkles },
-      { to: "/configuracoes", label: "Ajustes Gerais", shortLabel: "Ajustes", icon: Settings },
+      { to: "/configuracoes", label: "Configurações", shortLabel: "Ajustes", icon: Settings, mobilePrimary: true },
     ],
   },
 ];
 
-export const primaryMobileNavigation = navigationGroups.flatMap((group) => group.items).filter((item) => item.mobilePrimary);
+export const primaryMobileNavigation = navigationGroups
+  .flatMap((group) => group.items)
+  .filter((item) => item.mobilePrimary);
