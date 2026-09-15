@@ -1,4 +1,5 @@
 import {
+  Bot,
   CreditCard,
   LayoutDashboard,
   MessageCircle,
@@ -64,6 +65,7 @@ export const navigationGroups: NavigationGroup[] = [
     items: [
       { to: "/sigma", label: "Sigma", shortLabel: "Sigma", icon: Server, badgeKey: "sigma" },
       { to: "/whatsapp", label: "WhatsApp", shortLabel: "WhatsApp", icon: MessageCircle, badgeKey: "whatsapp" },
+      { to: "/bot", label: "Robô WhatsApp", shortLabel: "Robô", icon: Bot },
     ],
   },
   {
