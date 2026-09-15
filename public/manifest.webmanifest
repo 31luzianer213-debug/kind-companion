@@ -1,0 +1,56 @@
+{
+  "name": "IPTV Manager",
+  "short_name": "IPTV Manager",
+  "description": "Painel mobile para clientes, Sigma, WhatsApp, cobranças e automações.",
+  "lang": "pt-BR",
+  "start_url": "/painel?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Clientes",
+      "short_name": "Clientes",
+      "url": "/clientes?source=pwa"
+    },
+    {
+      "name": "Cobranças",
+      "short_name": "Cobranças",
+      "url": "/cobrancas?source=pwa"
+    },
+    {
+      "name": "WhatsApp",
+      "short_name": "WhatsApp",
+      "url": "/whatsapp?source=pwa"
+    },
+    {
+      "name": "Robô WhatsApp",
+      "short_name": "Robô",
+      "url": "/bot?source=pwa"
+    }
+  ]
+}
