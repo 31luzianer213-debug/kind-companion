@@ -1,38 +1,30 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  isTenantEvolutionEnabled,
+  tenantConnect,
+  tenantCurrentConnectionCode,
+  tenantDeleteInstance,
+  tenantInstanceName,
+  tenantLogout,
+  tenantSendText,
+  tenantState,
+} from "./evolution-tenant.server";
 
 const BAILEYS_API = process.env["BAILEYS_API_URL"] || "http://localhost:3001";
 
-async function readLocalStatus(instance = "default") {
+async function readLocalStatus(instance: string) {
   try {
     const fs = await import("node:fs");
     const path = await import("node:path");
     const dir = path.resolve(process.cwd(), "data");
     const instFile = path.join(dir, `baileys_status_${instance}.json`);
 
-    let current: any = null;
     if (fs.existsSync(instFile)) {
-      current = JSON.parse(fs.readFileSync(instFile, "utf8"));
-    } else {
-      const defaultFile = path.join(dir, "baileys_status.json");
-      if (fs.existsSync(defaultFile)) {
-        current = JSON.parse(fs.readFileSync(defaultFile, "utf8"));
-      }
+      return JSON.parse(fs.readFileSync(instFile, "utf8"));
     }
-
-    if (current?.status === "open") return current;
-
-    // Procura qualquer sessão conectada para exibir o número no painel
-    try {
-      for (const file of fs.readdirSync(dir)) {
-        if (!file.startsWith("baileys_status")) continue;
-        const parsed = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8"));
-        if (parsed?.status === "open") return parsed;
-      }
-    } catch {}
-
-    if (current) return current;
   } catch {}
+
   return {
     instance,
     status: "close",
@@ -45,26 +37,35 @@ async function readLocalStatus(instance = "default") {
   };
 }
 
-/**
- * Consulta o status em tempo real da conexão Baileys de um usuário/instância.
- */
-export const getBaileysStatus = createServerFn({ method: "POST" })
-  .inputValidator((input?: { instance?: string }) => input)
-  .handler(async ({ data }) => {
-    const instance = data?.instance || "default";
+function unavailableState(instance: string, mode: "qr" | "pairing" = "qr") {
+  return {
+    instance,
+    provider: "unconfigured",
+    status: "none",
+    mode,
+    qrCode: null,
+    pairingCode: null,
+    phone: null,
+    userName: null,
+    lastError:
+      "WhatsApp não configurado: defina EVOLUTION_API_URL + EVOLUTION_API_KEY (VPS) ou BAILEYS_API_URL.",
+  };
+}
 
-    // 0. Evolution API (VPS do usuário) tem prioridade quando configurada
-    const evo = await import("./evolution-api.server");
-    if (evo.isEvolutionEnabled()) {
-      const st = await evo.evoState();
-      // Enquanto conecta, busca sempre o QR atual. A Evolution troca o código
-      // periodicamente e manter o primeiro QR na tela faz o WhatsApp rejeitá-lo.
-      const connectionCode =
-        st.state === "connecting" ? await evo.evoCurrentConnectionCode() : null;
+/** Consulta somente a sessão pertencente ao usuário autenticado. */
+export const getBaileysStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input?: { instance?: string }) => input)
+  .handler(async ({ context }) => {
+    const instance = tenantInstanceName(context.userId);
+
+    if (isTenantEvolutionEnabled()) {
+      const st = await tenantState(context.userId);
+      const connectionCode = st.state === "connecting" ? await tenantCurrentConnectionCode(context.userId) : null;
       return {
         ok: true as const,
         state: {
-          instance: evo.evolutionEnv()?.instance || instance,
+          instance,
           provider: "evolution",
           status: st.state,
           mode: "qr",
@@ -77,42 +78,26 @@ export const getBaileysStatus = createServerFn({ method: "POST" })
       };
     }
 
-    // Sem Evolution e sem URL externa, localhost só funciona em desenvolvimento.
     if (!process.env["BAILEYS_API_URL"]) {
-      return { ok: false as const, state: { instance, provider: "unconfigured", status: "none", mode: "qr", qrCode: null, pairingCode: null, phone: null, userName: null, lastError: "WhatsApp não configurado: defina EVOLUTION_API_URL + EVOLUTION_API_KEY (VPS) ou BAILEYS_API_URL." } };
+      return { ok: false as const, state: unavailableState(instance) };
     }
 
-    // 1. Tenta buscar via API HTTP local do daemon
     try {
       const q = `?instance=${encodeURIComponent(instance)}`;
       const res = await fetch(`${BAILEYS_API}/api/status${q}`, { signal: AbortSignal.timeout(3000) });
       if (res.ok) {
         const state = await res.json();
-        if (state?.status === "open") return { ok: true as const, state };
-
-        // Se essa instância não está conectada, procura outra sessão ativa
-        try {
-          const listRes = await fetch(`${BAILEYS_API}/api/sessions`, { signal: AbortSignal.timeout(3000) });
-          if (listRes.ok) {
-            const list = await listRes.json();
-            const open = (list?.sessions ?? []).find((s: any) => s?.status === "open");
-            if (open) return { ok: true as const, state: open };
-          }
-        } catch {}
-
-        return { ok: true as const, state };
+        return { ok: true as const, state: { ...state, instance } };
       }
     } catch {}
 
-    // 2. Fallback: lê arquivo de status compartilhado
     const state = await readLocalStatus(instance);
     return { ok: true as const, state };
   });
 
-/**
- * Inicia a conexão Baileys via QR Code ou Código de Pareamento para a instância do usuário.
- */
+/** Cria/conecta exclusivamente a instância do usuário autenticado. */
 export const connectBaileys = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (input: {
       instance?: string;
@@ -123,32 +108,26 @@ export const connectBaileys = createServerFn({ method: "POST" })
       userId?: string;
     }) => input,
   )
-  .handler(async ({ data }) => {
-    const instance = data?.instance || "default";
+  .handler(async ({ data, context }) => {
+    const instance = tenantInstanceName(context.userId);
+    const mode = data?.mode || "qr";
 
-    const evo = await import("./evolution-api.server");
-    if (evo.isEvolutionEnabled()) {
-      const configuredOrigin =
-        process.env["PUBLIC_APP_URL"]?.trim() || "https://embrace-essence-app.lovable.app";
+    if (isTenantEvolutionEnabled()) {
+      const configuredOrigin = process.env["PUBLIC_APP_URL"]?.trim() || "https://embrace-essence-app.lovable.app";
       if (data?.origin) {
         try {
           const requestedUrl = new URL(data.origin);
           const allowedUrl = new URL(configuredOrigin);
           const requested = requestedUrl.origin;
           const allowed = allowedUrl.origin;
-          const lovablePreview = requestedUrl.hostname.endsWith(".lovable.app") && allowedUrl.hostname.endsWith(".lovable.app");
+          const lovablePreview =
+            requestedUrl.hostname.endsWith(".lovable.app") && allowedUrl.hostname.endsWith(".lovable.app");
           if (requested !== allowed && !lovablePreview) {
             return {
               ok: false as const,
               state: {
-                instance,
+                ...unavailableState(instance, mode),
                 provider: "evolution",
-                status: "none",
-                mode: data?.mode || "qr",
-                qrCode: null,
-                pairingCode: null,
-                phone: null,
-                userName: null,
                 lastError: "Conexão bloqueada: use o site oficial configurado em PUBLIC_APP_URL.",
               },
             };
@@ -157,28 +136,23 @@ export const connectBaileys = createServerFn({ method: "POST" })
           return {
             ok: false as const,
             state: {
-              instance,
+              ...unavailableState(instance, mode),
               provider: "evolution",
-              status: "none",
-              mode: data?.mode || "qr",
-              qrCode: null,
-              pairingCode: null,
-              phone: null,
-              userName: null,
               lastError: "Origem inválida para conexão do WhatsApp.",
             },
           };
         }
       }
+
       const { botWebhookUrl } = await import("./whatsapp-connection.server");
-      const res = await evo.evoConnect(botWebhookUrl(data?.origin, data?.userId));
+      const res = await tenantConnect(context.userId, botWebhookUrl(data?.origin, context.userId));
       return {
         ok: true as const,
         state: {
-          instance: evo.evolutionEnv()?.instance || instance,
+          instance,
           provider: "evolution",
           status: res.state,
-          mode: data?.mode || "qr",
+          mode,
           qrCode: res.base64,
           pairingCode: res.code,
           phone: null,
@@ -189,45 +163,36 @@ export const connectBaileys = createServerFn({ method: "POST" })
     }
 
     if (!process.env["BAILEYS_API_URL"]) {
-      return { ok: false as const, state: { instance, provider: "unconfigured", status: "none", mode: data?.mode || "qr", qrCode: null, pairingCode: null, phone: null, userName: null, lastError: "WhatsApp não configurado: defina EVOLUTION_API_URL + EVOLUTION_API_KEY (VPS) ou BAILEYS_API_URL." } };
+      return { ok: false as const, state: unavailableState(instance, mode) };
     }
 
     try {
       const res = await fetch(`${BAILEYS_API}/api/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instance,
-          mode: data?.mode || "qr",
-          phone: data?.phone,
-          force: data?.force,
-        }),
+        body: JSON.stringify({ instance, mode, phone: data?.phone, force: data?.force }),
         signal: AbortSignal.timeout(10000),
       });
       if (res.ok) {
         const result = await res.json();
-        return { ok: true as const, state: result.state };
+        return { ok: true as const, state: { ...result.state, instance } };
       }
     } catch {}
 
-    // Aguarda breve intervalo e lê arquivo de status
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((resolve) => setTimeout(resolve, 600));
     const local = await readLocalStatus(instance);
     return { ok: true as const, state: local };
   });
 
-/**
- * Desconecta e limpa a sessão Baileys da instância do usuário.
- */
+/** Desconecta apenas a sessão do usuário autenticado. */
 export const disconnectBaileys = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input?: { instance?: string }) => input)
-  .handler(async ({ data }) => {
-    const instance = data?.instance || "default";
+  .handler(async ({ context }) => {
+    const instance = tenantInstanceName(context.userId);
 
-    const evo = await import("./evolution-api.server");
-    if (evo.isEvolutionEnabled()) {
-      await evo.evoLogout();
-      return { ok: true as const };
+    if (isTenantEvolutionEnabled()) {
+      return await tenantLogout(context.userId);
     }
 
     try {
@@ -242,26 +207,31 @@ export const disconnectBaileys = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-/**
- * Envia uma mensagem de teste pelo Baileys (Texto, Botões Rápidos, Lista ou PIX).
- */
-/**
- * Limpa uma sessão Evolution corrompida (Bad MAC / No matching sessions)
- * e devolve um novo QR Code para pareamento.
- */
+/** Apaga a instância do usuário e gera uma sessão limpa para novo QR. */
 export const resetBaileysSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input?: { origin?: string; userId?: string }) => input)
-  .handler(async ({ data }) => {
-    const evo = await import("./evolution-api.server");
-    if (!evo.isEvolutionEnabled()) {
+  .handler(async ({ data, context }) => {
+    if (!isTenantEvolutionEnabled()) {
       throw new Error("Evolution API não está configurada na VPS.");
     }
-    await evo.evoDeleteInstance();
+
+    await tenantDeleteInstance(context.userId);
     const { botWebhookUrl } = await import("./whatsapp-connection.server");
-    const res = await evo.evoConnect(botWebhookUrl(data?.origin, data?.userId));
+    const res = await tenantConnect(context.userId, botWebhookUrl(data?.origin, context.userId));
     return {
       ok: true as const,
-      state: { provider: "evolution", status: res.state, mode: "qr", qrCode: res.base64, pairingCode: res.code, phone: null, userName: null, lastError: null },
+      state: {
+        instance: tenantInstanceName(context.userId),
+        provider: "evolution",
+        status: res.state,
+        mode: "qr",
+        qrCode: res.base64,
+        pairingCode: res.code,
+        phone: null,
+        userName: null,
+        lastError: null,
+      },
     };
   });
 
@@ -275,12 +245,11 @@ export const sendBaileysTest = createServerFn({ method: "POST" })
       type?: "text" | "buttons" | "list" | "pix_copy";
     }) => input,
   )
-  .handler(async ({ data }) => {
-    const instance = data.instance || "default";
+  .handler(async ({ data, context }) => {
+    const instance = tenantInstanceName(context.userId);
 
-    const evo = await import("./evolution-api.server");
-    if (evo.isEvolutionEnabled()) {
-      const sent = await evo.evoSendText(data.to, data.text || "Mensagem de teste ✅");
+    if (isTenantEvolutionEnabled()) {
+      const sent = await tenantSendText(context.userId, data.to, data.text || "Mensagem de teste ✅");
       if (!sent.ok) throw new Error(sent.error || "Falha ao enviar pela Evolution API");
       return { ok: true as const };
     }
@@ -289,12 +258,7 @@ export const sendBaileysTest = createServerFn({ method: "POST" })
       const res = await fetch(`${BAILEYS_API}/api/send-test`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instance,
-          to: data.to,
-          text: data.text,
-          type: data.type || "text",
-        }),
+        body: JSON.stringify({ instance, to: data.to, text: data.text, type: data.type || "text" }),
         signal: AbortSignal.timeout(6000),
       });
 
@@ -304,7 +268,7 @@ export const sendBaileysTest = createServerFn({ method: "POST" })
       }
 
       return { ok: true as const };
-    } catch (e: any) {
-      throw new Error(e.message || "Serviço Baileys não respondeu.");
+    } catch (error: any) {
+      throw new Error(error.message || "Serviço Baileys não respondeu.");
     }
   });
