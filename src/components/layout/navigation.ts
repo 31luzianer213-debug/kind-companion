@@ -1,4 +1,5 @@
 import {
+  Activity,
   Bot,
   CreditCard,
   LayoutDashboard,
@@ -17,6 +18,7 @@ export type AppRoute =
   | "/pedidos"
   | "/clientes"
   | "/cobrancas"
+  | "/atividades"
   | "/sigma"
   | "/bot"
   | "/whatsapp"
@@ -79,6 +81,12 @@ export const navigationGroups: NavigationGroup[] = [
         icon: Receipt,
         badgeKey: "invoices",
         mobilePrimary: true,
+      },
+      {
+        to: "/atividades",
+        label: "Atividades",
+        shortLabel: "Atividades",
+        icon: Activity,
       },
     ],
   },
