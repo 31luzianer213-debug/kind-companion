@@ -8,7 +8,6 @@ export function normalizePhone(raw: string) {
     return trimmed;
   }
   let digits = trimmed.replace(/\D/g, "").replace(/^0+/, "");
-  // remove DDI duplicado / prefixo de operadora
   if (digits.length > 13 && digits.startsWith("55")) digits = digits.slice(-13);
   if (!digits.startsWith("55") && digits.length >= 10 && digits.length <= 11) {
     digits = `55${digits}`;
@@ -18,13 +17,10 @@ export function normalizePhone(raw: string) {
 
 export function isValidBrPhone(raw: string) {
   const digits = normalizePhone(raw).replace(/\D/g, "");
-  // 55 + DDD (2) + 8 ou 9 dígitos
   return digits.length === 12 || digits.length === 13;
 }
 
-/**
- * Envia mensagem pelo WhatsApp usando o motor Baileys nativo.
- */
+/** Envia mensagem usando exclusivamente a instância recebida quando houver Evolution. */
 export async function sendWhatsapp(to: string, text: string, instance?: string) {
   const normalized = normalizePhone(to);
   if (!normalized) {
@@ -34,10 +30,18 @@ export async function sendWhatsapp(to: string, text: string, instance?: string) 
     };
   }
 
-  const { isEvolutionEnabled, evoSendText } = await import("./evolution-api.server");
-  if (isEvolutionEnabled()) {
-    const res = await evoSendText(normalized, text);
-    return res.ok ? { ok: true as const } : { ok: false as const, error: res.error || "Falha no envio pela Evolution API" };
+  const tenant = await import("./evolution-tenant.server");
+  if (tenant.isTenantEvolutionEnabled()) {
+    if (!instance) {
+      return {
+        ok: false as const,
+        error: "Instância do WhatsApp não informada para este usuário.",
+      };
+    }
+    const res = await tenant.tenantSendText(instance, normalized, text, true);
+    return res.ok
+      ? { ok: true as const }
+      : { ok: false as const, error: res.error || "Falha no envio pela Evolution API" };
   }
 
   try {
