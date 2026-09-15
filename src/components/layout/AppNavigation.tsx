@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, LogOut } from "lucide-react";
+import { ChevronRight, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SigmaLogo } from "@/components/SigmaLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -183,9 +183,11 @@ export function MobileDrawer(props: AppNavigationProps) {
   );
 }
 
-export function MobileBottomNavigation(props: Pick<AppNavigationProps, "pathname" | "counts" | "isWhatsAppConnected">) {
+export function MobileBottomNavigation(
+  props: Pick<AppNavigationProps, "pathname" | "counts" | "isWhatsAppConnected"> & { onOpenMenu: () => void },
+) {
   return (
-    <nav className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border/70 bg-background/92 px-2 pb-[max(.45rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-12px_40px_-28px_rgba(0,0,0,.75)] backdrop-blur-xl md:hidden" aria-label="Atalhos principais">
+    <nav className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border/70 bg-background/95 px-1.5 pb-[max(.45rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-12px_40px_-28px_rgba(0,0,0,.75)] backdrop-blur-xl md:hidden" aria-label="Atalhos principais">
       {primaryMobileNavigation.map((item) => {
         const active = isActive(props.pathname, item.to);
         const Icon = item.icon;
@@ -195,16 +197,25 @@ export function MobileBottomNavigation(props: Pick<AppNavigationProps, "pathname
             to={item.to}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-bold transition-all",
+              "relative flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 text-[9px] font-bold transition-all",
               active ? "bg-primary/10 text-primary" : "text-muted-foreground active:bg-accent",
             )}
           >
-            <Icon className="size-[19px]" />
-            <span>{item.shortLabel}</span>
-            <span className={cn("absolute inset-x-5 top-0 h-0.5 rounded-full bg-primary transition-opacity", active ? "opacity-100" : "opacity-0")} />
+            <Icon className="size-[19px] shrink-0" />
+            <span className="max-w-full truncate">{item.shortLabel}</span>
+            <span className={cn("absolute inset-x-4 top-0 h-0.5 rounded-full bg-primary transition-opacity", active ? "opacity-100" : "opacity-0")} />
           </Link>
         );
       })}
+      <button
+        type="button"
+        onClick={props.onOpenMenu}
+        className="relative flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 text-[9px] font-bold text-muted-foreground transition-all active:bg-accent"
+        aria-label="Abrir todas as opções"
+      >
+        <Menu className="size-[19px] shrink-0" />
+        <span>Mais</span>
+      </button>
     </nav>
   );
 }

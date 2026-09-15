@@ -71,7 +71,7 @@ export const navigationGroups: NavigationGroup[] = [
   {
     title: "Conta",
     items: [
-      { to: "/configuracoes", label: "Configurações", shortLabel: "Ajustes", icon: Settings, mobilePrimary: true },
+      { to: "/configuracoes", label: "Configurações", shortLabel: "Ajustes", icon: Settings },
     ],
   },
 ];
