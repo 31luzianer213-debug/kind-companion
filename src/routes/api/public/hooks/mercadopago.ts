@@ -1,13 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { addMonths } from "date-fns";
 
 export const Route = createFileRoute("/api/public/hooks/mercadopago")({
   server: {
     handlers: {
-      GET: async () => {
-        // Mercado Pago faz testes de conectividade via GET
-        return new Response("Mercado Pago Webhook Active", { status: 200 });
-      },
+      GET: async () => new Response("Mercado Pago Webhook Active", { status: 200 }),
       POST: async ({ request }) => {
         try {
           const url = new URL(request.url);
@@ -15,96 +11,52 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago")({
           const uidParam = url.searchParams.get("uid");
 
           let body: any = {};
-          try {
-            body = await request.json();
-          } catch {
-            // body pode ser vazio em notificações simples
-          }
-
-          if (!paymentId && body?.data?.id) {
-            paymentId = String(body.data.id);
-          }
-
-          if (!paymentId) {
-            return Response.json({ ok: true, message: "Evento sem ID de pagamento ignorado." }, { status: 200 });
-          }
+          try { body = await request.json(); } catch {}
+          if (!paymentId && body?.data?.id) paymentId = String(body.data.id);
+          if (!paymentId) return Response.json({ ok: true, message: "Evento sem ID de pagamento ignorado." });
 
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-          // Busca as configurações de pagamento do usuário dono
           let settingsList: any[] = [];
           if (uidParam) {
-            const { data } = await supabaseAdmin
-              .from("whatsapp_settings")
-              .select("*")
-              .eq("user_id", uidParam)
-              .maybeSingle();
+            const { data } = await supabaseAdmin.from("whatsapp_settings").select("*").eq("user_id", uidParam).maybeSingle();
             if (data) settingsList = [data];
           }
-
           if (settingsList.length === 0) {
-            const { data } = await supabaseAdmin
-              .from("whatsapp_settings")
-              .select("*")
-              .not("mercadopago_token", "is", null);
-            settingsList = (data ?? []).filter((s: any) => Boolean(s.mercadopago_token?.trim()));
+            const { data } = await supabaseAdmin.from("whatsapp_settings").select("*").not("mercadopago_token", "is", null);
+            settingsList = (data ?? []).filter((item: any) => Boolean(item.mercadopago_token?.trim()));
           }
-
           if (settingsList.length === 0) {
-            try {
-              const { readLocalPaymentSettings, DEFAULT_BOT_CONFIG } = await import("@/lib/bot.server");
-              const local = readLocalPaymentSettings(uidParam || "ccd7362726074f97") || readLocalPaymentSettings("default");
-              const token = local?.mercadopago_token || DEFAULT_BOT_CONFIG.mercadopago_token;
-              if (token) {
-                settingsList = [{
-                  user_id: uidParam || local?.user_id || "ccd7362726074f97",
-                  mercadopago_token: token,
-                }];
-              }
-            } catch {}
-          }
-
-          if (settingsList.length === 0) {
-            return Response.json({ ok: false, error: "Nenhuma credencial do Mercado Pago configurada." }, { status: 200 });
+            return Response.json({ ok: false, error: "Nenhuma credencial do Mercado Pago configurada." });
           }
 
           let paymentData: any = null;
           let matchedSettings: any = null;
-
-          // Testa o token para buscar os dados do pagamento
-          for (const s of settingsList) {
-            const token = s.mercadopago_token?.trim();
+          for (const settings of settingsList) {
+            const token = settings.mercadopago_token?.trim();
             if (!token) continue;
             try {
-              const res = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+              const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
-              if (res.ok) {
-                paymentData = await res.json();
-                matchedSettings = s;
+              if (response.ok) {
+                paymentData = await response.json();
+                matchedSettings = settings;
                 break;
               }
-            } catch {
-              // segue para o próximo se houver
-            }
+            } catch {}
           }
 
           if (!paymentData || !matchedSettings) {
-            return Response.json({ ok: true, message: "Pagamento não encontrado nas credenciais ativas." }, { status: 200 });
+            return Response.json({ ok: true, message: "Pagamento não encontrado nas credenciais ativas." });
           }
-
-          // Só processa pagamentos aprovados
           if (paymentData.status !== "approved") {
-            return Response.json(
-              { ok: true, message: `Status do pagamento: ${paymentData.status}. Aguardando aprovação.` },
-              { status: 200 },
-            );
+            return Response.json({ ok: true, message: `Status do pagamento: ${paymentData.status}. Aguardando aprovação.` });
           }
 
-          const externalRef = paymentData.external_reference;
+          const externalRef = String(paymentData.external_reference || "").trim();
 
-          // Se external_reference for um Pedido do WhatsApp/Loja, aprova e entrega o acesso imediatamente
-          if (externalRef && (externalRef.startsWith("ord_") || String(externalRef).length > 10)) {
+          if (externalRef.startsWith("ord_")) {
             try {
               const { approveAndReleaseOrderServer } = await import("@/lib/orders.server");
               const orderResult = await approveAndReleaseOrderServer(matchedSettings.user_id, externalRef);
@@ -115,116 +67,63 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago")({
                   order: orderResult.order,
                 });
               }
-            } catch (ordErr) {
-              console.warn("Aviso ao tentar aprovar pedido pelo external_reference:", ordErr);
+            } catch (error) {
+              console.warn("Falha ao processar pedido pago no Mercado Pago:", error);
             }
           }
 
           let invoice: any = null;
-
-          // 1. Tenta localizar a fatura pelo external_reference (ID da fatura)
           if (externalRef) {
-            const { data: inv } = await supabaseAdmin
+            const { data } = await supabaseAdmin
               .from("invoices")
-              .select("*, clients(*)")
+              .select("*")
               .eq("id", externalRef)
+              .eq("user_id", matchedSettings.user_id)
               .maybeSingle();
-            invoice = inv;
+            invoice = data;
           }
 
-          // 2. Se não encontrou por ID, busca fatura pendente do cliente associado ao valor
-          if (!invoice && matchedSettings.user_id) {
-            const { data: inv } = await supabaseAdmin
+          // Compatibilidade com cobranças antigas sem external_reference:
+          // só processa automaticamente quando existe UMA ÚNICA fatura do mesmo valor.
+          if (!invoice) {
+            const { data: candidates } = await supabaseAdmin
               .from("invoices")
-              .select("*, clients(*)")
+              .select("*")
               .eq("user_id", matchedSettings.user_id)
               .in("status", ["pending", "overdue"])
               .order("due_date", { ascending: true })
-              .limit(1)
-              .maybeSingle();
-            invoice = inv;
+              .limit(50);
+            const amount = Number(paymentData.transaction_amount ?? 0);
+            const sameAmount = (candidates ?? []).filter((item: any) => Math.abs(Number(item.amount) - amount) < 0.01);
+            if (sameAmount.length === 1) invoice = sameAmount[0];
+            else if (sameAmount.length > 1) {
+              return Response.json({
+                ok: true,
+                needsReview: true,
+                message: "Pagamento aprovado, mas há mais de uma fatura com o mesmo valor. Renovação automática não executada para evitar cliente incorreto.",
+              });
+            }
           }
 
           if (!invoice) {
-            return Response.json({ ok: true, message: "Pagamento aprovado, porém nenhuma fatura em aberto foi encontrada." });
+            return Response.json({ ok: true, needsReview: true, message: "Pagamento aprovado, mas nenhuma fatura correspondente foi encontrada." });
           }
 
-          // Se já foi marcada como paga, evita duplicidade
-          if (invoice.status === "paid") {
-            return Response.json({ ok: true, message: "Fatura já estava liquidada." });
-          }
-
-          // Marca a fatura como paga
-          await supabaseAdmin
-            .from("invoices")
-            .update({
-              status: "paid",
-              paid_at: new Date().toISOString(),
-            })
-            .eq("id", invoice.id);
-
-          // Avança a data de vencimento do cliente (+1 mês)
-          const next = addMonths(new Date(`${invoice.due_date}T12:00:00`), 1);
-          const nextIso = next.toISOString().slice(0, 10);
-          await supabaseAdmin
-            .from("clients")
-            .update({ next_due_date: nextIso })
-            .eq("id", invoice.client_id);
-
-          // Renovação automática no Painel Sigma
-          let sigmaRenewed = false;
-          let sigmaError: string | null = null;
-          const client = invoice.clients;
-
-          if (client?.sigma_customer_id && matchedSettings.sigma_url) {
-            try {
-              const { renewSigmaCustomer } = await import("@/lib/sigma.server");
-              await renewSigmaCustomer(
-                {
-                  url: matchedSettings.sigma_url,
-                  token: matchedSettings.sigma_token,
-                  username: matchedSettings.sigma_username,
-                  password: matchedSettings.sigma_password,
-                },
-                { id: String(client.sigma_customer_id) },
-                1,
-              );
-              sigmaRenewed = true;
-            } catch (err) {
-              sigmaError = err instanceof Error ? err.message : "Erro ao renovar no Sigma.";
-              console.error("Erro na renovação Sigma via webhook MP:", sigmaError);
-            }
-          }
-
-          // Notificação de agradecimento e confirmação via WhatsApp
-          if (client?.phone) {
-            try {
-              const { sendViaBaileys } = await import("@/lib/billing.server");
-              const text = `🎉 *Pagamento Confirmado!*\n\nOlá *${client.name}*, seu pagamento de *R$ ${Number(invoice.amount).toFixed(2)}* via Mercado Pago foi aprovado com sucesso!\n\n✅ Sua assinatura foi renovada por mais 30 dias (novo vencimento: *${nextIso.split("-").reverse().join("/")}*).\n\nObrigado pela preferência! Tenha um ótimo entretenimento.`;
-              await sendViaBaileys(client.phone, text);
-              await supabaseAdmin.from("message_logs").insert({
-                user_id: matchedSettings.user_id,
-                client_id: client.id,
-                invoice_id: invoice.id,
-                phone: client.phone,
-                body: text,
-                status: "sent",
-              });
-            } catch (wppErr) {
-              console.error("Erro ao enviar confirmação WhatsApp:", wppErr);
-            }
-          }
-
-          return Response.json({
-            ok: true,
-            message: "Pagamento processado com sucesso!",
-            invoiceId: invoice.id,
-            sigmaRenewed,
-            sigmaError,
+          const { processPaidInvoiceAutomation } = await import("@/lib/payment-automation.server");
+          const result = await processPaidInvoiceAutomation({
+            supabase: supabaseAdmin,
+            userId: matchedSettings.user_id,
+            invoice,
+            provider: "mercadopago",
+            providerPaymentId: String(paymentId),
+            amount: Number(paymentData.transaction_amount ?? invoice.amount ?? 0),
+            months: 1,
           });
+
+          return Response.json({ ok: true, message: "Pagamento processado automaticamente.", ...result });
         } catch (error) {
           console.error("Erro inesperado no webhook Mercado Pago:", error);
-          return Response.json({ ok: false, error: "Erro interno no processamento." }, { status: 500 });
+          return Response.json({ ok: false, error: error instanceof Error ? error.message : "Erro interno no processamento." }, { status: 500 });
         }
       },
     },
