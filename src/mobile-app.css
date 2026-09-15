@@ -1,0 +1,155 @@
+/* Mobile app treatment: keep desktop untouched and make authenticated screens feel native. */
+@media (max-width: 767px) {
+  .mobile-native-shell {
+    background: var(--background) !important;
+  }
+
+  .mobile-app-header {
+    padding-top: max(.55rem, env(safe-area-inset-top));
+    box-shadow: 0 10px 28px -24px rgb(0 0 0 / 70%);
+  }
+
+  .mobile-app-content {
+    padding-left: .75rem !important;
+    padding-right: .75rem !important;
+    padding-top: .75rem !important;
+  }
+
+  /* The top app bar already says where the user is. Avoid repeating a big desktop-style header. */
+  .mobile-app-content .page-header {
+    margin-bottom: .25rem !important;
+    gap: .5rem !important;
+  }
+
+  .mobile-app-content .page-header h1 {
+    font-size: 1.15rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .mobile-app-content .page-header > div:first-child > p {
+    display: none !important;
+  }
+
+  .mobile-app-content .page-header > div:last-child {
+    width: 100%;
+    gap: .5rem !important;
+  }
+
+  /* De-emphasize explanatory copy and keep actionable information above the fold. */
+  .mobile-app-content .surface-card p.text-sm.text-muted-foreground,
+  .mobile-app-content .surface-card p.text-xs.text-muted-foreground.leading-relaxed {
+    line-height: 1.35 !important;
+  }
+
+  .mobile-app-content [class~="p-6"] {
+    padding: 1rem !important;
+  }
+
+  .mobile-app-content [class~="p-5"] {
+    padding: .9rem !important;
+  }
+
+  .mobile-app-content [class~="p-4"] {
+    padding: .8rem !important;
+  }
+
+  .mobile-app-content [class*="text-3xl"],
+  .mobile-app-content [class*="text-4xl"] {
+    font-size: 1.65rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .mobile-app-content [class*="grid-cols-2"],
+  .mobile-app-content [class*="grid-cols-3"],
+  .mobile-app-content [class*="grid-cols-4"] {
+    gap: .65rem !important;
+  }
+
+  /* Controls should feel like touch UI, but not dominate the screen. */
+  .mobile-app-content button,
+  .mobile-app-content a[class*="inline-flex"] {
+    min-height: 42px !important;
+  }
+
+  .mobile-app-content input,
+  .mobile-app-content textarea,
+  .mobile-app-content select {
+    min-height: 44px !important;
+  }
+
+  /* Data-heavy sections become contained swipe regions rather than stretching the whole page. */
+  .mobile-app-content [class*="overflow-hidden"]:has(> table),
+  .mobile-app-content [class*="overflow-x-auto"] {
+    border-radius: 16px !important;
+    scrollbar-width: none;
+  }
+
+  .mobile-app-content [class*="overflow-hidden"]:has(> table)::-webkit-scrollbar,
+  .mobile-app-content [class*="overflow-x-auto"]::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-app-content table {
+    min-width: 620px !important;
+  }
+
+  .mobile-app-content thead th {
+    padding: 10px 12px !important;
+    font-size: 9px !important;
+  }
+
+  .mobile-app-content tbody td {
+    padding: 11px 12px !important;
+  }
+
+  /* Tabs behave like a native segmented/scroll control. */
+  .mobile-app-content [role="tablist"] {
+    border-radius: 14px !important;
+    padding: 3px !important;
+    gap: 2px !important;
+  }
+
+  .mobile-app-content [role="tab"] {
+    min-height: 36px !important;
+    border-radius: 11px !important;
+    font-size: 11px !important;
+  }
+
+  /* Avoid stacked desktop action bars taking a whole screen. */
+  .mobile-app-content .page-header > div:last-child > button,
+  .mobile-app-content .page-header > div:last-child > a {
+    flex: 1 1 auto;
+  }
+
+  .mobile-menu-sheet {
+    box-shadow: 0 -24px 70px -22px rgb(0 0 0 / 72%);
+  }
+
+  .mobile-bottom-nav {
+    left: .5rem !important;
+    right: .5rem !important;
+    bottom: max(.5rem, env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Give floating navigation breathing room and avoid accidental overlap. */
+  .mobile-native-shell main {
+    padding-bottom: max(.25rem, env(safe-area-inset-bottom));
+  }
+
+  /* Floating delete control remains available but stays out of the main visual hierarchy. */
+  .mobile-native-shell [data-mobile-client-delete] {
+    bottom: calc(5.75rem + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-app-content {
+    padding-left: .6rem !important;
+    padding-right: .6rem !important;
+  }
+
+  .mobile-bottom-nav {
+    left: .35rem !important;
+    right: .35rem !important;
+  }
+}
