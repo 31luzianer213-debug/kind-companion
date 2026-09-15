@@ -3,8 +3,11 @@ import {
   BellRing,
   Bot,
   CreditCard,
+  Gauge,
   LayoutDashboard,
+  ListChecks,
   MessageCircle,
+  Radio,
   Receipt,
   Server,
   Settings,
@@ -16,14 +19,17 @@ import {
 
 export type AppRoute =
   | "/painel"
+  | "/indicadores"
   | "/pedidos"
   | "/clientes"
+  | "/clientes-operacao"
   | "/cobrancas"
   | "/atividades"
   | "/cobranca-automatica"
   | "/sigma"
   | "/bot"
   | "/whatsapp"
+  | "/whatsapp-diagnostico"
   | "/pagamentos"
   | "/mensagens"
   | "/configuracoes";
@@ -55,6 +61,12 @@ export const navigationGroups: NavigationGroup[] = [
         icon: LayoutDashboard,
         mobilePrimary: true,
       },
+      {
+        to: "/indicadores",
+        label: "Indicadores",
+        shortLabel: "Indicadores",
+        icon: Gauge,
+      },
     ],
   },
   {
@@ -75,6 +87,12 @@ export const navigationGroups: NavigationGroup[] = [
         icon: Users,
         badgeKey: "clients",
         mobilePrimary: true,
+      },
+      {
+        to: "/clientes-operacao",
+        label: "Operação de Clientes",
+        shortLabel: "Operação",
+        icon: ListChecks,
       },
       {
         to: "/cobrancas",
@@ -114,6 +132,12 @@ export const navigationGroups: NavigationGroup[] = [
         shortLabel: "WhatsApp",
         icon: MessageCircle,
         badgeKey: "whatsapp",
+      },
+      {
+        to: "/whatsapp-diagnostico",
+        label: "Diagnóstico WhatsApp",
+        shortLabel: "Diagnóstico",
+        icon: Radio,
       },
       {
         to: "/cobranca-automatica",
