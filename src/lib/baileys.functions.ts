@@ -8,10 +8,22 @@ import {
   tenantInstanceName,
   tenantLogout,
   tenantSendText,
+  tenantSetWebhook,
   tenantState,
 } from "./evolution-tenant.server";
 
 const BAILEYS_API = process.env["BAILEYS_API_URL"] || "http://localhost:3001";
+const webhookEnsuredAt = new Map<string, number>();
+
+async function ensureBotWebhook(userId: string) {
+  const now = Date.now();
+  const last = webhookEnsuredAt.get(userId) || 0;
+  if (now - last < 5 * 60_000) return;
+
+  const { botWebhookUrl } = await import("./whatsapp-connection.server");
+  await tenantSetWebhook(userId, botWebhookUrl(undefined, userId));
+  webhookEnsuredAt.set(userId, now);
+}
 
 async function readLocalStatus(instance: string) {
   try {
@@ -61,6 +73,11 @@ export const getBaileysStatus = createServerFn({ method: "POST" })
 
     if (isTenantEvolutionEnabled()) {
       const st = await tenantState(context.userId);
+      if (st.state === "open") {
+        await ensureBotWebhook(context.userId).catch((error) => {
+          console.warn("[WhatsApp] Falha ao garantir webhook do robô:", error);
+        });
+      }
       const connectionCode = st.state === "connecting" ? await tenantCurrentConnectionCode(context.userId) : null;
       return {
         ok: true as const,
@@ -146,6 +163,7 @@ export const connectBaileys = createServerFn({ method: "POST" })
 
       const { botWebhookUrl } = await import("./whatsapp-connection.server");
       const res = await tenantConnect(context.userId, botWebhookUrl(data?.origin, context.userId));
+      webhookEnsuredAt.set(context.userId, Date.now());
       return {
         ok: true as const,
         state: {
@@ -192,6 +210,7 @@ export const disconnectBaileys = createServerFn({ method: "POST" })
     const instance = tenantInstanceName(context.userId);
 
     if (isTenantEvolutionEnabled()) {
+      webhookEnsuredAt.delete(context.userId);
       return await tenantLogout(context.userId);
     }
 
@@ -216,9 +235,11 @@ export const resetBaileysSession = createServerFn({ method: "POST" })
       throw new Error("Evolution API não está configurada na VPS.");
     }
 
+    webhookEnsuredAt.delete(context.userId);
     await tenantDeleteInstance(context.userId);
     const { botWebhookUrl } = await import("./whatsapp-connection.server");
     const res = await tenantConnect(context.userId, botWebhookUrl(data?.origin, context.userId));
+    webhookEnsuredAt.set(context.userId, Date.now());
     return {
       ok: true as const,
       state: {
