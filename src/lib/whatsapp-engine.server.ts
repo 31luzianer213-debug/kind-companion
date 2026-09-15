@@ -103,6 +103,59 @@ async function recordMessage(params: {
   if (error) console.error("[WhatsApp] Falha ao registrar mensagem:", error.message);
 }
 
+async function recoverRenewalConversationInput(userId: string, phone: string, incomingText: string) {
+  const raw = String(incomingText || "").trim();
+  if (!raw) return raw;
+
+  const normalized = raw.toLowerCase().trim();
+  if (["0", "menu", "inicio", "início", "cancelar", "sair", "voltar"].includes(normalized)) {
+    return raw;
+  }
+
+  try {
+    const { data: lastLog } = await supabaseAdmin
+      .from("message_logs")
+      .select("body, created_at")
+      .eq("user_id", userId)
+      .eq("phone", phone)
+      .eq("status", "sent")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!lastLog?.body || !lastLog?.created_at) return raw;
+
+    const createdAt = new Date(lastLog.created_at).getTime();
+    if (!Number.isFinite(createdAt) || Date.now() - createdAt > 15 * 60_000) return raw;
+
+    const body = String(lastLog.body);
+    const lowerBody = body.toLowerCase();
+    const awaitingRenewUsername =
+      lowerBody.includes("digite o seu usuário") ||
+      lowerBody.includes("digite o usuario") ||
+      lowerBody.includes("digite o usuário") ||
+      lowerBody.includes("digite o outro usuário") ||
+      lowerBody.includes("digite o outro usuario") ||
+      lowerBody.includes("qual você deseja renovar") ||
+      lowerBody.includes("qual deseja renovar");
+
+    if (!awaitingRenewUsername) return raw;
+
+    const isConfirmation = ["sim", "s", "ok", "confirmo", "quero", "renovar"].includes(normalized);
+    if (isConfirmation) {
+      const candidate = body.match(/Usuário:\*?\s*\*([^*\n]+)\*/i)?.[1]?.trim();
+      if (candidate) return `2 ${candidate}`;
+    }
+
+    // Torna a etapa de renovação stateless: mesmo se a próxima mensagem cair em
+    // outra instância serverless, o login informado continua no fluxo da opção 2.
+    return `2 ${raw}`;
+  } catch (error) {
+    console.warn("[WhatsApp Bot] Não foi possível reconstruir o contexto da renovação:", error);
+    return raw;
+  }
+}
+
 export async function processIncomingWhatsAppEvent(
   payload: unknown,
   queryUserId?: string | null,
@@ -158,9 +211,10 @@ export async function processIncomingWhatsAppEvent(
       continue;
     }
 
+    const contextualText = await recoverRenewalConversationInput(userId, message.phone, message.text);
     const result = await processBotMessage(supabaseAdmin, userId, {
       phone: message.phone,
-      text: message.text,
+      text: contextualText,
       pushName: message.pushName,
     });
     const reply = completeReply(result.reply, result.interactive, result.action);
