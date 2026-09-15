@@ -47,14 +47,20 @@ export async function processPaidInvoiceAutomation(input: PaidInvoiceAutomationI
 
   if (clientError || !client) throw new Error("Cliente da fatura não foi encontrado.");
 
+  // Faz o claim atômico da fatura. Webhooks duplicados não passam daqui duas vezes.
   const paidAt = new Date().toISOString();
-  const { error: invoiceError } = await supabase
+  const { data: claimedInvoice, error: invoiceError } = await supabase
     .from("invoices")
     .update({ status: "paid", paid_at: paidAt })
     .eq("id", invoice.id)
     .eq("user_id", userId)
-    .in("status", ["pending", "overdue"]);
+    .in("status", ["pending", "overdue"])
+    .select("id")
+    .maybeSingle();
   if (invoiceError) throw new Error(`Falha ao liquidar a fatura: ${invoiceError.message}`);
+  if (!claimedInvoice) {
+    return { ok: true as const, alreadyProcessed: true, invoiceId: invoice.id };
+  }
 
   const hasSigmaLink = Boolean(client.sigma_customer_id || client.sigma_username || client.iptv_username);
   let sigmaRenewed = false;
