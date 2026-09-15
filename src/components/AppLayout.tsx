@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import defaultOrdersSeed from "../../data/orders_default.json";
 import { AppBrand, DesktopNavigation, MobileBottomNavigation, MobileDrawer } from "@/components/layout/AppNavigation";
+import { MobileClientDelete } from "@/components/clients/MobileClientDelete";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
@@ -179,6 +180,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
           {children}
         </div>
       </main>
+
+      {pathname === "/clientes" ? <MobileClientDelete /> : null}
 
       <MobileBottomNavigation
         pathname={pathname}
