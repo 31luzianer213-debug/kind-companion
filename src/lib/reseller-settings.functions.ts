@@ -60,6 +60,9 @@ export const setResellerTrialServer = createServerFn({ method: "POST" })
       return { ok: false as const, error: "Ative este servidor Sigma antes de usá-lo para testes." };
     }
 
+    // whatsapp_settings não possui sigma_server_name nem sigma_streaming_dns.
+    // Mantemos apenas os campos que existem no schema e o vínculo test_server_id.
+    // O card do Robô lê nome/DNS diretamente de sigma_panels.
     const payload = {
       user_id: context.userId,
       test_server_id: server.id,
@@ -68,8 +71,6 @@ export const setResellerTrialServer = createServerFn({ method: "POST" })
       sigma_username: server.username ?? null,
       sigma_password: server.password ?? null,
       sigma_token: server.token ?? null,
-      sigma_server_name: server.name,
-      sigma_streaming_dns: server.streaming_dns ?? null,
     };
 
     const { error: saveError } = await supabase
@@ -84,6 +85,7 @@ export const setResellerTrialServer = createServerFn({ method: "POST" })
       ok: true as const,
       selectedServerId: server.id,
       serverName: server.name,
+      streamingDns: server.streaming_dns ?? null,
       error: null,
     };
   });
