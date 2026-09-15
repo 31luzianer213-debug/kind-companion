@@ -1,6 +1,11 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { processBotMessage, loadBotConfig, type BotInteractivePayload } from "./bot.server";
-import { evoSendMedia, evoSendText, isEvolutionEnabled } from "./evolution-api.server";
+import {
+  isTenantEvolutionEnabled,
+  tenantInstanceName,
+  tenantSendMedia,
+  tenantSendText,
+} from "./evolution-tenant.server";
 import { sendWhatsAppMedia, sendWhatsAppText } from "./whatsapp-connection.server";
 import { instanceNameFor } from "./evolution.server";
 import { parseEvolutionMessages } from "./whatsapp-event.server";
@@ -78,7 +83,6 @@ function interactiveAsText(interactive: BotInteractivePayload): string {
 }
 
 function completeReply(reply: string, _interactive?: BotInteractivePayload, _action?: string): string {
-  // O bot usa texto puro. Opções interativas nunca devem ser anexadas à resposta.
   return reply.trim();
 }
 
@@ -132,8 +136,7 @@ export async function processIncomingWhatsAppEvent(
       lastResult = { handled: false, ignored: "duplicate" };
       continue;
     }
-    // A identificação da conta e a deduplicação não dependem uma da outra.
-    // Executá-las em paralelo reduz a latência do webhook no primeiro acesso.
+
     const userPromise = resolveTargetUserId(queryUserId, message.instance);
     const claimPromise = message.messageId
       ? supabaseAdmin.from("whatsapp_processed_messages").insert({ message_id: message.messageId })
@@ -146,8 +149,6 @@ export async function processIncomingWhatsAppEvent(
       continue;
     }
     if (claimError) {
-      // A tabela de deduplicação é uma proteção extra. Falha de schema/RLS
-      // não pode impedir o bot inteiro de responder.
       console.warn("[WhatsApp Bot] Deduplicação persistente indisponível:", claimError.message);
     }
 
@@ -168,11 +169,10 @@ export async function processIncomingWhatsAppEvent(
       continue;
     }
 
-    // senderJid já prefere o senderPn (número real) quando a Evolution alterna
-    // o remoteJid para @lid. Isso mantém a mesma sessão Signal na conversa.
     const replyTarget = message.senderJid || message.phone;
-    const sent = isEvolutionEnabled()
-      ? await evoSendText(replyTarget, reply)
+    const evolutionInstance = message.instance || tenantInstanceName(userId);
+    const sent = isTenantEvolutionEnabled()
+      ? await tenantSendText(evolutionInstance, replyTarget, reply, true)
       : await sendWhatsAppText(replyTarget, reply, message.instance || undefined);
 
     if (!sent.ok) {
@@ -195,8 +195,11 @@ export async function processIncomingWhatsAppEvent(
         mimetype: "image/png",
         fileName: "qrcode-pix.png",
       };
-      if (isEvolutionEnabled()) await evoSendMedia(replyTarget, media);
-      else await sendWhatsAppMedia(replyTarget, media, message.instance || undefined);
+      if (isTenantEvolutionEnabled()) {
+        await tenantSendMedia(evolutionInstance, replyTarget, media, true);
+      } else {
+        await sendWhatsAppMedia(replyTarget, media, message.instance || undefined);
+      }
     }
 
     const hasCopyValue =
@@ -204,8 +207,11 @@ export async function processIncomingWhatsAppEvent(
       result.interactive.buttons.some((button) => Boolean(button.copyCode));
     for (const extra of hasCopyValue ? [] : result.extraMessages ?? []) {
       if (!extra.trim()) continue;
-      if (isEvolutionEnabled()) await evoSendText(replyTarget, extra);
-      else await sendWhatsAppText(replyTarget, extra, message.instance || undefined);
+      if (isTenantEvolutionEnabled()) {
+        await tenantSendText(evolutionInstance, replyTarget, extra, true);
+      } else {
+        await sendWhatsAppText(replyTarget, extra, message.instance || undefined);
+      }
     }
 
     lastResult = {

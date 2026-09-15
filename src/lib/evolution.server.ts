@@ -1,34 +1,44 @@
 /**
- * Adaptador de Compatibilidade — Baileys Nativo.
- * Redireciona todas as chamadas legadas de WhatsApp para o motor Baileys local (porta 3001).
- * Elimina 100% de chamadas para servidores externos da Evolution API.
+ * Adaptador de compatibilidade do WhatsApp.
+ * Quando a Evolution está configurada, cada usuário opera sua própria instância.
  */
 
 const BAILEYS_PORT = process.env.BAILEYS_PORT ? Number(process.env.BAILEYS_PORT) : 3001;
 const BAILEYS_URL = process.env.BAILEYS_API_URL || `http://127.0.0.1:${BAILEYS_PORT}`;
 
+import {
+  isTenantEvolutionEnabled,
+  tenantConnect,
+  tenantInstanceName,
+  tenantLogout,
+  tenantSetWebhook,
+  tenantState,
+} from "./evolution-tenant.server";
+
 export const DEFAULT_EVOLUTION_INSTANCE = "baileys_default";
 
-export function instanceNameFor(_userId?: string) {
-  return DEFAULT_EVOLUTION_INSTANCE;
+export function instanceNameFor(userId?: string) {
+  return userId ? tenantInstanceName(userId) : DEFAULT_EVOLUTION_INSTANCE;
 }
 
-export function evolutionConfig(_userId?: string) {
+export function evolutionConfig(userId?: string) {
   return {
     base: BAILEYS_URL,
     key: "baileys_local_token",
-    instance: DEFAULT_EVOLUTION_INSTANCE,
+    instance: instanceNameFor(userId),
   };
 }
 
 /** open | connecting | close | none */
-export async function fetchState(_userId?: string): Promise<"open" | "connecting" | "close" | "none"> {
-  const { isEvolutionEnabled, evoState } = await import("./evolution-api.server");
-  if (isEvolutionEnabled()) {
-    return (await evoState()).state;
+export async function fetchState(userId?: string): Promise<"open" | "connecting" | "close" | "none"> {
+  if (isTenantEvolutionEnabled() && userId) {
+    return (await tenantState(userId)).state;
   }
   try {
-    const res = await fetch(`${BAILEYS_URL}/api/status`, { signal: AbortSignal.timeout(2500) });
+    const instance = instanceNameFor(userId);
+    const res = await fetch(`${BAILEYS_URL}/api/status?instance=${encodeURIComponent(instance)}`, {
+      signal: AbortSignal.timeout(2500),
+    });
     if (res.ok) {
       const data = await res.json();
       const status = data.status || "close";
@@ -39,31 +49,33 @@ export async function fetchState(_userId?: string): Promise<"open" | "connecting
 }
 
 export async function ensureInstanceWebhook(userId?: string, publicAppUrl?: string) {
-  const { isEvolutionEnabled, evoSetWebhook } = await import("./evolution-api.server");
-  if (isEvolutionEnabled()) {
+  if (isTenantEvolutionEnabled() && userId) {
     const { botWebhookUrl } = await import("./whatsapp-connection.server");
-    return await evoSetWebhook(botWebhookUrl(publicAppUrl, userId));
+    return await tenantSetWebhook(userId, botWebhookUrl(publicAppUrl, userId));
   }
-  // Baileys processa mensagens em tempo real via WebSocket
   return { ok: true };
 }
 
-export async function setInstanceWebhook(_userId?: string, _webhookUrl?: string) {
+export async function setInstanceWebhook(userId?: string, webhookUrl?: string) {
+  if (isTenantEvolutionEnabled() && userId && webhookUrl) {
+    return await tenantSetWebhook(userId, webhookUrl);
+  }
   return { ok: true };
 }
 
-export async function connectInstance(_userId?: string, _publicAppUrl?: string, _forceNew = false) {
-  const { isEvolutionEnabled, evoConnect } = await import("./evolution-api.server");
-  if (isEvolutionEnabled()) {
+export async function connectInstance(userId?: string, publicAppUrl?: string, _forceNew = false) {
+  if (isTenantEvolutionEnabled() && userId) {
     const { botWebhookUrl } = await import("./whatsapp-connection.server");
-    const res = await evoConnect(_publicAppUrl ? `${_publicAppUrl.replace(/\/+$/, "")}/api/public/hooks/whatsapp-bot` : botWebhookUrl());
+    const res = await tenantConnect(userId, botWebhookUrl(publicAppUrl, userId));
     return { state: res.state, base64: res.base64, code: res.code };
   }
+
+  const instance = instanceNameFor(userId);
   try {
     const res = await fetch(`${BAILEYS_URL}/api/connect`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: "qr" }),
+      body: JSON.stringify({ instance, mode: "qr" }),
       signal: AbortSignal.timeout(5000),
     });
     if (res.ok) {
@@ -79,30 +91,33 @@ export async function connectInstance(_userId?: string, _publicAppUrl?: string, 
   return { state: "close", base64: null, code: null };
 }
 
-export async function deleteInstance(_userId?: string) {
-  const { isEvolutionEnabled, evoLogout } = await import("./evolution-api.server");
-  if (isEvolutionEnabled()) {
-    await evoLogout();
+export async function deleteInstance(userId?: string) {
+  if (isTenantEvolutionEnabled() && userId) {
+    await tenantLogout(userId);
     return { ok: true };
   }
+
+  const instance = instanceNameFor(userId);
   try {
     await fetch(`${BAILEYS_URL}/api/logout`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ instance }),
       signal: AbortSignal.timeout(3000),
     });
   } catch {}
   return { ok: true };
 }
 
-export async function restartInstance(_userId?: string) {
-  return await connectInstance();
+export async function restartInstance(userId?: string) {
+  return await connectInstance(userId);
 }
 
-export async function logoutInstance(_userId?: string) {
-  return await deleteInstance();
+export async function logoutInstance(userId?: string) {
+  return await deleteInstance(userId);
 }
 
-export async function sendTextMessage(_userId: string, to: string, text: string) {
+export async function sendTextMessage(userId: string, to: string, text: string) {
   const { sendWhatsapp } = await import("./whatsapp.server");
-  return await sendWhatsapp(to, text);
+  return await sendWhatsapp(to, text, instanceNameFor(userId));
 }
