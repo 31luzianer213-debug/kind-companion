@@ -50,7 +50,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
 
-
   useEffect(() => {
     let active = true;
     supabase.auth
@@ -158,7 +157,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             role="dialog"
             aria-modal="true"
             aria-label="Menu principal"
-            className="absolute inset-y-0 right-0 flex w-[min(88vw,360px)] flex-col border-l border-border/70 bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-right duration-200"
+            className="absolute inset-y-0 right-0 flex w-[min(92vw,380px)] flex-col border-l border-border/70 bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-right duration-200"
           >
             <div className="mb-2 flex justify-end">
               <Button variant="ghost" size="icon" onClick={() => setDrawerOpen(false)} aria-label="Fechar menu" className="size-10 rounded-xl">
@@ -176,12 +175,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       <main className="relative min-w-0 flex-1 overflow-x-hidden">
         <div className="pointer-events-none absolute inset-0 hidden app-grid opacity-[0.14] md:block" />
-        <div className="relative mx-auto min-h-full w-full max-w-[1600px] px-4 pb-24 pt-5 sm:px-6 md:px-8 md:pb-12 md:pt-8 lg:px-10 xl:px-12">
+        <div className="relative mx-auto min-h-full w-full max-w-[1600px] px-3 pb-24 pt-4 sm:px-5 sm:pt-5 md:px-8 md:pb-12 md:pt-8 lg:px-10 xl:px-12">
           {children}
         </div>
       </main>
 
-      <MobileBottomNavigation {...navigationProps} />
+      <MobileBottomNavigation
+        pathname={pathname}
+        counts={counts}
+        isWhatsAppConnected={whatsappStatus?.state === "open"}
+        onOpenMenu={() => setDrawerOpen(true)}
+      />
     </div>
   );
 }
