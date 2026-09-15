@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
+  CheckCircle2,
   Eye,
   EyeOff,
   Loader2,
@@ -28,6 +29,7 @@ import {
   saveSigmaServer,
   syncAllSigmaServers,
   syncSigmaServer,
+  testSigmaServer,
   type SigmaServerInput,
 } from "@/lib/sigma-servers.functions";
 
@@ -53,11 +55,14 @@ const emptyForm: SigmaServerInput = {
   is_default: false,
 };
 
+type SyncStage = "idle" | "testing" | "saving" | "syncing";
+
 function SigmaServersPage() {
   const queryClient = useQueryClient();
   const listFn = useServerFn(listSigmaServers);
   const saveFn = useServerFn(saveSigmaServer);
   const deleteFn = useServerFn(deleteSigmaServer);
+  const testFn = useServerFn(testSigmaServer);
   const syncOneFn = useServerFn(syncSigmaServer);
   const syncAllFn = useServerFn(syncAllSigmaServers);
 
@@ -65,6 +70,7 @@ function SigmaServersPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [syncStage, setSyncStage] = useState<SyncStage>("idle");
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [syncingAll, setSyncingAll] = useState(false);
 
@@ -80,6 +86,7 @@ function SigmaServersPage() {
   function openNew() {
     setForm({ ...emptyForm, is_default: servers.length === 0 });
     setShowPassword(false);
+    setSyncStage("idle");
     setEditorOpen(true);
   }
 
@@ -97,6 +104,7 @@ function SigmaServersPage() {
       is_default: server.is_default ?? false,
     });
     setShowPassword(false);
+    setSyncStage("idle");
     setEditorOpen(true);
   }
 
@@ -113,18 +121,37 @@ function SigmaServersPage() {
   async function saveAndSync(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
+    setSyncStage("testing");
 
     try {
-      const saved = await saveFn({ data: form });
-      if (!saved.ok || !saved.server?.id) {
-        toast.error(saved.error || "Não foi possível salvar o servidor.");
+      const tested = await testFn({ data: form });
+      if (!tested.ok) {
+        toast.error(tested.error || "Não foi possível conectar ao Sigma. Confira os dados e tente novamente.", {
+          duration: 10000,
+        });
         return;
       }
 
+      const preparedForm: SigmaServerInput = {
+        ...form,
+        token: tested.token || form.token,
+        name: form.name.trim() || tested.serverName || "Servidor Sigma",
+        streaming_dns: form.streaming_dns?.trim() || tested.streamingDns || "",
+      };
+      setForm(preparedForm);
+
+      setSyncStage("saving");
+      const saved = await saveFn({ data: preparedForm });
+      if (!saved.ok || !saved.server?.id) {
+        toast.error(saved.error || "A conexão funcionou, mas não foi possível salvar o servidor.");
+        return;
+      }
+
+      setSyncStage("syncing");
       const synced = await syncOneFn({ data: { serverId: saved.server.id } });
       if (!synced.ok) {
         await queryClient.invalidateQueries({ queryKey: ["sigma-servers"] });
-        toast.error(`Servidor salvo, mas a sincronização falhou: ${synced.error || "verifique os dados de acesso."}`, {
+        toast.error(`Servidor salvo, mas a sincronização falhou: ${synced.error || "tente sincronizar novamente."}`, {
           duration: 10000,
         });
         return;
@@ -134,13 +161,14 @@ function SigmaServersPage() {
       setEditorOpen(false);
       setForm(emptyForm);
       toast.success(
-        `Pronto! ${synced.created} cliente(s) importado(s) e ${synced.updated} atualizado(s). Eles já estão no Painel e em Clientes.`,
+        `Pronto! Conexão validada e ${synced.created} cliente(s) importado(s), ${synced.updated} atualizado(s).`,
         { duration: 7000 },
       );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha ao salvar e sincronizar o Sigma.");
+      toast.error(error instanceof Error ? error.message : "Falha ao conectar e sincronizar o Sigma.");
     } finally {
       setSaving(false);
+      setSyncStage("idle");
     }
   }
 
@@ -196,6 +224,14 @@ function SigmaServersPage() {
     toast.success(result.deletedClients ? `Servidor e ${result.deletedClients} cliente(s) removidos.` : "Servidor removido.");
   }
 
+  const stageLabel = syncStage === "testing"
+    ? "Testando conexão com o Sigma..."
+    : syncStage === "saving"
+      ? "Conexão aprovada. Salvando servidor..."
+      : syncStage === "syncing"
+        ? "Sincronizando clientes..."
+        : "";
+
   return (
     <div className="mx-auto max-w-5xl space-y-5 animate-in fade-in duration-300">
       <header className="flex flex-col gap-4 border-b border-border/60 pb-5 sm:flex-row sm:items-end sm:justify-between">
@@ -215,7 +251,7 @@ function SigmaServersPage() {
           {activeCount > 1 && (
             <Button variant="outline" onClick={syncAll} disabled={syncingAll} className="gap-2">
               <RefreshCw className={`size-4 ${syncingAll ? "animate-spin" : ""}`} />
-              Sincronizar todos
+              {syncingAll ? "Sincronizando..." : "Sincronizar todos"}
             </Button>
           )}
           <Button onClick={openNew} className="gap-2">
@@ -232,7 +268,7 @@ function SigmaServersPage() {
             <span className="mb-4 grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary"><Server className="size-7" /></span>
             <h2 className="text-lg font-bold">Conecte seu Sigma</h2>
             <p className="mt-2 max-w-md text-sm text-muted-foreground">
-              Informe os dados do painel e clique em Salvar e sincronizar. O sistema faz o restante sozinho.
+              Informe os dados do painel e clique em Salvar e sincronizar. O sistema testa a conexão antes e faz o restante sozinho.
             </p>
             <Button onClick={openNew} className="mt-5 gap-2"><Plus className="size-4" /> Conectar Sigma</Button>
           </CardContent>
@@ -269,7 +305,7 @@ function SigmaServersPage() {
                 <div className="flex gap-2">
                   <Button onClick={() => syncOne(server.id)} disabled={!server.enabled || syncingId === server.id} size="sm" className="flex-1 gap-2">
                     <RefreshCw className={`size-3.5 ${syncingId === server.id ? "animate-spin" : ""}`} />
-                    {syncingId === server.id ? "Sincronizando..." : "Sincronizar"}
+                    {syncingId === server.id ? "Sincronizando clientes..." : "Sincronizar"}
                   </Button>
                   <Button variant="outline" size="icon" onClick={() => openEdit(server)} aria-label="Editar servidor"><Settings2 className="size-4" /></Button>
                   <Button variant="ghost" size="icon" onClick={() => remove(server)} aria-label="Remover servidor" className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" /></Button>
@@ -285,28 +321,53 @@ function SigmaServersPage() {
           <DialogHeader>
             <DialogTitle>{form.id ? "Editar Sigma" : "Adicionar Sigma"}</DialogTitle>
             <DialogDescription>
-              Use os mesmos dados do painel de revenda. Ao salvar, os clientes serão importados automaticamente.
+              Use os mesmos dados do painel de revenda. Primeiro validamos a conexão; só depois salvamos e importamos os clientes.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={saveAndSync} className="space-y-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nome do servidor"><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Sigma Principal" /></Field>
-              <Field label="URL do painel"><Input required type="url" value={form.panel_url} onChange={(e) => setForm({ ...form, panel_url: e.target.value })} placeholder="https://painel.exemplo.com" /></Field>
-              <Field label="Usuário"><Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} autoComplete="username" /></Field>
-              <Field label="Senha">
-                <div className="relative">
-                  <Input type={showPassword ? "text" : "password"} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} autoComplete="current-password" className="pr-10" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-muted-foreground" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>
-                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
+            <div className="relative">
+              {saving && (
+                <div className="absolute inset-0 z-10 flex min-h-[250px] flex-col items-center justify-center rounded-xl border border-primary/20 bg-background/95 px-6 text-center backdrop-blur-sm animate-in fade-in duration-200">
+                  <div className="relative mb-4 grid size-16 place-items-center rounded-full bg-primary/10">
+                    <span className="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping" />
+                    <Loader2 className="size-8 animate-spin text-primary" />
+                  </div>
+                  <p className="text-sm font-bold text-foreground">{stageLabel}</p>
+                  <p className="mt-1 max-w-sm text-xs text-muted-foreground">Não feche esta janela. Isso pode levar alguns segundos dependendo da quantidade de clientes no servidor.</p>
+                  <div className="mt-4 flex items-center gap-2">
+                    {(["testing", "saving", "syncing"] as SyncStage[]).map((stage) => {
+                      const order = { testing: 0, saving: 1, syncing: 2, idle: -1 } as Record<SyncStage, number>;
+                      const done = order[stage] < order[syncStage];
+                      const active = stage === syncStage;
+                      return (
+                        <span key={stage} className={`grid size-7 place-items-center rounded-full border text-[10px] font-bold transition-all ${done ? "border-emerald-500 bg-emerald-500 text-white" : active ? "border-primary bg-primary text-primary-foreground scale-110" : "border-border bg-muted text-muted-foreground"}`}>
+                          {done ? <CheckCircle2 className="size-3.5" /> : order[stage] + 1}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
-              </Field>
-              <Field label="Token da API (opcional)"><Input value={form.token} onChange={(e) => setForm({ ...form, token: e.target.value })} /></Field>
-              <Field label="DNS de streaming (opcional)"><Input value={form.streaming_dns} onChange={(e) => setForm({ ...form, streaming_dns: e.target.value })} placeholder="http://dns.exemplo.com:8080" /></Field>
+              )}
+
+              <div className={`grid gap-4 sm:grid-cols-2 ${saving ? "pointer-events-none opacity-35" : ""}`}>
+                <Field label="Nome do servidor"><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Sigma Principal" /></Field>
+                <Field label="URL do painel"><Input required type="url" value={form.panel_url} onChange={(e) => setForm({ ...form, panel_url: e.target.value })} placeholder="https://painel.exemplo.com" /></Field>
+                <Field label="Usuário"><Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} autoComplete="username" /></Field>
+                <Field label="Senha">
+                  <div className="relative">
+                    <Input type={showPassword ? "text" : "password"} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} autoComplete="current-password" className="pr-10" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-muted-foreground" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                </Field>
+                <Field label="Token da API (opcional)"><Input value={form.token} onChange={(e) => setForm({ ...form, token: e.target.value })} /></Field>
+                <Field label="DNS de streaming (opcional)"><Input value={form.streaming_dns} onChange={(e) => setForm({ ...form, streaming_dns: e.target.value })} placeholder="http://dns.exemplo.com:8080" /></Field>
+              </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className={`grid gap-3 sm:grid-cols-2 ${saving ? "pointer-events-none opacity-35" : ""}`}>
               <Toggle label="Servidor ativo" checked={form.enabled ?? true} onChange={(checked) => setForm({ ...form, enabled: checked })} />
               <Toggle label="Renovação automática" checked={form.auto_renew ?? true} onChange={(checked) => setForm({ ...form, auto_renew: checked })} />
             </div>
@@ -314,9 +375,9 @@ function SigmaServersPage() {
             <div className="border-t border-border/60 pt-4">
               <Button type="submit" disabled={saving} className="w-full gap-2 sm:w-auto sm:min-w-52">
                 {saving ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-                {saving ? "Salvando e sincronizando..." : "Salvar e sincronizar"}
+                {saving ? stageLabel : "Salvar e sincronizar"}
               </Button>
-              <p className="mt-2 text-xs text-muted-foreground">Depois disso, os clientes já aparecem automaticamente no Painel e em Clientes.</p>
+              <p className="mt-2 text-xs text-muted-foreground">A conexão é validada antes de salvar. Depois disso, os clientes aparecem automaticamente no Painel e em Clientes.</p>
             </div>
           </form>
         </DialogContent>
