@@ -1,5 +1,6 @@
 import {
   Activity,
+  BellRing,
   Bot,
   CreditCard,
   LayoutDashboard,
@@ -19,6 +20,7 @@ export type AppRoute =
   | "/clientes"
   | "/cobrancas"
   | "/atividades"
+  | "/cobranca-automatica"
   | "/sigma"
   | "/bot"
   | "/whatsapp"
@@ -112,6 +114,12 @@ export const navigationGroups: NavigationGroup[] = [
         shortLabel: "WhatsApp",
         icon: MessageCircle,
         badgeKey: "whatsapp",
+      },
+      {
+        to: "/cobranca-automatica",
+        label: "Cobrança automática",
+        shortLabel: "Automação",
+        icon: BellRing,
       },
     ],
   },
