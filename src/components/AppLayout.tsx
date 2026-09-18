@@ -154,14 +154,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="app-aurora mobile-native-shell min-h-[100dvh] bg-background text-foreground md:flex">
-      <header className="mobile-app-header sticky top-0 z-30 flex min-h-[58px] items-center justify-between border-b border-border/45 bg-background/88 px-3.5 py-2 backdrop-blur-2xl md:hidden">
+      <header className="mobile-app-header sticky top-0 z-30 flex min-h-[62px] items-center justify-between border-b border-border bg-background/94 px-4 py-2 backdrop-blur-xl md:hidden">
         <div className="flex min-w-0 items-center gap-2.5">
-          <div className="grid size-9 shrink-0 place-items-center rounded-xl border border-border/60 bg-card/80 shadow-sm">
+          <div className="grid size-9 shrink-0 place-items-center rounded-lg border border-border bg-card shadow-sm">
             <SigmaLogo size="sm" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Sigma Control</p>
-            <h1 className="truncate text-[15px] font-extrabold tracking-tight text-foreground">{mobilePageTitle(pathname)}</h1>
+            <p className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-primary">Sigma Control</p>
+            <h1 className="truncate font-display text-[15px] font-bold text-foreground">{mobilePageTitle(pathname)}</h1>
           </div>
         </div>
         <Button
@@ -170,7 +170,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           onClick={() => setDrawerOpen(true)}
           aria-label="Abrir menu principal"
           aria-expanded={drawerOpen}
-          className="size-10 rounded-xl border border-border/55 bg-card/70"
+          className="size-10 rounded-lg border border-border bg-card"
         >
           <Menu className="size-5" />
         </Button>
@@ -188,7 +188,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             role="dialog"
             aria-modal="true"
             aria-label="Menu principal"
-            className="mobile-menu-sheet absolute inset-x-0 bottom-0 flex max-h-[86dvh] flex-col rounded-t-[28px] border border-b-0 border-border/65 bg-background px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-2xl animate-in slide-in-from-bottom duration-200"
+            className="mobile-menu-sheet absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col rounded-t-2xl border border-b-0 border-border bg-background px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-2xl animate-in slide-in-from-bottom duration-200"
           >
             <div className="mx-auto mb-1 h-1.5 w-11 rounded-full bg-muted-foreground/20" />
             <div className="flex items-center justify-between pb-1">
@@ -205,13 +205,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <aside className="sticky top-0 hidden h-[100dvh] w-[276px] shrink-0 flex-col border-r border-border/60 bg-sidebar/92 p-4 backdrop-blur-xl md:flex">
+      <aside className="sticky top-0 hidden h-[100dvh] w-[260px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-4 md:flex">
         <DesktopNavigation {...navigationProps} />
       </aside>
 
       <main className="relative min-w-0 flex-1 overflow-x-hidden">
-        <div className="pointer-events-none absolute inset-0 hidden app-grid opacity-[0.14] md:block" />
-        <div className="mobile-app-content relative mx-auto min-h-full w-full max-w-[1600px] px-3 pb-28 pt-3 sm:px-5 sm:pt-5 md:px-8 md:pb-12 md:pt-8 lg:px-10 xl:px-12">
+        <div className="mobile-app-content relative mx-auto min-h-full w-full max-w-[1480px] px-3 pb-28 pt-3 sm:px-5 sm:pt-5 md:px-7 md:pb-12 md:pt-7 lg:px-9 xl:px-10">
           {children}
         </div>
       </main>

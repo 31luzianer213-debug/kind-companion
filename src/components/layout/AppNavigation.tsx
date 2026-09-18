@@ -50,7 +50,7 @@ function Badge({ item, counts, connected, active }: { item: NavigationItem; coun
   return (
     <span className={cn(
       "min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] font-extrabold tabular-nums",
-      active && "bg-white/20 text-white",
+          active && "bg-primary/10 text-primary",
       !active && badge.tone === "warning" && "bg-amber-500/15 text-amber-500",
       !active && badge.tone === "danger" && "bg-rose-500/15 text-rose-500",
       !active && badge.tone === "success" && "bg-emerald-500/15 text-emerald-500",
@@ -77,7 +77,7 @@ export function AppBrand({ compact = false }: { compact?: boolean }) {
 export function DesktopNavigation(props: AppNavigationProps) {
   return (
     <>
-      <div className="border-b border-border/50 px-2 pb-5"><AppBrand /></div>
+      <div className="border-b border-border px-2 pb-5 pt-1"><AppBrand /></div>
       <nav className="mt-4 flex flex-1 flex-col gap-5 overflow-y-auto pr-1 subtle-scrollbar" aria-label="Navegação principal">
         {navigationGroups.map((group) => (
           <section key={group.title} aria-labelledby={`nav-${group.title}`}>
@@ -88,9 +88,10 @@ export function DesktopNavigation(props: AppNavigationProps) {
                 const Icon = item.icon;
                 return (
                   <Link key={item.to} to={item.to} aria-current={active ? "page" : undefined} className={cn(
-                    "group flex min-h-11 items-center gap-3 rounded-xl border border-transparent px-3 text-sm font-semibold transition-all",
-                    active ? "border-primary/25 bg-primary text-primary-foreground shadow-lg shadow-primary/15" : "text-muted-foreground hover:border-border/70 hover:bg-accent/60 hover:text-foreground",
+                    "group relative flex min-h-11 items-center gap-3 rounded-lg border border-transparent px-3 text-sm font-semibold transition-all",
+                    active ? "border-primary/15 bg-primary/10 text-primary" : "text-muted-foreground hover:border-border hover:bg-accent/60 hover:text-foreground",
                   )}>
+                    <span className={cn("absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary transition-opacity", active ? "opacity-100" : "opacity-0")} />
                     <Icon className="size-[18px] shrink-0" />
                     <span className="flex-1 truncate">{item.label}</span>
                     <Badge item={item} counts={props.counts} connected={props.isWhatsAppConnected} active={active} />
@@ -120,14 +121,14 @@ export function MobileDrawer(props: AppNavigationProps) {
               onClick={props.onNavigate}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-h-[78px] flex-col items-start justify-between rounded-2xl border p-3 text-left transition-all",
+                "flex min-h-[78px] flex-col items-start justify-between rounded-lg border p-3 text-left transition-all",
                 active
                   ? "border-primary/30 bg-primary/12 text-primary"
                   : "border-border/55 bg-card/65 text-foreground active:scale-[.98] active:bg-accent",
               )}
             >
               <div className="flex w-full items-center justify-between">
-                <span className={cn("grid size-9 place-items-center rounded-xl", active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                 <span className={cn("grid size-9 place-items-center rounded-lg", active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}> 
                   <Icon className="size-[18px]" />
                 </span>
                 <Badge item={item} counts={props.counts} connected={props.isWhatsAppConnected} active={active} />
@@ -147,16 +148,16 @@ export function MobileDrawer(props: AppNavigationProps) {
 
 export function MobileBottomNavigation(props: Pick<AppNavigationProps, "pathname" | "counts" | "isWhatsAppConnected"> & { onOpenMenu: () => void }) {
   return (
-    <nav className="mobile-bottom-nav fixed inset-x-2 bottom-2 z-30 grid grid-cols-5 rounded-[22px] border border-border/70 bg-background/92 px-1.5 pb-[max(.45rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_18px_55px_-18px_rgba(0,0,0,.6)] backdrop-blur-2xl md:hidden" aria-label="Atalhos principais">
+    <nav className="mobile-bottom-nav fixed inset-x-2 bottom-2 z-30 grid grid-cols-5 rounded-xl border border-border bg-background/96 px-1.5 pb-[max(.45rem,env(safe-area-inset-bottom))] pt-1.5 shadow-xl backdrop-blur-xl md:hidden" aria-label="Atalhos principais">
       {primaryMobileNavigation.map((item) => {
         const active = isActive(props.pathname, item.to);
         const Icon = item.icon;
         return (
           <Link key={item.to} to={item.to} aria-current={active ? "page" : undefined} className={cn(
-            "relative flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-0.5 text-[9px] font-extrabold transition-all active:scale-[.96]",
+            "relative flex min-h-[54px] min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 text-[9px] font-extrabold transition-all active:scale-[.96]",
             active ? "text-primary" : "text-muted-foreground",
           )}>
-            <span className={cn("grid size-8 place-items-center rounded-xl transition-all", active ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "bg-transparent")}>
+            <span className={cn("grid size-8 place-items-center rounded-lg transition-all", active ? "bg-primary/10 text-primary" : "bg-transparent")}> 
               <Icon className="size-[18px] shrink-0" />
             </span>
             <span className="max-w-full truncate">{item.shortLabel}</span>
