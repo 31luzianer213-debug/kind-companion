@@ -428,6 +428,7 @@ export type Database = {
           sigma_token: string | null
           sigma_url: string | null
           sigma_username: string | null
+          test_server_id: string | null
           updated_at: string
           user_id: string
           welcome_template: string
@@ -459,6 +460,7 @@ export type Database = {
           sigma_token?: string | null
           sigma_url?: string | null
           sigma_username?: string | null
+          test_server_id?: string | null
           updated_at?: string
           user_id: string
           welcome_template?: string
@@ -490,11 +492,20 @@ export type Database = {
           sigma_token?: string | null
           sigma_url?: string | null
           sigma_username?: string | null
+          test_server_id?: string | null
           updated_at?: string
           user_id?: string
           welcome_template?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_settings_test_server_id_fkey"
+            columns: ["test_server_id"]
+            isOneToOne: false
+            referencedRelation: "sigma_panels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
