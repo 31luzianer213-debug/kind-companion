@@ -29,7 +29,7 @@ export function useSigmaAutoSync() {
     staleTime: 60000,
   });
 
-  const isConfigured = Boolean(sigmaSettings?.some((server) => server.enabled));
+  const isConfigured = Array.isArray(sigmaSettings) && sigmaSettings.some((server) => server?.enabled);
 
   async function runSync(options: { silent?: boolean; reason?: string } = {}) {
     if (!isConfigured || isSyncingRef.current) return;
