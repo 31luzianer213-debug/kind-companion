@@ -24,7 +24,7 @@ export function useSigmaAutoSync() {
     queryKey: ["sigma-servers"],
     queryFn: async () => {
       const res = await getServers({});
-      return res.ok ? res.servers : [];
+      return res?.ok && Array.isArray(res.servers) ? res.servers : [];
     },
     staleTime: 60000,
   });
