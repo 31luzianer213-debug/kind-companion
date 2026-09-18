@@ -88,11 +88,12 @@ export function DesktopNavigation(props: AppNavigationProps) {
                 const Icon = item.icon;
                 return (
                   <Link key={item.to} to={item.to} aria-current={active ? "page" : undefined} className={cn(
-                    "group relative flex min-h-11 items-center gap-3 rounded-lg border border-transparent px-3 text-sm font-semibold transition-all",
+                    "group relative flex items-center gap-3 rounded-lg border border-transparent px-3 transition-all",
+                    item.secondary ? "ml-3 min-h-9 text-[13px] font-medium" : "min-h-11 text-sm font-semibold",
                     active ? "border-primary/15 bg-primary/10 text-primary" : "text-muted-foreground hover:border-border hover:bg-accent/60 hover:text-foreground",
                   )}>
                     <span className={cn("absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary transition-opacity", active ? "opacity-100" : "opacity-0")} />
-                    <Icon className="size-[18px] shrink-0" />
+                    <Icon className={cn("shrink-0", item.secondary ? "size-4" : "size-[18px]")} />
                     <span className="flex-1 truncate">{item.label}</span>
                     <Badge item={item} counts={props.counts} connected={props.isWhatsAppConnected} active={active} />
                   </Link>
