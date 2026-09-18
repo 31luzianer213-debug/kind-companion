@@ -76,11 +76,14 @@ function SigmaServersPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["sigma-servers"],
-    queryFn: () => listFn({}),
+    queryFn: async () => {
+      const res = await listFn({});
+      return res?.ok && Array.isArray(res.servers) ? res.servers : [];
+    },
     staleTime: 30_000,
   });
 
-  const servers = data?.ok && Array.isArray(data.servers) ? data.servers : [];
+  const servers = Array.isArray(data) ? data : [];
   const activeCount = servers.filter((server) => server.enabled).length;
 
   function openNew() {
