@@ -158,16 +158,12 @@ function WhatsAppPage() {
   const activeQr = state?.qrCode || localQr;
   const activePairing = state?.pairingCode || localPairingCode;
 
-  // Toast quando conecta
+  // Mantém os demais indicadores de status sincronizados, sem exibir aviso ao abrir a página.
   useEffect(() => {
     if (!isConnected) return;
-    toast.success(
-      state?.phone ? `WhatsApp conectado com sucesso no número +${state.phone}!` : "WhatsApp conectado com sucesso!",
-      { id: "baileys-connected-toast" },
-    );
     qc.invalidateQueries({ queryKey: ["layout-whatsapp-status"] });
     qc.invalidateQueries({ queryKey: ["painel-wa-status"] });
-  }, [isConnected, state?.phone, qc]);
+  }, [isConnected, qc]);
 
   // Histórico Recente de Disparos do Supabase
   const { data: logsData } = useQuery({
