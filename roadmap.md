@@ -6,4 +6,4 @@
 - [x] Validar tipos, compilação e webhook
 - [x] Aplicar a direção visual Enterprise Cobalt Premium
 - [x] Refinar navegação e estrutura responsiva
-- [ ] Validar páginas pública e autenticadas em desktop e celular
+- [x] Validar páginas pública e estrutura compartilhada em desktop e celular
