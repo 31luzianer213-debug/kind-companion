@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import uiPolishCss from "../ui-polish.css?url";
+import responsiveCss from "../responsive.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { PwaInstaller } from "@/components/PwaInstaller";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -116,6 +117,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "stylesheet", href: appCss },
       { rel: "stylesheet", href: uiPolishCss },
+      { rel: "stylesheet", href: responsiveCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
       { rel: "alternate icon", href: "/favicon.png", type: "image/png" },
