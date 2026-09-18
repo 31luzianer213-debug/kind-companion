@@ -120,7 +120,7 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago")({
             months: 1,
           });
 
-          return Response.json({ ok: true, message: "Pagamento processado automaticamente.", ...result });
+          return Response.json({ ...result, ok: true, message: "Pagamento processado automaticamente." });
         } catch (error) {
           console.error("Erro inesperado no webhook Mercado Pago:", error);
           return Response.json({ ok: false, error: error instanceof Error ? error.message : "Erro interno no processamento." }, { status: 500 });

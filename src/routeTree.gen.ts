@@ -12,17 +12,23 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedAtividadesRouteImport } from './routes/_authenticated/atividades'
 import { Route as AuthenticatedBotRouteImport } from './routes/_authenticated/bot'
 import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticated/clientes'
+import { Route as AuthenticatedClientesOperacaoRouteImport } from './routes/_authenticated/clientes-operacao'
+import { Route as AuthenticatedCobrancaAutomaticaRouteImport } from './routes/_authenticated/cobranca-automatica'
 import { Route as AuthenticatedCobrancasRouteImport } from './routes/_authenticated/cobrancas'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
+import { Route as AuthenticatedIndicadoresRouteImport } from './routes/_authenticated/indicadores'
 import { Route as AuthenticatedListasRouteImport } from './routes/_authenticated/listas'
 import { Route as AuthenticatedMensagensRouteImport } from './routes/_authenticated/mensagens'
 import { Route as AuthenticatedPagamentosRouteImport } from './routes/_authenticated/pagamentos'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedPedidosRouteImport } from './routes/_authenticated/pedidos'
 import { Route as AuthenticatedSigmaRouteImport } from './routes/_authenticated/sigma'
+import { Route as AuthenticatedSigmaSincronizacaoRouteImport } from './routes/_authenticated/sigma-sincronizacao'
 import { Route as AuthenticatedWhatsappRouteImport } from './routes/_authenticated/whatsapp'
+import { Route as AuthenticatedWhatsappDiagnosticoRouteImport } from './routes/_authenticated/whatsapp-diagnostico'
 import { Route as ApiPublicOrdersRouteImport } from './routes/api/public/orders'
 import { Route as ApiPublicHooksAsaasRouteImport } from './routes/api/public/hooks/asaas'
 import { Route as ApiPublicHooksCobrancaDiariaRouteImport } from './routes/api/public/hooks/cobranca-diaria'
@@ -45,6 +51,11 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAtividadesRoute = AuthenticatedAtividadesRouteImport.update({
+  id: '/atividades',
+  path: '/atividades',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedBotRoute = AuthenticatedBotRouteImport.update({
   id: '/bot',
   path: '/bot',
@@ -55,6 +66,18 @@ const AuthenticatedClientesRoute = AuthenticatedClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedClientesOperacaoRoute =
+  AuthenticatedClientesOperacaoRouteImport.update({
+    id: '/clientes-operacao',
+    path: '/clientes-operacao',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCobrancaAutomaticaRoute =
+  AuthenticatedCobrancaAutomaticaRouteImport.update({
+    id: '/cobranca-automatica',
+    path: '/cobranca-automatica',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCobrancasRoute = AuthenticatedCobrancasRouteImport.update({
   id: '/cobrancas',
   path: '/cobrancas',
@@ -64,6 +87,12 @@ const AuthenticatedConfiguracoesRoute =
   AuthenticatedConfiguracoesRouteImport.update({
     id: '/configuracoes',
     path: '/configuracoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedIndicadoresRoute =
+  AuthenticatedIndicadoresRouteImport.update({
+    id: '/indicadores',
+    path: '/indicadores',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedListasRoute = AuthenticatedListasRouteImport.update({
@@ -96,11 +125,23 @@ const AuthenticatedSigmaRoute = AuthenticatedSigmaRouteImport.update({
   path: '/sigma',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSigmaSincronizacaoRoute =
+  AuthenticatedSigmaSincronizacaoRouteImport.update({
+    id: '/sigma-sincronizacao',
+    path: '/sigma-sincronizacao',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedWhatsappRoute = AuthenticatedWhatsappRouteImport.update({
   id: '/whatsapp',
   path: '/whatsapp',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedWhatsappDiagnosticoRoute =
+  AuthenticatedWhatsappDiagnosticoRouteImport.update({
+    id: '/whatsapp-diagnostico',
+    path: '/whatsapp-diagnostico',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicOrdersRoute = ApiPublicOrdersRouteImport.update({
   id: '/api/public/orders',
   path: '/api/public/orders',
@@ -144,17 +185,23 @@ const ApiPublicHooksWhatsappPollRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/atividades': typeof AuthenticatedAtividadesRoute
   '/bot': typeof AuthenticatedBotRoute
   '/clientes': typeof AuthenticatedClientesRoute
+  '/clientes-operacao': typeof AuthenticatedClientesOperacaoRoute
+  '/cobranca-automatica': typeof AuthenticatedCobrancaAutomaticaRoute
   '/cobrancas': typeof AuthenticatedCobrancasRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/indicadores': typeof AuthenticatedIndicadoresRoute
   '/listas': typeof AuthenticatedListasRoute
   '/mensagens': typeof AuthenticatedMensagensRoute
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos': typeof AuthenticatedPedidosRoute
   '/sigma': typeof AuthenticatedSigmaRoute
+  '/sigma-sincronizacao': typeof AuthenticatedSigmaSincronizacaoRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
+  '/whatsapp-diagnostico': typeof AuthenticatedWhatsappDiagnosticoRoute
   '/api/public/orders': typeof ApiPublicOrdersRoute
   '/api/public/hooks/asaas': typeof ApiPublicHooksAsaasRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
@@ -166,17 +213,23 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/atividades': typeof AuthenticatedAtividadesRoute
   '/bot': typeof AuthenticatedBotRoute
   '/clientes': typeof AuthenticatedClientesRoute
+  '/clientes-operacao': typeof AuthenticatedClientesOperacaoRoute
+  '/cobranca-automatica': typeof AuthenticatedCobrancaAutomaticaRoute
   '/cobrancas': typeof AuthenticatedCobrancasRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/indicadores': typeof AuthenticatedIndicadoresRoute
   '/listas': typeof AuthenticatedListasRoute
   '/mensagens': typeof AuthenticatedMensagensRoute
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos': typeof AuthenticatedPedidosRoute
   '/sigma': typeof AuthenticatedSigmaRoute
+  '/sigma-sincronizacao': typeof AuthenticatedSigmaSincronizacaoRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
+  '/whatsapp-diagnostico': typeof AuthenticatedWhatsappDiagnosticoRoute
   '/api/public/orders': typeof ApiPublicOrdersRoute
   '/api/public/hooks/asaas': typeof ApiPublicHooksAsaasRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
@@ -190,17 +243,23 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/atividades': typeof AuthenticatedAtividadesRoute
   '/_authenticated/bot': typeof AuthenticatedBotRoute
   '/_authenticated/clientes': typeof AuthenticatedClientesRoute
+  '/_authenticated/clientes-operacao': typeof AuthenticatedClientesOperacaoRoute
+  '/_authenticated/cobranca-automatica': typeof AuthenticatedCobrancaAutomaticaRoute
   '/_authenticated/cobrancas': typeof AuthenticatedCobrancasRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/_authenticated/indicadores': typeof AuthenticatedIndicadoresRoute
   '/_authenticated/listas': typeof AuthenticatedListasRoute
   '/_authenticated/mensagens': typeof AuthenticatedMensagensRoute
   '/_authenticated/pagamentos': typeof AuthenticatedPagamentosRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/pedidos': typeof AuthenticatedPedidosRoute
   '/_authenticated/sigma': typeof AuthenticatedSigmaRoute
+  '/_authenticated/sigma-sincronizacao': typeof AuthenticatedSigmaSincronizacaoRoute
   '/_authenticated/whatsapp': typeof AuthenticatedWhatsappRoute
+  '/_authenticated/whatsapp-diagnostico': typeof AuthenticatedWhatsappDiagnosticoRoute
   '/api/public/orders': typeof ApiPublicOrdersRoute
   '/api/public/hooks/asaas': typeof ApiPublicHooksAsaasRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
@@ -214,17 +273,23 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/atividades'
     | '/bot'
     | '/clientes'
+    | '/clientes-operacao'
+    | '/cobranca-automatica'
     | '/cobrancas'
     | '/configuracoes'
+    | '/indicadores'
     | '/listas'
     | '/mensagens'
     | '/pagamentos'
     | '/painel'
     | '/pedidos'
     | '/sigma'
+    | '/sigma-sincronizacao'
     | '/whatsapp'
+    | '/whatsapp-diagnostico'
     | '/api/public/orders'
     | '/api/public/hooks/asaas'
     | '/api/public/hooks/cobranca-diaria'
@@ -236,17 +301,23 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/atividades'
     | '/bot'
     | '/clientes'
+    | '/clientes-operacao'
+    | '/cobranca-automatica'
     | '/cobrancas'
     | '/configuracoes'
+    | '/indicadores'
     | '/listas'
     | '/mensagens'
     | '/pagamentos'
     | '/painel'
     | '/pedidos'
     | '/sigma'
+    | '/sigma-sincronizacao'
     | '/whatsapp'
+    | '/whatsapp-diagnostico'
     | '/api/public/orders'
     | '/api/public/hooks/asaas'
     | '/api/public/hooks/cobranca-diaria'
@@ -259,17 +330,23 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/atividades'
     | '/_authenticated/bot'
     | '/_authenticated/clientes'
+    | '/_authenticated/clientes-operacao'
+    | '/_authenticated/cobranca-automatica'
     | '/_authenticated/cobrancas'
     | '/_authenticated/configuracoes'
+    | '/_authenticated/indicadores'
     | '/_authenticated/listas'
     | '/_authenticated/mensagens'
     | '/_authenticated/pagamentos'
     | '/_authenticated/painel'
     | '/_authenticated/pedidos'
     | '/_authenticated/sigma'
+    | '/_authenticated/sigma-sincronizacao'
     | '/_authenticated/whatsapp'
+    | '/_authenticated/whatsapp-diagnostico'
     | '/api/public/orders'
     | '/api/public/hooks/asaas'
     | '/api/public/hooks/cobranca-diaria'
@@ -315,6 +392,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/atividades': {
+      id: '/_authenticated/atividades'
+      path: '/atividades'
+      fullPath: '/atividades'
+      preLoaderRoute: typeof AuthenticatedAtividadesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/bot': {
       id: '/_authenticated/bot'
       path: '/bot'
@@ -329,6 +413,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedClientesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/clientes-operacao': {
+      id: '/_authenticated/clientes-operacao'
+      path: '/clientes-operacao'
+      fullPath: '/clientes-operacao'
+      preLoaderRoute: typeof AuthenticatedClientesOperacaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cobranca-automatica': {
+      id: '/_authenticated/cobranca-automatica'
+      path: '/cobranca-automatica'
+      fullPath: '/cobranca-automatica'
+      preLoaderRoute: typeof AuthenticatedCobrancaAutomaticaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/cobrancas': {
       id: '/_authenticated/cobrancas'
       path: '/cobrancas'
@@ -341,6 +439,13 @@ declare module '@tanstack/react-router' {
       path: '/configuracoes'
       fullPath: '/configuracoes'
       preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/indicadores': {
+      id: '/_authenticated/indicadores'
+      path: '/indicadores'
+      fullPath: '/indicadores'
+      preLoaderRoute: typeof AuthenticatedIndicadoresRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/listas': {
@@ -385,11 +490,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSigmaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/sigma-sincronizacao': {
+      id: '/_authenticated/sigma-sincronizacao'
+      path: '/sigma-sincronizacao'
+      fullPath: '/sigma-sincronizacao'
+      preLoaderRoute: typeof AuthenticatedSigmaSincronizacaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/whatsapp': {
       id: '/_authenticated/whatsapp'
       path: '/whatsapp'
       fullPath: '/whatsapp'
       preLoaderRoute: typeof AuthenticatedWhatsappRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/whatsapp-diagnostico': {
+      id: '/_authenticated/whatsapp-diagnostico'
+      path: '/whatsapp-diagnostico'
+      fullPath: '/whatsapp-diagnostico'
+      preLoaderRoute: typeof AuthenticatedWhatsappDiagnosticoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/public/orders': {
@@ -445,31 +564,43 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAtividadesRoute: typeof AuthenticatedAtividadesRoute
   AuthenticatedBotRoute: typeof AuthenticatedBotRoute
   AuthenticatedClientesRoute: typeof AuthenticatedClientesRoute
+  AuthenticatedClientesOperacaoRoute: typeof AuthenticatedClientesOperacaoRoute
+  AuthenticatedCobrancaAutomaticaRoute: typeof AuthenticatedCobrancaAutomaticaRoute
   AuthenticatedCobrancasRoute: typeof AuthenticatedCobrancasRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
+  AuthenticatedIndicadoresRoute: typeof AuthenticatedIndicadoresRoute
   AuthenticatedListasRoute: typeof AuthenticatedListasRoute
   AuthenticatedMensagensRoute: typeof AuthenticatedMensagensRoute
   AuthenticatedPagamentosRoute: typeof AuthenticatedPagamentosRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedPedidosRoute: typeof AuthenticatedPedidosRoute
   AuthenticatedSigmaRoute: typeof AuthenticatedSigmaRoute
+  AuthenticatedSigmaSincronizacaoRoute: typeof AuthenticatedSigmaSincronizacaoRoute
   AuthenticatedWhatsappRoute: typeof AuthenticatedWhatsappRoute
+  AuthenticatedWhatsappDiagnosticoRoute: typeof AuthenticatedWhatsappDiagnosticoRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAtividadesRoute: AuthenticatedAtividadesRoute,
   AuthenticatedBotRoute: AuthenticatedBotRoute,
   AuthenticatedClientesRoute: AuthenticatedClientesRoute,
+  AuthenticatedClientesOperacaoRoute: AuthenticatedClientesOperacaoRoute,
+  AuthenticatedCobrancaAutomaticaRoute: AuthenticatedCobrancaAutomaticaRoute,
   AuthenticatedCobrancasRoute: AuthenticatedCobrancasRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
+  AuthenticatedIndicadoresRoute: AuthenticatedIndicadoresRoute,
   AuthenticatedListasRoute: AuthenticatedListasRoute,
   AuthenticatedMensagensRoute: AuthenticatedMensagensRoute,
   AuthenticatedPagamentosRoute: AuthenticatedPagamentosRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedPedidosRoute: AuthenticatedPedidosRoute,
   AuthenticatedSigmaRoute: AuthenticatedSigmaRoute,
+  AuthenticatedSigmaSincronizacaoRoute: AuthenticatedSigmaSincronizacaoRoute,
   AuthenticatedWhatsappRoute: AuthenticatedWhatsappRoute,
+  AuthenticatedWhatsappDiagnosticoRoute: AuthenticatedWhatsappDiagnosticoRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

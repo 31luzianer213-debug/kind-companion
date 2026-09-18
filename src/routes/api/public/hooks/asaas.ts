@@ -49,7 +49,7 @@ export const Route = createFileRoute("/api/public/hooks/asaas")({
             months: 1,
           });
 
-          return Response.json({ ok: true, message: "Pagamento processado automaticamente.", ...result });
+          return Response.json({ ...result, ok: true, message: "Pagamento processado automaticamente." });
         } catch (error) {
           console.error("Erro inesperado no webhook Asaas:", error);
           return Response.json(

@@ -165,7 +165,7 @@ function PedidosPage() {
     refetchInterval: 3000,
   });
 
-  const orders: OrderItem[] = data ?? [];
+  const orders: OrderItem[] = Array.isArray(data) ? data : [];
 
   // Mutações
   const approveMutation = useMutation({
