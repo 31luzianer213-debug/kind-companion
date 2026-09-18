@@ -7,7 +7,7 @@ import type { QueryClient } from "@tanstack/react-query";
  * os dados salvos aparecem na hora, enquanto a atualização acontece em segundo plano.
  */
 
-const STORAGE_PREFIX = "sigma-control:query-cache:v2";
+const STORAGE_PREFIX = "sigma-control:query-cache:v3";
 const LEGACY_STORAGE_KEY = "sigma-control:query-cache:v1";
 const ACTIVE_USER_KEY = "sigma-control:query-cache:active-user";
 const MAX_AGE_MS = 24 * 60 * 60_000;
