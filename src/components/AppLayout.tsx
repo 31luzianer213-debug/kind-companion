@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
 import { listSigmaServers } from "@/lib/sigma-servers.functions";
+import { startQueryCachePersistence } from "@/lib/query-cache-persist";
 import "../mobile-app.css";
 
 const mobilePageTitles: Record<string, string> = {
@@ -70,7 +71,7 @@ async function getPendingOrderCount() {
     : 0;
 }
 
-export function AppLayout({ children }: { children: ReactNode }) {
+export function AppLayout({ children, userId }: { children: ReactNode; userId: string }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const statusFn = useServerFn(getWhatsAppStatus);
@@ -144,6 +145,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // para que a página Sigma já mostre os servidores salvos ao ser aberta.
   const queryClient = useQueryClient();
   const prefetchSigmaFn = useServerFn(listSigmaServers);
+  useEffect(() => startQueryCachePersistence(queryClient, userId), [queryClient, userId]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       void queryClient.prefetchQuery({
@@ -153,9 +156,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       });
     }, 300);
     return () => clearTimeout(timer);
-    // Executa uma vez por sessão do layout.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [prefetchSigmaFn, queryClient]);
 
   async function signOut() {
     await supabase.auth.signOut();

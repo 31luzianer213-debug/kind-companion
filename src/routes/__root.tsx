@@ -7,8 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
-import { hydrateQueryCache, startQueryCachePersistence } from "@/lib/query-cache-persist";
+import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import uiPolishCss from "../ui-polish.css?url";
@@ -147,13 +146,6 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-
-  // Reaproveita listas já carregadas nesta sessão do navegador para que as telas
-  // abram com os dados salvos na hora, atualizando em segundo plano.
-  useEffect(() => {
-    hydrateQueryCache(queryClient);
-    return startQueryCachePersistence(queryClient);
-  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
