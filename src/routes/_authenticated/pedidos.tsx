@@ -162,7 +162,7 @@ function PedidosPage() {
 
       return [];
     },
-    refetchInterval: 3000,
+    refetchInterval: 12000,
   });
 
   const orders: OrderItem[] = Array.isArray(data) ? data : [];

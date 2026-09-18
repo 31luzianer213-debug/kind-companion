@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useMemo } from "react";
+import { Suspense, lazy, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { runAutoBilling, sendWhatsAppMessage, getWhatsAppStatus } from "@/lib/whatsapp.functions";
@@ -37,15 +37,7 @@ import {
   CreditCard,
   X,
 } from "lucide-react";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from "recharts";
+const FinanceChart = lazy(() => import("@/components/dashboard/FinanceChart"));
 
 function getClientDeletedIds(): Set<string> {
   const set = new Set<string>();
@@ -157,7 +149,7 @@ function Painel() {
       };
     },
     staleTime: 5000,
-    refetchInterval: 10000,
+    refetchInterval: 20000,
   });
 
   const clients = Array.isArray(data?.clients) ? data.clients : [];
@@ -392,7 +384,7 @@ function Painel() {
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="surface-card rounded-lg lg:col-span-2 overflow-hidden border-border/70"><CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5"><div><CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground"><TrendingUp className="size-4 text-primary" />Balanço Financeiro de Faturas</CardTitle><CardDescription className="text-xs">Distribuição de faturas recebidas, em aberto e em atraso</CardDescription></div><Badge variant="outline" className="font-mono text-xs rounded-md">R$ {formatBRL(totalPaid + totalPending)}</Badge></CardHeader><CardContent className="pt-4 px-4 sm:px-5"><div className="h-[240px] w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" opacity={0.15} vertical={false} /><XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} /><YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => `R$${v}`} /><Tooltip formatter={(val: number) => [formatBRL(val), "Valor"]} contentStyle={{ backgroundColor: "var(--color-card)", borderColor: "var(--color-border)", borderRadius: "8px", fontSize: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }} /><Bar dataKey="valor" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div></CardContent></Card>
+        <Card className="surface-card rounded-lg lg:col-span-2 overflow-hidden border-border/70"><CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5"><div><CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground"><TrendingUp className="size-4 text-primary" />Balanço Financeiro de Faturas</CardTitle><CardDescription className="text-xs">Distribuição de faturas recebidas, em aberto e em atraso</CardDescription></div><Badge variant="outline" className="font-mono text-xs rounded-md">R$ {formatBRL(totalPaid + totalPending)}</Badge></CardHeader><CardContent className="pt-4 px-4 sm:px-5"><div className="h-[240px] w-full"><Suspense fallback={<div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />}><FinanceChart data={chartData} /></Suspense></div></CardContent></Card>
 
         <Card className="surface-card rounded-lg overflow-hidden flex flex-col border-border/70"><CardHeader className="pb-2 pt-4 px-4 sm:px-5"><div className="flex items-center justify-between"><CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground"><Calendar className="size-4 text-primary" />Vencimentos Imediatos</CardTitle><Badge variant="secondary" className="rounded-md text-[11px] font-medium">{upcomingClients.length} próximos</Badge></div><CardDescription className="text-xs">Clientes com vencimento hoje ou nos próximos 3 dias</CardDescription></CardHeader><CardContent className="flex-1 space-y-2.5 pt-2 px-4 sm:px-5">{upcomingClients.length === 0 ? <div className="flex h-full min-h-[160px] flex-col items-center justify-center rounded-lg border border-dashed border-border/60 p-4 text-center"><div className="grid size-8 place-items-center rounded-md bg-muted text-muted-foreground mb-2"><Check className="size-4" /></div><p className="text-xs font-semibold text-foreground">Tudo em dia!</p><p className="text-[11px] text-muted-foreground">Nenhum cliente vencendo nos próximos dias.</p></div> : upcomingClients.map((client) => { const isToday = client.next_due_date === todayStr; return <div key={client.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/20 p-2.5 transition-colors hover:bg-muted/40"><div className="min-w-0"><div className="flex items-center gap-1.5"><p className="truncate text-xs font-semibold text-foreground">{client.name}</p>{isToday && <span className="rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-1 py-0.2 text-[9px] font-bold uppercase">Hoje</span>}</div><p className="text-[11px] text-muted-foreground">{formatBRL(client.monthly_fee)} • {formatDate(client.next_due_date)}</p></div><Button size="sm" variant="outline" disabled={sendingId === client.id} onClick={() => cobrarClienteRapido(client)} className="h-7 rounded-md px-2 text-xs font-medium gap-1 border-border">{sendingId === client.id ? <Clock3 className="size-3 animate-spin text-primary" /> : <Send className="size-3" />}Cobrar</Button></div>; })}</CardContent><div className="border-t border-border/50 p-2.5 bg-muted/10"><Button asChild variant="ghost" size="sm" className="w-full justify-between text-xs text-muted-foreground hover:text-foreground h-7"><Link to="/cobrancas">Ver todas as cobranças <ChevronRight className="size-3" /></Link></Button></div></Card>
       </div>
