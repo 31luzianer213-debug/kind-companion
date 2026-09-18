@@ -1378,7 +1378,7 @@ function Clientes() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredClients.map((client) => {
+                {visibleClients.map((client) => {
                   const relativeDue = getRelativeDueInfo(client.next_due_date);
                   const isBusy = actionBusyId === client.id;
                   const isCopied = copiedId === client.id;
@@ -1572,7 +1572,7 @@ function Clientes() {
 
           {/* Cards Mobile */}
           <div className="grid gap-3 md:hidden">
-            {filteredClients.map((client) => {
+            {visibleClients.map((client) => {
               const relativeDue = getRelativeDueInfo(client.next_due_date);
               const isBusy = actionBusyId === client.id;
               const isCopied = copiedId === client.id;
@@ -1713,6 +1713,18 @@ function Clientes() {
               );
             })}
           </div>
+
+          {hasMoreClients ? (
+            <div className="flex justify-center pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setVisibleCount((current) => current + PAGE_SIZE)}
+              >
+                Mostrar mais clientes ({filteredClients.length - visibleClients.length} restantes)
+              </Button>
+            </div>
+          ) : null}
         </>
       )}
 
