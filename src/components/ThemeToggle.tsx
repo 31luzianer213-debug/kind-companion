@@ -12,11 +12,11 @@ function apply(theme: Theme) {
 }
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
     const stored = localStorage.getItem("tema") as Theme | null;
-    const initial: Theme = stored ?? "dark";
+    const initial: Theme = stored ?? "light";
     setTheme(initial);
     apply(initial);
   }, []);
@@ -57,7 +57,7 @@ export function ThemeToggle({ className, withLabel = false }: { className?: stri
       onClick={toggle}
       aria-label={dark ? "Ativar modo claro" : "Ativar modo escuro"}
       title={dark ? "Modo claro" : "Modo escuro"}
-      className={cn("rounded-full", className)}
+      className={cn("rounded-lg", className)}
     >
       {dark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
     </Button>

@@ -220,7 +220,6 @@ function AuthPage() {
       <AuthShowcase />
 
       <section className="relative flex min-h-[100dvh] flex-1 flex-col overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_0%,color-mix(in_oklch,var(--primary)_10%,transparent),transparent_34%)]" />
         <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-8">
           <Button asChild variant="ghost" size="sm" className="gap-2 rounded-xl text-muted-foreground">
             <Link to="/"><ArrowLeft className="size-4" /> Voltar</Link>
@@ -239,12 +238,12 @@ function AuthPage() {
             </Link>
           </div>
 
-          <div className="rounded-[24px] border border-border/70 bg-card/85 p-5 shadow-[0_24px_80px_-48px_rgba(0,0,0,.7)] backdrop-blur-xl sm:p-7">
+          <div className="rounded-lg border border-border bg-card p-5 shadow-[0_20px_60px_-42px_color-mix(in_oklch,var(--foreground)_45%,transparent)] sm:p-7">
             <div className="mb-6">
               <p className="mb-2 inline-flex items-center gap-1.5 text-xs font-bold text-primary">
                 <ShieldCheck className="size-3.5" /> Acesso seguro
               </p>
-              <h1 className="text-2xl font-black tracking-[-0.04em] sm:text-3xl">
+              <h1 className="font-display text-2xl font-bold sm:text-3xl">
                 {tab === "login" ? "Que bom ter você de volta" : "Comece gratuitamente"}
               </h1>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -253,7 +252,7 @@ function AuthPage() {
             </div>
 
             <Tabs value={tab} onValueChange={(value) => { setTab(value); setPassword(""); setConfirmation(""); }} className="w-full">
-              <TabsList className="mb-6 grid h-12 w-full grid-cols-2 rounded-xl border border-border/60 bg-muted/60 p-1">
+              <TabsList className="mb-6 grid h-12 w-full grid-cols-2 rounded-lg border border-border bg-muted/60 p-1">
                 <TabsTrigger value="login" className="rounded-lg font-bold data-[state=checked]:bg-background data-[state=checked]:shadow-sm">Entrar</TabsTrigger>
                 <TabsTrigger value="signup" className="rounded-lg font-bold data-[state=checked]:bg-background data-[state=checked]:shadow-sm">Criar conta</TabsTrigger>
               </TabsList>
