@@ -1,5 +1,5 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Menu, X } from "lucide-react";
 import type { ReactNode } from "react";
@@ -11,6 +11,7 @@ import { SigmaLogo } from "@/components/SigmaLogo";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
+import { listSigmaServers } from "@/lib/sigma-servers.functions";
 import "../mobile-app.css";
 
 const mobilePageTitles: Record<string, string> = {
@@ -138,6 +139,23 @@ export function AppLayout({ children }: { children: ReactNode }) {
     refetchInterval: 120_000,
     refetchOnWindowFocus: false,
   });
+
+  // Carrega a lista de servidores Sigma em segundo plano logo que o painel abre,
+  // para que a página Sigma já mostre os servidores salvos ao ser aberta.
+  const queryClient = useQueryClient();
+  const prefetchSigmaFn = useServerFn(listSigmaServers);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void queryClient.prefetchQuery({
+        queryKey: ["sigma-servers"],
+        queryFn: () => prefetchSigmaFn({}),
+        staleTime: 60_000,
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+    // Executa uma vez por sessão do layout.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function signOut() {
     await supabase.auth.signOut();
