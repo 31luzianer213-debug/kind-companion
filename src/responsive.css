@@ -1,0 +1,134 @@
+/* Sigma Control — camada global de responsividade.
+   Não altera identidade visual: apenas evita quebras, overflow e alvos pequenos. */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: clip;
+}
+
+/* Mídia sempre fluida */
+img,
+svg:not([width]),
+video,
+canvas,
+iframe {
+  max-width: 100%;
+}
+
+img,
+video {
+  height: auto;
+}
+
+/* Textos longos (URLs, tokens, e-mails) nunca empurram o layout */
+p,
+span,
+td,
+dd,
+li,
+h1,
+h2,
+h3,
+h4,
+label,
+code,
+pre {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Filhos de flex/grid podem encolher */
+main *,
+[role="dialog"] * {
+  min-width: 0;
+}
+
+/* Tabelas: container com rolagem horizontal contida */
+table {
+  max-width: 100%;
+}
+
+/* Abas e barras de filtros roláveis em qualquer largura */
+[role="tablist"] {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+[role="tablist"]::-webkit-scrollbar {
+  display: none;
+}
+
+/* Telas ultrawide: conteúdo não estica indefinidamente */
+@media (min-width: 1800px) {
+  .mobile-app-content {
+    max-width: 1680px !important;
+  }
+}
+
+/* Tablet / laptop pequeno */
+@media (max-width: 1024px) {
+  .app-aurora main [class*="xl:grid-cols-5"],
+  .app-aurora main [class*="lg:grid-cols-4"] {
+    gap: 0.9rem;
+  }
+}
+
+/* Celulares */
+@media (max-width: 767px) {
+  [role="dialog"] {
+    width: calc(100% - 1.25rem) !important;
+    max-width: calc(100% - 1.25rem) !important;
+    max-height: 88dvh !important;
+  }
+
+  [role="dialog"] [role="tablist"],
+  [role="dialog"] .grid {
+    max-width: 100%;
+  }
+
+  /* Botões e inputs confortáveis para toque */
+  button,
+  [role="button"],
+  a[class*="inline-flex"] {
+    touch-action: manipulation;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px; /* evita zoom automático no iOS */
+  }
+
+  /* Grupos de ação empilham antes de espremer */
+  .page-header > div:last-child {
+    flex-wrap: wrap;
+  }
+}
+
+/* Celulares pequenos (<= 380px) */
+@media (max-width: 380px) {
+  .app-aurora main [class*="sm:grid-cols-2"][class*="grid-cols-2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-aurora main [role="tab"] {
+    font-size: 10.5px !important;
+    padding-inline: 0.5rem !important;
+  }
+
+  .app-aurora main .kpi-value,
+  .app-aurora main [class*="text-2xl"] {
+    font-size: 1.35rem !important;
+  }
+}
