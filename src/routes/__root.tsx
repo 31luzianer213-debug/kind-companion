@@ -150,12 +150,10 @@ function RootComponent() {
 
   // Reaproveita listas já carregadas nesta sessão do navegador para que as telas
   // abram com os dados salvos na hora, atualizando em segundo plano.
-  // A hidratação acontece antes do primeiro render dos filhos para evitar piscar o esqueleto.
-  useState(() => {
-    if (typeof window !== "undefined") hydrateQueryCache(queryClient);
-    return true;
-  });
-  useEffect(() => startQueryCachePersistence(queryClient), [queryClient]);
+  useEffect(() => {
+    hydrateQueryCache(queryClient);
+    return startQueryCachePersistence(queryClient);
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
