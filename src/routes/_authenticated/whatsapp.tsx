@@ -180,7 +180,7 @@ function WhatsAppPage() {
         .limit(10);
       return data ?? [];
     },
-    refetchInterval: 10000,
+    refetchInterval: 20000,
   });
 
   async function handleStartQr(force = false) {
