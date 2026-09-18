@@ -24,12 +24,12 @@ export function useSigmaAutoSync() {
     queryKey: ["sigma-servers"],
     queryFn: async () => {
       const res = await getServers({});
-      return res.ok ? res.servers : [];
+      return res?.ok && Array.isArray(res.servers) ? res.servers : [];
     },
     staleTime: 60000,
   });
 
-  const isConfigured = Boolean(sigmaSettings?.some((server) => server.enabled));
+  const isConfigured = Array.isArray(sigmaSettings) && sigmaSettings.some((server) => server?.enabled);
 
   async function runSync(options: { silent?: boolean; reason?: string } = {}) {
     if (!isConfigured || isSyncingRef.current) return;
