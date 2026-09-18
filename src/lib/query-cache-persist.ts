@@ -13,17 +13,22 @@ const MAX_AGE_MS = 10 * 60_000;
 // Apenas listas de trabalho — nada sensível de sessão/autenticação.
 const PERSISTED_KEYS = new Set([
   "sigma-servers",
-  "sigma-sync-overview",
+  "sigma-sync-health",
+  "sigma-clients-list",
   "clients",
-  "bot-settings",
-  "sidebar-counts",
-  "dashboard-v2",
+  "operational-clients",
   "operational-dashboard",
+  "dashboard-v2",
+  "dashboard-kpis",
+  "sidebar-counts",
   "invoices",
-  "cobrancas",
-  "orders",
-  "message-templates",
-  "reseller-context",
+  "orders-list",
+  "billing-rules",
+  "bot-settings",
+  "payment-settings",
+  "whatsapp-settings",
+  "activities",
+  "reseller-trial-server-settings",
 ]);
 
 type Entry = { key: unknown[]; data: unknown; at: number };
