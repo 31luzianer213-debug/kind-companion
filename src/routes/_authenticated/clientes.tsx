@@ -461,6 +461,18 @@ function Clientes() {
     });
   }, [clients, search, filterTab, todayStr]);
 
+  // Renderização incremental: mantém a tela leve mesmo com milhares de clientes.
+  const PAGE_SIZE = 40;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [search, filterTab]);
+  const visibleClients = useMemo(
+    () => filteredClients.slice(0, visibleCount),
+    [filteredClients, visibleCount],
+  );
+  const hasMoreClients = filteredClients.length > visibleClients.length;
+
   const save = useMutation({
     mutationFn: async (values: ClientForm) => {
       const { data: auth } = await supabase.auth.getUser();
