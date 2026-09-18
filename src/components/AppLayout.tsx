@@ -151,7 +151,10 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
     const timer = setTimeout(() => {
       void queryClient.prefetchQuery({
         queryKey: ["sigma-servers"],
-        queryFn: () => prefetchSigmaFn({}),
+        queryFn: async () => {
+          const res = await prefetchSigmaFn({});
+          return res?.ok && Array.isArray(res.servers) ? res.servers : [];
+        },
         staleTime: 60_000,
       });
     }, 300);
