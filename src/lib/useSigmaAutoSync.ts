@@ -34,9 +34,12 @@ export function useSigmaAutoSync() {
   async function runSync(options: { silent?: boolean; reason?: string } = {}) {
     if (!isConfigured || isSyncingRef.current) return;
 
-    // Limite mínimo de 15 segundos entre chamadas para evitar duplicidade
+    // A aba oculta não precisa sincronizar: economiza rede, CPU e bateria.
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+
+    // Limite mínimo de 60 segundos entre chamadas para evitar duplicidade
     const now = Date.now();
-    if (now - lastSyncTimeRef.current < 15000 && !options.reason?.includes("force")) {
+    if (now - lastSyncTimeRef.current < 60000 && !options.reason?.includes("force")) {
       return;
     }
 
@@ -106,7 +109,7 @@ export function useSigmaAutoSync() {
 
     const interval = setInterval(() => {
       runSync({ silent: true, reason: "interval" });
-    }, 60000);
+    }, 180000);
 
     return () => clearInterval(interval);
   }, [isConfigured]);

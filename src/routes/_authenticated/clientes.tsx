@@ -461,6 +461,18 @@ function Clientes() {
     });
   }, [clients, search, filterTab, todayStr]);
 
+  // Renderização incremental: mantém a tela leve mesmo com milhares de clientes.
+  const PAGE_SIZE = 40;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [search, filterTab]);
+  const visibleClients = useMemo(
+    () => filteredClients.slice(0, visibleCount),
+    [filteredClients, visibleCount],
+  );
+  const hasMoreClients = filteredClients.length > visibleClients.length;
+
   const save = useMutation({
     mutationFn: async (values: ClientForm) => {
       const { data: auth } = await supabase.auth.getUser();
@@ -1366,7 +1378,7 @@ function Clientes() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredClients.map((client) => {
+                {visibleClients.map((client) => {
                   const relativeDue = getRelativeDueInfo(client.next_due_date);
                   const isBusy = actionBusyId === client.id;
                   const isCopied = copiedId === client.id;
@@ -1560,7 +1572,7 @@ function Clientes() {
 
           {/* Cards Mobile */}
           <div className="grid gap-3 md:hidden">
-            {filteredClients.map((client) => {
+            {visibleClients.map((client) => {
               const relativeDue = getRelativeDueInfo(client.next_due_date);
               const isBusy = actionBusyId === client.id;
               const isCopied = copiedId === client.id;
@@ -1701,6 +1713,18 @@ function Clientes() {
               );
             })}
           </div>
+
+          {hasMoreClients ? (
+            <div className="flex justify-center pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setVisibleCount((current) => current + PAGE_SIZE)}
+              >
+                Mostrar mais clientes ({filteredClients.length - visibleClients.length} restantes)
+              </Button>
+            </div>
+          ) : null}
         </>
       )}
 
