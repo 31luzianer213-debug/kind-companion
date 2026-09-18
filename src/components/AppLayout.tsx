@@ -8,6 +8,7 @@ import defaultOrdersSeed from "../../data/orders_default.json";
 import { DesktopNavigation, MobileBottomNavigation, MobileDrawer } from "@/components/layout/AppNavigation";
 import { MobileClientDelete } from "@/components/clients/MobileClientDelete";
 import { SigmaLogo } from "@/components/SigmaLogo";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
@@ -186,6 +187,8 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
             <h1 className="truncate font-display text-[15px] font-bold text-foreground">{mobilePageTitle(pathname)}</h1>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+        <GlobalSearch />
         <Button
           variant="ghost"
           size="icon"
@@ -196,7 +199,14 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
         >
           <Menu className="size-5" />
         </Button>
+        </div>
       </header>
+
+      <div className="pointer-events-none fixed right-6 top-4 z-40 hidden md:block">
+        <div className="pointer-events-auto">
+          <GlobalSearch />
+        </div>
+      </div>
 
       {drawerOpen && (
         <div className="fixed inset-0 z-50 md:hidden" role="presentation">
