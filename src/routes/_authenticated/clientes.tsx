@@ -16,6 +16,7 @@ import {
   createSigmaQuickTest,
 } from "@/lib/sigma.functions";
 import { listSigmaServers, syncAllSigmaServers } from "@/lib/sigma-servers.functions";
+import { ImportClientsCsv } from "@/components/clients/ImportClientsCsv";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1038,6 +1039,8 @@ function Clientes() {
             <Download className="size-3.5 text-muted-foreground" />
             CSV
           </Button>
+
+          <ImportClientsCsv />
 
           <Button
             size="sm"
