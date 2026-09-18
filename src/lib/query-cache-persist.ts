@@ -9,6 +9,7 @@ import type { QueryClient } from "@tanstack/react-query";
 
 const STORAGE_PREFIX = "sigma-control:query-cache:v2";
 const LEGACY_STORAGE_KEY = "sigma-control:query-cache:v1";
+const ACTIVE_USER_KEY = "sigma-control:query-cache:active-user";
 const MAX_AGE_MS = 24 * 60 * 60_000;
 
 // Apenas listas de trabalho — nada sensível de sessão/autenticação.
@@ -52,6 +53,14 @@ export function hydrateQueryCache(queryClient: QueryClient, userId: string): voi
   if (typeof window === "undefined") return;
   let entries: Entry[] = [];
   try {
+    const previousUserId = window.sessionStorage.getItem(ACTIVE_USER_KEY);
+    if (previousUserId && previousUserId !== userId) {
+      queryClient.removeQueries({
+        predicate: (query) => shouldPersist(query.queryKey),
+      });
+    }
+    window.sessionStorage.setItem(ACTIVE_USER_KEY, userId);
+
     // Remove o cache antigo, que não sobrevivia ao fechamento do navegador
     // e não era separado por conta.
     window.sessionStorage.removeItem(LEGACY_STORAGE_KEY);
