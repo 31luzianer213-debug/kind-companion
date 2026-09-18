@@ -80,7 +80,7 @@
   /* Data-heavy sections become contained swipe regions rather than stretching the whole page. */
   .mobile-app-content [class*="overflow-hidden"]:has(> table),
   .mobile-app-content [class*="overflow-x-auto"] {
-    border-radius: 16px !important;
+    border-radius: 8px !important;
     scrollbar-width: none;
   }
 
@@ -104,14 +104,14 @@
 
   /* Tabs behave like a native segmented/scroll control. */
   .mobile-app-content [role="tablist"] {
-    border-radius: 14px !important;
+    border-radius: 8px !important;
     padding: 3px !important;
     gap: 2px !important;
   }
 
   .mobile-app-content [role="tab"] {
     min-height: 36px !important;
-    border-radius: 11px !important;
+    border-radius: 6px !important;
     font-size: 11px !important;
   }
 
@@ -122,7 +122,7 @@
   }
 
   .mobile-menu-sheet {
-    box-shadow: 0 -24px 70px -22px rgb(0 0 0 / 72%);
+    box-shadow: 0 -24px 70px -28px color-mix(in oklch, var(--foreground) 55%, transparent);
   }
 
   .mobile-bottom-nav {
