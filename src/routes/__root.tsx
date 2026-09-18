@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import uiPolishCss from "../ui-polish.css?url";
+import responsiveCss from "../responsive.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { PwaInstaller } from "@/components/PwaInstaller";
 import { reportLovableError } from "../lib/lovable-error-reporting";
