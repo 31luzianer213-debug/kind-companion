@@ -140,6 +140,23 @@ export function AppLayout({ children }: { children: ReactNode }) {
     refetchOnWindowFocus: false,
   });
 
+  // Carrega a lista de servidores Sigma em segundo plano logo que o painel abre,
+  // para que a página Sigma já mostre os servidores salvos ao ser aberta.
+  const queryClient = useQueryClient();
+  const prefetchSigmaFn = useServerFn(listSigmaServers);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void queryClient.prefetchQuery({
+        queryKey: ["sigma-servers"],
+        queryFn: () => prefetchSigmaFn({}),
+        staleTime: 60_000,
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+    // Executa uma vez por sessão do layout.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function signOut() {
     await supabase.auth.signOut();
     navigate({ to: "/auth" });
