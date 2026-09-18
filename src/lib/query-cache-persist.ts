@@ -1,14 +1,15 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 /**
- * Persistência leve do cache de consultas em sessionStorage.
+ * Persistência leve do cache de consultas em localStorage, isolada por usuário.
  *
  * Objetivo: ao voltar para uma página já visitada (Sigma, Clientes, Cobranças...),
  * os dados salvos aparecem na hora, enquanto a atualização acontece em segundo plano.
  */
 
-const STORAGE_KEY = "sigma-control:query-cache:v1";
-const MAX_AGE_MS = 10 * 60_000;
+const STORAGE_PREFIX = "sigma-control:query-cache:v2";
+const LEGACY_STORAGE_KEY = "sigma-control:query-cache:v1";
+const MAX_AGE_MS = 24 * 60 * 60_000;
 
 // Apenas listas de trabalho — nada sensível de sessão/autenticação.
 const PERSISTED_KEYS = new Set([
@@ -43,14 +44,24 @@ function shouldPersist(key: readonly unknown[]): boolean {
   return !!root && PERSISTED_KEYS.has(root);
 }
 
-export function hydrateQueryCache(queryClient: QueryClient): void {
+function storageKey(userId: string): string {
+  return `${STORAGE_PREFIX}:${userId}`;
+}
+
+export function hydrateQueryCache(queryClient: QueryClient, userId: string): void {
   if (typeof window === "undefined") return;
   let entries: Entry[] = [];
   try {
-    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    // Remove o cache antigo, que não sobrevivia ao fechamento do navegador
+    // e não era separado por conta.
+    window.sessionStorage.removeItem(LEGACY_STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKey(userId));
     if (!raw) return;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return;
+    if (!Array.isArray(parsed)) {
+      window.localStorage.removeItem(storageKey(userId));
+      return;
+    }
     entries = parsed as Entry[];
   } catch {
     return;
@@ -67,7 +78,7 @@ export function hydrateQueryCache(queryClient: QueryClient): void {
   }
 }
 
-export function startQueryCachePersistence(queryClient: QueryClient): () => void {
+export function startQueryCachePersistence(queryClient: QueryClient, userId: string): () => void {
   if (typeof window === "undefined") return () => {};
 
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -84,7 +95,7 @@ export function startQueryCachePersistence(queryClient: QueryClient): () => void
         entries.push({ key, data, at: query.state.dataUpdatedAt || Date.now() });
       }
       if (entries.length === 0) return;
-      window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      window.localStorage.setItem(storageKey(userId), JSON.stringify(entries));
     } catch {
       // Cota cheia ou dado não serializável: cache persistente é só otimização.
     }
@@ -99,11 +110,17 @@ export function startQueryCachePersistence(queryClient: QueryClient): () => void
     if (event.type === "updated" && shouldPersist(event.query.queryKey as unknown[])) schedule();
   });
 
+  const flushWhenHidden = () => {
+    if (document.visibilityState === "hidden") flush();
+  };
   window.addEventListener("pagehide", flush);
+  document.addEventListener("visibilitychange", flushWhenHidden);
 
   return () => {
+    flush();
     unsubscribe();
     window.removeEventListener("pagehide", flush);
+    document.removeEventListener("visibilitychange", flushWhenHidden);
     if (timer) clearTimeout(timer);
   };
 }
