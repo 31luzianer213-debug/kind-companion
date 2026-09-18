@@ -10,46 +10,45 @@ const benefits = [
 
 export function AuthShowcase() {
   return (
-    <aside className="relative hidden min-h-screen overflow-hidden border-r border-white/10 bg-[#07090f] text-white lg:flex lg:w-[48%] lg:flex-col lg:justify-between lg:p-10 xl:p-14">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_10%,rgba(99,102,241,.30),transparent_34%),radial-gradient(circle_at_90%_85%,rgba(16,185,129,.14),transparent_30%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.035)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
+    <aside className="relative hidden min-h-screen overflow-hidden border-r border-primary/15 bg-primary text-primary-foreground lg:flex lg:w-[46%] lg:flex-col lg:justify-between lg:p-10 xl:p-14">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,color-mix(in_oklch,var(--primary-foreground)_6%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklch,var(--primary-foreground)_6%,transparent)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
 
       <Link to="/" className="relative z-10 flex w-fit items-center gap-3">
         <SigmaLogo size="lg" />
         <div>
           <div className="flex items-center gap-2">
             <span className="text-lg font-black tracking-tight">Painel Sigma</span>
-            <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-black tracking-wider text-emerald-300">
+            <span className="rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-2 py-0.5 text-[9px] font-black tracking-wider text-primary-foreground">
               GRÁTIS
             </span>
           </div>
-          <span className="text-[11px] font-medium text-white/50">Gestão que trabalha por você</span>
+          <span className="text-[11px] font-medium text-primary-foreground/60">Gestão que trabalha por você</span>
         </div>
       </Link>
 
       <div className="relative z-10 my-12 max-w-xl">
-        <span className="inline-flex items-center gap-2 rounded-full border border-indigo-300/20 bg-indigo-300/10 px-3 py-1.5 text-xs font-bold text-indigo-100">
+        <span className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-3 py-1.5 text-xs font-bold text-primary-foreground">
           <Sparkles className="size-3.5" /> Sua operação em piloto automático
         </span>
-        <h1 className="mt-6 text-4xl font-black leading-[1.08] tracking-[-0.05em] xl:text-5xl">
+        <h1 className="mt-6 font-display text-4xl font-extrabold leading-[1.08] xl:text-5xl">
           Menos tarefas repetidas.
-          <span className="mt-2 block bg-gradient-to-r from-indigo-300 via-white to-emerald-200 bg-clip-text text-transparent">
+          <span className="mt-2 block text-primary-foreground/75">
             Mais tempo para vender.
           </span>
         </h1>
-        <p className="mt-5 max-w-lg text-base leading-relaxed text-white/62">
+        <p className="mt-5 max-w-lg text-base leading-relaxed text-primary-foreground/70">
           Controle clientes, acessos, cobranças e WhatsApp em um painel rápido, claro e preparado para crescer com você.
         </p>
 
         <div className="mt-9 grid gap-3">
           {benefits.map(({ icon: Icon, title, text }) => (
-            <div key={title} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.055] p-3.5 backdrop-blur-sm">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/10">
-                <Icon className="size-[18px] text-indigo-200" />
+            <div key={title} className="flex items-center gap-3 rounded-lg border border-primary-foreground/15 bg-primary-foreground/[0.07] p-3.5">
+              <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-primary-foreground/15 bg-primary-foreground/10">
+                <Icon className="size-[18px] text-primary-foreground" />
               </span>
               <div>
                 <p className="text-sm font-bold">{title}</p>
-                <p className="text-xs text-white/50">{text}</p>
+                <p className="text-xs text-primary-foreground/60">{text}</p>
               </div>
               <CheckCircle2 className="ml-auto size-4 shrink-0 text-emerald-300" />
             </div>
@@ -57,7 +56,7 @@ export function AuthShowcase() {
         </div>
       </div>
 
-      <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-5 text-[11px] text-white/40">
+      <div className="relative z-10 flex items-center justify-between border-t border-primary-foreground/15 pt-5 text-[11px] text-primary-foreground/55">
         <span>Seguro e simples de usar</span>
         <span>© {new Date().getFullYear()} Painel Sigma</span>
       </div>
