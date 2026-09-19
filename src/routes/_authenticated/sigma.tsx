@@ -473,6 +473,24 @@ function SigmaServersPage() {
             </Field>
           )}
 
+          {removeAction === "move" && servers.length > 1 && (
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 p-3">
+              <input
+                type="checkbox"
+                checked={recreateOnTarget}
+                onChange={(e) => setRecreateOnTarget(e.target.checked)}
+                className="mt-0.5 size-4"
+              />
+              <span>
+                <span className="block text-sm font-bold">Criar os clientes no painel de destino</span>
+                <span className="block text-xs text-muted-foreground">
+                  Cada cliente é criado do zero no painel escolhido, mantendo o mesmo vencimento (os dias que já tinha), telas e telefone. Sem marcar, eles apenas passam a pertencer ao painel no sistema.
+                </span>
+              </span>
+            </label>
+          )}
+
+
           <div className="flex flex-col-reverse gap-2 border-t border-border/60 pt-4 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={() => setRemoveTarget(null)} disabled={removing}>Cancelar</Button>
             <Button variant={removeAction === "delete" ? "destructive" : "default"} onClick={confirmRemove} disabled={removing} className="gap-2">
