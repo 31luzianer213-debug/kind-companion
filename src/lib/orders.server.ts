@@ -345,9 +345,14 @@ export async function approveAndReleaseOrderServer(
       `Qualquer dúvida, estamos sempre à disposição aqui no WhatsApp! 🍿`;
   }
 
+  let whatsappSent = false;
+  let whatsappWarning = "";
   try {
-    await sendViaBaileys(order.customer_phone, accessMessage);
+    const sendResult: any = await sendViaBaileys(order.customer_phone, accessMessage);
+    whatsappSent = sendResult === undefined ? true : Boolean(sendResult?.ok ?? true);
+    if (!whatsappSent) whatsappWarning = sendResult?.error || "WhatsApp não conectado";
   } catch (sendErr) {
+    whatsappWarning = sendErr instanceof Error ? sendErr.message : "falha ao enviar";
     console.error("Aviso ao enviar mensagem de acesso via WhatsApp:", sendErr);
   }
 
@@ -362,12 +367,16 @@ export async function approveAndReleaseOrderServer(
   return {
     ok: true,
     message:
-      `Pedido #${order.order_number} aprovado! Acesso liberado no Sigma e entregue no WhatsApp.` +
+      `Pedido #${order.order_number} aprovado e acesso liberado.` +
+      (whatsappSent
+        ? " Os dados foram enviados no WhatsApp do cliente."
+        : ` Não foi possível enviar no WhatsApp (${whatsappWarning}). Envie os dados manualmente.`) +
       (clientWarning ? ` Atenção: não foi possível salvar o cliente (${clientWarning}).` : ""),
     order: updated ?? { ...order, status: "approved", target_username: username, notes: approvedNotes },
     username,
     password,
     m3uUrl,
+    whatsappSent,
   };
 }
 
