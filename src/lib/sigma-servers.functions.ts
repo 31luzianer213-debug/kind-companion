@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { extractCleanIptvDns, generateM3uUrl } from "./format";
-import type { SigmaConfig } from "./sigma.panel";
+import { createSigmaCustomer, type SigmaConfig } from "./sigma.panel";
 
 export interface SigmaServerInput {
   id?: string;
@@ -96,22 +96,25 @@ export const saveSigmaServer = createServerFn({ method: "POST" })
 
 export const deleteSigmaServer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { serverId: string; clientAction?: "keep" | "move" | "delete"; targetPanelId?: string | null }) => input)
+  .inputValidator((input: { serverId: string; clientAction?: "keep" | "move" | "delete"; targetPanelId?: string | null; recreateOnTarget?: boolean }) => input)
   .handler(async ({ data, context }) => {
     await cleanupOrphanRows(context.supabase, context.userId);
     const server = await getOwnedServer(context.supabase, context.userId, data.serverId);
     const action = data.clientAction ?? "keep";
     const { data: linkedClients, error: clientsError } = await context.supabase
       .from("clients")
-      .select("id")
+      .select("*")
       .eq("user_id", context.userId)
       .eq("panel_id", data.serverId);
     if (clientsError) return { ok: false as const, error: clientsError.message };
 
-    const clientIds = (linkedClients ?? []).map((client: { id: string }) => client.id);
+    const clients = (linkedClients ?? []) as any[];
+    const clientIds = clients.map((client) => client.id);
     let movedClients = 0;
     let deletedClients = 0;
     let keptClients = 0;
+    let recreatedClients = 0;
+    const failures: string[] = [];
 
     if (clientIds.length > 0) {
       if (action === "delete") {
@@ -120,15 +123,59 @@ export const deleteSigmaServer = createServerFn({ method: "POST" })
         deletedClients = clientIds.length;
       } else if (action === "move") {
         if (!data.targetPanelId) return { ok: false as const, error: "Escolha o painel de destino dos clientes." };
-        // valida propriedade do painel de destino
-        await getOwnedServer(context.supabase, context.userId, data.targetPanelId);
-        const { error: moveError } = await context.supabase
-          .from("clients")
-          .update({ panel_id: data.targetPanelId })
-          .eq("user_id", context.userId)
-          .eq("panel_id", data.serverId);
-        if (moveError) return { ok: false as const, error: `Falha ao mover clientes: ${moveError.message}` };
-        movedClients = clientIds.length;
+        const targetPanel = await getOwnedServer(context.supabase, context.userId, data.targetPanelId);
+
+        if (data.recreateOnTarget) {
+          const targetConfig = toConfig(targetPanel);
+          for (const client of clients) {
+            const username = client.sigma_username || client.iptv_username || null;
+            try {
+              const created = await createSigmaCustomer(targetConfig, {
+                name: client.name,
+                username: username || `cli${String(client.id).replace(/\D/g, "").slice(0, 8)}`,
+                password: client.iptv_password || null,
+                phone: client.phone || null,
+                email: client.email || null,
+                screens: client.screens || 1,
+                // mantém o mesmo vencimento/dias que o cliente já tinha
+                dueDate: client.next_due_date || null,
+                notes: `Servidor: ${targetPanel.name}`,
+              });
+              const update = {
+                panel_id: data.targetPanelId,
+                sigma_customer_id: created.id,
+                sigma_username: created.username,
+                sigma_synced_at: new Date().toISOString(),
+                iptv_username: created.username,
+                iptv_password: created.password,
+              };
+              const { error: updateError } = await context.supabase
+                .from("clients")
+                .update(update)
+                .eq("id", client.id)
+                .eq("user_id", context.userId);
+              if (updateError) throw new Error(updateError.message);
+              recreatedClients++;
+              movedClients++;
+            } catch (error) {
+              failures.push(`${client.name}: ${error instanceof Error ? error.message : "falha ao criar no painel de destino"}`);
+              await context.supabase
+                .from("clients")
+                .update({ panel_id: data.targetPanelId })
+                .eq("id", client.id)
+                .eq("user_id", context.userId);
+              movedClients++;
+            }
+          }
+        } else {
+          const { error: moveError } = await context.supabase
+            .from("clients")
+            .update({ panel_id: data.targetPanelId })
+            .eq("user_id", context.userId)
+            .eq("panel_id", data.serverId);
+          if (moveError) return { ok: false as const, error: `Falha ao mover clientes: ${moveError.message}` };
+          movedClients = clientIds.length;
+        }
       } else {
         const { error: unlinkError } = await context.supabase
           .from("clients")
@@ -147,7 +194,17 @@ export const deleteSigmaServer = createServerFn({ method: "POST" })
       .eq("user_id", context.userId);
     return error
       ? { ok: false as const, error: error.message }
-      : { ok: true as const, deletedClients, movedClients, keptClients, error: null };
+      : {
+          ok: true as const,
+          deletedClients,
+          movedClients,
+          keptClients,
+          recreatedClients,
+          failures: failures.slice(0, 5),
+          failedCount: failures.length,
+          error: null,
+        };
+
   });
 
 

@@ -4,7 +4,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { Menu, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import defaultOrdersSeed from "../../data/orders_default.json";
 import { DesktopNavigation, MobileBottomNavigation, MobileDrawer } from "@/components/layout/AppNavigation";
 import { MobileClientDelete } from "@/components/clients/MobileClientDelete";
 import { SigmaLogo } from "@/components/SigmaLogo";
@@ -41,36 +40,13 @@ function mobilePageTitle(pathname: string) {
   return entry?.[1] ?? "Sigma Control";
 }
 
-function getDeletedOrderIds() {
-  const ids = new Set<string>();
-  if (typeof window === "undefined") return ids;
-  try {
-    const stored = localStorage.getItem("iptv_deleted_orders");
-    const parsed = stored ? JSON.parse(stored) : [];
-    if (Array.isArray(parsed)) parsed.forEach((id) => ids.add(String(id)));
-  } catch {
-    // A malformed local cache must not prevent the application shell from rendering.
-  }
-  return ids;
-}
-
 async function getPendingOrderCount(
   listOrders: (args: { data: { status?: string } }) => Promise<{ orders?: { id: string }[] }>,
 ) {
-  const deletedIds = getDeletedOrderIds();
-  try {
-    const payload = await listOrders({ data: { status: "pending" } });
-    if (Array.isArray(payload?.orders)) {
-      return payload.orders.filter((order: { id: string }) => !deletedIds.has(order.id)).length;
-    }
-  } catch {
-    // The bundled seed keeps the navigation usable while the orders service is offline.
-  }
-
-  return Array.isArray(defaultOrdersSeed)
-    ? defaultOrdersSeed.filter((order) => order.status === "pending" && !deletedIds.has(order.id)).length
-    : 0;
+  const payload = await listOrders({ data: { status: "pending" } });
+  return Array.isArray(payload?.orders) ? payload.orders.length : 0;
 }
+
 
 export function AppLayout({ children, userId }: { children: ReactNode; userId: string }) {
   const navigate = useNavigate();

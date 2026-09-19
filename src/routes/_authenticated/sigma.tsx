@@ -76,6 +76,7 @@ function SigmaServersPage() {
   const [removeTarget, setRemoveTarget] = useState<any>(null);
   const [removeAction, setRemoveAction] = useState<"keep" | "move" | "delete">("keep");
   const [removeTargetPanel, setRemoveTargetPanel] = useState<string>("");
+  const [recreateOnTarget, setRecreateOnTarget] = useState(true);
   const [removing, setRemoving] = useState(false);
 
 
@@ -238,6 +239,7 @@ function SigmaServersPage() {
           serverId: removeTarget.id,
           clientAction: removeAction,
           targetPanelId: removeAction === "move" ? removeTargetPanel : null,
+          recreateOnTarget: removeAction === "move" ? recreateOnTarget : false,
         },
       });
       if (!result.ok) {
@@ -250,11 +252,15 @@ function SigmaServersPage() {
         result.deletedClients
           ? `Servidor e ${result.deletedClients} cliente(s) removidos.`
           : result.movedClients
-            ? `Servidor removido. ${result.movedClients} cliente(s) movidos para o outro painel.`
+            ? `Servidor removido. ${result.movedClients} cliente(s) movidos${result.recreatedClients ? ` e ${result.recreatedClients} recriados no painel de destino` : ""}.`
             : result.keptClients
               ? `Servidor removido. ${result.keptClients} cliente(s) mantidos no sistema.`
               : "Servidor removido.",
       );
+      if (result.failedCount) {
+        toast.warning(`${result.failedCount} cliente(s) não puderam ser criados no painel de destino: ${result.failures.join(" • ")}`);
+      }
+
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha ao remover o servidor.");
     } finally {
@@ -467,6 +473,24 @@ function SigmaServersPage() {
               </select>
             </Field>
           )}
+
+          {removeAction === "move" && servers.length > 1 && (
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 p-3">
+              <input
+                type="checkbox"
+                checked={recreateOnTarget}
+                onChange={(e) => setRecreateOnTarget(e.target.checked)}
+                className="mt-0.5 size-4"
+              />
+              <span>
+                <span className="block text-sm font-bold">Criar os clientes no painel de destino</span>
+                <span className="block text-xs text-muted-foreground">
+                  Cada cliente é criado do zero no painel escolhido, mantendo o mesmo vencimento (os dias que já tinha), telas e telefone. Sem marcar, eles apenas passam a pertencer ao painel no sistema.
+                </span>
+              </span>
+            </label>
+          )}
+
 
           <div className="flex flex-col-reverse gap-2 border-t border-border/60 pt-4 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={() => setRemoveTarget(null)} disabled={removing}>Cancelar</Button>

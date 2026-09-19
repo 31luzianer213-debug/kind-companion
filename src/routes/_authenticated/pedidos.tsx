@@ -49,41 +49,6 @@ import {
   Trash2,
 } from "lucide-react";
 
-import defaultOrdersSeed from "../../../data/orders_default.json";
-
-function getClientDeletedIds(): Set<string> {
-  const set = new Set<string>();
-  if (typeof window === "undefined") return set;
-  try {
-    const raw = localStorage.getItem("iptv_deleted_orders");
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        for (const id of parsed) set.add(id);
-      }
-    }
-  } catch {}
-  return set;
-}
-
-function saveClientDeletedId(orderId: string) {
-  if (typeof window === "undefined") return;
-  try {
-    const set = getClientDeletedIds();
-    set.add(orderId);
-    localStorage.setItem("iptv_deleted_orders", JSON.stringify(Array.from(set)));
-  } catch {}
-}
-
-function saveClientBulkDeletedIds(orderIds: string[]) {
-  if (typeof window === "undefined") return;
-  try {
-    const set = getClientDeletedIds();
-    for (const id of orderIds) set.add(id);
-    localStorage.setItem("iptv_deleted_orders", JSON.stringify(Array.from(set)));
-  } catch {}
-}
-
 export const Route = createFileRoute("/_authenticated/pedidos")({
   head: () => ({
     meta: [
@@ -137,41 +102,9 @@ function PedidosPage() {
   // Query para listar os pedidos em tempo real (atualiza a cada 3s)
   const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ["orders-list"],
-    initialData: () => {
-      const deletedIds = getClientDeletedIds();
-      return ((defaultOrdersSeed as unknown as OrderItem[]) || []).filter((o) => !deletedIds.has(o.id));
-    },
     queryFn: async () => {
-      const deletedIds = getClientDeletedIds();
-
-      try {
-        const res = await getOrdersFn({ data: {} });
-        if (res?.orders && res.orders.length > 0) {
-          return res.orders.filter((o) => !deletedIds.has(o.id));
-        }
-      } catch (err) {
-        console.warn("Aviso ao carregar lista via serverFn:", err);
-      }
-
-      // Fallback seguro via API pública
-      try {
-        const res = await fetch("/api/public/orders");
-        if (res.ok) {
-          const json = await res.json();
-          if (Array.isArray(json?.orders) && json.orders.length > 0) {
-            return json.orders.filter((o: OrderItem) => !deletedIds.has(o.id));
-          }
-        }
-      } catch (err) {
-        console.warn("Aviso no fallback /api/public/orders:", err);
-      }
-
-      // Fallback garantido pré-compilado no bundle (Lovable Cloud / Edge Workers)
-      if (Array.isArray(defaultOrdersSeed) && defaultOrdersSeed.length > 0) {
-        return (defaultOrdersSeed as unknown as OrderItem[]).filter((o) => !deletedIds.has(o.id));
-      }
-
-      return [];
+      const res = await getOrdersFn({ data: {} });
+      return Array.isArray(res?.orders) ? res.orders : [];
     },
     refetchInterval: 12000,
   });
@@ -231,24 +164,9 @@ function PedidosPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (orderId: string) => {
-      // 1. Grava no tombstone do localStorage para nunca reaparecer mesmo com recarregamento
-      saveClientDeletedId(orderId);
-
-      // 2. Atualização otimista imediata na UI
-      queryClient.setQueryData(["orders-list"], (old: OrderItem[] | undefined) => {
-        return (old || []).filter((o) => o.id !== orderId);
-      });
-
-      // 3. Executa deleção no backend
-      try {
-        await deleteFn({ data: { orderId } });
-      } catch {}
-
-      try {
-        await fetch(`/api/public/orders?id=${encodeURIComponent(orderId)}`, { method: "DELETE" });
-      } catch {}
-
-      return { ok: true };
+      const res = await deleteFn({ data: { orderId } });
+      if (!res?.ok) throw new Error(res?.message || "Falha ao excluir pedido.");
+      return res;
     },
     onSuccess: () => {
       toast.success("Pedido excluído com sucesso!");
@@ -263,23 +181,18 @@ function PedidosPage() {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async (orderIds: string[]) => {
-      saveClientBulkDeletedIds(orderIds);
-      const idSet = new Set(orderIds);
-      queryClient.setQueryData(["orders-list"], (old: OrderItem[] | undefined) => {
-        return (old || []).filter((o) => !idSet.has(o.id));
-      });
-
-      try {
-        await bulkDeleteFn({ data: { orderIds } });
-      } catch {}
-
-      return { ok: true, count: orderIds.length };
+      const res = await bulkDeleteFn({ data: { orderIds } });
+      if (!res?.ok) throw new Error(res?.message || "Falha ao excluir pedidos.");
+      return res;
     },
     onSuccess: (_, vars) => {
       toast.success(`${vars.length} pedidos excluídos permanentemente!`);
       queryClient.invalidateQueries({ queryKey: ["orders-list"] });
       queryClient.invalidateQueries({ queryKey: ["sidebar-counts"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-v2"] });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Falha ao excluir pedidos.");
     },
   });
 

@@ -3,7 +3,6 @@ import { generateM3uUrl, generateEpgUrl, extractCleanIptvDns } from "./format";
 import type { SigmaConfig } from "./sigma.panel";
 import { sendViaBaileys } from "./billing.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import defaultOrdersData from "../../data/orders_default.json";
 import defaultBotConfigData from "../../data/bot_config_default.json";
 
 export type OrderItem = {
@@ -33,74 +32,55 @@ export function getCanonicalUserId(userId?: string): string {
   return clean.slice(0, 16) || "default";
 }
 
-export function getOrdersFilePath(userId?: string): string {
-  const canonicalId = getCanonicalUserId(userId);
-  return `orders_${canonicalId}.json`;
+function mapRow(row: any): OrderItem {
+  return {
+    ...row,
+    amount: Number(row.amount) || 0,
+    duration_months: Number(row.duration_months) || 1,
+    screens: Number(row.screens) || 1,
+    order_number: Number(row.order_number) || 0,
+  } as OrderItem;
 }
 
-const deletedOrderIdsSet = new Set<string>();
-const ordersMemoryStore = new Map<string, OrderItem>();
-
-// Inicializa o store em memória com os pedidos pré-compilados
-try {
-  if (Array.isArray(defaultOrdersData)) {
-    for (const item of defaultOrdersData as OrderItem[]) {
-      if (item && item.id) {
-        ordersMemoryStore.set(item.id, item);
-      }
-    }
-  }
-} catch {}
-
-export function getDeletedOrderIds(): Set<string> {
-  return deletedOrderIdsSet;
+/** Lê os pedidos direto do banco (fonte única de verdade). */
+export async function readOrders(userId: string): Promise<OrderItem[]> {
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`Falha ao ler pedidos: ${error.message}`);
+  return (data ?? []).map(mapRow);
 }
 
-export function markOrdersAsDeleted(orderIds: string[]): void {
-  for (const id of orderIds) {
-    if (id) {
-      deletedOrderIdsSet.add(id);
-      ordersMemoryStore.delete(id);
-    }
-  }
+async function getOrder(userId: string, orderId: string): Promise<OrderItem | null> {
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("id", orderId)
+    .maybeSingle();
+  if (error) throw new Error(`Falha ao ler o pedido: ${error.message}`);
+  return data ? mapRow(data) : null;
 }
 
-export function readLocalOrders(userId?: string): OrderItem[] {
-  const list = Array.from(ordersMemoryStore.values()).filter((o) => !deletedOrderIdsSet.has(o.id));
-  list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  return list;
-}
-
-export function triggerOrdersGitSync(): void {
-  // Em ambiente serverless (Cloudflare Workers / Edge), a persistência primária é feita via Supabase
-}
-
-export function writeLocalOrders(userId: string | undefined, orders: OrderItem[]): void {
-  for (const o of orders) {
-    if (o && o.id && !deletedOrderIdsSet.has(o.id)) {
-      ordersMemoryStore.set(o.id, o);
-    }
-  }
-}
-
-export function updateOrderServer(
+export async function updateOrderServer(
   userId: string,
   orderId: string,
   updates: Partial<OrderItem>,
-): OrderItem | null {
-  const list = readLocalOrders(userId);
-  const idx = list.findIndex((o) => o.id === orderId);
-  if (idx === -1) return null;
-
-  list[idx] = {
-    ...list[idx],
-    ...updates,
-    updated_at: new Date().toISOString(),
-  };
-
-  writeLocalOrders(userId, list);
-  return list[idx];
+): Promise<OrderItem | null> {
+  const { id: _ignoredId, user_id: _ignoredUser, created_at: _ignoredCreated, ...patch } = updates as any;
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("id", orderId)
+    .select("*")
+    .maybeSingle();
+  if (error) throw new Error(`Falha ao atualizar o pedido: ${error.message}`);
+  return data ? mapRow(data) : null;
 }
+
 
 /** Cria um novo pedido (novo acesso ou renovação) */
 export async function createOrderServer(
@@ -120,8 +100,14 @@ export async function createOrderServer(
     notes?: string;
   },
 ): Promise<OrderItem> {
-  const existing = readLocalOrders(userId);
-  const nextNumber = existing.reduce((max, o) => Math.max(max, o.order_number || 0), 1000) + 1;
+  const { data: lastOrder } = await supabaseAdmin
+    .from("orders")
+    .select("order_number")
+    .eq("user_id", userId)
+    .order("order_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextNumber = Math.max(1000, Number(lastOrder?.order_number) || 1000) + 1;
 
   const newOrder: OrderItem = {
     id: `ord_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -144,13 +130,9 @@ export async function createOrderServer(
     updated_at: new Date().toISOString(),
   };
 
-  // 1. Grava no disco
-  existing.unshift(newOrder);
-  writeLocalOrders(userId, existing);
-
-  // 2. Tenta gravar no banco Supabase
-  try {
-    await supabaseAdmin.from("orders").insert({
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .insert({
       id: newOrder.id,
       user_id: userId,
       order_number: newOrder.order_number,
@@ -167,62 +149,25 @@ export async function createOrderServer(
       gateway_payment_id: newOrder.gateway_payment_id,
       pix_code: newOrder.pix_code,
       notes: newOrder.notes,
-    });
-  } catch {}
+    })
+    .select("*")
+    .maybeSingle();
 
-  return newOrder;
+  if (error) throw new Error(`Falha ao salvar o pedido: ${error.message}`);
+  return data ? mapRow(data) : newOrder;
 }
 
-/** Lista os pedidos do revendedor */
+/** Lista os pedidos do revendedor (direto do banco) */
 export async function listOrdersServer(
   userId: string,
   filterStatus?: string,
 ): Promise<OrderItem[]> {
-  const localList = readLocalOrders(userId);
-
-  // Tenta sincronizar com o banco se houver registros
-  try {
-    let query = supabaseAdmin
-      .from("orders")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-
-    if (filterStatus && filterStatus !== "all") {
-      query = query.eq("status", filterStatus);
-    }
-
-    const { data: dbOrders } = await query;
-    if (dbOrders && dbOrders.length > 0) {
-      const deletedIds = getDeletedOrderIds();
-      // Merge sem duplicatas (preferindo status mais recente e ignorando pedidos excluídos)
-      const map = new Map<string, OrderItem>();
-      for (const item of localList) {
-        if (!deletedIds.has(item.id)) map.set(item.id, item);
-      }
-      for (const item of dbOrders) {
-        if (item && item.id && !deletedIds.has(item.id)) {
-          map.set(item.id, {
-            ...(map.get(item.id) || {}),
-            ...item,
-            amount: Number(item.amount),
-          } as OrderItem);
-        }
-      }
-      const combined = Array.from(map.values()).sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      );
-      writeLocalOrders(userId, combined);
-      return filterStatus && filterStatus !== "all"
-        ? combined.filter((o) => o.status === filterStatus)
-        : combined;
-    }
-  } catch {}
-
+  const list = await readOrders(userId);
   return filterStatus && filterStatus !== "all"
-    ? localList.filter((o) => o.status === filterStatus)
-    : localList;
+    ? list.filter((o) => o.status === filterStatus)
+    : list;
 }
+
 
 /**
  * Aprova o pedido e libera o acesso no Sigma e WhatsApp.
@@ -241,16 +186,15 @@ export async function approveAndReleaseOrderServer(
   password?: string;
   m3uUrl?: string;
 }> {
-  const orders = readLocalOrders(userId);
-  const orderIndex = orders.findIndex((o) => o.id === orderId);
-  if (orderIndex === -1) {
+  const order = await getOrder(userId, orderId);
+  if (!order) {
     return { ok: false, message: "Pedido não encontrado." };
   }
 
-  const order = orders[orderIndex];
   if (order.status === "approved") {
     return { ok: true, message: "Este pedido já foi liberado anteriormente.", order };
   }
+
 
   // 1. Carrega configurações do revendedor (Sigma e WhatsApp)
   let wsRow: any = null;
@@ -325,6 +269,7 @@ export async function approveAndReleaseOrderServer(
   const epgUrl = generateEpgUrl(cleanDns, username, password);
 
   // 4. Cadastra ou atualiza na tabela `clients`
+  let clientWarning = "";
   try {
     const { data: existingClient } = await supabaseAdmin
       .from("clients")
@@ -335,7 +280,7 @@ export async function approveAndReleaseOrderServer(
       .maybeSingle();
 
     if (existingClient?.id) {
-      await supabaseAdmin
+      const { error: updErr } = await supabaseAdmin
         .from("clients")
         .update({
           status: "active",
@@ -345,8 +290,9 @@ export async function approveAndReleaseOrderServer(
           updated_at: new Date().toISOString(),
         })
         .eq("id", existingClient.id);
+      if (updErr) throw new Error(updErr.message);
     } else {
-      await supabaseAdmin.from("clients").insert({
+      const { error: insErr } = await supabaseAdmin.from("clients").insert({
         user_id: userId,
         name: order.customer_name,
         phone: order.customer_phone,
@@ -359,10 +305,13 @@ export async function approveAndReleaseOrderServer(
         status: "active",
         notes: `M3U: ${m3uUrl}\nServidor: ${serverName}\nPedido #${order.order_number}`,
       });
+      if (insErr) throw new Error(insErr.message);
     }
   } catch (dbErr) {
+    clientWarning = dbErr instanceof Error ? dbErr.message : "erro desconhecido";
     console.warn("Aviso ao salvar cliente no banco:", dbErr);
   }
+
 
   // 5. Dispara a mensagem de liberação no WhatsApp do cliente
   let accessMessage = "";
@@ -403,30 +352,19 @@ export async function approveAndReleaseOrderServer(
   }
 
   // 6. Atualiza o status do pedido para 'approved'
-  order.status = "approved";
-  order.target_username = username;
-  order.notes = `${order.notes ? order.notes + " | " : ""}Liberado em ${new Date().toLocaleString()}`;
-  order.updated_at = new Date().toISOString();
-
-  orders[orderIndex] = order;
-  writeLocalOrders(userId, orders);
-
-  try {
-    await supabaseAdmin
-      .from("orders")
-      .update({
-        status: "approved",
-        target_username: username,
-        notes: order.notes,
-        updated_at: order.updated_at,
-      })
-      .eq("id", orderId);
-  } catch {}
+  const approvedNotes = `${order.notes ? order.notes + " | " : ""}Liberado em ${new Date().toLocaleString()}`;
+  const updated = await updateOrderServer(userId, orderId, {
+    status: "approved",
+    target_username: username,
+    notes: approvedNotes,
+  });
 
   return {
     ok: true,
-    message: `Pedido #${order.order_number} aprovado! Acesso liberado no Sigma e entregue no WhatsApp.`,
-    order,
+    message:
+      `Pedido #${order.order_number} aprovado! Acesso liberado no Sigma e entregue no WhatsApp.` +
+      (clientWarning ? ` Atenção: não foi possível salvar o cliente (${clientWarning}).` : ""),
+    order: updated ?? { ...order, status: "approved", target_username: username, notes: approvedNotes },
     username,
     password,
     m3uUrl,
@@ -438,23 +376,8 @@ export async function cancelOrderServer(
   userId: string,
   orderId: string,
 ): Promise<{ ok: boolean; message: string }> {
-  const orders = readLocalOrders(userId);
-  const orderIndex = orders.findIndex((o) => o.id === orderId);
-  if (orderIndex === -1) {
-    return { ok: false, message: "Pedido não encontrado." };
-  }
-
-  orders[orderIndex].status = "cancelled";
-  orders[orderIndex].updated_at = new Date().toISOString();
-  writeLocalOrders(userId, orders);
-
-  try {
-    await supabaseAdmin
-      .from("orders")
-      .update({ status: "cancelled", updated_at: new Date().toISOString() })
-      .eq("id", orderId);
-  } catch {}
-
+  const updated = await updateOrderServer(userId, orderId, { status: "cancelled" });
+  if (!updated) return { ok: false, message: "Pedido não encontrado." };
   return { ok: true, message: "Pedido cancelado com sucesso." };
 }
 
@@ -463,23 +386,12 @@ export async function deleteOrderServer(
   userId: string,
   orderId: string,
 ): Promise<{ ok: boolean; message: string }> {
-  // 1. Registra tombstone para que o pedido nunca mais seja reimportado ou revivido
-  markOrdersAsDeleted([orderId]);
-
-  // 2. Remove da lista local e regrava os arquivos
-  const list = readLocalOrders(userId);
-  const updatedList = list.filter((o) => o.id !== orderId);
-  writeLocalOrders(userId, updatedList);
-
-
-
-  // 4. Exclui do banco Supabase se existir
-  try {
-    await supabaseAdmin.from("orders").delete().eq("id", orderId);
-  } catch (err) {
-    console.warn("[deleteOrderServer] Erro ao deletar no Supabase:", err);
-  }
-
+  const { error } = await supabaseAdmin
+    .from("orders")
+    .delete()
+    .eq("user_id", userId)
+    .eq("id", orderId);
+  if (error) return { ok: false, message: `Falha ao excluir o pedido: ${error.message}` };
   return { ok: true, message: "Pedido excluído com sucesso!" };
 }
 
@@ -492,22 +404,12 @@ export async function bulkDeleteOrdersServer(
     return { ok: true, message: "Nenhum pedido para excluir.", count: 0 };
   }
 
-  // 1. Registra todos no tombstone
-  markOrdersAsDeleted(orderIds);
-
-  const idSet = new Set(orderIds);
-  const list = readLocalOrders(userId);
-  const updatedList = list.filter((o) => !idSet.has(o.id));
-  writeLocalOrders(userId, updatedList);
-
-
-
-  // 3. Exclui do banco de dados
-  try {
-    for (const id of orderIds) {
-      await supabaseAdmin.from("orders").delete().eq("id", id);
-    }
-  } catch {}
+  const { error } = await supabaseAdmin
+    .from("orders")
+    .delete()
+    .eq("user_id", userId)
+    .in("id", orderIds);
+  if (error) return { ok: false, message: `Falha ao excluir os pedidos: ${error.message}`, count: 0 };
 
   return { ok: true, message: `${orderIds.length} pedidos excluídos permanentemente.`, count: orderIds.length };
 }
