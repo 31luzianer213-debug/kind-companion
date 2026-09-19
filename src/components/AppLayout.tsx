@@ -75,6 +75,7 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const statusFn = useServerFn(getWhatsAppStatus);
+  const ordersFn = useServerFn(getOrdersList);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
 
