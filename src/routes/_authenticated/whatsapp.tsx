@@ -7,18 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateTime } from "@/lib/format";
 import {
   Activity,
   AlertTriangle,
   Bot,
-  Check,
   CheckCircle2,
   Clock,
-  Copy,
-  KeyRound,
   Loader2,
   LogOut,
   MessageCircle,
@@ -186,7 +183,6 @@ function WhatsAppPage() {
     if (!confirm("A sessão do WhatsApp parece corrompida. Isso apagará a sessão atual da VPS e exigirá um novo QR Code. Continuar?")) return;
     setLoadingAction(true);
     setLocalQr(null);
-    setLocalPairingCode(null);
     toast.loading("Limpando sessão corrompida e gerando novo QR Code...", { id: "reset-wa-toast" });
     try {
       const res = await resetBaileysSession({ data: { origin: window.location.origin, userId: currentUser?.id } });
@@ -208,7 +204,6 @@ function WhatsAppPage() {
     if (!confirm("Deseja realmente desconectar o WhatsApp? Será necessário escanear o QR Code novamente.")) return;
     setLoadingAction(true);
     setLocalQr(null);
-    setLocalPairingCode(null);
     try {
       await disconnectBaileys({ data: { instance: instanceId } });
       toast.success("WhatsApp desconectado.");
