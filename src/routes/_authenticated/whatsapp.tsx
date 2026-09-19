@@ -405,15 +405,8 @@ function WhatsAppPage() {
                 </div>
               </div>
             ) : (
-              <Tabs value={connectTab} onValueChange={(value) => setConnectTab(value as "qr" | "pairing")} className="space-y-5">
-                <TabsList className="grid h-11 w-full grid-cols-2 rounded-xl">
-                  <TabsTrigger value="qr" className="gap-2 rounded-lg text-xs sm:text-sm">
-                    <QrCode className="size-4" /> QR Code
-                  </TabsTrigger>
-                  <TabsTrigger value="pairing" className="gap-2 rounded-lg text-xs sm:text-sm">
-                    <KeyRound className="size-4" /> Código
-                  </TabsTrigger>
-                </TabsList>
+              <div className="space-y-5">
+
 
                 <TabsContent value="qr" className="mt-0 space-y-4">
                   <div className="rounded-2xl border bg-muted/20 p-4 text-sm text-muted-foreground">
