@@ -406,9 +406,7 @@ function WhatsAppPage() {
               </div>
             ) : (
               <div className="space-y-5">
-
-
-                <TabsContent value="qr" className="mt-0 space-y-4">
+                <div className="space-y-4">
                   <div className="rounded-2xl border bg-muted/20 p-4 text-sm text-muted-foreground">
                     No celular, abra <strong className="text-foreground">WhatsApp → Aparelhos conectados → Conectar aparelho</strong>.
                   </div>
