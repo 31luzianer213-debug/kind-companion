@@ -76,6 +76,7 @@ function SigmaServersPage() {
   const [removeTarget, setRemoveTarget] = useState<any>(null);
   const [removeAction, setRemoveAction] = useState<"keep" | "move" | "delete">("keep");
   const [removeTargetPanel, setRemoveTargetPanel] = useState<string>("");
+  const [recreateOnTarget, setRecreateOnTarget] = useState(true);
   const [removing, setRemoving] = useState(false);
 
 
