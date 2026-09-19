@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
 import { listSigmaServers } from "@/lib/sigma-servers.functions";
+import { getOrdersList } from "@/lib/orders.functions";
 import { startQueryCachePersistence } from "@/lib/query-cache-persist";
 import "../mobile-app.css";
 
