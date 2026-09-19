@@ -66,26 +66,22 @@ function statusBadge(status: string) {
       label: "Aguardando conexão",
       color: "bg-amber-500",
       variant: "secondary" as const,
-      desc: "Escaneie o QR Code ou insira o Código de Pareamento no seu WhatsApp.",
+      desc: "Escaneie o QR Code no seu WhatsApp para concluir a conexão.",
     };
   }
   return {
     label: "Desconectado",
     color: "bg-red-500",
     variant: "destructive" as const,
-    desc: "Conecte pelo QR Code ou pelo código de pareamento.",
+    desc: "Conecte lendo o QR Code pelo seu WhatsApp.",
   };
 }
 
 function WhatsAppPage() {
   const qc = useQueryClient();
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [connectTab, setConnectTab] = useState<"qr" | "pairing">("qr");
-  const [pairingPhone, setPairingPhone] = useState("");
   const [loadingAction, setLoadingAction] = useState(false);
-  const [copiedCode, setCopiedCode] = useState(false);
   const [localQr, setLocalQr] = useState<string | null>(null);
-  const [localPairingCode, setLocalPairingCode] = useState<string | null>(null);
   const [isRequestingQr, setIsRequestingQr] = useState(false);
 
   // Testes
@@ -119,12 +115,8 @@ function WhatsAppPage() {
         setLocalQr(s.qrCode);
         setIsRequestingQr(false);
       }
-      if (s?.pairingCode) {
-        setLocalPairingCode(s.pairingCode);
-      }
       if (s?.status === "open") {
         setLocalQr(null);
-        setLocalPairingCode(null);
         setIsRequestingQr(false);
       }
 
@@ -144,7 +136,6 @@ function WhatsAppPage() {
 
   // O código vindo da consulta mais recente tem prioridade sobre o cache local.
   const activeQr = state?.qrCode || localQr;
-  const activePairing = state?.pairingCode || localPairingCode;
 
   // Mantém os demais indicadores de status sincronizados, sem exibir aviso ao abrir a página.
   useEffect(() => {
@@ -190,30 +181,6 @@ function WhatsAppPage() {
     }
   }
 
-  async function handleStartPairing() {
-    const clean = pairingPhone.replace(/\D/g, "");
-    if (clean.length < 10) {
-      toast.error("Informe o número completo com DDD (ex: 5593991614242)");
-      return;
-    }
-    setLoadingAction(true);
-    toast.loading("Gerando código de pareamento no WhatsApp...", { id: "pairing-toast" });
-
-    try {
-      const res = await connectBaileys({ data: { instance: instanceId, mode: "pairing", phone: clean, origin: window.location.origin, userId: currentUser?.id } });
-      if (res?.state?.pairingCode) {
-        setLocalPairingCode(res.state.pairingCode);
-        toast.success("Código de pareamento gerado!", { id: "pairing-toast" });
-      } else {
-        toast.info("Aguardando liberação do código pelo WhatsApp...", { id: "pairing-toast" });
-      }
-      qc.invalidateQueries({ queryKey: ["baileys"] });
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao solicitar código de pareamento", { id: "pairing-toast" });
-    } finally {
-      setLoadingAction(false);
-    }
-  }
 
   async function handleResetSession() {
     if (!confirm("A sessão do WhatsApp parece corrompida. Isso apagará a sessão atual da VPS e exigirá um novo QR Code. Continuar?")) return;
@@ -253,12 +220,6 @@ function WhatsAppPage() {
     }
   }
 
-  function handleCopyPairingCode(code: string) {
-    navigator.clipboard.writeText(code);
-    setCopiedCode(true);
-    toast.success("Código copiado!");
-    setTimeout(() => setCopiedCode(false), 2000);
-  }
 
   async function handleSendTest() {
     const cleanNum = testNumber.replace(/\D/g, "");
