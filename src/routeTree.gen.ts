@@ -28,7 +28,6 @@ import { Route as AuthenticatedSigmaRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSigmaSincronizacaoRouteImport } from './routes/_authenticated/sigma-sincronizacao'
 import { Route as AuthenticatedWhatsappRouteImport } from './routes/_authenticated/whatsapp'
 import { Route as AuthenticatedWhatsappDiagnosticoRouteImport } from './routes/_authenticated/whatsapp-diagnostico'
-import { Route as ApiPublicOrdersRouteImport } from './routes/api/public/orders'
 import { Route as ApiPublicHooksAsaasRouteImport } from './routes/api/public/hooks/asaas'
 import { Route as ApiPublicHooksCobrancaDiariaRouteImport } from './routes/api/public/hooks/cobranca-diaria'
 import { Route as ApiPublicHooksMercadopagoRouteImport } from './routes/api/public/hooks/mercadopago'
@@ -136,11 +135,6 @@ const AuthenticatedWhatsappDiagnosticoRoute =
     path: '/whatsapp-diagnostico',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const ApiPublicOrdersRoute = ApiPublicOrdersRouteImport.update({
-  id: '/api/public/orders',
-  path: '/api/public/orders',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicHooksAsaasRoute = ApiPublicHooksAsaasRouteImport.update({
   id: '/api/public/hooks/asaas',
   path: '/api/public/hooks/asaas',
@@ -195,7 +189,6 @@ export interface FileRoutesByFullPath {
   '/sigma-sincronizacao': typeof AuthenticatedSigmaSincronizacaoRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/whatsapp-diagnostico': typeof AuthenticatedWhatsappDiagnosticoRoute
-  '/api/public/orders': typeof ApiPublicOrdersRoute
   '/api/public/hooks/asaas': typeof ApiPublicHooksAsaasRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
@@ -222,7 +215,6 @@ export interface FileRoutesByTo {
   '/sigma-sincronizacao': typeof AuthenticatedSigmaSincronizacaoRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/whatsapp-diagnostico': typeof AuthenticatedWhatsappDiagnosticoRoute
-  '/api/public/orders': typeof ApiPublicOrdersRoute
   '/api/public/hooks/asaas': typeof ApiPublicHooksAsaasRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
@@ -251,7 +243,6 @@ export interface FileRoutesById {
   '/_authenticated/sigma-sincronizacao': typeof AuthenticatedSigmaSincronizacaoRoute
   '/_authenticated/whatsapp': typeof AuthenticatedWhatsappRoute
   '/_authenticated/whatsapp-diagnostico': typeof AuthenticatedWhatsappDiagnosticoRoute
-  '/api/public/orders': typeof ApiPublicOrdersRoute
   '/api/public/hooks/asaas': typeof ApiPublicHooksAsaasRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
@@ -280,7 +271,6 @@ export interface FileRouteTypes {
     | '/sigma-sincronizacao'
     | '/whatsapp'
     | '/whatsapp-diagnostico'
-    | '/api/public/orders'
     | '/api/public/hooks/asaas'
     | '/api/public/hooks/cobranca-diaria'
     | '/api/public/hooks/mercadopago'
@@ -307,7 +297,6 @@ export interface FileRouteTypes {
     | '/sigma-sincronizacao'
     | '/whatsapp'
     | '/whatsapp-diagnostico'
-    | '/api/public/orders'
     | '/api/public/hooks/asaas'
     | '/api/public/hooks/cobranca-diaria'
     | '/api/public/hooks/mercadopago'
@@ -335,7 +324,6 @@ export interface FileRouteTypes {
     | '/_authenticated/sigma-sincronizacao'
     | '/_authenticated/whatsapp'
     | '/_authenticated/whatsapp-diagnostico'
-    | '/api/public/orders'
     | '/api/public/hooks/asaas'
     | '/api/public/hooks/cobranca-diaria'
     | '/api/public/hooks/mercadopago'
@@ -348,7 +336,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  ApiPublicOrdersRoute: typeof ApiPublicOrdersRoute
   ApiPublicHooksAsaasRoute: typeof ApiPublicHooksAsaasRoute
   ApiPublicHooksCobrancaDiariaRoute: typeof ApiPublicHooksCobrancaDiariaRoute
   ApiPublicHooksMercadopagoRoute: typeof ApiPublicHooksMercadopagoRoute
@@ -492,13 +479,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWhatsappDiagnosticoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/public/orders': {
-      id: '/api/public/orders'
-      path: '/api/public/orders'
-      fullPath: '/api/public/orders'
-      preLoaderRoute: typeof ApiPublicOrdersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/hooks/asaas': {
       id: '/api/public/hooks/asaas'
       path: '/api/public/hooks/asaas'
@@ -589,7 +569,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  ApiPublicOrdersRoute: ApiPublicOrdersRoute,
   ApiPublicHooksAsaasRoute: ApiPublicHooksAsaasRoute,
   ApiPublicHooksCobrancaDiariaRoute: ApiPublicHooksCobrancaDiariaRoute,
   ApiPublicHooksMercadopagoRoute: ApiPublicHooksMercadopagoRoute,
