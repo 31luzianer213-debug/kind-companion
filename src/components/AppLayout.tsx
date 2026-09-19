@@ -4,7 +4,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { Menu, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import defaultOrdersSeed from "../../data/orders_default.json";
 import { DesktopNavigation, MobileBottomNavigation, MobileDrawer } from "@/components/layout/AppNavigation";
 import { MobileClientDelete } from "@/components/clients/MobileClientDelete";
 import { SigmaLogo } from "@/components/SigmaLogo";
