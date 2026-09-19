@@ -8,17 +8,11 @@ async function handleBillingExecution(request: Request) {
   const bearerToken = match?.[1];
 
   const providedSecret = querySecret || bearerToken;
-  const configuredSecret = process.env["BILLING_CRON_SECRET"] || "cron_iptv_seguro";
+  const configuredSecret = process.env["BILLING_CRON_SECRET"];
 
-  // Validação simples e segura
-  if (!providedSecret || (providedSecret !== configuredSecret && providedSecret !== "cron_iptv_seguro")) {
-    return Response.json(
-      {
-        ok: false,
-        error: "Não autorizado. Passe ?secret=cron_iptv_seguro na URL ou configure a variável BILLING_CRON_SECRET.",
-      },
-      { status: 401 }
-    );
+  // Sem segredo configurado a rotina fica fechada; nunca expor o valor esperado.
+  if (!configuredSecret || !providedSecret || providedSecret !== configuredSecret) {
+    return Response.json({ ok: false, error: "Não autorizado." }, { status: 401 });
   }
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
