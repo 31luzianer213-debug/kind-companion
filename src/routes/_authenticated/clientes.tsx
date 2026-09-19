@@ -307,7 +307,7 @@ function Clientes() {
       try {
         const params = new URLSearchParams(window.location.search);
         if (params.get("novo") === "1" || params.get("novo") === "true") {
-          setForm(empty);
+          setForm({ ...empty, next_due_date: defaultNextDueDate() });
           setOpen(true);
           const url = new URL(window.location.href);
           url.searchParams.delete("novo");
@@ -327,7 +327,7 @@ function Clientes() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   function openCreateModal() {
-    setForm(empty);
+    setForm({ ...empty, next_due_date: defaultNextDueDate() });
     setOpen(true);
   }
 
