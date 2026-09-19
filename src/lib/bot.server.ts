@@ -668,11 +668,11 @@ async function handlePlanOrderCreation({
       order.pix_code = mpPixResult.qrCode;
       order.gateway_payment_id = mpPixResult.paymentId;
       order.payment_method = "mercadopago_pix";
-      updateOrderServer(userId, order.id, {
+      await updateOrderServer(userId, order.id, {
         pix_code: mpPixResult.qrCode,
         gateway_payment_id: mpPixResult.paymentId,
         payment_method: "mercadopago_pix",
-      });
+      }).catch((e) => console.warn("[Bot] falha ao salvar PIX no pedido:", e));
     } else {
       console.warn(`[Bot Plan] ⚠️ Falha na API do Mercado Pago: ${mpPixResult?.error}`);
     }
@@ -819,11 +819,11 @@ async function handleRenewOrderCreation({
       order.pix_code = mpPixResult.qrCode;
       order.gateway_payment_id = mpPixResult.paymentId;
       order.payment_method = "mercadopago_pix";
-      updateOrderServer(userId, order.id, {
+      await updateOrderServer(userId, order.id, {
         pix_code: mpPixResult.qrCode,
         gateway_payment_id: mpPixResult.paymentId,
         payment_method: "mercadopago_pix",
-      });
+      }).catch((e) => console.warn("[Bot] falha ao salvar PIX no pedido:", e));
     } else {
       console.warn(`[Bot Renew] ⚠️ Falha na API do Mercado Pago: ${mpPixResult?.error}`);
     }
