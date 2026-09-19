@@ -413,7 +413,3 @@ export async function bulkDeleteOrdersServer(
 
   return { ok: true, message: `${orderIds.length} pedidos excluídos permanentemente.`, count: orderIds.length };
 }
-
-
-  return { ok: true, message: `${orderIds.length} pedidos excluídos permanentemente.`, count: orderIds.length };
-}
