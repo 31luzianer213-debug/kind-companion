@@ -152,8 +152,9 @@ async function deleteLocalClients(supabase: any, userId: string, clientIds: stri
 }
 
 /**
- * Repara vínculos antigos e remove somente clientes Sigma órfãos de painéis
- * que já não existem. É idempotente e seguro para executar ao abrir Clientes.
+ * Apenas repara vínculos antigos entre clientes e painéis Sigma.
+ * NUNCA apaga clientes: a exclusão automática causava perda de dados
+ * quando o painel ainda não tinha carregado ou mudava de nome.
  */
 async function cleanupOrphanRows(supabase: any, userId: string) {
   const [{ data: panels, error: panelsError }, { data: orphans, error: clientsError }] = await Promise.all([
@@ -168,7 +169,6 @@ async function cleanupOrphanRows(supabase: any, userId: string) {
   if (panelsError || clientsError) return { removed: 0, repaired: 0 };
 
   const activePanels = panels ?? [];
-  const toDelete: string[] = [];
   let repaired = 0;
 
   for (const client of orphans ?? []) {
@@ -184,13 +184,10 @@ async function cleanupOrphanRows(supabase: any, userId: string) {
         .eq("id", client.id)
         .eq("user_id", userId);
       if (!error) repaired++;
-    } else if (activePanels.length === 0 || recordedName) {
-      toDelete.push(client.id);
     }
   }
 
-  await deleteLocalClients(supabase, userId, toDelete);
-  return { removed: toDelete.length, repaired };
+  return { removed: 0, repaired };
 }
 
 export const testSigmaServer = createServerFn({ method: "POST" })
