@@ -256,8 +256,8 @@ function AuthPage() {
 
             <Tabs value={tab} onValueChange={(value) => { setTab(value); setPassword(""); setConfirmation(""); }} className="w-full">
               <TabsList className="mb-6 grid h-12 w-full grid-cols-2 rounded-lg border border-border bg-muted/60 p-1">
-                <TabsTrigger value="login" className="rounded-lg font-bold data-[state=checked]:bg-background data-[state=checked]:shadow-sm">Entrar</TabsTrigger>
-                <TabsTrigger value="signup" className="rounded-lg font-bold data-[state=checked]:bg-background data-[state=checked]:shadow-sm">Criar conta</TabsTrigger>
+                <TabsTrigger value="login" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">Entrar</TabsTrigger>
+                <TabsTrigger value="signup" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">Criar conta</TabsTrigger>
               </TabsList>
 
               <TabsContent value="login" className="mt-0">
