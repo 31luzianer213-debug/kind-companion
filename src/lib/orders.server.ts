@@ -100,8 +100,14 @@ export async function createOrderServer(
     notes?: string;
   },
 ): Promise<OrderItem> {
-  const existing = readLocalOrders(userId);
-  const nextNumber = existing.reduce((max, o) => Math.max(max, o.order_number || 0), 1000) + 1;
+  const { data: lastOrder } = await supabaseAdmin
+    .from("orders")
+    .select("order_number")
+    .eq("user_id", userId)
+    .order("order_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextNumber = Math.max(1000, Number(lastOrder?.order_number) || 1000) + 1;
 
   const newOrder: OrderItem = {
     id: `ord_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -124,13 +130,9 @@ export async function createOrderServer(
     updated_at: new Date().toISOString(),
   };
 
-  // 1. Grava no disco
-  existing.unshift(newOrder);
-  writeLocalOrders(userId, existing);
-
-  // 2. Tenta gravar no banco Supabase
-  try {
-    await supabaseAdmin.from("orders").insert({
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .insert({
       id: newOrder.id,
       user_id: userId,
       order_number: newOrder.order_number,
@@ -147,62 +149,25 @@ export async function createOrderServer(
       gateway_payment_id: newOrder.gateway_payment_id,
       pix_code: newOrder.pix_code,
       notes: newOrder.notes,
-    });
-  } catch {}
+    })
+    .select("*")
+    .maybeSingle();
 
-  return newOrder;
+  if (error) throw new Error(`Falha ao salvar o pedido: ${error.message}`);
+  return data ? mapRow(data) : newOrder;
 }
 
-/** Lista os pedidos do revendedor */
+/** Lista os pedidos do revendedor (direto do banco) */
 export async function listOrdersServer(
   userId: string,
   filterStatus?: string,
 ): Promise<OrderItem[]> {
-  const localList = readLocalOrders(userId);
-
-  // Tenta sincronizar com o banco se houver registros
-  try {
-    let query = supabaseAdmin
-      .from("orders")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-
-    if (filterStatus && filterStatus !== "all") {
-      query = query.eq("status", filterStatus);
-    }
-
-    const { data: dbOrders } = await query;
-    if (dbOrders && dbOrders.length > 0) {
-      const deletedIds = getDeletedOrderIds();
-      // Merge sem duplicatas (preferindo status mais recente e ignorando pedidos excluídos)
-      const map = new Map<string, OrderItem>();
-      for (const item of localList) {
-        if (!deletedIds.has(item.id)) map.set(item.id, item);
-      }
-      for (const item of dbOrders) {
-        if (item && item.id && !deletedIds.has(item.id)) {
-          map.set(item.id, {
-            ...(map.get(item.id) || {}),
-            ...item,
-            amount: Number(item.amount),
-          } as OrderItem);
-        }
-      }
-      const combined = Array.from(map.values()).sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      );
-      writeLocalOrders(userId, combined);
-      return filterStatus && filterStatus !== "all"
-        ? combined.filter((o) => o.status === filterStatus)
-        : combined;
-    }
-  } catch {}
-
+  const list = await readOrders(userId);
   return filterStatus && filterStatus !== "all"
-    ? localList.filter((o) => o.status === filterStatus)
-    : localList;
+    ? list.filter((o) => o.status === filterStatus)
+    : list;
 }
+
 
 /**
  * Aprova o pedido e libera o acesso no Sigma e WhatsApp.
