@@ -452,39 +452,8 @@ function WhatsAppPage() {
                       </Button>
                     </div>
                   )}
-                </TabsContent>
-
-                <TabsContent value="pairing" className="mt-0 space-y-4">
-                  <div className="rounded-2xl border bg-muted/20 p-4 text-sm text-muted-foreground">
-                    Informe o número com país e DDD. Depois escolha <strong className="text-foreground">Conectar com número de telefone</strong> no WhatsApp.
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                    <Input
-                      placeholder="55 + DDD + número"
-                      value={pairingPhone}
-                      onChange={(event) => setPairingPhone(event.target.value)}
-                      className="h-11 rounded-xl font-mono"
-                    />
-                    <Button onClick={handleStartPairing} disabled={loadingAction} className="h-11 gap-2 rounded-xl">
-                      {loadingAction ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
-                      Gerar código
-                    </Button>
-                  </div>
-                  {activePairing && (
-                    <div className="rounded-2xl border border-primary/25 bg-primary/5 p-5 text-center">
-                      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Código de pareamento</p>
-                      <div className="mt-3 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                        <span className="max-w-full break-all rounded-xl border bg-background px-4 py-3 font-mono text-2xl font-black tracking-[0.2em] text-primary sm:text-3xl">
-                          {activePairing}
-                        </span>
-                        <Button variant="outline" size="icon" onClick={() => handleCopyPairingCode(activePairing)} className="size-11 shrink-0 rounded-xl">
-                          {copiedCode ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
