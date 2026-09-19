@@ -269,6 +269,7 @@ export async function approveAndReleaseOrderServer(
   const epgUrl = generateEpgUrl(cleanDns, username, password);
 
   // 4. Cadastra ou atualiza na tabela `clients`
+  let clientWarning = "";
   try {
     const { data: existingClient } = await supabaseAdmin
       .from("clients")
@@ -279,7 +280,7 @@ export async function approveAndReleaseOrderServer(
       .maybeSingle();
 
     if (existingClient?.id) {
-      await supabaseAdmin
+      const { error: updErr } = await supabaseAdmin
         .from("clients")
         .update({
           status: "active",
@@ -289,8 +290,9 @@ export async function approveAndReleaseOrderServer(
           updated_at: new Date().toISOString(),
         })
         .eq("id", existingClient.id);
+      if (updErr) throw new Error(updErr.message);
     } else {
-      await supabaseAdmin.from("clients").insert({
+      const { error: insErr } = await supabaseAdmin.from("clients").insert({
         user_id: userId,
         name: order.customer_name,
         phone: order.customer_phone,
@@ -303,10 +305,13 @@ export async function approveAndReleaseOrderServer(
         status: "active",
         notes: `M3U: ${m3uUrl}\nServidor: ${serverName}\nPedido #${order.order_number}`,
       });
+      if (insErr) throw new Error(insErr.message);
     }
   } catch (dbErr) {
+    clientWarning = dbErr instanceof Error ? dbErr.message : "erro desconhecido";
     console.warn("Aviso ao salvar cliente no banco:", dbErr);
   }
+
 
   // 5. Dispara a mensagem de liberação no WhatsApp do cliente
   let accessMessage = "";
