@@ -352,30 +352,19 @@ export async function approveAndReleaseOrderServer(
   }
 
   // 6. Atualiza o status do pedido para 'approved'
-  order.status = "approved";
-  order.target_username = username;
-  order.notes = `${order.notes ? order.notes + " | " : ""}Liberado em ${new Date().toLocaleString()}`;
-  order.updated_at = new Date().toISOString();
-
-  orders[orderIndex] = order;
-  writeLocalOrders(userId, orders);
-
-  try {
-    await supabaseAdmin
-      .from("orders")
-      .update({
-        status: "approved",
-        target_username: username,
-        notes: order.notes,
-        updated_at: order.updated_at,
-      })
-      .eq("id", orderId);
-  } catch {}
+  const approvedNotes = `${order.notes ? order.notes + " | " : ""}Liberado em ${new Date().toLocaleString()}`;
+  const updated = await updateOrderServer(userId, orderId, {
+    status: "approved",
+    target_username: username,
+    notes: approvedNotes,
+  });
 
   return {
     ok: true,
-    message: `Pedido #${order.order_number} aprovado! Acesso liberado no Sigma e entregue no WhatsApp.`,
-    order,
+    message:
+      `Pedido #${order.order_number} aprovado! Acesso liberado no Sigma e entregue no WhatsApp.` +
+      (clientWarning ? ` Atenção: não foi possível salvar o cliente (${clientWarning}).` : ""),
+    order: updated ?? { ...order, status: "approved", target_username: username, notes: approvedNotes },
     username,
     password,
     m3uUrl,
@@ -387,23 +376,8 @@ export async function cancelOrderServer(
   userId: string,
   orderId: string,
 ): Promise<{ ok: boolean; message: string }> {
-  const orders = readLocalOrders(userId);
-  const orderIndex = orders.findIndex((o) => o.id === orderId);
-  if (orderIndex === -1) {
-    return { ok: false, message: "Pedido não encontrado." };
-  }
-
-  orders[orderIndex].status = "cancelled";
-  orders[orderIndex].updated_at = new Date().toISOString();
-  writeLocalOrders(userId, orders);
-
-  try {
-    await supabaseAdmin
-      .from("orders")
-      .update({ status: "cancelled", updated_at: new Date().toISOString() })
-      .eq("id", orderId);
-  } catch {}
-
+  const updated = await updateOrderServer(userId, orderId, { status: "cancelled" });
+  if (!updated) return { ok: false, message: "Pedido não encontrado." };
   return { ok: true, message: "Pedido cancelado com sucesso." };
 }
 
@@ -412,23 +386,12 @@ export async function deleteOrderServer(
   userId: string,
   orderId: string,
 ): Promise<{ ok: boolean; message: string }> {
-  // 1. Registra tombstone para que o pedido nunca mais seja reimportado ou revivido
-  markOrdersAsDeleted([orderId]);
-
-  // 2. Remove da lista local e regrava os arquivos
-  const list = readLocalOrders(userId);
-  const updatedList = list.filter((o) => o.id !== orderId);
-  writeLocalOrders(userId, updatedList);
-
-
-
-  // 4. Exclui do banco Supabase se existir
-  try {
-    await supabaseAdmin.from("orders").delete().eq("id", orderId);
-  } catch (err) {
-    console.warn("[deleteOrderServer] Erro ao deletar no Supabase:", err);
-  }
-
+  const { error } = await supabaseAdmin
+    .from("orders")
+    .delete()
+    .eq("user_id", userId)
+    .eq("id", orderId);
+  if (error) return { ok: false, message: `Falha ao excluir o pedido: ${error.message}` };
   return { ok: true, message: "Pedido excluído com sucesso!" };
 }
 
@@ -441,22 +404,16 @@ export async function bulkDeleteOrdersServer(
     return { ok: true, message: "Nenhum pedido para excluir.", count: 0 };
   }
 
-  // 1. Registra todos no tombstone
-  markOrdersAsDeleted(orderIds);
+  const { error } = await supabaseAdmin
+    .from("orders")
+    .delete()
+    .eq("user_id", userId)
+    .in("id", orderIds);
+  if (error) return { ok: false, message: `Falha ao excluir os pedidos: ${error.message}`, count: 0 };
 
-  const idSet = new Set(orderIds);
-  const list = readLocalOrders(userId);
-  const updatedList = list.filter((o) => !idSet.has(o.id));
-  writeLocalOrders(userId, updatedList);
+  return { ok: true, message: `${orderIds.length} pedidos excluídos permanentemente.`, count: orderIds.length };
+}
 
-
-
-  // 3. Exclui do banco de dados
-  try {
-    for (const id of orderIds) {
-      await supabaseAdmin.from("orders").delete().eq("id", id);
-    }
-  } catch {}
 
   return { ok: true, message: `${orderIds.length} pedidos excluídos permanentemente.`, count: orderIds.length };
 }
