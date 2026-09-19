@@ -238,6 +238,7 @@ function SigmaServersPage() {
           serverId: removeTarget.id,
           clientAction: removeAction,
           targetPanelId: removeAction === "move" ? removeTargetPanel : null,
+          recreateOnTarget: removeAction === "move" ? recreateOnTarget : false,
         },
       });
       if (!result.ok) {
@@ -250,11 +251,15 @@ function SigmaServersPage() {
         result.deletedClients
           ? `Servidor e ${result.deletedClients} cliente(s) removidos.`
           : result.movedClients
-            ? `Servidor removido. ${result.movedClients} cliente(s) movidos para o outro painel.`
+            ? `Servidor removido. ${result.movedClients} cliente(s) movidos${result.recreatedClients ? ` e ${result.recreatedClients} recriados no painel de destino` : ""}.`
             : result.keptClients
               ? `Servidor removido. ${result.keptClients} cliente(s) mantidos no sistema.`
               : "Servidor removido.",
       );
+      if (result.failedCount) {
+        toast.warning(`${result.failedCount} cliente(s) não puderam ser criados no painel de destino: ${result.failures.join(" • ")}`);
+      }
+
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha ao remover o servidor.");
     } finally {
