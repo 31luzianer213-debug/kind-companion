@@ -489,6 +489,7 @@ function Clientes() {
       const { data: auth } = await supabase.auth.getUser();
       const payload = {
         user_id: auth.user!.id,
+        panel_id: values.panel_id || defaultSigmaServer?.id || null,
         name: values.name.trim(),
         phone: cleanPhoneDigits(values.phone),
         email: values.email?.trim() || null,
