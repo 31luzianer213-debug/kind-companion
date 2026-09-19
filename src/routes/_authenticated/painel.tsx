@@ -7,8 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { runAutoBilling, sendWhatsAppMessage, getWhatsAppStatus } from "@/lib/whatsapp.functions";
 import { listSigmaServers, syncAllSigmaServers } from "@/lib/sigma-servers.functions";
 import { useSigmaAutoSync } from "@/lib/useSigmaAutoSync";
-import { approveOrder, type OrderItem } from "@/lib/orders.functions";
-import defaultOrdersSeed from "../../../data/orders_default.json";
+import { approveOrder, getOrdersList, type OrderItem } from "@/lib/orders.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,21 +37,6 @@ import {
   X,
 } from "lucide-react";
 const FinanceChart = lazy(() => import("@/components/dashboard/FinanceChart"));
-
-function getClientDeletedIds(): Set<string> {
-  const set = new Set<string>();
-  if (typeof window === "undefined") return set;
-  try {
-    const raw = localStorage.getItem("iptv_deleted_orders");
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        for (const id of parsed) set.add(id);
-      }
-    }
-  } catch {}
-  return set;
-}
 
 export const Route = createFileRoute("/_authenticated/painel")({
   head: () => ({
@@ -116,20 +100,8 @@ function Painel() {
   const { data } = useQuery({
     queryKey: ["dashboard-v2"],
     queryFn: async () => {
-      const deletedIds = getClientDeletedIds();
-      let ordersList: OrderItem[] = [];
-      try {
-        const oRes = await fetch("/api/public/orders");
-        if (oRes.ok) {
-          const json = await oRes.json();
-          if (Array.isArray(json?.orders) && json.orders.length > 0) {
-            ordersList = json.orders.filter((o: OrderItem) => !deletedIds.has(o.id));
-          }
-        }
-      } catch {}
-      if (ordersList.length === 0 && Array.isArray(defaultOrdersSeed)) {
-        ordersList = (defaultOrdersSeed as unknown as OrderItem[]).filter((o) => !deletedIds.has(o.id));
-      }
+      const ordersRes = await ordersFn({ data: {} }).catch(() => ({ orders: [] as OrderItem[] }));
+      const ordersList: OrderItem[] = Array.isArray(ordersRes?.orders) ? (ordersRes.orders as OrderItem[]) : [];
 
       const [clients, invoices, logs, settings, sigmaRes] = await Promise.all([
         supabase.from("clients").select("*").order("name"),
@@ -155,12 +127,7 @@ function Painel() {
   const clients = Array.isArray(data?.clients) ? data.clients : [];
   const invoices = Array.isArray(data?.invoices) ? data.invoices : [];
   const logs = Array.isArray(data?.logs) ? data.logs : [];
-  const deletedIds = getClientDeletedIds();
-  const fallbackOrders = Array.isArray(defaultOrdersSeed)
-    ? (defaultOrdersSeed as unknown as OrderItem[])
-    : [];
-  const rawOrders = Array.isArray(data?.orders) ? data.orders : fallbackOrders;
-  const orders = rawOrders.filter((o) => !deletedIds.has(o.id));
+  const orders = Array.isArray(data?.orders) ? data.orders : [];
   const pendingOrders = orders.filter((o) => o.status === "pending");
   const sigmaServers = Array.isArray(data?.sigmaServers) ? data.sigmaServers : [];
   const defaultSigmaServer = sigmaServers.find((server) => server.is_default) ?? sigmaServers[0];
