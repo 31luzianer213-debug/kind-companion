@@ -113,18 +113,6 @@ function WhatsAppPage() {
         if (res?.state) s = res.state;
       } catch {}
 
-      // 2. Se não encontrou QR e está no navegador, consulta direto o daemon local
-      if (!s?.qrCode && typeof window !== "undefined") {
-        try {
-          const direct = await fetch(`http://localhost:3001/api/status?instance=${encodeURIComponent(instanceId)}`, {
-            signal: AbortSignal.timeout(1500),
-          });
-          if (direct.ok) {
-            const data = await direct.json();
-            if (data?.status) s = data;
-          }
-        } catch {}
-      }
 
       // Sincroniza estados locais
       if (s?.qrCode) {
@@ -184,31 +172,6 @@ function WhatsAppPage() {
     setIsRequestingQr(true);
     toast.loading("Solicitando QR Code do WhatsApp...", { id: "qr-toast" });
 
-    // 1. Tenta chamada direta ao daemon local (instantâneo se estiver no mesmo PC ou Lovable preview)
-    try {
-      const direct = await fetch("http://localhost:3001/api/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instance: instanceId, mode: "qr", force }),
-        signal: AbortSignal.timeout(7000),
-      });
-      if (direct.ok) {
-        const json = await direct.json();
-        if (json?.state?.qrCode) {
-          setLocalQr(json.state.qrCode);
-          setIsRequestingQr(false);
-          setLoadingAction(false);
-          toast.success("QR Code gerado! Aponte a câmera do WhatsApp.", { id: "qr-toast" });
-          await connectBaileys({
-            data: { instance: instanceId, mode: "qr", force, origin: window.location.origin, userId: currentUser?.id },
-          }).catch(() => null);
-          qc.invalidateQueries({ queryKey: ["baileys"] });
-          return;
-        }
-      }
-    } catch {}
-
-    // 2. Fallback: via Server Function
     try {
       const res = await connectBaileys({ data: { instance: instanceId, mode: "qr", force, origin: window.location.origin, userId: currentUser?.id } });
       if (res?.state?.qrCode) {
@@ -236,30 +199,6 @@ function WhatsAppPage() {
     setLoadingAction(true);
     toast.loading("Gerando código de pareamento no WhatsApp...", { id: "pairing-toast" });
 
-    // 1. Tenta chamada direta ao daemon local
-    try {
-      const direct = await fetch("http://localhost:3001/api/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instance: instanceId, mode: "pairing", phone: clean }),
-        signal: AbortSignal.timeout(8000),
-      });
-      if (direct.ok) {
-        const json = await direct.json();
-        if (json?.state?.pairingCode) {
-          setLocalPairingCode(json.state.pairingCode);
-          toast.success("Código de pareamento gerado!", { id: "pairing-toast" });
-          await connectBaileys({
-            data: { instance: instanceId, mode: "pairing", phone: clean, origin: window.location.origin, userId: currentUser?.id },
-          }).catch(() => null);
-          qc.invalidateQueries({ queryKey: ["baileys"] });
-          setLoadingAction(false);
-          return;
-        }
-      }
-    } catch {}
-
-    // 2. Fallback: via Server Function
     try {
       const res = await connectBaileys({ data: { instance: instanceId, mode: "pairing", phone: clean, origin: window.location.origin, userId: currentUser?.id } });
       if (res?.state?.pairingCode) {
@@ -304,15 +243,6 @@ function WhatsAppPage() {
     setLocalQr(null);
     setLocalPairingCode(null);
     try {
-      // 1. Tenta chamada direta
-      try {
-        await fetch("http://localhost:3001/api/logout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ instance: instanceId }),
-          signal: AbortSignal.timeout(3000),
-        });
-      } catch {}
       await disconnectBaileys({ data: { instance: instanceId } });
       toast.success("WhatsApp desconectado.");
       qc.invalidateQueries({ queryKey: ["baileys"] });
@@ -338,28 +268,14 @@ function WhatsAppPage() {
     }
     setSendingTest(true);
     try {
-      // 1. Tenta envio direto
-      let sent = false;
-      try {
-        const direct = await fetch("http://localhost:3001/api/send-test", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ instance: instanceId, to: cleanNum, text: testText, type: "text" }),
-          signal: AbortSignal.timeout(6000),
-        });
-        if (direct.ok) sent = true;
-      } catch {}
-
-      if (!sent) {
-        await sendBaileysTest({
-          data: {
-            instance: instanceId,
-            to: cleanNum,
-            text: testText,
-            type: "text",
-          },
-        });
-      }
+      await sendBaileysTest({
+        data: {
+          instance: instanceId,
+          to: cleanNum,
+          text: testText,
+          type: "text",
+        },
+      });
 
       toast.success("Mensagem de texto enviada! Confira seu WhatsApp.");
       qc.invalidateQueries({ queryKey: ["whatsapp-recent-logs"] });

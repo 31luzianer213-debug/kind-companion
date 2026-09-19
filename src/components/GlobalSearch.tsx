@@ -29,12 +29,13 @@ function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
 }
 
-export function GlobalSearch() {
+export function GlobalSearch({ enableShortcut = true }: { enableShortcut?: boolean } = {}) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState("");
 
   useEffect(() => {
+    if (!enableShortcut) return;
     function onKey(event: KeyboardEvent) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -43,7 +44,7 @@ export function GlobalSearch() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [enableShortcut]);
 
   const pages = useMemo(
     () => [

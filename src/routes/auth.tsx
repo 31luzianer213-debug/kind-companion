@@ -51,6 +51,9 @@ function friendlyError(message: string) {
   if (/Invalid login credentials|invalid_grant/i.test(message)) return "E-mail ou senha incorretos.";
   if (/already registered/i.test(message)) return "Este e-mail já possui uma conta.";
   if (/Password should be at least|password is too short/i.test(message)) return "Use uma senha com pelo menos 6 caracteres.";
+  if (/pwned|leaked|known to be weak|easy to guess|weak_password/i.test(message))
+    return "Essa senha é muito comum e já apareceu em vazamentos. Escolha outra, com letras, números e símbolos.";
+  if (/invalid format|Unable to validate email|invalid email/i.test(message)) return "E-mail inválido. Confira o endereço digitado.";
   if (/Email not confirmed|not confirmed/i.test(message)) return "Confirme seu e-mail antes de entrar.";
   if (/rate limit|over_email_send_rate_limit/i.test(message)) return "Muitas tentativas. Aguarde um pouco e tente novamente.";
   return message || "Não foi possível concluir. Tente novamente.";

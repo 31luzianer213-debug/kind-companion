@@ -177,11 +177,21 @@ const empty: ClientForm = {
 
 function formatPhoneInput(value?: string | null) {
   if (!value) return "";
-  const digits = String(value).replace(/\D/g, "");
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+  const raw = String(value).replace(/\D/g, "").slice(0, 13);
+  // Aceita número com código do país (55) sem perder dígitos do DDD/celular.
+  const hasCountry = raw.length > 11 && raw.startsWith("55");
+  const prefix = hasCountry ? "+55 " : "";
+  const digits = hasCountry ? raw.slice(2) : raw;
+  if (digits.length <= 2) return `${prefix}${digits}`;
+  if (digits.length <= 6) return `${prefix}(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `${prefix}(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `${prefix}(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+}
+
+function defaultNextDueDate() {
+  const date = new Date();
+  date.setDate(date.getDate() + 30);
+  return date.toISOString().slice(0, 10);
 }
 
 function cleanPhoneDigits(phone?: string | null) {
@@ -297,7 +307,7 @@ function Clientes() {
       try {
         const params = new URLSearchParams(window.location.search);
         if (params.get("novo") === "1" || params.get("novo") === "true") {
-          setForm(empty);
+          setForm({ ...empty, next_due_date: defaultNextDueDate() });
           setOpen(true);
           const url = new URL(window.location.href);
           url.searchParams.delete("novo");
@@ -317,7 +327,7 @@ function Clientes() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   function openCreateModal() {
-    setForm(empty);
+    setForm({ ...empty, next_due_date: defaultNextDueDate() });
     setOpen(true);
   }
 
@@ -479,6 +489,7 @@ function Clientes() {
       const { data: auth } = await supabase.auth.getUser();
       const payload = {
         user_id: auth.user!.id,
+        panel_id: values.panel_id || defaultSigmaServer?.id || null,
         name: values.name.trim(),
         phone: cleanPhoneDigits(values.phone),
         email: values.email?.trim() || null,
@@ -1764,14 +1775,22 @@ function Clientes() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Painel Sigma de origem *</Label>
+                <Label className="text-xs font-semibold">
+                  Painel Sigma de origem {sigmaServers.some((server) => server.enabled) ? "*" : "(opcional)"}
+                </Label>
                 <Select
                   value={form.panel_id || defaultSigmaServer?.id || ""}
                   onValueChange={(value) => setForm({ ...form, panel_id: value })}
-                  disabled={Boolean(form.id && form.panel_id)}
+                  disabled={Boolean(form.id && form.panel_id) || !sigmaServers.some((server) => server.enabled)}
                 >
                   <SelectTrigger className="rounded-md">
-                    <SelectValue placeholder="Selecione o painel Sigma" />
+                    <SelectValue
+                      placeholder={
+                        sigmaServers.some((server) => server.enabled)
+                          ? "Selecione o painel Sigma"
+                          : "Nenhum servidor Sigma cadastrado"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {sigmaServers.filter((server) => server.enabled).map((server) => (
@@ -1783,6 +1802,10 @@ function Clientes() {
                 </Select>
                 {form.id && form.panel_id ? (
                   <p className="text-[11px] text-muted-foreground">O painel de origem fica bloqueado para preservar as operações deste cliente.</p>
+                ) : !sigmaServers.some((server) => server.enabled) ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    Você ainda não cadastrou um servidor Sigma. O cliente será salvo só aqui no painel e poderá ser vinculado depois.
+                  </p>
                 ) : null}
               </div>
 
