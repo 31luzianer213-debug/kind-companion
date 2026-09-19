@@ -528,29 +528,45 @@ export async function createTrialForBot(
   const expiryDate = new Date(Date.now() + hours * 60 * 60 * 1000);
   const expiryIso = expiryDate.toISOString().slice(0, 10);
 
-  // 4. Cria a linha no painel Sigma se as credenciais estiverem configuradas
-  if (panelUrl && (panelToken || (panelUser && panelPass))) {
-    try {
-      const { createSigmaCustomer } = await import("./sigma.panel");
-      const sigmaConfig: SigmaConfig = {
-        url: panelUrl,
-        token: panelToken,
-        username: panelUser,
-        password: panelPass,
-      };
+  // 4. O teste só existe se houver um painel Sigma configurado e a criação der certo
+  const hasPanel = Boolean(panelUrl && (panelToken || (panelUser && panelPass)));
+  if (!hasPanel) {
+    return {
+      ok: false,
+      error:
+        `😕 *Teste indisponível no momento*\n\n` +
+        `Nosso sistema de testes está temporariamente fora do ar.\n` +
+        `Fale com o atendimento ou digite *3* para ver os planos.`,
+    };
+  }
 
-      await createSigmaCustomer(sigmaConfig, {
-        name: clientDisplayName,
-        username: trialUsername,
-        password: trialPassword,
-        phone: cleanPhone,
-        screens: 1,
-        dueDate: expiryIso,
-        notes: `Teste automático gerado via Bot WhatsApp (${hours}h)`,
-      });
-    } catch (sigmaErr) {
-      console.warn("Aviso ao criar teste no Sigma (prosseguindo com entrega da lista e credenciais):", sigmaErr);
-    }
+  try {
+    const { createSigmaCustomer } = await import("./sigma.panel");
+    const sigmaConfig: SigmaConfig = {
+      url: panelUrl,
+      token: panelToken,
+      username: panelUser,
+      password: panelPass,
+    };
+
+    await createSigmaCustomer(sigmaConfig, {
+      name: clientDisplayName,
+      username: trialUsername,
+      password: trialPassword,
+      phone: cleanPhone,
+      screens: 1,
+      dueDate: expiryIso,
+      notes: `Teste automático gerado via Bot WhatsApp (${hours}h)`,
+    });
+  } catch (sigmaErr) {
+    console.error("Erro ao criar teste no Sigma:", sigmaErr);
+    return {
+      ok: false,
+      error:
+        `😕 *Não consegui gerar seu teste agora*\n\n` +
+        `Houve uma falha ao criar o acesso no servidor.\n` +
+        `Tente novamente em alguns minutos ou digite *3* para ver os planos.`,
+    };
   }
 
   // 5. Gera links de acesso oficiais do IPTV
