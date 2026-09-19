@@ -246,6 +246,21 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
       wsRow = null;
     }
 
+    // Fonte principal e permanente: tabela bot_settings (sobrevive a reinícios do servidor)
+    let storedConfig: any = null;
+    try {
+      if (supabase && userId && userId !== "default") {
+        const { data } = await supabase
+          .from("bot_settings")
+          .select("config")
+          .eq("user_id", userId)
+          .maybeSingle();
+        storedConfig = data?.config ?? null;
+      }
+    } catch {
+      storedConfig = null;
+    }
+
     let metaBot: any = null;
     try {
       if (supabase?.auth?.getUser) {
@@ -255,6 +270,9 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
     } catch {
       metaBot = null;
     }
+
+    metaBot = { ...(metaBot ?? {}), ...(storedConfig ?? {}) };
+
 
     const businessName =
       wsRow?.business_name?.trim() ||
@@ -343,6 +361,20 @@ export async function saveBotConfigServer(
       pix_key: updated.pixKey ?? "",
       pix_holder: updated.pixHolder ?? "",
     });
+  }
+
+  // 1.5 Persiste a configuração completa no banco (fonte definitiva, não se perde)
+  try {
+    if (supabase && userId && userId !== "default") {
+      await supabase
+        .from("bot_settings")
+        .upsert(
+          { user_id: userId, config: updated, updated_at: new Date().toISOString() },
+          { onConflict: "user_id" },
+        );
+    }
+  } catch (persistErr) {
+    console.warn("Aviso ao salvar bot_settings:", persistErr);
   }
 
   // 2. Atualiza na tabela whatsapp_settings de forma segura
