@@ -363,6 +363,20 @@ export async function saveBotConfigServer(
     });
   }
 
+  // 1.5 Persiste a configuração completa no banco (fonte definitiva, não se perde)
+  try {
+    if (supabase && userId && userId !== "default") {
+      await supabase
+        .from("bot_settings")
+        .upsert(
+          { user_id: userId, config: updated, updated_at: new Date().toISOString() },
+          { onConflict: "user_id" },
+        );
+    }
+  } catch (persistErr) {
+    console.warn("Aviso ao salvar bot_settings:", persistErr);
+  }
+
   // 2. Atualiza na tabela whatsapp_settings de forma segura
   try {
     if (supabase) {
