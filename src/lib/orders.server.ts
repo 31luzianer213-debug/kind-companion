@@ -186,16 +186,15 @@ export async function approveAndReleaseOrderServer(
   password?: string;
   m3uUrl?: string;
 }> {
-  const orders = readLocalOrders(userId);
-  const orderIndex = orders.findIndex((o) => o.id === orderId);
-  if (orderIndex === -1) {
+  const order = await getOrder(userId, orderId);
+  if (!order) {
     return { ok: false, message: "Pedido não encontrado." };
   }
 
-  const order = orders[orderIndex];
   if (order.status === "approved") {
     return { ok: true, message: "Este pedido já foi liberado anteriormente.", order };
   }
+
 
   // 1. Carrega configurações do revendedor (Sigma e WhatsApp)
   let wsRow: any = null;
