@@ -1774,14 +1774,22 @@ function Clientes() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Painel Sigma de origem *</Label>
+                <Label className="text-xs font-semibold">
+                  Painel Sigma de origem {sigmaServers.some((server) => server.enabled) ? "*" : "(opcional)"}
+                </Label>
                 <Select
                   value={form.panel_id || defaultSigmaServer?.id || ""}
                   onValueChange={(value) => setForm({ ...form, panel_id: value })}
-                  disabled={Boolean(form.id && form.panel_id)}
+                  disabled={Boolean(form.id && form.panel_id) || !sigmaServers.some((server) => server.enabled)}
                 >
                   <SelectTrigger className="rounded-md">
-                    <SelectValue placeholder="Selecione o painel Sigma" />
+                    <SelectValue
+                      placeholder={
+                        sigmaServers.some((server) => server.enabled)
+                          ? "Selecione o painel Sigma"
+                          : "Nenhum servidor Sigma cadastrado"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {sigmaServers.filter((server) => server.enabled).map((server) => (
@@ -1793,6 +1801,10 @@ function Clientes() {
                 </Select>
                 {form.id && form.panel_id ? (
                   <p className="text-[11px] text-muted-foreground">O painel de origem fica bloqueado para preservar as operações deste cliente.</p>
+                ) : !sigmaServers.some((server) => server.enabled) ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    Você ainda não cadastrou um servidor Sigma. O cliente será salvo só aqui no painel e poderá ser vinculado depois.
+                  </p>
                 ) : null}
               </div>
 
