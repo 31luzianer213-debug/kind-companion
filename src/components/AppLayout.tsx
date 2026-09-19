@@ -165,7 +165,7 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
           </div>
         </div>
         <div className="flex items-center gap-2">
-        <GlobalSearch />
+        <GlobalSearch enableShortcut={false} />
         <Button
           variant="ghost"
           size="icon"
