@@ -109,26 +109,14 @@ export const deleteSigmaServer = createServerFn({ method: "POST" })
 
     const clientIds = (linkedClients ?? []).map((client) => client.id);
     if (clientIds.length > 0) {
-      const { error: logsError } = await context.supabase
-        .from("message_logs")
-        .delete()
-        .eq("user_id", context.userId)
-        .in("client_id", clientIds);
-      if (logsError) return { ok: false as const, error: `Falha ao remover mensagens dos clientes: ${logsError.message}` };
-
-      const { error: invoicesError } = await context.supabase
-        .from("invoices")
-        .delete()
-        .eq("user_id", context.userId)
-        .in("client_id", clientIds);
-      if (invoicesError) return { ok: false as const, error: `Falha ao remover cobranças dos clientes: ${invoicesError.message}` };
-
-      const { error: deleteClientsError } = await context.supabase
+      // Remover o servidor NÃO apaga clientes, cobranças nem histórico:
+      // os clientes apenas deixam de ficar vinculados ao painel removido.
+      const { error: unlinkError } = await context.supabase
         .from("clients")
-        .delete()
+        .update({ panel_id: null })
         .eq("user_id", context.userId)
         .eq("panel_id", data.serverId);
-      if (deleteClientsError) return { ok: false as const, error: `Falha ao remover clientes: ${deleteClientsError.message}` };
+      if (unlinkError) return { ok: false as const, error: `Falha ao desvincular clientes: ${unlinkError.message}` };
     }
 
     const { error } = await context.supabase
