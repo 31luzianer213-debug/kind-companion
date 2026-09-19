@@ -7,18 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateTime } from "@/lib/format";
 import {
   Activity,
   AlertTriangle,
   Bot,
-  Check,
   CheckCircle2,
   Clock,
-  Copy,
-  KeyRound,
   Loader2,
   LogOut,
   MessageCircle,
@@ -66,26 +63,22 @@ function statusBadge(status: string) {
       label: "Aguardando conexão",
       color: "bg-amber-500",
       variant: "secondary" as const,
-      desc: "Escaneie o QR Code ou insira o Código de Pareamento no seu WhatsApp.",
+      desc: "Escaneie o QR Code no seu WhatsApp para concluir a conexão.",
     };
   }
   return {
     label: "Desconectado",
     color: "bg-red-500",
     variant: "destructive" as const,
-    desc: "Conecte pelo QR Code ou pelo código de pareamento.",
+    desc: "Conecte lendo o QR Code pelo seu WhatsApp.",
   };
 }
 
 function WhatsAppPage() {
   const qc = useQueryClient();
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [connectTab, setConnectTab] = useState<"qr" | "pairing">("qr");
-  const [pairingPhone, setPairingPhone] = useState("");
   const [loadingAction, setLoadingAction] = useState(false);
-  const [copiedCode, setCopiedCode] = useState(false);
   const [localQr, setLocalQr] = useState<string | null>(null);
-  const [localPairingCode, setLocalPairingCode] = useState<string | null>(null);
   const [isRequestingQr, setIsRequestingQr] = useState(false);
 
   // Testes
@@ -119,12 +112,8 @@ function WhatsAppPage() {
         setLocalQr(s.qrCode);
         setIsRequestingQr(false);
       }
-      if (s?.pairingCode) {
-        setLocalPairingCode(s.pairingCode);
-      }
       if (s?.status === "open") {
         setLocalQr(null);
-        setLocalPairingCode(null);
         setIsRequestingQr(false);
       }
 
@@ -144,7 +133,6 @@ function WhatsAppPage() {
 
   // O código vindo da consulta mais recente tem prioridade sobre o cache local.
   const activeQr = state?.qrCode || localQr;
-  const activePairing = state?.pairingCode || localPairingCode;
 
   // Mantém os demais indicadores de status sincronizados, sem exibir aviso ao abrir a página.
   useEffect(() => {
@@ -190,36 +178,11 @@ function WhatsAppPage() {
     }
   }
 
-  async function handleStartPairing() {
-    const clean = pairingPhone.replace(/\D/g, "");
-    if (clean.length < 10) {
-      toast.error("Informe o número completo com DDD (ex: 5593991614242)");
-      return;
-    }
-    setLoadingAction(true);
-    toast.loading("Gerando código de pareamento no WhatsApp...", { id: "pairing-toast" });
-
-    try {
-      const res = await connectBaileys({ data: { instance: instanceId, mode: "pairing", phone: clean, origin: window.location.origin, userId: currentUser?.id } });
-      if (res?.state?.pairingCode) {
-        setLocalPairingCode(res.state.pairingCode);
-        toast.success("Código de pareamento gerado!", { id: "pairing-toast" });
-      } else {
-        toast.info("Aguardando liberação do código pelo WhatsApp...", { id: "pairing-toast" });
-      }
-      qc.invalidateQueries({ queryKey: ["baileys"] });
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao solicitar código de pareamento", { id: "pairing-toast" });
-    } finally {
-      setLoadingAction(false);
-    }
-  }
 
   async function handleResetSession() {
     if (!confirm("A sessão do WhatsApp parece corrompida. Isso apagará a sessão atual da VPS e exigirá um novo QR Code. Continuar?")) return;
     setLoadingAction(true);
     setLocalQr(null);
-    setLocalPairingCode(null);
     toast.loading("Limpando sessão corrompida e gerando novo QR Code...", { id: "reset-wa-toast" });
     try {
       const res = await resetBaileysSession({ data: { origin: window.location.origin, userId: currentUser?.id } });
@@ -241,7 +204,6 @@ function WhatsAppPage() {
     if (!confirm("Deseja realmente desconectar o WhatsApp? Será necessário escanear o QR Code novamente.")) return;
     setLoadingAction(true);
     setLocalQr(null);
-    setLocalPairingCode(null);
     try {
       await disconnectBaileys({ data: { instance: instanceId } });
       toast.success("WhatsApp desconectado.");
@@ -253,12 +215,6 @@ function WhatsAppPage() {
     }
   }
 
-  function handleCopyPairingCode(code: string) {
-    navigator.clipboard.writeText(code);
-    setCopiedCode(true);
-    toast.success("Código copiado!");
-    setTimeout(() => setCopiedCode(false), 2000);
-  }
 
   async function handleSendTest() {
     const cleanNum = testNumber.replace(/\D/g, "");
@@ -405,17 +361,8 @@ function WhatsAppPage() {
                 </div>
               </div>
             ) : (
-              <Tabs value={connectTab} onValueChange={(value) => setConnectTab(value as "qr" | "pairing")} className="space-y-5">
-                <TabsList className="grid h-11 w-full grid-cols-2 rounded-xl">
-                  <TabsTrigger value="qr" className="gap-2 rounded-lg text-xs sm:text-sm">
-                    <QrCode className="size-4" /> QR Code
-                  </TabsTrigger>
-                  <TabsTrigger value="pairing" className="gap-2 rounded-lg text-xs sm:text-sm">
-                    <KeyRound className="size-4" /> Código
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="qr" className="mt-0 space-y-4">
+              <div className="space-y-5">
+                <div className="space-y-4">
                   <div className="rounded-2xl border bg-muted/20 p-4 text-sm text-muted-foreground">
                     No celular, abra <strong className="text-foreground">WhatsApp → Aparelhos conectados → Conectar aparelho</strong>.
                   </div>
@@ -459,39 +406,8 @@ function WhatsAppPage() {
                       </Button>
                     </div>
                   )}
-                </TabsContent>
-
-                <TabsContent value="pairing" className="mt-0 space-y-4">
-                  <div className="rounded-2xl border bg-muted/20 p-4 text-sm text-muted-foreground">
-                    Informe o número com país e DDD. Depois escolha <strong className="text-foreground">Conectar com número de telefone</strong> no WhatsApp.
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                    <Input
-                      placeholder="55 + DDD + número"
-                      value={pairingPhone}
-                      onChange={(event) => setPairingPhone(event.target.value)}
-                      className="h-11 rounded-xl font-mono"
-                    />
-                    <Button onClick={handleStartPairing} disabled={loadingAction} className="h-11 gap-2 rounded-xl">
-                      {loadingAction ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
-                      Gerar código
-                    </Button>
-                  </div>
-                  {activePairing && (
-                    <div className="rounded-2xl border border-primary/25 bg-primary/5 p-5 text-center">
-                      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Código de pareamento</p>
-                      <div className="mt-3 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                        <span className="max-w-full break-all rounded-xl border bg-background px-4 py-3 font-mono text-2xl font-black tracking-[0.2em] text-primary sm:text-3xl">
-                          {activePairing}
-                        </span>
-                        <Button variant="outline" size="icon" onClick={() => handleCopyPairingCode(activePairing)} className="size-11 shrink-0 rounded-xl">
-                          {copiedCode ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
