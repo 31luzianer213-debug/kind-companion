@@ -3,7 +3,6 @@ import { generateM3uUrl, generateEpgUrl, extractCleanIptvDns } from "./format";
 import type { SigmaConfig } from "./sigma.panel";
 import { sendViaBaileys } from "./billing.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import defaultOrdersData from "../../data/orders_default.json";
 import defaultBotConfigData from "../../data/bot_config_default.json";
 
 export type OrderItem = {
