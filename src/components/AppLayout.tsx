@@ -115,7 +115,7 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
     queryKey: ["sidebar-counts"],
     queryFn: async () => {
       const [pendingOrders, clients, overdueInvoices, sigmaClients] = await Promise.all([
-        getPendingOrderCount(),
+        getPendingOrderCount(ordersFn),
         supabase.from("clients").select("id", { count: "exact", head: true }),
         supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "overdue"),
         supabase.from("clients").select("id", { count: "exact", head: true }).not("sigma_customer_id", "is", null),
