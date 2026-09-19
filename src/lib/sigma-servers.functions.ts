@@ -141,7 +141,7 @@ export const deleteSigmaServer = createServerFn({ method: "POST" })
                 dueDate: client.next_due_date || null,
                 notes: `Servidor: ${targetPanel.name}`,
               });
-              const update: Record<string, any> = {
+              const update = {
                 panel_id: data.targetPanelId,
                 sigma_customer_id: created.id,
                 sigma_username: created.username,
