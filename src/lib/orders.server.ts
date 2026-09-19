@@ -32,74 +32,55 @@ export function getCanonicalUserId(userId?: string): string {
   return clean.slice(0, 16) || "default";
 }
 
-export function getOrdersFilePath(userId?: string): string {
-  const canonicalId = getCanonicalUserId(userId);
-  return `orders_${canonicalId}.json`;
+function mapRow(row: any): OrderItem {
+  return {
+    ...row,
+    amount: Number(row.amount) || 0,
+    duration_months: Number(row.duration_months) || 1,
+    screens: Number(row.screens) || 1,
+    order_number: Number(row.order_number) || 0,
+  } as OrderItem;
 }
 
-const deletedOrderIdsSet = new Set<string>();
-const ordersMemoryStore = new Map<string, OrderItem>();
-
-// Inicializa o store em memória com os pedidos pré-compilados
-try {
-  if (Array.isArray(defaultOrdersData)) {
-    for (const item of defaultOrdersData as OrderItem[]) {
-      if (item && item.id) {
-        ordersMemoryStore.set(item.id, item);
-      }
-    }
-  }
-} catch {}
-
-export function getDeletedOrderIds(): Set<string> {
-  return deletedOrderIdsSet;
+/** Lê os pedidos direto do banco (fonte única de verdade). */
+export async function readOrders(userId: string): Promise<OrderItem[]> {
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`Falha ao ler pedidos: ${error.message}`);
+  return (data ?? []).map(mapRow);
 }
 
-export function markOrdersAsDeleted(orderIds: string[]): void {
-  for (const id of orderIds) {
-    if (id) {
-      deletedOrderIdsSet.add(id);
-      ordersMemoryStore.delete(id);
-    }
-  }
+async function getOrder(userId: string, orderId: string): Promise<OrderItem | null> {
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("id", orderId)
+    .maybeSingle();
+  if (error) throw new Error(`Falha ao ler o pedido: ${error.message}`);
+  return data ? mapRow(data) : null;
 }
 
-export function readLocalOrders(userId?: string): OrderItem[] {
-  const list = Array.from(ordersMemoryStore.values()).filter((o) => !deletedOrderIdsSet.has(o.id));
-  list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  return list;
-}
-
-export function triggerOrdersGitSync(): void {
-  // Em ambiente serverless (Cloudflare Workers / Edge), a persistência primária é feita via Supabase
-}
-
-export function writeLocalOrders(userId: string | undefined, orders: OrderItem[]): void {
-  for (const o of orders) {
-    if (o && o.id && !deletedOrderIdsSet.has(o.id)) {
-      ordersMemoryStore.set(o.id, o);
-    }
-  }
-}
-
-export function updateOrderServer(
+export async function updateOrderServer(
   userId: string,
   orderId: string,
   updates: Partial<OrderItem>,
-): OrderItem | null {
-  const list = readLocalOrders(userId);
-  const idx = list.findIndex((o) => o.id === orderId);
-  if (idx === -1) return null;
-
-  list[idx] = {
-    ...list[idx],
-    ...updates,
-    updated_at: new Date().toISOString(),
-  };
-
-  writeLocalOrders(userId, list);
-  return list[idx];
+): Promise<OrderItem | null> {
+  const { id: _ignoredId, user_id: _ignoredUser, created_at: _ignoredCreated, ...patch } = updates as any;
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("id", orderId)
+    .select("*")
+    .maybeSingle();
+  if (error) throw new Error(`Falha ao atualizar o pedido: ${error.message}`);
+  return data ? mapRow(data) : null;
 }
+
 
 /** Cria um novo pedido (novo acesso ou renovação) */
 export async function createOrderServer(
