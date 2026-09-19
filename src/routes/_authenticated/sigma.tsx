@@ -214,18 +214,49 @@ function SigmaServersPage() {
     }
   }
 
-  async function remove(server: any) {
-    if (!window.confirm(`Remover o servidor "${server.name}"? Os clientes e dados vinculados a ele também serão removidos deste sistema.`)) return;
+  function remove(server: any) {
+    setRemoveTarget(server);
+    setRemoveAction("keep");
+    setRemoveTargetPanel(servers.find((item) => item.id !== server.id)?.id ?? "");
+  }
 
-    const result = await deleteFn({ data: { serverId: server.id } });
-    if (!result.ok) {
-      toast.error(result.error);
+  async function confirmRemove() {
+    if (!removeTarget) return;
+    if (removeAction === "move" && !removeTargetPanel) {
+      toast.error("Escolha o painel de destino dos clientes.");
       return;
     }
-
-    await refreshAfterSync();
-    toast.success(result.deletedClients ? `Servidor e ${result.deletedClients} cliente(s) removidos.` : "Servidor removido.");
+    setRemoving(true);
+    try {
+      const result = await deleteFn({
+        data: {
+          serverId: removeTarget.id,
+          clientAction: removeAction,
+          targetPanelId: removeAction === "move" ? removeTargetPanel : null,
+        },
+      });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      await refreshAfterSync();
+      setRemoveTarget(null);
+      toast.success(
+        result.deletedClients
+          ? `Servidor e ${result.deletedClients} cliente(s) removidos.`
+          : result.movedClients
+            ? `Servidor removido. ${result.movedClients} cliente(s) movidos para o outro painel.`
+            : result.keptClients
+              ? `Servidor removido. ${result.keptClients} cliente(s) mantidos no sistema.`
+              : "Servidor removido.",
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao remover o servidor.");
+    } finally {
+      setRemoving(false);
+    }
   }
+
 
   const stageLabel = syncStage === "testing"
     ? "Testando conexão com o Sigma..."
