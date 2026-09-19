@@ -177,11 +177,21 @@ const empty: ClientForm = {
 
 function formatPhoneInput(value?: string | null) {
   if (!value) return "";
-  const digits = String(value).replace(/\D/g, "");
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+  const raw = String(value).replace(/\D/g, "").slice(0, 13);
+  // Aceita número com código do país (55) sem perder dígitos do DDD/celular.
+  const hasCountry = raw.length > 11 && raw.startsWith("55");
+  const prefix = hasCountry ? "+55 " : "";
+  const digits = hasCountry ? raw.slice(2) : raw;
+  if (digits.length <= 2) return `${prefix}${digits}`;
+  if (digits.length <= 6) return `${prefix}(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `${prefix}(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `${prefix}(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+}
+
+function defaultNextDueDate() {
+  const date = new Date();
+  date.setDate(date.getDate() + 30);
+  return date.toISOString().slice(0, 10);
 }
 
 function cleanPhoneDigits(phone?: string | null) {
