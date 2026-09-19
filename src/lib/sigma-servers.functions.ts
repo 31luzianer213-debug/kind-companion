@@ -96,10 +96,11 @@ export const saveSigmaServer = createServerFn({ method: "POST" })
 
 export const deleteSigmaServer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { serverId: string }) => input)
+  .inputValidator((input: { serverId: string; clientAction?: "keep" | "move" | "delete"; targetPanelId?: string | null }) => input)
   .handler(async ({ data, context }) => {
     await cleanupOrphanRows(context.supabase, context.userId);
     const server = await getOwnedServer(context.supabase, context.userId, data.serverId);
+    const action = data.clientAction ?? "keep";
     const { data: linkedClients, error: clientsError } = await context.supabase
       .from("clients")
       .select("id")
@@ -107,16 +108,36 @@ export const deleteSigmaServer = createServerFn({ method: "POST" })
       .eq("panel_id", data.serverId);
     if (clientsError) return { ok: false as const, error: clientsError.message };
 
-    const clientIds = (linkedClients ?? []).map((client) => client.id);
+    const clientIds = (linkedClients ?? []).map((client: { id: string }) => client.id);
+    let movedClients = 0;
+    let deletedClients = 0;
+    let keptClients = 0;
+
     if (clientIds.length > 0) {
-      // Remover o servidor NÃO apaga clientes, cobranças nem histórico:
-      // os clientes apenas deixam de ficar vinculados ao painel removido.
-      const { error: unlinkError } = await context.supabase
-        .from("clients")
-        .update({ panel_id: null })
-        .eq("user_id", context.userId)
-        .eq("panel_id", data.serverId);
-      if (unlinkError) return { ok: false as const, error: `Falha ao desvincular clientes: ${unlinkError.message}` };
+      if (action === "delete") {
+        const deleteError = await deleteLocalClients(context.supabase, context.userId, clientIds);
+        if (deleteError) return { ok: false as const, error: deleteError };
+        deletedClients = clientIds.length;
+      } else if (action === "move") {
+        if (!data.targetPanelId) return { ok: false as const, error: "Escolha o painel de destino dos clientes." };
+        // valida propriedade do painel de destino
+        await getOwnedServer(context.supabase, context.userId, data.targetPanelId);
+        const { error: moveError } = await context.supabase
+          .from("clients")
+          .update({ panel_id: data.targetPanelId })
+          .eq("user_id", context.userId)
+          .eq("panel_id", data.serverId);
+        if (moveError) return { ok: false as const, error: `Falha ao mover clientes: ${moveError.message}` };
+        movedClients = clientIds.length;
+      } else {
+        const { error: unlinkError } = await context.supabase
+          .from("clients")
+          .update({ panel_id: null })
+          .eq("user_id", context.userId)
+          .eq("panel_id", data.serverId);
+        if (unlinkError) return { ok: false as const, error: `Falha ao desvincular clientes: ${unlinkError.message}` };
+        keptClients = clientIds.length;
+      }
     }
 
     const { error } = await context.supabase
@@ -126,8 +147,9 @@ export const deleteSigmaServer = createServerFn({ method: "POST" })
       .eq("user_id", context.userId);
     return error
       ? { ok: false as const, error: error.message }
-      : { ok: true as const, deletedClients: clientIds.length, error: null };
+      : { ok: true as const, deletedClients, movedClients, keptClients, error: null };
   });
+
 
 async function deleteLocalClients(supabase: any, userId: string, clientIds: string[]) {
   if (clientIds.length === 0) return null;

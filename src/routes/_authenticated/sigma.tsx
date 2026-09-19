@@ -73,6 +73,11 @@ function SigmaServersPage() {
   const [syncStage, setSyncStage] = useState<SyncStage>("idle");
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [syncingAll, setSyncingAll] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<any>(null);
+  const [removeAction, setRemoveAction] = useState<"keep" | "move" | "delete">("keep");
+  const [removeTargetPanel, setRemoveTargetPanel] = useState<string>("");
+  const [removing, setRemoving] = useState(false);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["sigma-servers"],
@@ -214,18 +219,49 @@ function SigmaServersPage() {
     }
   }
 
-  async function remove(server: any) {
-    if (!window.confirm(`Remover o servidor "${server.name}"? Os clientes e dados vinculados a ele também serão removidos deste sistema.`)) return;
+  function remove(server: any) {
+    setRemoveTarget(server);
+    setRemoveAction("keep");
+    setRemoveTargetPanel(servers.find((item) => item.id !== server.id)?.id ?? "");
+  }
 
-    const result = await deleteFn({ data: { serverId: server.id } });
-    if (!result.ok) {
-      toast.error(result.error);
+  async function confirmRemove() {
+    if (!removeTarget) return;
+    if (removeAction === "move" && !removeTargetPanel) {
+      toast.error("Escolha o painel de destino dos clientes.");
       return;
     }
-
-    await refreshAfterSync();
-    toast.success(result.deletedClients ? `Servidor e ${result.deletedClients} cliente(s) removidos.` : "Servidor removido.");
+    setRemoving(true);
+    try {
+      const result = await deleteFn({
+        data: {
+          serverId: removeTarget.id,
+          clientAction: removeAction,
+          targetPanelId: removeAction === "move" ? removeTargetPanel : null,
+        },
+      });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      await refreshAfterSync();
+      setRemoveTarget(null);
+      toast.success(
+        result.deletedClients
+          ? `Servidor e ${result.deletedClients} cliente(s) removidos.`
+          : result.movedClients
+            ? `Servidor removido. ${result.movedClients} cliente(s) movidos para o outro painel.`
+            : result.keptClients
+              ? `Servidor removido. ${result.keptClients} cliente(s) mantidos no sistema.`
+              : "Servidor removido.",
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao remover o servidor.");
+    } finally {
+      setRemoving(false);
+    }
   }
+
 
   const stageLabel = syncStage === "testing"
     ? "Testando conexão com o Sigma..."
@@ -385,8 +421,65 @@ function SigmaServersPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!removeTarget} onOpenChange={(open) => !removing && !open && setRemoveTarget(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Remover “{removeTarget?.name}”</DialogTitle>
+            <DialogDescription>Escolha o que fazer com os clientes que estão neste servidor.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            {[
+              { value: "keep" as const, title: "Manter os clientes", desc: "Os clientes continuam no sistema, apenas sem servidor vinculado." },
+              { value: "move" as const, title: "Mover para outro painel", desc: "Todos os clientes passam a pertencer ao painel escolhido." },
+              { value: "delete" as const, title: "Apagar os clientes", desc: "Remove os clientes, cobranças e histórico deste servidor. Não tem volta." },
+            ].map((option) => {
+              const disabled = option.value === "move" && servers.length < 2;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  disabled={disabled || removing}
+                  onClick={() => setRemoveAction(option.value)}
+                  className={`w-full rounded-xl border p-3 text-left transition ${
+                    removeAction === option.value ? "border-primary bg-primary/5" : "border-border/60 hover:bg-muted/40"
+                  } ${disabled ? "cursor-not-allowed opacity-45" : ""}`}
+                >
+                  <p className="text-sm font-bold">{option.title}</p>
+                  <p className="text-xs text-muted-foreground">{disabled ? "Cadastre outro servidor para usar esta opção." : option.desc}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          {removeAction === "move" && servers.length > 1 && (
+            <Field label="Painel de destino">
+              <select
+                value={removeTargetPanel}
+                onChange={(e) => setRemoveTargetPanel(e.target.value)}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Selecione...</option>
+                {servers.filter((item) => item.id !== removeTarget?.id).map((item) => (
+                  <option key={item.id} value={item.id}>{item.name}</option>
+                ))}
+              </select>
+            </Field>
+          )}
+
+          <div className="flex flex-col-reverse gap-2 border-t border-border/60 pt-4 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => setRemoveTarget(null)} disabled={removing}>Cancelar</Button>
+            <Button variant={removeAction === "delete" ? "destructive" : "default"} onClick={confirmRemove} disabled={removing} className="gap-2">
+              {removing ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+              {removing ? "Removendo..." : "Remover servidor"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
