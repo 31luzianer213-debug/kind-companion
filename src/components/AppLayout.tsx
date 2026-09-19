@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
 import { listSigmaServers } from "@/lib/sigma-servers.functions";
+import { getOrdersList } from "@/lib/orders.functions";
 import { startQueryCachePersistence } from "@/lib/query-cache-persist";
 import "../mobile-app.css";
 
@@ -53,18 +54,17 @@ function getDeletedOrderIds() {
   return ids;
 }
 
-async function getPendingOrderCount() {
+async function getPendingOrderCount(
+  listOrders: (args: { data: { status?: string } }) => Promise<{ orders?: { id: string }[] }>,
+) {
   const deletedIds = getDeletedOrderIds();
   try {
-    const response = await fetch("/api/public/orders?status=pending");
-    if (response.ok) {
-      const payload = await response.json();
-      if (Array.isArray(payload?.orders)) {
-        return payload.orders.filter((order: { id: string }) => !deletedIds.has(order.id)).length;
-      }
+    const payload = await listOrders({ data: { status: "pending" } });
+    if (Array.isArray(payload?.orders)) {
+      return payload.orders.filter((order: { id: string }) => !deletedIds.has(order.id)).length;
     }
   } catch {
-    // The bundled seed keeps the navigation usable while the public endpoint is offline.
+    // The bundled seed keeps the navigation usable while the orders service is offline.
   }
 
   return Array.isArray(defaultOrdersSeed)
@@ -76,6 +76,7 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const statusFn = useServerFn(getWhatsAppStatus);
+  const ordersFn = useServerFn(getOrdersList);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
 
@@ -116,7 +117,7 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
     queryKey: ["sidebar-counts"],
     queryFn: async () => {
       const [pendingOrders, clients, overdueInvoices, sigmaClients] = await Promise.all([
-        getPendingOrderCount(),
+        getPendingOrderCount(ordersFn),
         supabase.from("clients").select("id", { count: "exact", head: true }),
         supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "overdue"),
         supabase.from("clients").select("id", { count: "exact", head: true }).not("sigma_customer_id", "is", null),
