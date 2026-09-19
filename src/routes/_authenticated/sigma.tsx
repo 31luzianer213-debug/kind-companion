@@ -73,6 +73,11 @@ function SigmaServersPage() {
   const [syncStage, setSyncStage] = useState<SyncStage>("idle");
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [syncingAll, setSyncingAll] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<any>(null);
+  const [removeAction, setRemoveAction] = useState<"keep" | "move" | "delete">("keep");
+  const [removeTargetPanel, setRemoveTargetPanel] = useState<string>("");
+  const [removing, setRemoving] = useState(false);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["sigma-servers"],
