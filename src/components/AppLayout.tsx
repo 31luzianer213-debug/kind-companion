@@ -53,18 +53,17 @@ function getDeletedOrderIds() {
   return ids;
 }
 
-async function getPendingOrderCount() {
+async function getPendingOrderCount(
+  listOrders: (args: { data: { status?: string } }) => Promise<{ orders?: { id: string }[] }>,
+) {
   const deletedIds = getDeletedOrderIds();
   try {
-    const response = await fetch("/api/public/orders?status=pending");
-    if (response.ok) {
-      const payload = await response.json();
-      if (Array.isArray(payload?.orders)) {
-        return payload.orders.filter((order: { id: string }) => !deletedIds.has(order.id)).length;
-      }
+    const payload = await listOrders({ data: { status: "pending" } });
+    if (Array.isArray(payload?.orders)) {
+      return payload.orders.filter((order: { id: string }) => !deletedIds.has(order.id)).length;
     }
   } catch {
-    // The bundled seed keeps the navigation usable while the public endpoint is offline.
+    // The bundled seed keeps the navigation usable while the orders service is offline.
   }
 
   return Array.isArray(defaultOrdersSeed)
