@@ -376,7 +376,7 @@ export async function approveAndReleaseOrderServer(
     username,
     password,
     m3uUrl,
-    whatsappSent,
+
   };
 }
 
