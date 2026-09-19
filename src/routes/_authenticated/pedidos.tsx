@@ -85,6 +85,16 @@ function saveClientBulkDeletedIds(orderIds: string[]) {
 }
 
 export const Route = createFileRoute("/_authenticated/pedidos")({
+  head: () => ({
+    meta: [
+      { title: "Pedidos — Sigma Control" },
+      { name: "description", content: "Aprove, cancele e acompanhe os pedidos dos seus clientes IPTV." },
+      { property: "og:title", content: "Pedidos — Sigma Control" },
+      { property: "og:description", content: "Gestão de pedidos e liberação automática de acessos." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: PedidosPage,
 });
 
