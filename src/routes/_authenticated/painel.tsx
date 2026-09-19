@@ -60,6 +60,8 @@ function Painel() {
   const syncSigma = useServerFn(syncAllSigmaServers);
   const getSigma = useServerFn(listSigmaServers);
   const approveFn = useServerFn(approveOrder);
+  const ordersFn = useServerFn(getOrdersList);
+
   const getStatus = useServerFn(getWhatsAppStatus);
 
   const [running, setRunning] = useState(false);
