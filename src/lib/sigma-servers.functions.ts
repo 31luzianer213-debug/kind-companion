@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { extractCleanIptvDns, generateM3uUrl } from "./format";
-import type { SigmaConfig } from "./sigma.panel";
+import { createSigmaCustomer, type SigmaConfig } from "./sigma.panel";
 
 export interface SigmaServerInput {
   id?: string;
