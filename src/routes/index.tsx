@@ -20,9 +20,7 @@ import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const FALLBACK_PLANS: SaasPlan[] = [
-  { id: "basico", name: "Básico", description: "Para quem está começando a organizar a revenda.", price_monthly: 29.9, max_clients: 100, features: ["Até 100 clientes", "Cobranças e lembretes no WhatsApp", "Painel Sigma integrado", "Pedidos com Pix automático", "Suporte por e-mail"], highlighted: false, sort_order: 1 },
-  { id: "profissional", name: "Profissional", description: "Para revendas em crescimento que precisam de automação total.", price_monthly: 59.9, max_clients: 500, features: ["Até 500 clientes", "Robô de atendimento 24h no WhatsApp", "Cobrança automática diária", "Relatórios e indicadores", "Múltiplos painéis Sigma", "Suporte prioritário"], highlighted: true, sort_order: 2 },
-  { id: "ilimitado", name: "Ilimitado", description: "Para operações grandes, sem limite de clientes.", price_monthly: 99.9, max_clients: null, features: ["Clientes ilimitados", "Tudo do Profissional", "Importação em massa (CSV)", "Prioridade em novos recursos", "Suporte via WhatsApp"], highlighted: false, sort_order: 3 },
+  { id: "ilimitado", name: "Plano Mensal", description: "Acesso completo ao Sigma Control.", price_monthly: 20, max_clients: null, features: ["Clientes ilimitados", "Cobranças e lembretes no WhatsApp", "Painel Sigma integrado", "Pedidos com Pix automático", "Robô de atendimento 24h no WhatsApp", "Suporte via WhatsApp"], highlighted: true, sort_order: 1 },
 ];
 
 export const Route = createFileRoute("/")({
@@ -129,8 +127,8 @@ function Pricing({ plans }: { plans: SaasPlan[] }) {
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
         <div className="max-w-2xl">
           <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-primary">Planos e preços</p>
-          <h2 className="mt-3 font-display text-3xl font-bold leading-tight text-foreground sm:text-4xl">Um plano para cada tamanho de revenda</h2>
-          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">Comece com 7 dias grátis. Depois, pague por Pix e troque de plano quando quiser. Sem fidelidade.</p>
+          <h2 className="mt-3 font-display text-3xl font-bold leading-tight text-foreground sm:text-4xl">Um plano simples, tudo incluído</h2>
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">Comece com 7 dias grátis. Depois, pague por Pix. Sem fidelidade, cancele quando quiser.</p>
         </div>
         <div className="mt-10 grid gap-4 lg:grid-cols-3" data-testid="landing-pricing">
           {plans.map((plan) => (
@@ -196,7 +194,7 @@ function Index() {
               <Button asChild size="lg" variant="outline" className="h-12 px-7"><a href="#planos">Ver planos</a></Button>
             </div>
             <div className="flex flex-wrap gap-x-6 gap-y-3 border-t border-border pt-6">
-              {["A partir de R$ 29,90/mês", "Configuração guiada", "Dados isolados por revenda"].map((item) => <span key={item} className="flex items-center gap-2 text-xs font-semibold text-muted-foreground"><span className="grid size-5 place-items-center rounded-full bg-primary/10 text-primary"><Check className="size-3" /></span>{item}</span>)}
+              {["Apenas R$ 20/mês", "Configuração guiada", "Dados isolados por revenda"].map((item) => <span key={item} className="flex items-center gap-2 text-xs font-semibold text-muted-foreground"><span className="grid size-5 place-items-center rounded-full bg-primary/10 text-primary"><Check className="size-3" /></span>{item}</span>)}
             </div>
           </div>
           <DashboardPreview />

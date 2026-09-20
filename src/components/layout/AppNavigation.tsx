@@ -23,6 +23,7 @@ interface AppNavigationProps {
   counts?: NavigationCounts;
   email: string | null;
   isWhatsAppConnected: boolean;
+  isAdmin?: boolean;
   onNavigate?: () => void;
   onSignOut: () => void;
 }
@@ -82,7 +83,7 @@ export function DesktopNavigation(props: AppNavigationProps) {
           <section key={group.title} aria-labelledby={`nav-${group.title}`}>
             <p id={`nav-${group.title}`} className="mb-1.5 px-3 text-[9px] font-extrabold uppercase tracking-[0.16em] text-muted-foreground/65">{group.title}</p>
             <div className="space-y-1">
-              {group.items.map((item) => {
+              {group.items.filter((item) => !item.adminOnly || props.isAdmin).map((item) => {
                 const active = isActive(props.pathname, item.to);
                 const Icon = item.icon;
                 return (
@@ -110,7 +111,7 @@ export function MobileDrawer(props: AppNavigationProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <nav className="grid flex-1 grid-cols-2 gap-2 overflow-y-auto py-3 subtle-scrollbar" aria-label="Menu mobile">
-        {navigationGroups.flatMap((group) => group.items).map((item) => {
+        {navigationGroups.flatMap((group) => group.items).filter((item) => !item.adminOnly || props.isAdmin).map((item) => {
           const active = isActive(props.pathname, item.to);
           const Icon = item.icon;
           return (

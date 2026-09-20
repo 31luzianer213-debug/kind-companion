@@ -8,11 +8,10 @@ import {
   MessageCircle,
   MessageSquareText,
   Receipt,
-  RefreshCw,
   Server,
   Settings,
+  ShieldCheck,
   ShoppingBag,
-  Stethoscope,
   Timer,
   Users,
   type LucideIcon,
@@ -35,6 +34,7 @@ export type AppRoute =
   | "/pagamentos"
   | "/mensagens"
   | "/assinatura"
+  | "/admin"
   | "/configuracoes";
 
 export type NavigationBadge = "orders" | "clients" | "invoices" | "sigma" | "whatsapp";
@@ -46,6 +46,7 @@ export interface NavigationItem {
   icon: LucideIcon;
   badgeKey?: NavigationBadge;
   mobilePrimary?: boolean;
+  adminOnly?: boolean;
 }
 
 export interface NavigationGroup {
@@ -77,9 +78,7 @@ export const navigationGroups: NavigationGroup[] = [
     title: "Conexões",
     items: [
       { to: "/sigma", label: "Painel Sigma", shortLabel: "Sigma", icon: Server, badgeKey: "sigma" },
-      { to: "/sigma-sincronizacao", label: "Sincronização Sigma", shortLabel: "Sync", icon: RefreshCw },
       { to: "/whatsapp", label: "WhatsApp", shortLabel: "WhatsApp", icon: MessageCircle, badgeKey: "whatsapp" },
-      { to: "/whatsapp-diagnostico", label: "Diagnóstico WhatsApp", shortLabel: "Diagnóstico", icon: Stethoscope },
     ],
   },
   {
@@ -87,6 +86,7 @@ export const navigationGroups: NavigationGroup[] = [
     items: [
       { to: "/atividades", label: "Atividades", shortLabel: "Histórico", icon: Activity },
       { to: "/assinatura", label: "Assinatura", shortLabel: "Plano", icon: Crown },
+      { to: "/admin", label: "Administração", shortLabel: "Admin", icon: ShieldCheck, adminOnly: true },
       { to: "/configuracoes", label: "Configurações", shortLabel: "Ajustes", icon: Settings },
     ],
   },

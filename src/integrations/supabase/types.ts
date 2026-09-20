@@ -358,65 +358,6 @@ export type Database = {
         }
         Relationships: []
       }
-      saas_payments: {
-        Row: {
-          amount: number
-          approved_at: string | null
-          created_at: string
-          id: string
-          months: number
-          pix_code: string | null
-          pix_qr_base64: string | null
-          plan_id: string
-          provider: string
-          provider_payment_id: string | null
-          status: string
-          ticket_url: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          approved_at?: string | null
-          created_at?: string
-          id?: string
-          months?: number
-          pix_code?: string | null
-          pix_qr_base64?: string | null
-          plan_id: string
-          provider?: string
-          provider_payment_id?: string | null
-          status?: string
-          ticket_url?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          approved_at?: string | null
-          created_at?: string
-          id?: string
-          months?: number
-          pix_code?: string | null
-          pix_qr_base64?: string | null
-          plan_id?: string
-          provider?: string
-          provider_payment_id?: string | null
-          status?: string
-          ticket_url?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "saas_payments_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "saas_plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       saas_plans: {
         Row: {
           active: boolean
@@ -496,6 +437,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      saas_payments: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          created_at: string
+          id: string
+          months: number
+          pix_code: string | null
+          pix_qr_base64: string | null
+          plan_id: string
+          provider: string
+          provider_payment_id: string | null
+          status: string
+          ticket_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          months?: number
+          pix_code?: string | null
+          pix_qr_base64?: string | null
+          plan_id: string
+          provider?: string
+          provider_payment_id?: string | null
+          status?: string
+          ticket_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          months?: number
+          pix_code?: string | null
+          pix_qr_base64?: string | null
+          plan_id?: string
+          provider?: string
+          provider_payment_id?: string | null
+          status?: string
+          ticket_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       sigma_panels: {
         Row: {
@@ -675,7 +667,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      subscription_state: { Args: { p_user: string }; Returns: string }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
