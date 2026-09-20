@@ -127,7 +127,7 @@
 
   html {
     scroll-behavior: smooth;
-    font-family: 'Manrope', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
   }
 
   body {
@@ -135,7 +135,7 @@
     overflow-x: hidden;
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-family: 'Manrope', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
     font-feature-settings: "cv11", "ss01";
     text-rendering: optimizeLegibility;
     transition: background-color 200ms ease, color 200ms ease;
@@ -233,7 +233,7 @@
   margin-bottom: 1.5rem;
 
   & h1 {
-    font-family: "Sora", "Manrope", system-ui, sans-serif;
+    font-family: "Space Grotesk", "DM Sans", system-ui, sans-serif;
     letter-spacing: 0;
     line-height: 1.1;
   }

@@ -97,7 +97,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Sigma Control — Gestão de revenda IPTV e cobrança no WhatsApp" },
       { name: "description", content: "Painel para revendedores IPTV: clientes, painel Sigma, pedidos com Pix e cobranças automáticas no WhatsApp." },
       { name: "author", content: "Sigma Control" },
-      { name: "theme-color", content: "#09090b" },
+      { name: "theme-color", content: "#0C1512" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
@@ -112,7 +112,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Sora:wght@600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap",
       },
       { rel: "stylesheet", href: appCss },
       { rel: "stylesheet", href: uiPolishCss },
