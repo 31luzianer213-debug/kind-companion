@@ -23,7 +23,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAdminSettings, saveAdminSettings, testMercadoPagoToken } from "@/lib/admin.functions";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  getAdminPlan,
+  getAdminSettings,
+  listAdminSubscriptions,
+  saveAdminPlan,
+  saveAdminSettings,
+  testMercadoPagoToken,
+  updateAdminSubscription,
+} from "@/lib/admin.functions";
+
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Administração — Sigma Control" }] }),
@@ -270,6 +280,193 @@ function AdminPage() {
           </p>
         </CardContent>
       </Card>
+
+      <PlanEditorCard />
+      <SubscriptionsCard />
     </div>
   );
 }
+
+function PlanEditorCard() {
+  const queryClient = useQueryClient();
+  const getPlanFn = useServerFn(getAdminPlan);
+  const savePlanFn = useServerFn(saveAdminPlan);
+  const [form, setForm] = useState<{ id: string; name: string; description: string; price: string; maxClients: string; features: string } | null>(null);
+
+  const { data } = useQuery({ queryKey: ["admin-plan"], queryFn: () => getPlanFn({}), retry: false });
+
+  useEffect(() => {
+    if (data?.ok && !form) {
+      setForm({
+        id: data.plan.id,
+        name: data.plan.name,
+        description: data.plan.description,
+        price: String(data.plan.price_monthly),
+        maxClients: data.plan.max_clients === null ? "" : String(data.plan.max_clients),
+        features: data.plan.features.join("\n"),
+      });
+    }
+  }, [data, form]);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!form) throw new Error("Plano não carregado.");
+      const res = await savePlanFn({
+        data: {
+          id: form.id,
+          name: form.name,
+          description: form.description,
+          price_monthly: Number(form.price.replace(",", ".")),
+          max_clients: form.maxClients.trim() ? Number(form.maxClients) : null,
+          features: form.features.split("\n").map((f) => f.trim()).filter(Boolean),
+        },
+      });
+      if (!res.ok) throw new Error(res.error || "Falha ao salvar o plano.");
+    },
+    onSuccess: () => {
+      toast.success("Plano atualizado! O novo valor já aparece no site e na tela de Assinatura.");
+      queryClient.invalidateQueries({ queryKey: ["admin-plan"] });
+      queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  if (!form) return null;
+
+  return (
+    <Card className="surface-card border-border/70" data-testid="admin-plan-card">
+      <CardHeader className="border-b border-border/50 pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Crown className="size-5 text-primary" /> Plano de assinatura
+        </CardTitle>
+        <CardDescription>Defina o nome, o valor mensal e o que está incluso para seus revendedores.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Nome do plano</Label>
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} data-testid="admin-plan-name" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Valor mensal (R$)</Label>
+            <Input
+              inputMode="decimal"
+              value={form.price}
+              onChange={(e) => setForm({ ...form, price: e.target.value })}
+              data-testid="admin-plan-price"
+            />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label className="text-xs font-semibold">Descrição</Label>
+            <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Limite de clientes (vazio = ilimitado)</Label>
+            <Input
+              inputMode="numeric"
+              value={form.maxClients}
+              onChange={(e) => setForm({ ...form, maxClients: e.target.value })}
+              placeholder="ilimitado"
+            />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold">Benefícios (um por linha)</Label>
+          <Textarea rows={6} value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} />
+        </div>
+        <div className="flex justify-end border-t border-border/50 pt-3">
+          <Button onClick={() => save.mutate()} disabled={save.isPending} className="gap-1.5 px-6 font-semibold" data-testid="admin-plan-save">
+            {save.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+            Salvar plano
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SubscriptionsCard() {
+  const queryClient = useQueryClient();
+  const listFn = useServerFn(listAdminSubscriptions);
+  const updateFn = useServerFn(updateAdminSubscription);
+  const [days, setDays] = useState("30");
+
+  const { data } = useQuery({ queryKey: ["admin-subscriptions"], queryFn: () => listFn({}), retry: false });
+
+  const update = useMutation({
+    mutationFn: async (input: { userId: string; action: "grant" | "block" }) => {
+      const res = await updateFn({ data: { ...input, days: Number(days) || 30 } });
+      if (!res.ok) throw new Error(res.error || "Falha ao atualizar a assinatura.");
+    },
+    onSuccess: () => {
+      toast.success("Assinatura atualizada.");
+      queryClient.invalidateQueries({ queryKey: ["admin-subscriptions"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const rows = data?.ok ? data.rows : [];
+
+  return (
+    <Card className="surface-card border-border/70" data-testid="admin-subscriptions-card">
+      <CardHeader className="border-b border-border/50 pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <ShieldCheck className="size-5 text-primary" /> Assinaturas dos revendedores
+        </CardTitle>
+        <CardDescription>Libere dias de acesso manualmente ou bloqueie quem não pagou.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-4">
+        <div className="flex items-center gap-2">
+          <Label className="text-xs font-semibold">Dias a liberar</Label>
+          <Input
+            inputMode="numeric"
+            value={days}
+            onChange={(e) => setDays(e.target.value)}
+            className="h-9 w-24"
+            data-testid="admin-sub-days"
+          />
+        </div>
+        {rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma assinatura encontrada ainda.</p>
+        ) : (
+          <div className="divide-y divide-border/60 rounded-xl border border-border/60">
+            {rows.map((row) => {
+              const until = row.current_period_end || row.trial_ends_at;
+              return (
+                <div key={row.user_id} className="flex flex-wrap items-center justify-between gap-3 p-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-foreground">{row.email}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {row.status} · {row.clients} clientes
+                      {until ? ` · até ${new Date(until).toLocaleDateString("pt-BR")}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={update.isPending}
+                      onClick={() => update.mutate({ userId: row.user_id, action: "grant" })}
+                    >
+                      Liberar dias
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      disabled={update.isPending}
+                      onClick={() => update.mutate({ userId: row.user_id, action: "block" })}
+                    >
+                      Bloquear
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+

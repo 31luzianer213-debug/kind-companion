@@ -78,3 +78,141 @@ export const testMercadoPagoToken = createServerFn({ method: "POST" })
       return { ok: false as const, error: err instanceof Error ? err.message : "Falha na conexão com o Mercado Pago." };
     }
   });
+
+export type AdminPlan = {
+  id: string;
+  name: string;
+  description: string;
+  price_monthly: number;
+  max_clients: number | null;
+  features: string[];
+};
+
+/** Plano de assinatura do sistema (o que os revendedores pagam). */
+export const getAdminPlan = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { isAdminEmail } = await import("./system-settings.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await isAdminEmail(emailFromClaims(context.claims)))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
+    }
+    const { data, error } = await (supabaseAdmin as any)
+      .from("saas_plans")
+      .select("*")
+      .eq("active", true)
+      .order("sort_order")
+      .limit(1)
+      .maybeSingle();
+    if (error) return { ok: false as const, error: error.message };
+    const plan: AdminPlan = {
+      id: data?.id ?? "ilimitado",
+      name: data?.name ?? "Plano Mensal",
+      description: data?.description ?? "",
+      price_monthly: Number(data?.price_monthly) || 0,
+      max_clients: data?.max_clients === null || data?.max_clients === undefined ? null : Number(data.max_clients),
+      features: Array.isArray(data?.features) ? data.features.map(String) : [],
+    };
+    return { ok: true as const, plan };
+  });
+
+/** Salva nome, preço, limite e benefícios do plano de assinatura. */
+export const saveAdminPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: AdminPlan) => input)
+  .handler(async ({ data, context }) => {
+    const { isAdminEmail } = await import("./system-settings.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await isAdminEmail(emailFromClaims(context.claims)))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
+    }
+    const price = Number(data.price_monthly);
+    if (!Number.isFinite(price) || price <= 0) return { ok: false as const, error: "Informe um valor mensal válido." };
+    if (!data.name?.trim()) return { ok: false as const, error: "Informe o nome do plano." };
+    const { error } = await (supabaseAdmin as any)
+      .from("saas_plans")
+      .update({
+        name: data.name.trim(),
+        description: data.description?.trim() ?? "",
+        price_monthly: price,
+        max_clients: data.max_clients === null ? null : Number(data.max_clients) || null,
+        features: (data.features ?? []).map((f) => String(f).trim()).filter(Boolean),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.id);
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
+  });
+
+export type AdminSubscriptionRow = {
+  user_id: string;
+  email: string;
+  status: string;
+  trial_ends_at: string | null;
+  current_period_end: string | null;
+  clients: number;
+};
+
+/** Lista os revendedores e o estado de cada assinatura. */
+export const listAdminSubscriptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { isAdminEmail } = await import("./system-settings.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await isAdminEmail(emailFromClaims(context.claims)))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema.", rows: [] as AdminSubscriptionRow[] };
+    }
+    const [{ data: subs }, users, { data: clients }] = await Promise.all([
+      (supabaseAdmin as any).from("saas_subscriptions").select("user_id, status, trial_ends_at, current_period_end"),
+      (supabaseAdmin as any).auth.admin.listUsers({ page: 1, perPage: 200 }),
+      (supabaseAdmin as any).from("clients").select("user_id"),
+    ]);
+    const emails = new Map<string, string>();
+    for (const u of users?.data?.users ?? []) emails.set(u.id, u.email ?? "");
+    const counts = new Map<string, number>();
+    for (const c of clients ?? []) counts.set(c.user_id, (counts.get(c.user_id) ?? 0) + 1);
+    const rows: AdminSubscriptionRow[] = (subs ?? []).map((s: any) => ({
+      user_id: s.user_id,
+      email: emails.get(s.user_id) ?? s.user_id.slice(0, 8),
+      status: s.status,
+      trial_ends_at: s.trial_ends_at,
+      current_period_end: s.current_period_end,
+      clients: counts.get(s.user_id) ?? 0,
+    }));
+    rows.sort((a, b) => a.email.localeCompare(b.email));
+    return { ok: true as const, rows };
+  });
+
+/** Libera dias de acesso ou bloqueia a assinatura de um revendedor. */
+export const updateAdminSubscription = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { userId: string; action: "grant" | "block"; days?: number }) => input)
+  .handler(async ({ data, context }) => {
+    const { isAdminEmail } = await import("./system-settings.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await isAdminEmail(emailFromClaims(context.claims)))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
+    }
+    if (data.action === "block") {
+      const { error } = await (supabaseAdmin as any)
+        .from("saas_subscriptions")
+        .update({ status: "canceled", current_period_end: new Date(Date.now() - 86_400_000).toISOString() })
+        .eq("user_id", data.userId);
+      if (error) return { ok: false as const, error: error.message };
+      return { ok: true as const };
+    }
+    const days = Math.max(1, Math.min(365, Number(data.days) || 30));
+    const { data: current } = await (supabaseAdmin as any)
+      .from("saas_subscriptions")
+      .select("current_period_end")
+      .eq("user_id", data.userId)
+      .maybeSingle();
+    const base = current?.current_period_end ? new Date(current.current_period_end).getTime() : 0;
+    const start = base > Date.now() ? base : Date.now();
+    const { error } = await (supabaseAdmin as any)
+      .from("saas_subscriptions")
+      .update({ status: "active", current_period_end: new Date(start + days * 86_400_000).toISOString() })
+      .eq("user_id", data.userId);
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
+  });
