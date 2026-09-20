@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TermosRouteImport } from './routes/termos'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authenticated/assinatura'
 import { Route as AuthenticatedAtividadesRouteImport } from './routes/_authenticated/atividades'
 import { Route as AuthenticatedBotRouteImport } from './routes/_authenticated/bot'
@@ -62,6 +63,11 @@ const TermosRoute = TermosRouteImport.update({
   id: '/termos',
   path: '/termos',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAssinaturaRoute = AuthenticatedAssinaturaRouteImport.update({
   id: '/assinatura',
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/atividades': typeof AuthenticatedAtividadesRoute
   '/bot': typeof AuthenticatedBotRoute
@@ -230,6 +237,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/atividades': typeof AuthenticatedAtividadesRoute
   '/bot': typeof AuthenticatedBotRoute
@@ -262,6 +270,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/atividades': typeof AuthenticatedAtividadesRoute
   '/_authenticated/bot': typeof AuthenticatedBotRoute
@@ -294,6 +303,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/privacidade'
     | '/termos'
+    | '/admin'
     | '/assinatura'
     | '/atividades'
     | '/bot'
@@ -324,6 +334,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/privacidade'
     | '/termos'
+    | '/admin'
     | '/assinatura'
     | '/atividades'
     | '/bot'
@@ -355,6 +366,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/privacidade'
     | '/termos'
+    | '/_authenticated/admin'
     | '/_authenticated/assinatura'
     | '/_authenticated/atividades'
     | '/_authenticated/bot'
@@ -432,6 +444,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/termos'
       preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/assinatura': {
       id: '/_authenticated/assinatura'
@@ -605,6 +624,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAssinaturaRoute: typeof AuthenticatedAssinaturaRoute
   AuthenticatedAtividadesRoute: typeof AuthenticatedAtividadesRoute
   AuthenticatedBotRoute: typeof AuthenticatedBotRoute
@@ -625,6 +645,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAssinaturaRoute: AuthenticatedAssinaturaRoute,
   AuthenticatedAtividadesRoute: AuthenticatedAtividadesRoute,
   AuthenticatedBotRoute: AuthenticatedBotRoute,

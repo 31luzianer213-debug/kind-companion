@@ -545,6 +545,33 @@ export type Database = {
         }
         Relationships: []
       }
+      system_settings: {
+        Row: {
+          admin_email: string | null
+          created_at: string
+          id: string
+          mercadopago_token: string | null
+          saas_provider: string
+          updated_at: string
+        }
+        Insert: {
+          admin_email?: string | null
+          created_at?: string
+          id?: string
+          mercadopago_token?: string | null
+          saas_provider?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_email?: string | null
+          created_at?: string
+          id?: string
+          mercadopago_token?: string | null
+          saas_provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_processed_messages: {
         Row: {
           message_id: string

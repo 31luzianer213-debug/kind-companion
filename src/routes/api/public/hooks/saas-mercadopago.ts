@@ -11,8 +11,9 @@ export const Route = createFileRoute("/api/public/hooks/saas-mercadopago")({
       GET: async () => new Response("SaaS Mercado Pago Webhook Active", { status: 200 }),
       POST: async ({ request }) => {
         try {
-          const token = process.env["SAAS_MERCADOPAGO_TOKEN"]?.trim();
-          if (!token) return Response.json({ ok: false, error: "SAAS_MERCADOPAGO_TOKEN não configurado." }, { status: 500 });
+          const { getMercadoPagoToken } = await import("@/lib/system-settings.server");
+          const token = await getMercadoPagoToken();
+          if (!token) return Response.json({ ok: false, error: "Token do Mercado Pago não configurado no painel Admin." }, { status: 500 });
 
           const url = new URL(request.url);
           let paymentId = url.searchParams.get("data.id") || url.searchParams.get("id");

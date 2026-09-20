@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
 import { listSigmaServers } from "@/lib/sigma-servers.functions";
 import { getOrdersList } from "@/lib/orders.functions";
+import { getAdminStatus } from "@/lib/admin.functions";
 import { startQueryCachePersistence } from "@/lib/query-cache-persist";
 import "../mobile-app.css";
 
@@ -56,6 +57,7 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const statusFn = useServerFn(getWhatsAppStatus);
   const ordersFn = useServerFn(getOrdersList);
+  const adminStatusFn = useServerFn(getAdminStatus);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
 
@@ -113,8 +115,7 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
     refetchOnWindowFocus: false,
   });
 
-  const { data: whatsappStatus } = useQuery({
-    queryKey: ["layout-whatsapp-status"],
+  const { data: whatsappStatus } = useQuery({    queryKey: ["layout-whatsapp-status"],
     queryFn: () => statusFn({ data: { origin: typeof window !== "undefined" ? window.location.origin : undefined } }),
     enabled: pathname === "/painel" || pathname.startsWith("/whatsapp"),
     staleTime: 60_000,
@@ -122,8 +123,7 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
     refetchOnWindowFocus: false,
   });
 
-  // Carrega a lista de servidores Sigma em segundo plano logo que o painel abre,
-  // para que a página Sigma já mostre os servidores salvos ao ser aberta.
+  // Carrega a lista de servidores Sigma em segundo plano logo que o painel abre,  // para que a página Sigma já mostre os servidores salvos ao ser aberta.
   const queryClient = useQueryClient();
   const prefetchSigmaFn = useServerFn(listSigmaServers);
   useEffect(() => startQueryCachePersistence(queryClient, userId), [queryClient, userId]);
@@ -147,11 +147,20 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
     navigate({ to: "/auth" });
   }
 
+  const { data: adminStatus } = useQuery({
+    queryKey: ["admin-status"],
+    queryFn: () => adminStatusFn({}),
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+
   const navigationProps = {
     pathname,
     counts,
     email,
     isWhatsAppConnected: whatsappStatus?.state === "open",
+    isAdmin: Boolean(adminStatus?.isAdmin),
     onSignOut: signOut,
   };
 

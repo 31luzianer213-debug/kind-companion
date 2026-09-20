@@ -114,7 +114,7 @@ function AssinaturaPage() {
             </p>
             {!sub?.saasPaymentsEnabled && (
               <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300" data-testid="saas-payments-disabled">
-                Os pagamentos da assinatura ainda não foram habilitados pelo administrador do sistema (segredo SAAS_MERCADOPAGO_TOKEN).
+                Os pagamentos da assinatura ainda não foram habilitados pelo administrador do sistema (Access Token do Mercado Pago em Administração).
               </p>
             )}
           </div>

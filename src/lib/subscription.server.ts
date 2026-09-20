@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createMercadoPagoPixPayment } from "./mercadopago.server";
+import { getMercadoPagoToken } from "./system-settings.server";
 import { publicAppUrl } from "./whatsapp-connection.server";
 
 export type SubscriptionState = "active" | "trialing" | "grace" | "blocked";
@@ -90,7 +91,7 @@ export async function getSubscriptionSummaryServer(userId: string): Promise<Subs
     currentPeriodEnd: subscription?.current_period_end ?? null,
     daysLeft,
     clientsCount: count ?? 0,
-    saasPaymentsEnabled: Boolean(process.env["SAAS_MERCADOPAGO_TOKEN"]?.trim()),
+    saasPaymentsEnabled: Boolean(await getMercadoPagoToken()),
   };
 }
 
@@ -101,9 +102,9 @@ export async function createSubscriptionPixServer(params: {
   email: string | null;
   name: string | null;
 }) {
-  const token = process.env["SAAS_MERCADOPAGO_TOKEN"]?.trim();
+  const token = await getMercadoPagoToken();
   if (!token) {
-    return { ok: false as const, error: "Pagamentos da assinatura ainda não estão habilitados. Configure SAAS_MERCADOPAGO_TOKEN." };
+    return { ok: false as const, error: "Pagamentos da assinatura ainda não estão habilitados. O administrador precisa configurar o Access Token do Mercado Pago em Administração." };
   }
 
   const { data: planRow } = await supabaseAdmin.from("saas_plans").select("*").eq("id", params.planId).eq("active", true).maybeSingle();
@@ -137,7 +138,7 @@ export async function createSubscriptionPixServer(params: {
   const pix = await createMercadoPagoPixPayment({
     token,
     amount,
-    description: `Sigma Control — Plano ${plan.name} (${months} mês${months > 1 ? "es" : ""})`,
+    description: `Sigma Control - Plano ${plan.name} (${months} mes${months > 1 ? "es" : ""})`,
     orderId: `saas_${payment.id}`,
     customerName: params.name || params.email || "Revendedor",
     customerPhone: "",
@@ -187,7 +188,7 @@ export async function activateSubscriptionFromPayment(paymentId: string) {
 
 /** Consulta o Mercado Pago e ativa caso o Pix já tenha sido pago (fallback do webhook). */
 export async function reconcileSaasPayment(paymentId: string, userId?: string) {
-  const token = process.env["SAAS_MERCADOPAGO_TOKEN"]?.trim();
+  const token = await getMercadoPagoToken();
   const { data: payment } = await supabaseAdmin.from("saas_payments").select("*").eq("id", paymentId).maybeSingle();
   if (!payment || (userId && payment.user_id !== userId)) return { ok: false as const, error: "Pagamento não encontrado." };
   if (payment.status === "approved") return { ok: true as const, status: "approved" as const };
