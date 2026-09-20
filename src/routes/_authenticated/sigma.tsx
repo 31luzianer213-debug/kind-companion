@@ -408,7 +408,7 @@ function SigmaServersPage() {
                     </button>
                   </div>
                 </Field>
-                <Field label="Token da API (opcional)"><Input value={form.token} onChange={(e) => setForm({ ...form, token: e.target.value })} /></Field>
+                <Field label="Token da API (opcional)"><Input value={form.token} onChange={(e) => setForm({ ...form, token: e.target.value })} placeholder={form.id ? "Deixe em branco para manter o token atual" : ""} /></Field>
                 <Field label="DNS de streaming (opcional)"><Input value={form.streaming_dns} onChange={(e) => setForm({ ...form, streaming_dns: e.target.value })} placeholder="http://dns.exemplo.com:8080" /></Field>
               </div>
             </div>
