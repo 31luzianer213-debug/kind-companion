@@ -12,11 +12,14 @@ import {
   Eye,
   EyeOff,
   Info,
+  KeyRound,
   Loader2,
   Lock,
   Search,
   ShieldCheck,
   Sparkles,
+  Trash2,
+  UserPlus,
   Users,
   Wallet,
 } from "lucide-react";
@@ -28,11 +31,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  createAdminReseller,
+  deleteAdminReseller,
   getAdminPlan,
   getAdminSettings,
   listAdminSubscriptions,
+  resetAdminResellerPassword,
   saveAdminPlan,
   saveAdminSettings,
+  startAdminTrial,
   testMercadoPagoToken,
   updateAdminSubscription,
 } from "@/lib/admin.functions";
