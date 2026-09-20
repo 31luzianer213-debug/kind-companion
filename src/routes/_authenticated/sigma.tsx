@@ -293,7 +293,7 @@ function SigmaServersPage() {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 sm:justify-end">
           {activeCount > 1 && (
             <Button variant="outline" onClick={syncAll} disabled={syncingAll} className="gap-2">
               <RefreshCw className={`size-4 ${syncingAll ? "animate-spin" : ""}`} />
@@ -363,7 +363,7 @@ function SigmaServersPage() {
       )}
 
       <Dialog open={editorOpen} onOpenChange={(open) => !saving && setEditorOpen(open)}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{form.id ? "Editar Sigma" : "Adicionar Sigma"}</DialogTitle>
             <DialogDescription>

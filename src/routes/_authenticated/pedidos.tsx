@@ -779,7 +779,7 @@ function PedidosPage() {
 
       {/* MODAL DE CONFIRMAÇÃO DE LIBERAÇÃO DE ACESSO */}
       <Dialog open={releaseModalOpen} onOpenChange={setReleaseModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-white">
               <Zap className="h-5 w-5 fill-white text-white" />
@@ -793,21 +793,21 @@ function PedidosPage() {
           {selectedOrder && (
             <div className="space-y-3 py-2 text-sm">
               <div className="rounded-xl border border-border/80 bg-muted/30 p-3.5 space-y-2">
-                <div className="flex justify-between">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-3">
                   <span className="text-muted-foreground">Pedido:</span>
                   <span className="font-bold">#{selectedOrder.order_number}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Cliente:</span>
-                  <span className="font-bold">{selectedOrder.customer_name}</span>
+                  <span className="min-w-0 break-words text-right font-bold">{selectedOrder.customer_name}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-3">
                   <span className="text-muted-foreground">WhatsApp:</span>
-                  <span className="font-bold">{selectedOrder.customer_phone}</span>
+                  <span className="min-w-0 break-words text-right font-bold">{selectedOrder.customer_phone}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-3">
                   <span className="text-muted-foreground">Plano:</span>
-                  <span className="font-bold text-white">{selectedOrder.plan_name}</span>
+                  <span className="min-w-0 break-words text-right font-bold text-white">{selectedOrder.plan_name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Valor PIX:</span>
@@ -874,7 +874,7 @@ function PedidosPage() {
 
       {/* MODAL DE CREDENCIAIS LIBERADAS (SUCESSO) */}
       <Dialog open={credentialsModalOpen} onOpenChange={setCredentialsModalOpen}>
-        <DialogContent className="max-w-md">
+         <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-white">
               <Sparkles className="h-5 w-5 text-white" />
@@ -949,7 +949,7 @@ function PedidosPage() {
 
       {/* MODAL DE NOVO PEDIDO MANUAL */}
       <Dialog open={newOrderModalOpen} onOpenChange={setNewOrderModalOpen}>
-        <DialogContent className="max-w-md">
+         <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               <Plus className="h-5 w-5 text-primary" />

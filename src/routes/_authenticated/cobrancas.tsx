@@ -186,12 +186,12 @@ function Cobrancas() {
             <Input placeholder="Buscar por cliente ou telefone..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 pr-8" />
             {search ? <button type="button" onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"><X className="size-4" /></button> : null}
           </div>
-          <Tabs value={filter} onValueChange={setFilter} className="w-full sm:w-auto">
-            <TabsList className="grid w-full grid-cols-4 sm:w-auto">
-              <TabsTrigger value="open" className="text-xs">Abertas ({metrics.openCount})</TabsTrigger>
-              <TabsTrigger value="overdue" className="text-xs">Atrasadas ({metrics.overdueCount})</TabsTrigger>
-              <TabsTrigger value="paid" className="text-xs">Pagas ({metrics.paidCount})</TabsTrigger>
-              <TabsTrigger value="all" className="text-xs">Todas ({allInvoices.length})</TabsTrigger>
+          <Tabs value={filter} onValueChange={setFilter} className="min-w-0 w-full sm:w-auto">
+            <TabsList className="flex w-full justify-start overflow-x-auto sm:w-auto">
+              <TabsTrigger value="open" className="shrink-0 whitespace-nowrap text-xs">Abertas ({metrics.openCount})</TabsTrigger>
+              <TabsTrigger value="overdue" className="shrink-0 whitespace-nowrap text-xs">Atrasadas ({metrics.overdueCount})</TabsTrigger>
+              <TabsTrigger value="paid" className="shrink-0 whitespace-nowrap text-xs">Pagas ({metrics.paidCount})</TabsTrigger>
+              <TabsTrigger value="all" className="shrink-0 whitespace-nowrap text-xs">Todas ({allInvoices.length})</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -202,7 +202,7 @@ function Cobrancas() {
       ) : filteredInvoices.length === 0 ? (
         <Card className="surface-card border-dashed p-12 text-center"><Wallet className="mx-auto mb-3 size-8 text-muted-foreground" /><h3 className="font-semibold">Nenhuma cobrança encontrada</h3><p className="mt-1 text-sm text-muted-foreground">Não há registros nesta categoria.</p></Card>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border/60 bg-card shadow-sm">
+        <div className="max-w-full overflow-hidden rounded-lg border border-border/60 bg-card shadow-sm">
           <Table>
             <TableHeader><TableRow><TableHead>Cliente</TableHead><TableHead>Valor</TableHead><TableHead>Vencimento</TableHead><TableHead>Status</TableHead><TableHead>Lembretes</TableHead><TableHead className="text-right">Detalhes</TableHead></TableRow></TableHeader>
             <TableBody>
