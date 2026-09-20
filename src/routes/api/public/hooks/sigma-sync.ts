@@ -11,16 +11,14 @@ export const Route = createFileRoute("/api/public/hooks/sigma-sync")({
 
 async function handleSync(request: Request) {
   const secret = process.env["BILLING_CRON_SECRET"] || process.env["SIGMA_CRON_SECRET"];
-  if (secret) {
-    const authHeader = request.headers.get("authorization") ?? "";
-    const match = /^Bearer ([^\s,]+)$/.exec(authHeader);
-    const url = new URL(request.url);
-    const querySecret = url.searchParams.get("secret");
+  const authHeader = request.headers.get("authorization") ?? "";
+  const match = /^Bearer ([^\s,]+)$/.exec(authHeader);
+  const url = new URL(request.url);
+  const passedSecret = match?.[1] || url.searchParams.get("secret");
 
-    const passedSecret = match?.[1] || querySecret;
-    if (passedSecret !== secret) {
-      return new Response("Unauthorized", { status: 401 });
-    }
+  // Sem segredo configurado a rotina permanece fechada.
+  if (!secret || !passedSecret || passedSecret !== secret) {
+    return Response.json({ ok: false, error: "Não autorizado." }, { status: 401 });
   }
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

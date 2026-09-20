@@ -37,7 +37,7 @@ export async function createMercadoPagoPixPayment(
   const phoneNum = cleanPhone.length >= 10 ? cleanPhone.slice(cleanPhone.length >= 12 ? 4 : 2) : cleanPhone || "999999999";
 
   // Divide nome do cliente
-  const parts = (input.customerName || "Cliente IPTV").trim().split(" ");
+  const parts = (input.customerName || "Cliente").trim().split(" ");
   const firstName = parts[0] || "Cliente";
   const lastName = parts.slice(1).join(" ") || "VIP";
 
@@ -47,7 +47,7 @@ export async function createMercadoPagoPixPayment(
     payment_method_id: "pix",
     external_reference: input.orderId,
     payer: {
-      email: `${cleanPhone || "cliente"}@cobrancas-whatsapp.shop`,
+      email: `pagador${cleanPhone || Date.now()}@cliente-pix.com`,
       first_name: firstName,
       last_name: lastName,
       phone: {
@@ -69,7 +69,7 @@ export async function createMercadoPagoPixPayment(
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
         "X-Idempotency-Key": idempotencyKey,
-        "User-Agent": "KindCompanion-IPTV/2.0 (MercadoPago Pix)",
+        "User-Agent": "SigmaControl/1.0 (MercadoPago Pix)",
       },
       body: JSON.stringify(payload),
     });

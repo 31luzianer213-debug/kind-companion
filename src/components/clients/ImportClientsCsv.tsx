@@ -1,3 +1,4 @@
+import { friendlyDbError } from "@/lib/format";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Upload, Loader2 } from "lucide-react";
@@ -150,7 +151,7 @@ export function ImportClientsCsv() {
         .from("clients")
         .insert(toInsert.map((row) => ({ ...row, user_id: userId, status: "active" })));
       if (error) {
-        toast.error(`Falha ao importar: ${error.message}`);
+        toast.error(`Falha ao importar: ${friendlyDbError(error.message)}`);
         return;
       }
 

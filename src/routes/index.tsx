@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
   BarChart3,
+  Bot,
   Check,
   CircleDollarSign,
   MessageCircle,
@@ -14,14 +15,31 @@ import {
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SigmaLogo } from "@/components/SigmaLogo";
+import { listSaasPlans, type SaasPlan } from "@/lib/subscription.functions";
+import { formatBRL } from "@/lib/format";
+import { cn } from "@/lib/utils";
+
+const FALLBACK_PLANS: SaasPlan[] = [
+  { id: "basico", name: "Básico", description: "Para quem está começando a organizar a revenda.", price_monthly: 29.9, max_clients: 100, features: ["Até 100 clientes", "Cobranças e lembretes no WhatsApp", "Painel Sigma integrado", "Pedidos com Pix automático", "Suporte por e-mail"], highlighted: false, sort_order: 1 },
+  { id: "profissional", name: "Profissional", description: "Para revendas em crescimento que precisam de automação total.", price_monthly: 59.9, max_clients: 500, features: ["Até 500 clientes", "Robô de atendimento 24h no WhatsApp", "Cobrança automática diária", "Relatórios e indicadores", "Múltiplos painéis Sigma", "Suporte prioritário"], highlighted: true, sort_order: 2 },
+  { id: "ilimitado", name: "Ilimitado", description: "Para operações grandes, sem limite de clientes.", price_monthly: 99.9, max_clients: null, features: ["Clientes ilimitados", "Tudo do Profissional", "Importação em massa (CSV)", "Prioridade em novos recursos", "Suporte via WhatsApp"], highlighted: false, sort_order: 3 },
+];
 
 export const Route = createFileRoute("/")({
+  loader: async () => {
+    try {
+      const res = await listSaasPlans();
+      return { plans: res.plans.length ? res.plans : FALLBACK_PLANS };
+    } catch {
+      return { plans: FALLBACK_PLANS };
+    }
+  },
   head: () => ({
     meta: [
-      { title: "Sigma Control — Gestão IPTV e Cobrança Automática" },
-      { name: "description", content: "Gerencie clientes do Servidor Sigma e automatize cobranças pelo WhatsApp em um painel profissional e gratuito." },
-      { property: "og:title", content: "Sigma Control — Gestão IPTV em nível profissional" },
-      { property: "og:description", content: "Clientes, Servidor Sigma, cobrança Pix e WhatsApp em uma operação organizada." },
+      { title: "Sigma Control — Gestão de revenda IPTV com cobrança automática no WhatsApp" },
+      { name: "description", content: "Organize clientes, integre seu painel Sigma, receba por Pix e automatize cobranças e atendimento pelo WhatsApp. Teste grátis por 7 dias." },
+      { property: "og:title", content: "Sigma Control — Gestão de revenda IPTV em nível profissional" },
+      { property: "og:description", content: "Clientes, painel Sigma, pedidos Pix, robô e cobrança no WhatsApp em uma operação organizada." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -30,13 +48,33 @@ export const Route = createFileRoute("/")({
 });
 
 const features = [
-  { icon: Users, title: "Clientes organizados", text: "Acessos, vencimentos, valores e contatos reunidos em uma visão objetiva." },
-  { icon: MonitorPlay, title: "Servidor Sigma", text: "Sincronize clientes, renove acessos e crie testes sem alternar entre painéis." },
-  { icon: MessageCircle, title: "WhatsApp integrado", text: "Envie lembretes, cobranças Pix e dados de acesso usando sua própria conexão." },
-  { icon: BarChart3, title: "Visão financeira", text: "Acompanhe recebimentos, atrasos e o desempenho da operação com dados reais." },
+  { icon: Users, title: "Clientes organizados", text: "Acessos, vencimentos, valores e contatos reunidos em uma visão objetiva, com importação em massa." },
+  { icon: MonitorPlay, title: "Painel Sigma integrado", text: "Sincronize clientes, crie acessos, renove e gere testes sem sair do sistema." },
+  { icon: MessageCircle, title: "Cobrança no WhatsApp", text: "Lembretes antes do vencimento, cobrança no dia e aviso de atraso, com Pix automático." },
+  { icon: Bot, title: "Robô de atendimento 24h", text: "Testes grátis, planos, renovação por Pix e reenvio de acessos respondidos automaticamente." },
+  { icon: CircleDollarSign, title: "Pedidos e recebimentos", text: "Pix do Mercado Pago ou Asaas confirmado automaticamente e acesso liberado na hora." },
+  { icon: BarChart3, title: "Indicadores do negócio", text: "Ativos, vencendo, inadimplência e receita do mês para decidir com dados reais." },
 ];
 
-const trustItems = ["Sem mensalidade", "Configuração guiada", "Dados protegidos"];
+const steps = [
+  { title: "Crie sua conta", text: "Cadastro em 1 minuto e 7 dias de teste com todos os recursos liberados." },
+  { title: "Conecte Sigma e WhatsApp", text: "Informe seu painel Sigma e escaneie o QR Code do WhatsApp da sua revenda." },
+  { title: "Deixe o sistema trabalhar", text: "Clientes sincronizados, cobranças enviadas e pedidos liberados automaticamente." },
+];
+
+const testimonials = [
+  { name: "Rafael M.", role: "Revenda com 320 clientes", text: "Antes eu perdia horas cobrando um por um. Hoje o Sigma Control avisa, cobra e libera sozinho." },
+  { name: "Juliana S.", role: "Revenda com 90 clientes", text: "O robô do WhatsApp responde os testes e os planos enquanto eu trabalho em outra coisa." },
+  { name: "Carlos A.", role: "Operação com 3 painéis", text: "Ter todos os painéis Sigma e a cobrança Pix no mesmo lugar mudou minha organização." },
+];
+
+const faqs = [
+  { q: "Preciso de conhecimento técnico?", a: "Não. A configuração é guiada: você informa o painel Sigma, conecta o WhatsApp e cadastra sua chave Pix ou token do Mercado Pago." },
+  { q: "Como funciona o teste grátis?", a: "Ao criar a conta você tem 7 dias com todos os recursos do plano Ilimitado. Ao final, escolha um plano e pague por Pix. Seus dados continuam salvos." },
+  { q: "Meus clientes ficam visíveis para outros revendedores?", a: "Nunca. Cada conta enxerga apenas seus próprios clientes, cobranças e configurações, com isolamento aplicado direto no banco de dados." },
+  { q: "Quais painéis IPTV são compatíveis?", a: "Atualmente o Sigma Control integra com painéis Sigma (um ou vários). Outros painéis podem ser gerenciados manualmente pelo cadastro de clientes." },
+  { q: "Posso cancelar quando quiser?", a: "Sim. Não há fidelidade. Se não renovar, o acesso fica em modo somente leitura por 3 dias e depois é bloqueado até a renovação." },
+];
 
 function DashboardPreview() {
   return (
@@ -57,9 +95,9 @@ function DashboardPreview() {
               <p className="mt-1 text-[10px] font-bold text-emerald-500">+12 este mês</p>
             </div>
             <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-muted-foreground">Recebido</p>
+              <p className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-muted-foreground">Recebido no mês</p>
               <p className="mt-2 font-display text-2xl font-bold text-primary">R$ 3.840</p>
-              <p className="mt-1 text-[10px] font-bold text-primary">Mês atual</p>
+              <p className="mt-1 text-[10px] font-bold text-primary">Pix confirmado</p>
             </div>
           </div>
           <div className="mt-3 space-y-2">
@@ -85,19 +123,55 @@ function DashboardPreview() {
   );
 }
 
+function Pricing({ plans }: { plans: SaasPlan[] }) {
+  return (
+    <section id="planos" className="border-b border-border bg-card">
+      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
+        <div className="max-w-2xl">
+          <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-primary">Planos e preços</p>
+          <h2 className="mt-3 font-display text-3xl font-bold leading-tight text-foreground sm:text-4xl">Um plano para cada tamanho de revenda</h2>
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">Comece com 7 dias grátis. Depois, pague por Pix e troque de plano quando quiser. Sem fidelidade.</p>
+        </div>
+        <div className="mt-10 grid gap-4 lg:grid-cols-3" data-testid="landing-pricing">
+          {plans.map((plan) => (
+            <article key={plan.id} className={cn("relative flex flex-col rounded-lg border bg-background p-6", plan.highlighted ? "border-primary/50 shadow-xl shadow-primary/10" : "border-border")} data-testid={`landing-plan-${plan.id}`}>
+              {plan.highlighted && <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-primary-foreground">Mais escolhido</span>}
+              <h3 className="font-display text-lg font-bold text-foreground">{plan.name}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
+              <p className="mt-5 font-display text-4xl font-extrabold text-foreground">{formatBRL(plan.price_monthly)}<span className="text-sm font-semibold text-muted-foreground"> /mês</span></p>
+              <p className="text-xs text-muted-foreground">{plan.max_clients ? `até ${plan.max_clients} clientes` : "clientes ilimitados"} · desconto no semestral e anual</p>
+              <ul className="mt-6 flex-1 space-y-2.5">
+                {plan.features.map((f) => <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground"><Check className="mt-0.5 size-4 shrink-0 text-emerald-500" />{f}</li>)}
+              </ul>
+              <Button asChild size="lg" variant={plan.highlighted ? "default" : "outline"} className="mt-8 h-12"><Link to="/auth">Testar grátis por 7 dias</Link></Button>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Index() {
+  const { plans } = Route.useLoaderData();
   return (
     <main className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <header className="sticky top-0 z-50 border-b border-border bg-background/92 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2.5" aria-label="Sigma Control">
             <SigmaLogo size="sm" />
-            <div><p className="font-display text-sm font-bold text-foreground sm:text-base">Sigma Control</p><p className="hidden text-[9px] font-bold uppercase tracking-[0.12em] text-primary sm:block">Operação IPTV</p></div>
+            <div><p className="font-display text-sm font-bold text-foreground sm:text-base">Sigma Control</p><p className="hidden text-[9px] font-bold uppercase tracking-[0.12em] text-primary sm:block">Gestão de revenda IPTV</p></div>
           </Link>
+          <nav className="hidden items-center gap-6 text-sm font-semibold text-muted-foreground md:flex">
+            <a href="#recursos" className="hover:text-foreground">Recursos</a>
+            <a href="#como-funciona" className="hover:text-foreground">Como funciona</a>
+            <a href="#planos" className="hover:text-foreground">Planos</a>
+            <a href="#faq" className="hover:text-foreground">Dúvidas</a>
+          </nav>
           <div className="flex items-center gap-1.5 sm:gap-2">
             <ThemeToggle />
-            <Button asChild variant="ghost" size="sm"><Link to="/auth">Entrar</Link></Button>
-            <Button asChild size="sm" className="hidden sm:inline-flex"><Link to="/auth">Criar conta <ArrowRight /></Link></Button>
+            <Button asChild variant="ghost" size="sm"><Link to="/auth" data-testid="landing-login">Entrar</Link></Button>
+            <Button asChild size="sm" className="hidden sm:inline-flex"><Link to="/auth" data-testid="landing-signup">Teste grátis <ArrowRight /></Link></Button>
           </div>
         </div>
       </header>
@@ -107,22 +181,22 @@ function Index() {
           <div className="space-y-7 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
               <span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" /><span className="relative inline-flex size-2 rounded-full bg-primary" /></span>
-              SIGMA CONTROL
+              7 DIAS GRÁTIS · SEM CARTÃO
             </div>
             <div className="space-y-5">
               <h1 className="max-w-2xl font-display text-4xl font-extrabold leading-[1.08] text-foreground sm:text-5xl lg:text-6xl">
-                Gestão <span className="text-primary">IPTV</span> em nível profissional
+                Sua revenda <span className="text-primary">IPTV</span> cobrando e atendendo sozinha
               </h1>
               <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-                Organize clientes, integre seu Servidor Sigma e automatize cobranças pelo WhatsApp em uma operação simples e confiável.
+                Organize clientes, integre o painel Sigma, receba por Pix e deixe o WhatsApp cobrar, renovar e liberar acessos automaticamente.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg" className="h-12 px-7"><Link to="/auth">Começar agora <ArrowRight /></Link></Button>
-              <Button asChild size="lg" variant="outline" className="h-12 px-7"><a href="#recursos">Conhecer recursos</a></Button>
+              <Button asChild size="lg" className="h-12 px-7"><Link to="/auth">Começar teste grátis <ArrowRight /></Link></Button>
+              <Button asChild size="lg" variant="outline" className="h-12 px-7"><a href="#planos">Ver planos</a></Button>
             </div>
             <div className="flex flex-wrap gap-x-6 gap-y-3 border-t border-border pt-6">
-              {trustItems.map((item) => <span key={item} className="flex items-center gap-2 text-xs font-semibold text-muted-foreground"><span className="grid size-5 place-items-center rounded-full bg-primary/10 text-primary"><Check className="size-3" /></span>{item}</span>)}
+              {["A partir de R$ 29,90/mês", "Configuração guiada", "Dados isolados por revenda"].map((item) => <span key={item} className="flex items-center gap-2 text-xs font-semibold text-muted-foreground"><span className="grid size-5 place-items-center rounded-full bg-primary/10 text-primary"><Check className="size-3" /></span>{item}</span>)}
             </div>
           </div>
           <DashboardPreview />
@@ -150,17 +224,68 @@ function Index() {
         </div>
       </section>
 
+      <section id="como-funciona" className="border-b border-border">
+        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
+          <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-primary">Como funciona</p>
+          <h2 className="mt-3 max-w-2xl font-display text-3xl font-bold leading-tight text-foreground sm:text-4xl">Do cadastro à primeira cobrança automática em minutos</h2>
+          <ol className="mt-10 grid gap-4 md:grid-cols-3">
+            {steps.map((step, index) => (
+              <li key={step.title} className="rounded-lg border border-border bg-card p-6">
+                <span className="grid size-9 place-items-center rounded-lg bg-primary font-display text-sm font-bold text-primary-foreground">{index + 1}</span>
+                <h3 className="mt-4 font-display text-base font-bold text-foreground">{step.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.text}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <Pricing plans={plans} />
+
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
+          <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-primary">Quem usa recomenda</p>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {testimonials.map((t) => (
+              <blockquote key={t.name} className="rounded-lg border border-border bg-card p-6">
+                <p className="text-sm leading-relaxed text-foreground">“{t.text}”</p>
+                <footer className="mt-4 text-xs text-muted-foreground"><strong className="text-foreground">{t.name}</strong> · {t.role}</footer>
+              </blockquote>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="faq" className="border-b border-border bg-card">
+        <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 sm:py-20">
+          <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-primary">Perguntas frequentes</p>
+          <h2 className="mt-3 font-display text-3xl font-bold text-foreground">Dúvidas comuns</h2>
+          <div className="mt-8 divide-y divide-border rounded-lg border border-border bg-background">
+            {faqs.map((item) => (
+              <details key={item.q} className="group p-5">
+                <summary className="cursor-pointer list-none font-semibold text-foreground marker:content-none">{item.q}</summary>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
         <div className="grid items-center gap-8 rounded-lg border border-primary/20 bg-primary p-7 text-primary-foreground shadow-xl shadow-primary/15 sm:p-10 lg:grid-cols-[1fr_auto]">
-          <div><p className="text-xs font-bold uppercase tracking-[0.14em] opacity-70">Pronto para começar?</p><h2 className="mt-2 font-display text-2xl font-bold sm:text-3xl">Profissionalize sua gestão sem aumentar seus custos.</h2><p className="mt-3 max-w-2xl text-sm opacity-75">Crie sua conta e tenha clientes, Sigma, WhatsApp e cobranças em uma única rotina.</p></div>
-          <Button asChild size="lg" variant="secondary" className="h-12 px-7"><Link to="/auth"><Zap /> Criar conta gratuita</Link></Button>
+          <div><p className="text-xs font-bold uppercase tracking-[0.14em] opacity-70">Pronto para começar?</p><h2 className="mt-2 font-display text-2xl font-bold sm:text-3xl">Profissionalize sua revenda hoje. Os primeiros 7 dias são por nossa conta.</h2><p className="mt-3 max-w-2xl text-sm opacity-75">Crie sua conta e tenha clientes, Sigma, WhatsApp e cobranças em uma única rotina.</p></div>
+          <Button asChild size="lg" variant="secondary" className="h-12 px-7"><Link to="/auth"><Zap /> Criar conta</Link></Button>
         </div>
       </section>
 
       <footer className="border-t border-border bg-card">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-6 text-center sm:flex-row sm:px-6 sm:text-left">
           <div className="flex items-center gap-2"><ShieldCheck className="size-4 text-primary" /><span className="text-xs font-semibold text-foreground">Sigma Control</span></div>
-          <p className="text-xs text-muted-foreground">© 2026. Feito para operações IPTV profissionais.</p>
+          <nav className="flex gap-4 text-xs text-muted-foreground">
+            <Link to="/termos" className="hover:text-foreground">Termos de Uso</Link>
+            <Link to="/privacidade" className="hover:text-foreground">Política de Privacidade</Link>
+          </nav>
+          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Sigma Control. Feito para revendas IPTV profissionais.</p>
         </div>
       </footer>
     </main>

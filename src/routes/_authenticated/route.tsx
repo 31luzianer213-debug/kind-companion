@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { ResellerContextEnhancements } from "@/components/ResellerContextEnhancements";
+import { SubscriptionGate } from "@/components/SubscriptionGate";
 import { hydrateQueryCache } from "@/lib/query-cache-persist";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -41,7 +42,9 @@ function AuthenticatedLayout() {
   return (
     <AppLayout userId={user.id}>
       <ResellerContextEnhancements />
-      <Outlet />
+      <SubscriptionGate>
+        <Outlet />
+      </SubscriptionGate>
     </AppLayout>
   );
 }

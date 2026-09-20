@@ -358,6 +358,137 @@ export type Database = {
         }
         Relationships: []
       }
+      saas_plans: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string
+          features: Json
+          highlighted: boolean
+          id: string
+          max_clients: number | null
+          name: string
+          price_monthly: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          features?: Json
+          highlighted?: boolean
+          id: string
+          max_clients?: number | null
+          name: string
+          price_monthly: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          features?: Json
+          highlighted?: boolean
+          id?: string
+          max_clients?: number | null
+          name?: string
+          price_monthly?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      saas_subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          plan_id: string
+          status: string
+          trial_ends_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          plan_id: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          plan_id?: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saas_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saas_payments: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          created_at: string
+          id: string
+          months: number
+          pix_code: string | null
+          pix_qr_base64: string | null
+          plan_id: string
+          provider: string
+          provider_payment_id: string | null
+          status: string
+          ticket_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          months?: number
+          pix_code?: string | null
+          pix_qr_base64?: string | null
+          plan_id: string
+          provider?: string
+          provider_payment_id?: string | null
+          status?: string
+          ticket_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          months?: number
+          pix_code?: string | null
+          pix_qr_base64?: string | null
+          plan_id?: string
+          provider?: string
+          provider_payment_id?: string | null
+          status?: string
+          ticket_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sigma_panels: {
         Row: {
           auto_renew: boolean | null
@@ -427,6 +558,7 @@ export type Database = {
           api_url: string | null
           asaas_env: string
           asaas_token: string | null
+          asaas_webhook_token: string | null
           auto_send_enabled: boolean
           business_name: string | null
           created_at: string
@@ -459,6 +591,7 @@ export type Database = {
           api_url?: string | null
           asaas_env?: string
           asaas_token?: string | null
+          asaas_webhook_token?: string | null
           auto_send_enabled?: boolean
           business_name?: string | null
           created_at?: string
@@ -491,6 +624,7 @@ export type Database = {
           api_url?: string | null
           asaas_env?: string
           asaas_token?: string | null
+          asaas_webhook_token?: string | null
           auto_send_enabled?: boolean
           business_name?: string | null
           created_at?: string

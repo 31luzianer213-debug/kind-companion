@@ -31,6 +31,9 @@ const mobilePageTitles: Record<string, string> = {
   "/cobranca-automatica": "Automação",
   "/sigma-sincronizacao": "Sincronização",
   "/whatsapp-diagnostico": "Diagnóstico",
+  "/mensagens": "Mensagens",
+  "/pagamentos": "Recebimentos",
+  "/assinatura": "Assinatura",
 };
 
 function mobilePageTitle(pathname: string) {

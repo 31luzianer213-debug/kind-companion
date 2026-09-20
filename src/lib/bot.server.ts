@@ -1,5 +1,4 @@
 import { generateM3uUrl, generateEpgUrl, extractCleanIptvDns } from "./format";
-import defaultBotConfigData from "../../data/bot_config_default.json";
 import type { SigmaConfig } from "./sigma.panel";
 import { createOrderServer, listOrdersServer, approveAndReleaseOrderServer, updateOrderServer } from "./orders.server";
 import { createMercadoPagoPixPayment } from "./mercadopago.server";
@@ -68,12 +67,12 @@ export type BotConfigData = {
 
 export const DEFAULT_BOT_CONFIG: BotConfigData = {
   enabled: true,
-  businessName: "Alpha IPTV",
-  serverName: "Alpha server IPTV",
-  streamingDns: "http://karen256.top",
+  businessName: "Minha Revenda IPTV",
+  serverName: "Meu Servidor",
+  streamingDns: "",
   testEnabled: true,
   testDurationHours: 4,
-  testPackageName: "TESTE LISTA IPTV ALPHA COM TODOS CONTEUDOS COM ADULTOS 🔞",
+  testPackageName: "Teste grátis",
   blockRepeatDays: 7,
   menuGreeting:
     "👋 Olá! Seja muito bem-vindo(a) à *{empresa}*! 🍿\n" +
@@ -105,7 +104,7 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
   planSemiannualPrice: 160.0,
   planAnnualPrice: 290.0,
   renewalPrice: 35.0,
-  mercadopago_token: process.env.MERCADOPAGO_ACCESS_TOKEN || "",
+  mercadopago_token: "",
   payment_provider: "mercadopago",
   appAndroidApk: "https://bit.ly/app-xciptv-oficial",
   appAndroidDownloaderCode: "389471",
@@ -127,7 +126,7 @@ export function generateDefaultPlansText(params: {
   const q = Number(params.planQuarterlyPrice || 90).toFixed(2).replace(".", ",");
   const s = Number(params.planSemiannualPrice || 160).toFixed(2).replace(".", ",");
   const a = Number(params.planAnnualPrice || 290).toFixed(2).replace(".", ",");
-  const srv = params.serverName || "Alpha IPTV";
+  const srv = params.serverName || "Meu Servidor";
 
   return (
     `🛒 *PLANOS E ASSINATURAS ${srv.toUpperCase()}* 🍿\n\n` +
@@ -511,13 +510,13 @@ export async function createTrialForBot(
     wsRow?.sigma_server_name?.trim() ||
     userMetaSigma?.server_name?.trim() ||
     botConfig.businessName ||
-    "Alpha server IPTV";
+    "Meu Servidor";
 
   const streamingDns =
     botConfig.streamingDns ||
     wsRow?.sigma_streaming_dns?.trim() ||
     userMetaSigma?.streaming_dns?.trim() ||
-    "http://karen256.top";
+    "";
 
   // 3. Gera credenciais aleatórias para o teste
   const trialUsername = Math.floor(10000000 + Math.random() * 90000000).toString();
@@ -570,7 +569,7 @@ export async function createTrialForBot(
   }
 
   // 5. Gera links de acesso oficiais do IPTV
-  const cleanDns = extractCleanIptvDns(streamingDns) || "http://karen256.top";
+  const cleanDns = extractCleanIptvDns(streamingDns) || "";
   const m3uUrl = generateM3uUrl(cleanDns, trialUsername, trialPassword, "ts");
   const epgUrl = generateEpgUrl(cleanDns, trialUsername, trialPassword);
 
@@ -1028,7 +1027,7 @@ export async function processBotMessage(
   // Saudações e pedido explícito de menu não precisam de uma segunda consulta
   // ao banco: loadBotConfig já trouxe nome, servidor e duração do teste.
   if (["oi", "olá", "ola", "menu", "início", "inicio", "start", "0", "voltar ao menu", "voltar menu", "menu inicial", "menu principal"].includes(text)) {
-    const quickServerName = config.serverName || config.businessName || "Alpha server IPTV";
+    const quickServerName = config.serverName || config.businessName || "Meu Servidor";
     return buildMainMenu(config, quickServerName);
   }
 
@@ -1043,8 +1042,8 @@ export async function processBotMessage(
     wsRow = data;
   } catch {}
 
-  const serverName = config.serverName || wsRow?.sigma_server_name?.trim() || config.businessName || "Alpha server IPTV";
-  const streamingDns = config.streamingDns || wsRow?.sigma_streaming_dns?.trim() || "http://karen256.top";
+  const serverName = config.serverName || wsRow?.sigma_server_name?.trim() || config.businessName || "Meu Servidor";
+  const streamingDns = config.streamingDns || wsRow?.sigma_streaming_dns?.trim() || "";
   const pixKey = config.pixKey || wsRow?.pix_key || readLocalPaymentSettings(userId)?.pix_key || "Consulte nossa chave PIX";
   const pixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
 
@@ -1779,7 +1778,7 @@ export async function processBotMessage(
 
     const u = client.iptv_username || client.name;
     const p = client.iptv_password || "••••••••";
-    const cleanDns = extractCleanIptvDns(streamingDns) || "http://karen256.top";
+    const cleanDns = extractCleanIptvDns(streamingDns) || "";
     const m3uUrl = generateM3uUrl(cleanDns, u, p, "ts");
     const epgUrl = generateEpgUrl(cleanDns, u, p);
 

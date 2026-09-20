@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Check, KeyRound, Loader2, Lock, Mail, Send, ShieldCheck, User, X } from "lucide-react";
 import { toast } from "sonner";
 import { AuthField } from "@/components/auth/AuthField";
@@ -7,7 +7,6 @@ import { AuthShowcase } from "@/components/auth/AuthShowcase";
 import { SigmaLogo } from "@/components/SigmaLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,9 +23,9 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Acessar — Painel Sigma" },
-      { name: "description", content: "Entre ou crie gratuitamente sua conta no Painel Sigma." },
-      { property: "og:title", content: "Acessar — Painel Sigma" },
+      { title: "Acessar — Sigma Control" },
+      { name: "description", content: "Entre ou crie sua conta no Sigma Control e teste grátis por 7 dias." },
+      { property: "og:title", content: "Acessar — Sigma Control" },
       { property: "og:description", content: "Gestão de clientes e cobranças automáticas em um só lugar." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -76,13 +74,11 @@ function passwordStrength(password: string) {
 
 function AuthPage() {
   const navigate = useNavigate();
-  const rememberId = useId();
   const [tab, setTab] = useState("login");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
-  const [remember, setRemember] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -91,25 +87,60 @@ function AuthPage() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirmation, setNewPasswordConfirmation] = useState("");
 
   useEffect(() => {
     void (async () => {
       const url = new URL(window.location.href);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const isRecovery = url.searchParams.get("reset") === "true" || hashParams.get("type") === "recovery";
+
       if (url.searchParams.has("code")) {
         const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
         url.searchParams.delete("code");
         url.searchParams.delete("state");
         window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+        if (!error && isRecovery) {
+          setResetMode(true);
+          return;
+        }
         if (!error) {
           toast.success("E-mail confirmado. Sua conta está pronta!");
           navigate({ to: "/painel" });
           return;
         }
       }
+
+      if (isRecovery) {
+        // O Supabase cria a sessão de recuperação a partir do link do e-mail.
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          setResetMode(true);
+          return;
+        }
+        toast.error("Link de recuperação inválido ou expirado. Solicite um novo.");
+        return;
+      }
+
       const { data } = await supabase.auth.getSession();
       if (data.session) navigate({ to: "/painel" });
     })();
   }, [navigate]);
+
+  async function updatePassword(event: React.FormEvent) {
+    event.preventDefault();
+    if (newPassword.length < 6) return toast.error("A nova senha precisa ter pelo menos 6 caracteres.");
+    if (newPassword !== newPasswordConfirmation) return toast.error("As senhas não coincidem.");
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setLoading(false);
+    if (error) return toast.error(friendlyError(error.message));
+    toast.success("Senha atualizada! Você já está conectado.");
+    window.history.replaceState({}, "", "/auth");
+    navigate({ to: "/painel" });
+  }
 
   function openRecovery() {
     if (email.trim()) setForgotEmail(email.trim());
@@ -235,19 +266,35 @@ function AuthPage() {
             <Link to="/" className="inline-flex items-center gap-2.5">
               <SigmaLogo size="md" />
               <div>
-                <p className="text-sm font-black tracking-tight">Painel Sigma</p>
+                <p className="text-sm font-black tracking-tight">Sigma Control</p>
                 <p className="text-[10px] font-medium text-muted-foreground">Gestão e automação</p>
               </div>
             </Link>
           </div>
 
           <div className="rounded-lg border border-border bg-card p-5 shadow-[0_20px_60px_-42px_color-mix(in_oklch,var(--foreground)_45%,transparent)] sm:p-7">
+            {resetMode ? (
+              <form onSubmit={updatePassword} className="space-y-4" data-testid="reset-password-form">
+                <div className="mb-2">
+                  <p className="mb-2 inline-flex items-center gap-1.5 text-xs font-bold text-primary"><KeyRound className="size-3.5" /> Redefinir senha</p>
+                  <h1 className="font-display text-2xl font-bold sm:text-3xl">Crie uma nova senha</h1>
+                  <p className="mt-2 text-sm text-muted-foreground">Escolha uma senha forte para voltar a acessar sua conta.</p>
+                </div>
+                <AuthField id="reset-password" label="Nova senha" icon={<Lock className="size-4" />} type={showPassword ? "text" : "password"} required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo de 6 caracteres" autoComplete="new-password" revealable revealed={showPassword} onReveal={() => setShowPassword((value) => !value)} />
+                <AuthField id="reset-password-confirmation" label="Confirme a nova senha" icon={<Lock className="size-4" />} type={showPassword ? "text" : "password"} required minLength={6} value={newPasswordConfirmation} onChange={(e) => setNewPasswordConfirmation(e.target.value)} placeholder="Repita a senha" autoComplete="new-password" invalid={newPasswordConfirmation.length > 0 && newPassword !== newPasswordConfirmation} />
+                <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl text-sm font-bold" data-testid="reset-password-submit">
+                  {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
+                  {loading ? "Salvando…" : "Salvar nova senha"}
+                </Button>
+              </form>
+            ) : (
+            <>
             <div className="mb-6">
               <p className="mb-2 inline-flex items-center gap-1.5 text-xs font-bold text-primary">
                 <ShieldCheck className="size-3.5" /> Acesso seguro
               </p>
               <h1 className="font-display text-2xl font-bold sm:text-3xl">
-                {tab === "login" ? "Que bom ter você de volta" : "Comece gratuitamente"}
+                {tab === "login" ? "Que bom ter você de volta" : "Teste grátis por 7 dias"}
               </h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 {tab === "login" ? "Entre para continuar gerenciando sua operação." : "Crie sua conta e configure seu painel em poucos minutos."}
@@ -278,10 +325,6 @@ function AuthPage() {
                     onReveal={() => setShowPassword((value) => !value)}
                     hint={<button type="button" onClick={openRecovery} className="text-xs font-bold text-primary hover:underline">Esqueci minha senha</button>}
                   />
-                  <div className="flex items-center gap-2 py-1">
-                    <Checkbox id={rememberId} checked={remember} onCheckedChange={(value) => setRemember(value === true)} />
-                    <Label htmlFor={rememberId} className="cursor-pointer text-xs font-normal text-muted-foreground">Manter conectado neste dispositivo</Label>
-                  </div>
                   <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl text-sm font-bold shadow-lg shadow-primary/15">
                     {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
                     {loading ? "Entrando…" : "Entrar no painel"}
@@ -333,7 +376,7 @@ function AuthPage() {
                   />
                   <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl text-sm font-bold shadow-lg shadow-primary/15">
                     {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
-                    {loading ? "Criando conta…" : "Criar minha conta grátis"}
+                    {loading ? "Criando conta…" : "Criar minha conta"}
                   </Button>
                 </form>
               </TabsContent>
@@ -345,10 +388,12 @@ function AuthPage() {
               {googleLoading ? <Loader2 className="size-4 animate-spin" /> : <GoogleIcon />}
               {googleLoading ? "Conectando…" : "Continuar com Google"}
             </Button>
+            </>
+            )}
           </div>
 
           <p className="px-4 pt-5 text-center text-[11px] leading-relaxed text-muted-foreground">
-            Ao continuar, você concorda com os termos de uso e a política de privacidade.
+            Ao continuar, você concorda com os <Link to="/termos" className="font-semibold text-primary hover:underline">Termos de Uso</Link> e a <Link to="/privacidade" className="font-semibold text-primary hover:underline">Política de Privacidade</Link>.
           </p>
         </div>
       </section>

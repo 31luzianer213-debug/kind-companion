@@ -17,38 +17,32 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago")({
 
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-          let settingsList: any[] = [];
-          if (uidParam) {
-            const { data } = await supabaseAdmin.from("whatsapp_settings").select("*").eq("user_id", uidParam).maybeSingle();
-            if (data) settingsList = [data];
+          // O webhook precisa carregar o identificador do revendedor (?uid=). Assim o pagamento
+          // é consultado apenas com o token daquela conta, sem cruzar dados entre revendedores.
+          if (!uidParam || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(uidParam)) {
+            return Response.json({ ok: false, error: "Webhook sem identificador do revendedor (uid)." }, { status: 401 });
           }
-          if (settingsList.length === 0) {
-            const { data } = await supabaseAdmin.from("whatsapp_settings").select("*").not("mercadopago_token", "is", null);
-            settingsList = (data ?? []).filter((item: any) => Boolean(item.mercadopago_token?.trim()));
-          }
-          if (settingsList.length === 0) {
-            return Response.json({ ok: false, error: "Nenhuma credencial do Mercado Pago configurada." });
+
+          const { data: matchedSettings } = await supabaseAdmin
+            .from("whatsapp_settings")
+            .select("*")
+            .eq("user_id", uidParam)
+            .maybeSingle();
+          const token = String((matchedSettings as any)?.mercadopago_token ?? "").trim();
+          if (!matchedSettings || !token) {
+            return Response.json({ ok: false, error: "Credencial do Mercado Pago não configurada para esta conta." });
           }
 
           let paymentData: any = null;
-          let matchedSettings: any = null;
-          for (const settings of settingsList) {
-            const token = settings.mercadopago_token?.trim();
-            if (!token) continue;
-            try {
-              const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              if (response.ok) {
-                paymentData = await response.json();
-                matchedSettings = settings;
-                break;
-              }
-            } catch {}
-          }
+          try {
+            const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (response.ok) paymentData = await response.json();
+          } catch {}
 
-          if (!paymentData || !matchedSettings) {
-            return Response.json({ ok: true, message: "Pagamento não encontrado nas credenciais ativas." });
+          if (!paymentData) {
+            return Response.json({ ok: true, message: "Pagamento não encontrado na conta do Mercado Pago informada." });
           }
           if (paymentData.status !== "approved") {
             return Response.json({ ok: true, message: `Status do pagamento: ${paymentData.status}. Aguardando aprovação.` });
@@ -107,6 +101,9 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago")({
 
           if (!invoice) {
             return Response.json({ ok: true, needsReview: true, message: "Pagamento aprovado, mas nenhuma fatura correspondente foi encontrada." });
+          }
+          if (invoice.status === "paid") {
+            return Response.json({ ok: true, message: "Fatura já estava paga. Evento ignorado." });
           }
 
           const { processPaidInvoiceAutomation } = await import("@/lib/payment-automation.server");

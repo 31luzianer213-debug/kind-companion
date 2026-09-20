@@ -57,7 +57,7 @@ export type TemplateVarInput = {
 
 /**
  * Extrai o DNS/URL limpo para conexão IPTV e streaming (sem caminhos de login, dashboard ou hashes).
- * Exemplo: "https://aplicativoz342.click/#/sign-in?redirect=/dashboard" -> "https://aplicativoz342.click"
+ * Exemplo: "https://painel.seuservidor.com/#/sign-in?redirect=/dashboard" -> "https://painel.seuservidor.com"
  */
 export function extractCleanIptvDns(rawUrl?: string | null): string {
   if (!rawUrl) return "";
@@ -79,7 +79,7 @@ export function extractCleanIptvDns(rawUrl?: string | null): string {
   return `${proto}${hostPart}`;
 }
 
-/** Extrai apenas o host limpo (ex: "aplicativoz342.click") */
+/** Extrai apenas o host limpo (ex: "painel.seuservidor.com") */
 export function extractHostOnly(rawUrl?: string | null): string {
   if (!rawUrl) return "";
   const cleaned = extractCleanIptvDns(rawUrl);
@@ -87,7 +87,7 @@ export function extractHostOnly(rawUrl?: string | null): string {
 }
 
 /**
- * Extrai o nome do servidor gravado nas observações do cliente (ex: Servidor: Alpha server IPTV).
+ * Extrai o nome do servidor gravado nas observações do cliente (ex: Servidor: Meu Servidor).
  */
 export function extractServerFromNotes(notes?: string | null): string | null {
   if (!notes) return null;
@@ -254,7 +254,7 @@ export function formatCredentialsMessage(params: {
   const serverLabel =
     candidateServerName && !isRawDomain(candidateServerName)
       ? candidateServerName
-      : "Alpha server IPTV";
+      : "Meu Servidor";
 
   const u = (params.username ?? "").trim();
   const p = (params.password ?? "").trim();
@@ -332,7 +332,7 @@ export function buildTemplateVars(input: TemplateVarInput): Record<string, strin
   const realServerName =
     candidateServerName && !isRawDomain(candidateServerName)
       ? candidateServerName
-      : settings?.business_name?.trim() || "Alpha server IPTV";
+      : settings?.business_name?.trim() || "Meu Servidor";
 
   const username = client?.iptv_username || list?.username || "";
   const password = client?.iptv_password || list?.password || "";
@@ -390,3 +390,11 @@ export const TEMPLATE_VARS: { key: string; label: string }[] = [
   { key: "link", label: "link de pagamento" },
 ];
 
+
+/** Traduz erros do banco (limite de plano / assinatura) em mensagens claras. */
+export function friendlyDbError(message: string) {
+  if (/LIMITE_PLANO/.test(message)) return message.replace(/^.*LIMITE_PLANO:\s*/, "");
+  if (/ASSINATURA_INATIVA/.test(message)) return message.replace(/^.*ASSINATURA_INATIVA:\s*/, "");
+  if (/duplicate key/i.test(message)) return "Já existe um cliente com esses dados.";
+  return message;
+}

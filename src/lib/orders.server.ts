@@ -3,7 +3,6 @@ import { generateM3uUrl, generateEpgUrl, extractCleanIptvDns } from "./format";
 import type { SigmaConfig } from "./sigma.panel";
 import { sendViaBaileys } from "./billing.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import defaultBotConfigData from "../../data/bot_config_default.json";
 
 export type OrderItem = {
   id: string;
@@ -207,15 +206,28 @@ export async function approveAndReleaseOrderServer(
     wsRow = data;
   } catch {}
 
-  let botCfg: any = defaultBotConfigData || null;
+  const panelUrl = wsRow?.sigma_url?.trim() || "";
+  const panelToken = wsRow?.sigma_token || null;
+  const panelUser = wsRow?.sigma_username || "";
+  const panelPass = wsRow?.sigma_password || "";
+  const serverName = wsRow?.sigma_server_name?.trim() || wsRow?.business_name || "Meu Servidor";
+  const streamingDns = wsRow?.sigma_streaming_dns?.trim() || "";
+  const cleanDns = extractCleanIptvDns(streamingDns) || "";
 
-  const panelUrl = wsRow?.sigma_url || botCfg?.sigma_url || "https://aplicativoz342.click";
-  const panelToken = wsRow?.sigma_token || botCfg?.sigma_token || null;
-  const panelUser = wsRow?.sigma_username || botCfg?.sigma_username || "Karen256";
-  const panelPass = wsRow?.sigma_password || botCfg?.sigma_password || "";
-  const serverName = wsRow?.sigma_server_name?.trim() || botCfg?.serverName || wsRow?.business_name || botCfg?.businessName || "Alpha server IPTV";
-  const streamingDns = wsRow?.sigma_streaming_dns?.trim() || botCfg?.streamingDns || "http://karen256.top";
-  const cleanDns = extractCleanIptvDns(streamingDns) || "http://karen256.top";
+  if (!panelUrl || !(panelToken || (panelUser && panelPass))) {
+    return {
+      ok: false,
+      message: "Configure o Painel Sigma (URL e credenciais) em Sigma antes de liberar pedidos.",
+      order,
+    };
+  }
+  if (!cleanDns) {
+    return {
+      ok: false,
+      message: "Informe o DNS de streaming do seu servidor em Sigma para gerar a lista M3U do cliente.",
+      order,
+    };
+  }
 
   const durationMonths = order.duration_months || 1;
   const expiryDate = addMonths(new Date(), durationMonths);

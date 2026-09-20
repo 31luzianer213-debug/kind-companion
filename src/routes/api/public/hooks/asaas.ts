@@ -38,6 +38,27 @@ export const Route = createFileRoute("/api/public/hooks/asaas")({
             return Response.json({ ok: true, needsReview: true, message: "Pagamento recebido, mas a fatura informada não foi encontrada." });
           }
 
+          // O webhook carrega o identificador do revendedor (?uid=) e a fatura precisa pertencer a ele.
+          const uidParam = new URL(request.url).searchParams.get("uid");
+          if (!uidParam || uidParam !== invoice.user_id) {
+            return Response.json({ ok: false, error: "Webhook sem identificador do revendedor ou fatura de outra conta." }, { status: 401 });
+          }
+
+          // Valida o token de autenticação do webhook quando o revendedor configurou um.
+          const { data: settings } = await supabaseAdmin
+            .from("whatsapp_settings")
+            .select("asaas_webhook_token")
+            .eq("user_id", invoice.user_id)
+            .maybeSingle();
+          const expectedToken = String((settings as any)?.asaas_webhook_token ?? "").trim();
+          if (expectedToken && request.headers.get("asaas-access-token") !== expectedToken) {
+            return Response.json({ ok: false, error: "Token do webhook Asaas inválido." }, { status: 401 });
+          }
+
+          if (invoice.status === "paid") {
+            return Response.json({ ok: true, message: "Fatura já estava paga. Evento ignorado." });
+          }
+
           const { processPaidInvoiceAutomation } = await import("@/lib/payment-automation.server");
           const result = await processPaidInvoiceAutomation({
             supabase: supabaseAdmin,

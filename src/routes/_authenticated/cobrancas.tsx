@@ -32,7 +32,7 @@ import {
 export const Route = createFileRoute("/_authenticated/cobrancas")({
   head: () => ({
     meta: [
-      { title: "Monitor de Cobranças — IPTV Manager" },
+      { title: "Monitor de Cobranças — Sigma Control" },
       { name: "description", content: "Acompanhe cobranças, pagamentos e renovações processadas automaticamente." },
     ],
   }),
