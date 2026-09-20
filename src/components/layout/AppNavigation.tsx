@@ -66,9 +66,8 @@ export function AppBrand({ compact = false }: { compact?: boolean }) {
       <div className="min-w-0 leading-tight">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-black tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-[15px]">Sigma Control</span>
-          {!compact && <span className="rounded-md border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-emerald-500">GRÁTIS</span>}
         </div>
-        {!compact && <span className="block truncate text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Operação inteligente</span>}
+        {!compact && <span className="block truncate text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Gestão de revenda IPTV</span>}
       </div>
     </Link>
   );

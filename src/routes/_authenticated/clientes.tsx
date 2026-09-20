@@ -75,6 +75,7 @@ import {
   generateEpgUrl,
   extractM3uFromNotes,
   formatAppsLinksBlock,
+  friendlyDbError,
 } from "@/lib/format";
 import {
   KeyRound,
@@ -112,7 +113,7 @@ import {
 export const Route = createFileRoute("/_authenticated/clientes")({
   head: () => ({
     meta: [
-      { title: "Clientes & Acessos Sigma — IPTV Manager" },
+      { title: "Clientes & Acessos Sigma — Sigma Control" },
       { name: "description", content: "Gerencie sua base de clientes, mensalidades e sincronize acessos com o servidor Sigma." },
     ],
   }),
@@ -486,6 +487,15 @@ function Clientes() {
 
   const save = useMutation({
     mutationFn: async (values: ClientForm) => {
+      const phoneDigits = cleanPhoneDigits(values.phone);
+      if (!values.name.trim()) throw new Error("Informe o nome do cliente.");
+      if (phoneDigits.length < 10 || phoneDigits.length > 13) throw new Error("Informe um WhatsApp válido com DDD (ex.: 11 99999-9999).");
+      if (values.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) throw new Error("E-mail inválido.");
+      if (Number(values.monthly_fee) < 0) throw new Error("O valor da mensalidade não pode ser negativo.");
+      const dueDay = Number(values.due_day || 10);
+      if (dueDay < 1 || dueDay > 31) throw new Error("O dia de vencimento deve estar entre 1 e 31.");
+      if (Number(values.screens || 1) < 1) throw new Error("Informe ao menos 1 tela.");
+
       const { data: auth } = await supabase.auth.getUser();
       const payload = {
         user_id: auth.user!.id,
@@ -620,7 +630,7 @@ function Clientes() {
 
       queryClient.invalidateQueries({ queryKey: ["clients"] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(friendlyDbError(error.message)),
   });
 
   async function executarExclusao() {

@@ -1,6 +1,6 @@
 {
-  "name": "IPTV Manager",
-  "short_name": "IPTV Manager",
+  "name": "Sigma Control",
+  "short_name": "Sigma Control",
   "description": "Painel mobile para clientes, Sigma, WhatsApp, cobranças e automações.",
   "lang": "pt-BR",
   "start_url": "/painel?source=pwa",

@@ -41,9 +41,9 @@ const FinanceChart = lazy(() => import("@/components/dashboard/FinanceChart"));
 export const Route = createFileRoute("/_authenticated/painel")({
   head: () => ({
     meta: [
-      { title: "Painel — IPTV Manager Pro" },
+      { title: "Painel — Sigma Control" },
       { name: "description", content: "Visão 360 do seu negócio IPTV: clientes, finanças, capacidade e automação WhatsApp." },
-      { property: "og:title", content: "Painel — IPTV Manager Pro" },
+      { property: "og:title", content: "Painel — Sigma Control" },
       { property: "og:description", content: "Centro de comando e finanças IPTV." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -149,9 +149,13 @@ function Painel() {
   const overdueInvoices = useMemo(() => invoices.filter((i) => i.status === "overdue"), [invoices]);
   const paidInvoices = useMemo(() => invoices.filter((i) => i.status === "paid"), [invoices]);
 
+  const monthKey = new Date().toISOString().slice(0, 7);
   const totalPaid = useMemo(
-    () => paidInvoices.reduce((sum, i) => sum + Number(i.amount || 0), 0),
-    [paidInvoices],
+    () =>
+      paidInvoices
+        .filter((i) => String(i.paid_at ?? i.updated_at ?? "").startsWith(monthKey))
+        .reduce((sum, i) => sum + Number(i.amount || 0), 0),
+    [paidInvoices, monthKey],
   );
   const totalOverdue = useMemo(
     () => overdueInvoices.reduce((sum, i) => sum + Number(i.amount || 0), 0),
@@ -179,9 +183,22 @@ function Painel() {
       .slice(0, 5);
   }, [clients, todayStr]);
 
+  const clientHealth = useMemo(() => {
+    const today = new Date(todayStr).getTime();
+    let due7 = 0;
+    let expired = 0;
+    for (const c of clients) {
+      if (c.status !== "active" || !c.next_due_date) continue;
+      const diffDays = Math.ceil((new Date(String(c.next_due_date)).getTime() - today) / 86_400_000);
+      if (diffDays < 0) expired += 1;
+      else if (diffDays <= 7) due7 += 1;
+    }
+    return { due7, expired, inactive: clients.filter((c) => c.status !== "active").length };
+  }, [clients, todayStr]);
+
   const chartData = useMemo(() => {
     return [
-      { name: "Recebido", valor: totalPaid, fill: "#10b981" },
+      { name: "Recebido no mês", valor: totalPaid, fill: "#10b981" },
       { name: "Em Aberto", valor: totalPending, fill: "#f59e0b" },
       { name: "Atrasado", valor: totalOverdue, fill: "#f43f5e" },
     ];
@@ -260,10 +277,6 @@ function Painel() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Visão Geral</h1>
-            <Badge variant="outline" className="text-xs gap-1.5 rounded-md border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              100% Grátis
-            </Badge>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground">
             Acompanhe o faturamento em tempo real, aprove pedidos e automatize cobranças pelo WhatsApp.
@@ -337,6 +350,20 @@ function Painel() {
           </div>
         </div>
       )}
+
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4" data-testid="client-health-strip">
+        {[
+          { label: "Clientes ativos", value: activeClients.length, tone: "text-emerald-600 dark:text-emerald-400", to: "/clientes" as const },
+          { label: "Vencendo em 7 dias", value: clientHealth.due7, tone: "text-amber-600 dark:text-amber-400", to: "/clientes" as const },
+          { label: "Vencidos", value: clientHealth.expired, tone: "text-rose-600 dark:text-rose-400", to: "/cobrancas" as const },
+          { label: "Inativos / bloqueados", value: clientHealth.inactive, tone: "text-muted-foreground", to: "/clientes-operacao" as const },
+        ].map((item) => (
+          <Link key={item.label} to={item.to} className="rounded-lg border border-border/60 bg-card/70 px-4 py-3 transition-colors hover:border-border">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{item.label}</p>
+            <p className={cn("mt-1 text-xl font-bold tabular-nums", item.tone)}>{item.value}</p>
+          </Link>
+        ))}
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="surface-card rounded-lg overflow-hidden border-border/70 hover:border-border transition-colors"><CardContent className="p-4 space-y-3"><div className="flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Receita Prevista</span><span className="grid size-8 place-items-center rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20"><Wallet className="size-4" /></span></div><div><p className="text-2xl font-bold tracking-tight text-foreground truncate">{formatBRL(totalMonthlyFee)}</p><div className="mt-1 flex items-center justify-between text-xs text-muted-foreground"><span>{activeClients.length} ativos</span><span className="font-medium text-foreground">Ticket: {formatBRL(ticketMedio)}</span></div></div></CardContent></Card>

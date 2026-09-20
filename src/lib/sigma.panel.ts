@@ -530,11 +530,11 @@ export async function sigmaLogin(url: string, username: string, password: string
 
   const notFound = attempts.filter((a) => /404|405/.test(a)).length;
   if (attempts.length > 0 && notFound === attempts.length) {
-    const isStreamHost = /karen256\.top|\bcdn\b|\bstream\b|\bplay\b/i.test(base);
+    const isStreamHost = /\bcdn\b|\bstream\b|\bplay\b/i.test(base);
     if (isStreamHost) {
       throw new Error(
         `O endereço "${base}" parece ser o servidor de transmissão de streaming (DNS) e não o painel de gerenciamento de revenda.\n\n` +
-        `Coloque a URL onde você faz login (ex.: https://aplicativoz342.click) no campo "Endereço do Painel", e mantenha "${base}" no campo "DNS de Transmissão".`
+        `Coloque a URL onde você faz login (ex.: https://painel.seuservidor.com) no campo "Endereço do Painel", e mantenha "${base}" no campo "DNS de Transmissão".`
       );
     }
     throw new Error(
@@ -1136,11 +1136,11 @@ export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCust
 
   // Se for apenas 404 em tudo, verifica se o usuário digitou o host de streaming em vez do painel
   if (onlyNotFound) {
-    const isStreamHost = /karen256\.top|\bcdn\b|\bstream\b|\bplay\b/i.test(config.url);
+    const isStreamHost = /\bcdn\b|\bstream\b|\bplay\b/i.test(config.url);
     if (isStreamHost) {
       throw new Error(
         `O endereço "${config.url}" aparenta ser o servidor de streaming/transmissão (DNS), e não o painel de gerenciamento de revenda onde você cria as linhas.\n\n` +
-        `Coloque a URL do painel onde você faz login (ex.: https://aplicativoz342.click) no campo "Endereço do Painel", e mantenha "${config.url}" no campo "DNS de Transmissão".`
+        `Coloque a URL do painel onde você faz login (ex.: https://painel.seuservidor.com) no campo "Endereço do Painel", e mantenha "${config.url}" no campo "DNS de Transmissão".`
       );
     }
     throw new Error(

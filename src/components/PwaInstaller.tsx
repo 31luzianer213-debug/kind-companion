@@ -91,7 +91,7 @@ export function PwaInstaller() {
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-sm font-bold text-foreground">Instalar IPTV Manager</p>
+                <p className="text-sm font-bold text-foreground">Instalar Sigma Control</p>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                   Use o painel como aplicativo, direto da tela inicial do celular.
                 </p>

@@ -62,6 +62,7 @@ const defaults: PaymentSettingsPayload = {
 };
 
 function PagamentosPage() {
+  const { user } = Route.useRouteContext();
   const queryClient = useQueryClient();
   const getSettingsFn = useServerFn(getPaymentSettings);
   const saveSettingsFn = useServerFn(savePaymentSettings);
@@ -192,9 +193,9 @@ function PagamentosPage() {
     save.mutate(form);
   }
 
-  const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://seusite.com";
-  const mpWebhookUrl = `${currentOrigin}/api/public/hooks/mercadopago`;
-  const asaasWebhookUrl = `${currentOrigin}/api/public/hooks/cobranca-diaria`;
+  const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
+  const mpWebhookUrl = `${currentOrigin}/api/public/hooks/mercadopago?uid=${user.id}`;
+  const asaasWebhookUrl = `${currentOrigin}/api/public/hooks/asaas?uid=${user.id}`;
 
   const activeProvider = form.payment_provider || "pix";
 
@@ -715,7 +716,7 @@ function PagamentosPage() {
               <div className="flex items-center gap-2">
                 <Input
                   readOnly
-                  value={typeof window !== "undefined" ? `${window.location.origin}/api/public/hooks/mercadopago` : "/api/public/hooks/mercadopago"}
+                  value={mpWebhookUrl}
                   className="font-mono text-xs bg-muted/40 h-8"
                 />
                 <Button
@@ -723,7 +724,7 @@ function PagamentosPage() {
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    const url = `${window.location.origin}/api/public/hooks/mercadopago`;
+                    const url = mpWebhookUrl;
                     navigator.clipboard.writeText(url);
                     toast.success("URL do Webhook Mercado Pago copiada!");
                   }}
@@ -747,7 +748,7 @@ function PagamentosPage() {
               <div className="flex items-center gap-2">
                 <Input
                   readOnly
-                  value={typeof window !== "undefined" ? `${window.location.origin}/api/public/hooks/asaas` : "/api/public/hooks/asaas"}
+                  value={asaasWebhookUrl}
                   className="font-mono text-xs bg-muted/40 h-8"
                 />
                 <Button
@@ -755,7 +756,7 @@ function PagamentosPage() {
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    const url = `${window.location.origin}/api/public/hooks/asaas`;
+                    const url = asaasWebhookUrl;
                     navigator.clipboard.writeText(url);
                     toast.success("URL do Webhook Asaas copiada!");
                   }}

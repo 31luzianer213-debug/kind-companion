@@ -17,10 +17,7 @@ export function AuthShowcase() {
         <SigmaLogo size="lg" />
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-lg font-black tracking-tight">Painel Sigma</span>
-            <span className="rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-2 py-0.5 text-[9px] font-black tracking-wider text-primary-foreground">
-              GRÁTIS
-            </span>
+            <span className="text-lg font-black tracking-tight">Sigma Control</span>
           </div>
           <span className="text-[11px] font-medium text-primary-foreground/60">Gestão que trabalha por você</span>
         </div>
@@ -58,7 +55,7 @@ export function AuthShowcase() {
 
       <div className="relative z-10 flex items-center justify-between border-t border-primary-foreground/15 pt-5 text-[11px] text-primary-foreground/55">
         <span>Seguro e simples de usar</span>
-        <span>© {new Date().getFullYear()} Painel Sigma</span>
+        <span>© {new Date().getFullYear()} Sigma Control</span>
       </div>
     </aside>
   );

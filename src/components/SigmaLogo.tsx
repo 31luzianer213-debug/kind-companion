@@ -23,7 +23,7 @@ export function SigmaLogo({ className, size = "md", showGlow = true }: SigmaLogo
   return (
     <div
       className={cn("relative flex shrink-0 select-none items-center justify-center", sizeClasses[size], className)}
-      title="Painel Sigma — Gestão e automação"
+      title="Sigma Control — Gestão de revenda IPTV"
     >
       <svg
         viewBox="0 0 48 48"
@@ -31,7 +31,7 @@ export function SigmaLogo({ className, size = "md", showGlow = true }: SigmaLogo
         xmlns="http://www.w3.org/2000/svg"
         className={cn("h-full w-full", showGlow && "drop-shadow-[0_8px_16px_rgba(15,118,110,0.22)]")}
         role="img"
-        aria-label="Logo Painel Sigma"
+        aria-label="Logo Sigma Control"
       >
         <defs>
           <linearGradient id={backgroundId} x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">

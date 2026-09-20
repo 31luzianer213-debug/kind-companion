@@ -1,11 +1,19 @@
 import {
+  Activity,
+  BarChart3,
   Bot,
+  CreditCard,
+  Crown,
   LayoutDashboard,
   MessageCircle,
+  MessageSquareText,
   Receipt,
+  RefreshCw,
   Server,
   Settings,
   ShoppingBag,
+  Stethoscope,
+  Timer,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -26,6 +34,7 @@ export type AppRoute =
   | "/whatsapp-diagnostico"
   | "/pagamentos"
   | "/mensagens"
+  | "/assinatura"
   | "/configuracoes";
 
 export type NavigationBadge = "orders" | "clients" | "invoices" | "sigma" | "whatsapp";
@@ -44,11 +53,6 @@ export interface NavigationGroup {
   items: NavigationItem[];
 }
 
-/**
- * O menu principal mostra apenas as áreas que o usuário realmente precisa
- * escolher no dia a dia. Recursos avançados continuam disponíveis dentro
- * das áreas correspondentes, sem poluir a navegação.
- */
 export const navigationGroups: NavigationGroup[] = [
   {
     title: "Principal",
@@ -57,19 +61,32 @@ export const navigationGroups: NavigationGroup[] = [
       { to: "/clientes", label: "Clientes", shortLabel: "Clientes", icon: Users, badgeKey: "clients", mobilePrimary: true },
       { to: "/pedidos", label: "Pedidos", shortLabel: "Pedidos", icon: ShoppingBag, badgeKey: "orders", mobilePrimary: true },
       { to: "/cobrancas", label: "Cobranças", shortLabel: "Cobrar", icon: Receipt, badgeKey: "invoices", mobilePrimary: true },
+      { to: "/indicadores", label: "Indicadores", shortLabel: "Dados", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Automação",
+    items: [
+      { to: "/cobranca-automatica", label: "Cobrança automática", shortLabel: "Automação", icon: Timer },
+      { to: "/mensagens", label: "Modelos de mensagem", shortLabel: "Mensagens", icon: MessageSquareText },
+      { to: "/bot", label: "Robô WhatsApp", shortLabel: "Robô", icon: Bot },
+      { to: "/pagamentos", label: "Recebimentos (Pix)", shortLabel: "Pix", icon: CreditCard },
     ],
   },
   {
     title: "Conexões",
     items: [
-      { to: "/sigma", label: "Sigma", shortLabel: "Sigma", icon: Server, badgeKey: "sigma" },
+      { to: "/sigma", label: "Painel Sigma", shortLabel: "Sigma", icon: Server, badgeKey: "sigma" },
+      { to: "/sigma-sincronizacao", label: "Sincronização Sigma", shortLabel: "Sync", icon: RefreshCw },
       { to: "/whatsapp", label: "WhatsApp", shortLabel: "WhatsApp", icon: MessageCircle, badgeKey: "whatsapp" },
-      { to: "/bot", label: "Robô WhatsApp", shortLabel: "Robô", icon: Bot },
+      { to: "/whatsapp-diagnostico", label: "Diagnóstico WhatsApp", shortLabel: "Diagnóstico", icon: Stethoscope },
     ],
   },
   {
     title: "Conta",
     items: [
+      { to: "/atividades", label: "Atividades", shortLabel: "Histórico", icon: Activity },
+      { to: "/assinatura", label: "Assinatura", shortLabel: "Plano", icon: Crown },
       { to: "/configuracoes", label: "Configurações", shortLabel: "Ajustes", icon: Settings },
     ],
   },

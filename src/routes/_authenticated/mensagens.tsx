@@ -82,7 +82,7 @@ function WhatsAppSimulator({
     epg: epg,
     apps: formatAppsLinksBlock(null, serverName || "Servidor Principal"),
     telas: "2",
-    empresa: businessName || "IPTV Manager Pro",
+    empresa: businessName || "Sigma Control",
     pix: pixKey || "12345678900",
     titular: "Revendedor Oficial",
     link: "https://pagamento.com/fatura/123",

@@ -76,7 +76,7 @@ function formatPlansText(prices: {
   const q = Number(prices.quarterly || 90).toFixed(2).replace(".", ",");
   const s = Number(prices.semiannual || 160).toFixed(2).replace(".", ",");
   const a = Number(prices.annual || 280).toFixed(2).replace(".", ",");
-  const srv = prices.serverName || "Alpha IPTV";
+  const srv = prices.serverName || "Minha Revenda IPTV";
 
   return (
     `🛒 *PLANOS E ASSINATURAS ${srv.toUpperCase()}* 🍿\n\n` +
@@ -105,12 +105,12 @@ function BotPage() {
   // Form State
   const [form, setForm] = useState({
     enabled: true,
-    businessName: "Alpha IPTV",
-    serverName: "Alpha server IPTV",
-    streamingDns: "http://karen256.top",
+    businessName: "Minha Revenda IPTV",
+    serverName: "Meu Servidor",
+    streamingDns: "",
     testEnabled: true,
     testDurationHours: 4,
-    testPackageName: "TESTE LISTA IPTV ALPHA COM TODOS CONTEUDOS COM ADULTOS 🔞",
+    testPackageName: "Teste grátis",
     blockRepeatDays: 7,
     planMonthlyPrice: 35.0,
     planQuarterlyPrice: 90.0,
@@ -121,7 +121,7 @@ function BotPage() {
     plansText: "",
     supportMessage: "",
     pixKey: "",
-    pixHolder: "Alpha IPTV",
+    pixHolder: "Minha Revenda IPTV",
     mercadopago_token: "",
     payment_provider: "mercadopago",
     appAndroidApk: "https://bit.ly/app-xciptv-oficial",
@@ -141,8 +141,8 @@ function BotPage() {
       id: "1",
       sender: "bot",
       text:
-        "👋 Olá! Seja muito bem-vindo(a) à *Alpha IPTV*! 🍿\n" +
-        "Eu sou o assistente virtual do *Alpha server IPTV* e estou aqui para te atender 24h por dia.\n\n" +
+        "👋 Olá! Seja muito bem-vindo(a) à *{empresa}*! 🍿\n" +
+        "Eu sou o assistente virtual do *{servidor}* e estou aqui para te atender 24h por dia.\n\n" +
         "Como posso te ajudar hoje? Digite o *número* da opção desejada:\n\n" +
         "1️⃣ *Gerar Teste Grátis* (Acesso Imediato)\n" +
         "2️⃣ *Renovar Minha Assinatura* (PIX Automático)\n" +
@@ -182,13 +182,13 @@ function BotPage() {
       const c = botData.config;
       setForm({
         enabled: c.enabled ?? true,
-        businessName: c.businessName || "Alpha IPTV",
-        serverName: c.serverName || "Alpha server IPTV",
-        streamingDns: c.streamingDns || "http://karen256.top",
+        businessName: c.businessName || "Minha Revenda IPTV",
+        serverName: c.serverName || "Meu Servidor",
+        streamingDns: c.streamingDns || "",
         testEnabled: c.testEnabled ?? true,
         testDurationHours: Number(c.testDurationHours ?? 4),
         testPackageName:
-          c.testPackageName || "TESTE LISTA IPTV ALPHA COM TODOS CONTEUDOS COM ADULTOS 🔞",
+          c.testPackageName || "Teste grátis",
         blockRepeatDays: Number(c.blockRepeatDays ?? 7),
         planMonthlyPrice: Number(c.planMonthlyPrice ?? 35.0),
         planQuarterlyPrice: Number(c.planQuarterlyPrice ?? 90.0),
@@ -199,7 +199,7 @@ function BotPage() {
         plansText: c.plansText || "",
         supportMessage: c.supportMessage || "",
         pixKey: c.pixKey || "",
-        pixHolder: c.pixHolder || "Alpha IPTV",
+        pixHolder: c.pixHolder || "Minha Revenda IPTV",
         mercadopago_token: c.mercadopago_token || "",
         payment_provider: c.payment_provider || "mercadopago",
         appAndroidApk: c.appAndroidApk || "https://bit.ly/app-xciptv-oficial",
@@ -328,8 +328,8 @@ function BotPage() {
             ? form.menuGreeting
                 .replace(/{empresa}/g, form.businessName)
                 .replace(/{servidor}/g, form.serverName)
-            : "👋 Olá! Seja muito bem-vindo(a) à *Alpha IPTV*! 🍿\n" +
-              "Eu sou o assistente virtual do *Alpha server IPTV* e estou aqui para te atender 24h por dia.\n\n" +
+            : "👋 Olá! Seja muito bem-vindo(a) à *{empresa}*! 🍿\n" +
+              "Eu sou o assistente virtual do *{servidor}* e estou aqui para te atender 24h por dia.\n\n" +
               "Como posso te ajudar hoje? Digite o *número* da opção desejada:\n\n" +
               "1️⃣ *Gerar Teste Grátis* (Acesso Imediato)\n" +
               "2️⃣ *Renovar Minha Assinatura* (PIX Automático)\n" +
@@ -531,7 +531,7 @@ function BotPage() {
                       <Label className="text-[11px] font-medium">Titular da Chave</Label>
                       <Input
                         type="text"
-                        placeholder="Ex: Alpha IPTV"
+                        placeholder="Ex: Minha Revenda IPTV"
                         value={form.pixHolder}
                         onChange={(e) => setForm({ ...form, pixHolder: e.target.value })}
                         className="rounded-xl text-xs"
@@ -673,7 +673,7 @@ function BotPage() {
                     </Label>
                     <Input
                       type="text"
-                      placeholder="Ex: Alpha IPTV ou Alpha server IPTV"
+                      placeholder="Ex: Minha Revenda ou Servidor Premium"
                       value={form.serverName}
                       onChange={(e) => setForm({ ...form, serverName: e.target.value })}
                       className="rounded-xl text-sm"
@@ -745,7 +745,7 @@ function BotPage() {
                     type="text"
                     value={form.testPackageName}
                     onChange={(e) => setForm({ ...form, testPackageName: e.target.value })}
-                    placeholder="Ex: TESTE LISTA IPTV ALPHA COM TODOS CONTEUDOS COM ADULTOS 🔞"
+                    placeholder="Ex: Teste grátis 4 horas"
                     className="rounded-xl text-sm"
                   />
                 </div>
@@ -916,7 +916,7 @@ function BotPage() {
                     type="text"
                     value={form.businessName}
                     onChange={(e) => setForm({ ...form, businessName: e.target.value })}
-                    placeholder="Ex: Alpha IPTV"
+                    placeholder="Ex: Minha Revenda IPTV"
                     className="rounded-xl text-sm"
                   />
                 </div>
@@ -996,7 +996,7 @@ function BotPage() {
                 🤖
               </div>
               <div className="leading-tight flex-1">
-                <p className="text-xs font-bold truncate text-foreground">{form.businessName || "Alpha IPTV"}</p>
+                <p className="text-xs font-bold truncate text-foreground">{form.businessName || "Minha Revenda IPTV"}</p>
                 <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                   <span className={`size-1.5 rounded-full inline-block ${whatsappConnected ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`} /> {whatsappConnected ? "WhatsApp conectado" : "WhatsApp desconectado"}
                 </p>

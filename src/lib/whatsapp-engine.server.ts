@@ -57,13 +57,13 @@ export async function resolveTargetUserId(
     if (exact?.user_id) return exact.user_id;
   }
 
-  const configured =
-    rows.find((row: any) => row.auto_send_enabled && row.business_name?.trim()) ??
-    rows.find((row: any) => row.business_name?.trim()) ??
-    rows[0];
+  // Sem instância identificada, só é seguro atender quando existe uma única conta.
+  // Nunca roteia a conversa de um revendedor para outro.
+  if (rows.length === 1 && rows[0]?.user_id) return rows[0].user_id;
 
-  if (!configured?.user_id) throw new Error("Nenhuma conta configurada para atender no WhatsApp.");
-  return configured.user_id;
+  throw new Error(
+    "Não foi possível identificar a conta dona desta instância do WhatsApp. Reconecte o WhatsApp pelo painel para registrar o webhook com o identificador correto.",
+  );
 }
 
 function interactiveAsText(interactive: BotInteractivePayload): string {

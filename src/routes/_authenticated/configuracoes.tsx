@@ -31,7 +31,7 @@ import {
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   head: () => ({
     meta: [
-      { title: "Ajustes & Automação — IPTV Manager Pro" },
+      { title: "Ajustes & Automação — Sigma Control" },
       { name: "description", content: "Configurações gerais do sistema, régua de automação de cobranças e visão integrada de módulos." },
     ],
   }),
@@ -47,7 +47,7 @@ type AutomationSettings = {
 };
 
 const defaults: AutomationSettings = {
-  business_name: "IPTV Manager Pro",
+  business_name: "",
   reminder_days_before: 3,
   send_on_due_day: true,
   overdue_reminder: true,
@@ -73,7 +73,7 @@ function ConfiguracoesPage() {
         version: "2.0",
         timestamp: new Date().toISOString(),
         exported_by: authUser?.user?.email || "admin",
-        system: "IPTV Manager Pro",
+        system: "Sigma Control",
         data: {
           clients: clients || [],
           whatsapp_settings: wsSettings || [],
@@ -448,7 +448,7 @@ function ConfiguracoesPage() {
                 </CardDescription>
               </div>
               <Badge variant="outline" className="text-emerald-400 border-emerald-400/30 text-xs self-start sm:self-auto">
-                🛡️ 100% Grátis & Ilimitado
+                Seus dados, sempre com você
               </Badge>
             </div>
           </CardHeader>

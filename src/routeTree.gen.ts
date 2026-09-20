@@ -12,6 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as TermosRouteImport } from './routes/termos'
+import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authenticated/assinatura'
 import { Route as AuthenticatedAtividadesRouteImport } from './routes/_authenticated/atividades'
 import { Route as AuthenticatedBotRouteImport } from './routes/_authenticated/bot'
 import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticated/clientes'
@@ -31,6 +34,7 @@ import { Route as AuthenticatedWhatsappDiagnosticoRouteImport } from './routes/_
 import { Route as ApiPublicHooksAsaasRouteImport } from './routes/api/public/hooks/asaas'
 import { Route as ApiPublicHooksCobrancaDiariaRouteImport } from './routes/api/public/hooks/cobranca-diaria'
 import { Route as ApiPublicHooksMercadopagoRouteImport } from './routes/api/public/hooks/mercadopago'
+import { Route as ApiPublicHooksSaasMercadopagoRouteImport } from './routes/api/public/hooks/saas-mercadopago'
 import { Route as ApiPublicHooksSigmaSyncRouteImport } from './routes/api/public/hooks/sigma-sync'
 import { Route as ApiPublicHooksWhatsappBotRouteImport } from './routes/api/public/hooks/whatsapp-bot'
 import { Route as ApiPublicHooksWhatsappPollRouteImport } from './routes/api/public/hooks/whatsapp-poll'
@@ -48,6 +52,21 @@ const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAssinaturaRoute = AuthenticatedAssinaturaRouteImport.update({
+  id: '/assinatura',
+  path: '/assinatura',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAtividadesRoute = AuthenticatedAtividadesRouteImport.update({
   id: '/atividades',
@@ -152,6 +171,12 @@ const ApiPublicHooksMercadopagoRoute =
     path: '/api/public/hooks/mercadopago',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSaasMercadopagoRoute =
+  ApiPublicHooksSaasMercadopagoRouteImport.update({
+    id: '/api/public/hooks/saas-mercadopago',
+    path: '/api/public/hooks/saas-mercadopago',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSigmaSyncRoute = ApiPublicHooksSigmaSyncRouteImport.update({
   id: '/api/public/hooks/sigma-sync',
   path: '/api/public/hooks/sigma-sync',
@@ -173,6 +198,9 @@ const ApiPublicHooksWhatsappPollRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
+  '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/atividades': typeof AuthenticatedAtividadesRoute
   '/bot': typeof AuthenticatedBotRoute
   '/clientes': typeof AuthenticatedClientesRoute
@@ -192,6 +220,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/asaas': typeof ApiPublicHooksAsaasRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
+  '/api/public/hooks/saas-mercadopago': typeof ApiPublicHooksSaasMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
   '/api/public/hooks/whatsapp-poll': typeof ApiPublicHooksWhatsappPollRoute
@@ -199,6 +228,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
+  '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/atividades': typeof AuthenticatedAtividadesRoute
   '/bot': typeof AuthenticatedBotRoute
   '/clientes': typeof AuthenticatedClientesRoute
@@ -218,6 +250,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/asaas': typeof ApiPublicHooksAsaasRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
+  '/api/public/hooks/saas-mercadopago': typeof ApiPublicHooksSaasMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
   '/api/public/hooks/whatsapp-poll': typeof ApiPublicHooksWhatsappPollRoute
@@ -227,6 +260,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
+  '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/atividades': typeof AuthenticatedAtividadesRoute
   '/_authenticated/bot': typeof AuthenticatedBotRoute
   '/_authenticated/clientes': typeof AuthenticatedClientesRoute
@@ -246,6 +282,7 @@ export interface FileRoutesById {
   '/api/public/hooks/asaas': typeof ApiPublicHooksAsaasRoute
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
+  '/api/public/hooks/saas-mercadopago': typeof ApiPublicHooksSaasMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
   '/api/public/hooks/whatsapp-poll': typeof ApiPublicHooksWhatsappPollRoute
@@ -255,6 +292,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/privacidade'
+    | '/termos'
+    | '/assinatura'
     | '/atividades'
     | '/bot'
     | '/clientes'
@@ -274,6 +314,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/asaas'
     | '/api/public/hooks/cobranca-diaria'
     | '/api/public/hooks/mercadopago'
+    | '/api/public/hooks/saas-mercadopago'
     | '/api/public/hooks/sigma-sync'
     | '/api/public/hooks/whatsapp-bot'
     | '/api/public/hooks/whatsapp-poll'
@@ -281,6 +322,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/privacidade'
+    | '/termos'
+    | '/assinatura'
     | '/atividades'
     | '/bot'
     | '/clientes'
@@ -300,6 +344,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/asaas'
     | '/api/public/hooks/cobranca-diaria'
     | '/api/public/hooks/mercadopago'
+    | '/api/public/hooks/saas-mercadopago'
     | '/api/public/hooks/sigma-sync'
     | '/api/public/hooks/whatsapp-bot'
     | '/api/public/hooks/whatsapp-poll'
@@ -308,6 +353,9 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/privacidade'
+    | '/termos'
+    | '/_authenticated/assinatura'
     | '/_authenticated/atividades'
     | '/_authenticated/bot'
     | '/_authenticated/clientes'
@@ -327,6 +375,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/asaas'
     | '/api/public/hooks/cobranca-diaria'
     | '/api/public/hooks/mercadopago'
+    | '/api/public/hooks/saas-mercadopago'
     | '/api/public/hooks/sigma-sync'
     | '/api/public/hooks/whatsapp-bot'
     | '/api/public/hooks/whatsapp-poll'
@@ -336,9 +385,12 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
+  TermosRoute: typeof TermosRoute
   ApiPublicHooksAsaasRoute: typeof ApiPublicHooksAsaasRoute
   ApiPublicHooksCobrancaDiariaRoute: typeof ApiPublicHooksCobrancaDiariaRoute
   ApiPublicHooksMercadopagoRoute: typeof ApiPublicHooksMercadopagoRoute
+  ApiPublicHooksSaasMercadopagoRoute: typeof ApiPublicHooksSaasMercadopagoRoute
   ApiPublicHooksSigmaSyncRoute: typeof ApiPublicHooksSigmaSyncRoute
   ApiPublicHooksWhatsappBotRoute: typeof ApiPublicHooksWhatsappBotRoute
   ApiPublicHooksWhatsappPollRoute: typeof ApiPublicHooksWhatsappPollRoute
@@ -366,6 +418,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/assinatura': {
+      id: '/_authenticated/assinatura'
+      path: '/assinatura'
+      fullPath: '/assinatura'
+      preLoaderRoute: typeof AuthenticatedAssinaturaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/atividades': {
       id: '/_authenticated/atividades'
@@ -500,6 +573,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksMercadopagoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/saas-mercadopago': {
+      id: '/api/public/hooks/saas-mercadopago'
+      path: '/api/public/hooks/saas-mercadopago'
+      fullPath: '/api/public/hooks/saas-mercadopago'
+      preLoaderRoute: typeof ApiPublicHooksSaasMercadopagoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sigma-sync': {
       id: '/api/public/hooks/sigma-sync'
       path: '/api/public/hooks/sigma-sync'
@@ -525,6 +605,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAssinaturaRoute: typeof AuthenticatedAssinaturaRoute
   AuthenticatedAtividadesRoute: typeof AuthenticatedAtividadesRoute
   AuthenticatedBotRoute: typeof AuthenticatedBotRoute
   AuthenticatedClientesRoute: typeof AuthenticatedClientesRoute
@@ -544,6 +625,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAssinaturaRoute: AuthenticatedAssinaturaRoute,
   AuthenticatedAtividadesRoute: AuthenticatedAtividadesRoute,
   AuthenticatedBotRoute: AuthenticatedBotRoute,
   AuthenticatedClientesRoute: AuthenticatedClientesRoute,
@@ -569,9 +651,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
+  TermosRoute: TermosRoute,
   ApiPublicHooksAsaasRoute: ApiPublicHooksAsaasRoute,
   ApiPublicHooksCobrancaDiariaRoute: ApiPublicHooksCobrancaDiariaRoute,
   ApiPublicHooksMercadopagoRoute: ApiPublicHooksMercadopagoRoute,
+  ApiPublicHooksSaasMercadopagoRoute: ApiPublicHooksSaasMercadopagoRoute,
   ApiPublicHooksSigmaSyncRoute: ApiPublicHooksSigmaSyncRoute,
   ApiPublicHooksWhatsappBotRoute: ApiPublicHooksWhatsappBotRoute,
   ApiPublicHooksWhatsappPollRoute: ApiPublicHooksWhatsappPollRoute,

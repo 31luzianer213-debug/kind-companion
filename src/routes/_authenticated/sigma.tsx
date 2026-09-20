@@ -36,7 +36,7 @@ import {
 export const Route = createFileRoute("/_authenticated/sigma")({
   head: () => ({
     meta: [
-      { title: "Sigma — IPTV Manager Pro" },
+      { title: "Sigma — Sigma Control" },
       { name: "description", content: "Conecte seu Sigma e traga os clientes automaticamente." },
     ],
   }),
