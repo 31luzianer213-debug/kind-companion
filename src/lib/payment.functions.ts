@@ -108,8 +108,8 @@ export const savePaymentSettings = createServerFn({ method: "POST" })
       pix_holder: (data.pix_holder ?? "").trim(),
       payment_link: (data.payment_link ?? "").trim(),
       payment_provider: data.payment_provider ?? "pix",
-      mercadopago_token: (data.mercadopago_token ?? "").trim(),
-      asaas_token: (data.asaas_token ?? "").trim(),
+      mercadopago_token: (data.mercadopago_token ?? "").trim() || existing?.mercadopago_token || "",
+      asaas_token: (data.asaas_token ?? "").trim() || existing?.asaas_token || "",
       asaas_env: data.asaas_env ?? "production",
     };
 
