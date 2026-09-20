@@ -351,6 +351,8 @@ function Painel() {
         </div>
       )}
 
+      <SectionTitle icon={Users} title="Seus clientes" description="Situação da carteira hoje" />
+
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4" data-testid="client-health-strip">
         {[
           { label: "Clientes ativos", value: activeClients.length, tone: "text-emerald-600 dark:text-emerald-400", to: "/clientes" as const },
