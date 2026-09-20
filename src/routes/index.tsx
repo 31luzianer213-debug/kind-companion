@@ -112,10 +112,12 @@ function DashboardPreview() {
           </div>
         </div>
       </div>
-      <div className="absolute -bottom-5 -left-4 hidden w-48 rounded-lg bg-foreground p-4 text-background shadow-xl sm:block">
-        <p className="text-[9px] font-bold uppercase tracking-[0.12em] opacity-60">Status do sistema</p>
-        <p className="mt-2 flex items-center gap-2 text-xs font-bold"><span className="size-2 rounded-full bg-emerald-400" /> Operação online</p>
-        <p className="mt-2 text-[10px] leading-relaxed opacity-65">Sigma e WhatsApp prontos para trabalhar.</p>
+      <div className="mt-4 hidden items-center justify-between gap-4 rounded-lg bg-foreground p-4 text-background shadow-xl sm:flex">
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-[0.12em] opacity-60">Status do sistema</p>
+          <p className="mt-1.5 flex items-center gap-2 text-xs font-bold"><span className="size-2 rounded-full bg-emerald-400" /> Operação online</p>
+        </div>
+        <p className="max-w-[16rem] text-right text-[10px] leading-relaxed opacity-65">Sigma e WhatsApp prontos para trabalhar.</p>
       </div>
     </div>
   );
