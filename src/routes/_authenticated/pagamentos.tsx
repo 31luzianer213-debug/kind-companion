@@ -617,7 +617,7 @@ function PagamentosPage() {
                         setAsaasStatus(null);
                       }}
                       className="rounded-xl font-mono text-sm pr-10"
-                      required={activeProvider === "asaas"}
+                      required={activeProvider === "asaas" && !(data as any)?.has_asaas_token}
                     />
                     <Button
                       type="button"
