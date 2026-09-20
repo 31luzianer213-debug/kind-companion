@@ -401,3 +401,25 @@ function Painel() {
     </div>
   );
 }
+
+function SectionTitle({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-center gap-2.5 pt-1">
+      <span className="grid size-7 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
+        <Icon className="size-4" />
+      </span>
+      <div>
+        <h2 className="text-sm font-bold tracking-tight text-foreground">{title}</h2>
+        <p className="text-[11px] text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  );
+}
