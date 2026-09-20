@@ -12,11 +12,14 @@ import {
   Eye,
   EyeOff,
   Info,
+  KeyRound,
   Loader2,
   Lock,
   Search,
   ShieldCheck,
   Sparkles,
+  Trash2,
+  UserPlus,
   Users,
   Wallet,
 } from "lucide-react";
@@ -28,11 +31,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  createAdminReseller,
+  deleteAdminReseller,
   getAdminPlan,
   getAdminSettings,
   listAdminSubscriptions,
+  resetAdminResellerPassword,
   saveAdminPlan,
   saveAdminSettings,
+  startAdminTrial,
   testMercadoPagoToken,
   updateAdminSubscription,
 } from "@/lib/admin.functions";
@@ -438,10 +445,21 @@ function SubscriptionsCard() {
   const queryClient = useQueryClient();
   const listFn = useServerFn(listAdminSubscriptions);
   const updateFn = useServerFn(updateAdminSubscription);
+  const createFn = useServerFn(createAdminReseller);
+  const deleteFn = useServerFn(deleteAdminReseller);
+  const resetFn = useServerFn(resetAdminResellerPassword);
+  const trialFn = useServerFn(startAdminTrial);
   const [days, setDays] = useState("30");
   const [term, setTerm] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newDays, setNewDays] = useState("30");
 
   const { data, isLoading } = useQuery({ queryKey: ["admin-subscriptions"], queryFn: () => listFn({}), retry: false });
+
+  function refresh() {
+    queryClient.invalidateQueries({ queryKey: ["admin-subscriptions"] });
+  }
 
   const update = useMutation({
     mutationFn: async (input: { userId: string; action: "grant" | "block" }) => {
@@ -450,19 +468,68 @@ function SubscriptionsCard() {
     },
     onSuccess: () => {
       toast.success("Assinatura atualizada.");
-      queryClient.invalidateQueries({ queryKey: ["admin-subscriptions"] });
+      refresh();
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const create = useMutation({
+    mutationFn: async () => {
+      const res = await createFn({
+        data: { email: newEmail, password: newPassword, days: Number(newDays) || 30 },
+      });
+      if (!res.ok) throw new Error(res.error || "Falha ao criar o revendedor.");
+    },
+    onSuccess: () => {
+      toast.success("Revendedor criado com assinatura ativa.");
+      setNewEmail("");
+      setNewPassword("");
+      refresh();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await deleteFn({ data: { userId } });
+      if (!res.ok) throw new Error(res.error || "Falha ao excluir o revendedor.");
+    },
+    onSuccess: () => {
+      toast.success("Revendedor excluído com todos os dados dele.");
+      refresh();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const resetPassword = useMutation({
+    mutationFn: async (input: { userId: string; password: string }) => {
+      const res = await resetFn({ data: input });
+      if (!res.ok) throw new Error(res.error || "Falha ao trocar a senha.");
+    },
+    onSuccess: () => toast.success("Senha alterada. Avise o revendedor."),
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const trial = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await trialFn({ data: { userId, days: 7 } });
+      if (!res.ok) throw new Error(res.error || "Falha ao liberar o teste.");
+    },
+    onSuccess: () => {
+      toast.success("Teste grátis de 7 dias liberado.");
+      refresh();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const busy = update.isPending || remove.isPending || trial.isPending || resetPassword.isPending;
   const rows = data?.ok && Array.isArray(data.rows) ? data.rows : [];
 
   const stats = useMemo(() => {
     const active = rows.filter((r) => r.status === "active").length;
-    const trial = rows.filter((r) => r.status === "trialing" || r.status === "trial").length;
-    const blocked = rows.filter((r) => r.status === "blocked" || r.status === "canceled").length;
+    const trialCount = rows.filter((r) => r.status === "trialing" || r.status === "trial").length;
     const clients = rows.reduce((sum, r) => sum + Number(r.clients || 0), 0);
-    return { total: rows.length, active, trial, blocked, clients };
+    return { total: rows.length, active, trial: trialCount, clients };
   }, [rows]);
 
   const filtered = useMemo(() => {
@@ -478,6 +545,7 @@ function SubscriptionsCard() {
     blocked: "Bloqueada",
     canceled: "Cancelada",
     past_due: "Vencida",
+    sem_assinatura: "Sem assinatura",
   };
 
   return (
@@ -496,12 +564,58 @@ function SubscriptionsCard() {
         ))}
       </div>
 
+      <Card className="surface-card border-border/70" data-testid="admin-new-reseller-card">
+        <CardHeader className="border-b border-border/50 pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <UserPlus className="size-5 text-primary" /> Criar novo revendedor
+          </CardTitle>
+          <CardDescription>Cria a conta de acesso já com assinatura liberada.</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_100px_auto] sm:items-end">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">E-mail</Label>
+              <Input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="revendedor@email.com"
+                data-testid="admin-new-email"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Senha</Label>
+              <Input
+                type="text"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="mínimo 6 caracteres"
+                data-testid="admin-new-password"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Dias</Label>
+              <Input inputMode="numeric" value={newDays} onChange={(e) => setNewDays(e.target.value)} />
+            </div>
+            <Button
+              onClick={() => create.mutate()}
+              disabled={create.isPending || !newEmail.trim() || newPassword.length < 6}
+              className="gap-1.5 font-semibold"
+              data-testid="admin-create-reseller"
+            >
+              {create.isPending ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
+              Criar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="surface-card border-border/70" data-testid="admin-subscriptions-card">
         <CardHeader className="border-b border-border/50 pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <ShieldCheck className="size-5 text-primary" /> Assinaturas dos revendedores
           </CardTitle>
-          <CardDescription>Libere dias de acesso manualmente ou bloqueie quem não pagou.</CardDescription>
+          <CardDescription>Libere dias, troque a senha, bloqueie ou exclua a conta.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -558,23 +672,57 @@ function SubscriptionsCard() {
                         {until ? ` · até ${new Date(until).toLocaleDateString("pt-BR")}` : ""}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        disabled={update.isPending}
+                        disabled={busy}
                         onClick={() => update.mutate({ userId: row.user_id, action: "grant" })}
                       >
                         Liberar {Number(days) || 30} dias
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={busy} onClick={() => trial.mutate(row.user_id)}>
+                        Teste 7 dias
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5"
+                        disabled={busy}
+                        onClick={() => {
+                          const senha = window.prompt(`Nova senha para ${row.email} (mínimo 6 caracteres):`);
+                          if (!senha) return;
+                          resetPassword.mutate({ userId: row.user_id, password: senha });
+                        }}
+                      >
+                        <KeyRound className="size-3.5" /> Senha
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         className="text-destructive"
-                        disabled={update.isPending}
+                        disabled={busy}
                         onClick={() => update.mutate({ userId: row.user_id, action: "block" })}
                       >
                         Bloquear
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1.5 text-destructive"
+                        disabled={busy}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Excluir ${row.email}? Todos os clientes, cobranças e configurações dessa conta serão apagados.`,
+                            )
+                          ) {
+                            remove.mutate(row.user_id);
+                          }
+                        }}
+                        data-testid="admin-delete-reseller"
+                      >
+                        <Trash2 className="size-3.5" /> Excluir
                       </Button>
                     </div>
                   </div>
