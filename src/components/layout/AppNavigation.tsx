@@ -110,7 +110,7 @@ export function DesktopNavigation(props: AppNavigationProps) {
 export function MobileDrawer(props: AppNavigationProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <nav className="grid flex-1 grid-cols-2 gap-2 overflow-y-auto py-3 subtle-scrollbar" aria-label="Menu mobile">
+      <nav className="grid flex-1 grid-cols-2 gap-2 overflow-y-auto overscroll-contain py-3 subtle-scrollbar" aria-label="Menu mobile">
         {navigationGroups.flatMap((group) => group.items).filter((item) => !item.adminOnly || props.isAdmin).map((item) => {
           const active = isActive(props.pathname, item.to);
           const Icon = item.icon;
@@ -121,7 +121,7 @@ export function MobileDrawer(props: AppNavigationProps) {
               onClick={props.onNavigate}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-h-[78px] flex-col items-start justify-between rounded-lg border p-3 text-left transition-all",
+                "flex min-h-[78px] min-w-0 flex-col items-start justify-between rounded-lg border p-3 text-left transition-all",
                 active
                   ? "border-primary/30 bg-primary/12 text-primary"
                   : "border-border/55 bg-card/65 text-foreground active:scale-[.98] active:bg-accent",
@@ -148,7 +148,7 @@ export function MobileDrawer(props: AppNavigationProps) {
 
 export function MobileBottomNavigation(props: Pick<AppNavigationProps, "pathname" | "counts" | "isWhatsAppConnected"> & { onOpenMenu: () => void }) {
   return (
-    <nav className="mobile-bottom-nav fixed inset-x-2 bottom-2 z-30 grid grid-cols-5 rounded-xl border border-border bg-background/96 px-1.5 pb-[max(.45rem,env(safe-area-inset-bottom))] pt-1.5 shadow-xl backdrop-blur-xl md:hidden" aria-label="Atalhos principais">
+    <nav className="mobile-bottom-nav fixed inset-x-2 bottom-2 z-30 grid grid-cols-[repeat(5,minmax(0,1fr))] rounded-xl border border-border bg-background/96 px-1.5 pb-[max(.45rem,env(safe-area-inset-bottom))] pt-1.5 shadow-xl backdrop-blur-xl md:hidden" aria-label="Atalhos principais">
       {primaryMobileNavigation.map((item) => {
         const active = isActive(props.pathname, item.to);
         const Icon = item.icon;
@@ -164,10 +164,10 @@ export function MobileBottomNavigation(props: Pick<AppNavigationProps, "pathname
           </Link>
         );
       })}
-      <button type="button" onClick={props.onOpenMenu} className="relative flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-0.5 text-[9px] font-extrabold text-muted-foreground transition-all active:scale-[.96] active:bg-accent" aria-label="Abrir todas as opções">
+      <Button type="button" variant="ghost" onClick={props.onOpenMenu} className="relative flex min-h-[54px] min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 text-[9px] font-extrabold text-muted-foreground transition-all active:scale-[.96] active:bg-accent" aria-label="Abrir todas as opções">
         <span className="grid size-8 place-items-center rounded-xl bg-muted/65"><Menu className="size-[18px] shrink-0" /></span>
         <span>Mais</span>
-      </button>
+      </Button>
     </nav>
   );
 }
