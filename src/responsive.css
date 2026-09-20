@@ -89,14 +89,6 @@ textarea {
 
 /* Tablet / laptop pequeno */
 @media (min-width: 768px) and (max-width: 1023px) {
-  :root {
-    --ui-sidebar-width: clamp(220px, 28vw, 244px);
-  }
-
-  .app-sidebar {
-    padding-inline: .7rem !important;
-  }
-
   .app-aurora main [class*="xl:grid-cols-5"],
   .app-aurora main [class*="lg:grid-cols-4"] {
     gap: 0.9rem;

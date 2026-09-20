@@ -165,8 +165,8 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
   };
 
   return (
-    <div className="app-aurora mobile-native-shell min-h-[100dvh] bg-background text-foreground md:flex">
-      <header className="mobile-app-header sticky top-0 z-30 grid min-h-[62px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-background/94 px-3 py-2 backdrop-blur-xl md:hidden sm:px-4">
+    <div className="app-aurora mobile-native-shell min-h-[100dvh] bg-background text-foreground lg:flex">
+      <header className="mobile-app-header sticky top-0 z-30 grid min-h-[62px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-background/94 px-3 py-2 backdrop-blur-xl lg:hidden sm:px-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <div className="grid size-9 shrink-0 place-items-center rounded-lg border border-border bg-card shadow-sm">
             <SigmaLogo size="sm" />
@@ -191,14 +191,14 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
         </div>
       </header>
 
-      <div className="pointer-events-none fixed right-6 top-4 z-40 hidden md:block">
+      <div className="pointer-events-none fixed right-6 top-4 z-40 hidden lg:block">
         <div className="pointer-events-auto">
           <GlobalSearch />
         </div>
       </div>
 
       {drawerOpen && (
-        <div className="fixed inset-0 z-50 md:hidden" role="presentation">
+        <div className="fixed inset-0 z-50 lg:hidden" role="presentation">
           <button
             type="button"
             className="absolute inset-0 bg-black/55 backdrop-blur-[2px]"
@@ -227,7 +227,7 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
         </div>
       )}
 
-      <aside className="app-sidebar sticky top-0 hidden h-[100dvh] w-[var(--ui-sidebar-width)] shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-3 lg:p-4 md:flex">
+      <aside className="app-sidebar sticky top-0 hidden h-[100dvh] w-[var(--ui-sidebar-width)] shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-4 lg:flex">
         <DesktopNavigation {...navigationProps} />
       </aside>
 

@@ -148,7 +148,7 @@ export function MobileDrawer(props: AppNavigationProps) {
 
 export function MobileBottomNavigation(props: Pick<AppNavigationProps, "pathname" | "counts" | "isWhatsAppConnected"> & { onOpenMenu: () => void }) {
   return (
-    <nav className="mobile-bottom-nav fixed inset-x-2 bottom-2 z-30 grid grid-cols-[repeat(5,minmax(0,1fr))] rounded-xl border border-border bg-background/96 px-1.5 pb-[max(.45rem,env(safe-area-inset-bottom))] pt-1.5 shadow-xl backdrop-blur-xl md:hidden" aria-label="Atalhos principais">
+    <nav className="mobile-bottom-nav fixed inset-x-2 bottom-2 z-30 grid grid-cols-[repeat(5,minmax(0,1fr))] rounded-xl border border-border bg-background/96 px-1.5 pb-[max(.45rem,env(safe-area-inset-bottom))] pt-1.5 shadow-xl backdrop-blur-xl lg:hidden" aria-label="Atalhos principais">
       {primaryMobileNavigation.map((item) => {
         const active = isActive(props.pathname, item.to);
         const Icon = item.icon;
