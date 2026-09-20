@@ -610,7 +610,7 @@ function PagamentosPage() {
                   <div className="relative flex items-center">
                     <Input
                       type={showAsaasToken ? "text" : "password"}
-                      placeholder="$aact_YTU5YTE0M2M6N2Z..."
+                      placeholder={(data as any)?.has_asaas_token ? "Token salvo — deixe em branco para manter" : "$aact_YTU5YTE0M2M6N2Z..."}
                       value={form.asaas_token}
                       onChange={(e) => {
                         setForm({ ...form, asaas_token: e.target.value });
