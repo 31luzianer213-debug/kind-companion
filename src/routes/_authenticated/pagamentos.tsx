@@ -495,7 +495,7 @@ function PagamentosPage() {
                       setMpStatus(null);
                     }}
                     className="rounded-xl font-mono text-sm pr-20"
-                    required={activeProvider === "mercadopago"}
+                    required={activeProvider === "mercadopago" && !(data as any)?.has_mercadopago_token}
                   />
                   <div className="absolute right-1 flex items-center gap-1">
                     <Button
