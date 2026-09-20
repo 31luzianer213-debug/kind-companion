@@ -82,15 +82,15 @@ export function PwaInstaller() {
   }
 
   return (
-    <div className="fixed inset-x-3 bottom-[5.5rem] z-[60] md:bottom-5 md:left-auto md:right-5 md:w-[390px]">
+    <div className="fixed inset-x-2 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[60] sm:inset-x-3 md:bottom-5 md:left-auto md:right-5 md:w-[min(390px,calc(100vw-2.5rem))]">
       <div className="rounded-2xl border border-border/70 bg-background/95 p-3.5 shadow-2xl backdrop-blur-xl">
         <div className="flex items-start gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Smartphone className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <div>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+              <div className="min-w-0">
                 <p className="text-sm font-bold text-foreground">Instalar Sigma Control</p>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                   Use o painel como aplicativo, direto da tela inicial do celular.
@@ -99,7 +99,7 @@ export function PwaInstaller() {
               <button
                 type="button"
                 onClick={dismiss}
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="grid size-10 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
                 aria-label="Fechar aviso de instalação"
               >
                 <X className="size-4" />
@@ -115,7 +115,7 @@ export function PwaInstaller() {
               </div>
             ) : null}
 
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 grid grid-cols-1 gap-2 min-[390px]:grid-cols-[minmax(0,1fr)_auto]">
               <Button size="sm" onClick={install} className="h-9 flex-1 gap-1.5 rounded-xl font-semibold">
                 {isIos && !installPrompt ? <Share2 className="size-4" /> : <Download className="size-4" />}
                 {isIos && !installPrompt ? "Como instalar" : "Instalar app"}

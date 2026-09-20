@@ -1168,9 +1168,9 @@ function Clientes() {
                   <span className="text-muted-foreground font-sans">Senha:</span>
                   <span className="font-bold text-foreground select-all">{testCredentials.password}</span>
                 </div>
-                <div className="flex justify-between items-center py-1 border-b border-border/30">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-border/30 py-1">
                   <span className="text-muted-foreground font-sans">Servidor / DNS:</span>
-                  <span className="text-primary truncate max-w-[200px] select-all">{testCredentials.serverUrl || sigmaServerUrl}</span>
+                  <span className="min-w-0 truncate text-right text-primary select-all" title={testCredentials.serverUrl || sigmaServerUrl}>{testCredentials.serverUrl || sigmaServerUrl}</span>
                 </div>
               </div>
 
@@ -1182,22 +1182,22 @@ function Clientes() {
                   </span>
                   <span className="text-[10px] text-muted-foreground">Inclusos na mensagem</span>
                 </div>
-                <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                <div className="grid grid-cols-1 gap-1.5 text-[11px] min-[420px]:grid-cols-2">
                   <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
                     <span className="text-muted-foreground">Downloader (TV):</span>
                     <span className="font-mono font-bold text-amber-400">{botConfig?.appAndroidDownloaderCode || "389471"}</span>
                   </div>
                   <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
                     <span className="text-muted-foreground">App Android:</span>
-                    <a href={botConfig?.appAndroidApk || "https://bit.ly/app-xciptv-oficial"} target="_blank" rel="noreferrer" className="text-primary hover:underline font-mono truncate max-w-[80px]">APK</a>
+                    <a href={botConfig?.appAndroidApk || "https://bit.ly/app-xciptv-oficial"} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">APK</a>
                   </div>
                   <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
                     <span className="text-muted-foreground">iPhone / iOS:</span>
-                    <a href={botConfig?.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509"} target="_blank" rel="noreferrer" className="text-primary hover:underline font-mono truncate max-w-[80px]">App Store</a>
+                    <a href={botConfig?.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509"} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">App Store</a>
                   </div>
                   <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
                     <span className="text-muted-foreground">Windows PC:</span>
-                    <a href={botConfig?.appWindowsLink || "https://www.iptvsmarters.com/download?download=windows"} target="_blank" rel="noreferrer" className="text-primary hover:underline font-mono truncate max-w-[80px]">.exe</a>
+                    <a href={botConfig?.appWindowsLink || "https://www.iptvsmarters.com/download?download=windows"} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">.exe</a>
                   </div>
                 </div>
               </div>
@@ -1331,20 +1331,20 @@ function Clientes() {
             </div>
 
             <Tabs value={filterTab} onValueChange={setFilterTab} className="w-full sm:w-auto">
-              <TabsList className="grid grid-cols-5 w-full sm:w-auto h-9 p-1 bg-muted/60">
-                <TabsTrigger value="all" className="text-xs">
+              <TabsList className="flex h-10 w-full justify-start overflow-x-auto bg-muted/60 p-1 sm:w-auto">
+                <TabsTrigger value="all" className="shrink-0 whitespace-nowrap text-xs">
                   Todos ({stats.total})
                 </TabsTrigger>
-                <TabsTrigger value="active" className="text-xs">
+                <TabsTrigger value="active" className="shrink-0 whitespace-nowrap text-xs">
                   Ativos ({stats.active})
                 </TabsTrigger>
-                <TabsTrigger value="overdue" className="text-xs">
+                <TabsTrigger value="overdue" className="shrink-0 whitespace-nowrap text-xs">
                   Atraso ({stats.overdue})
                 </TabsTrigger>
-                <TabsTrigger value="today" className="text-xs">
+                <TabsTrigger value="today" className="shrink-0 whitespace-nowrap text-xs">
                   Hoje ({stats.todayDue})
                 </TabsTrigger>
-                <TabsTrigger value="blocked" className="text-xs">
+                <TabsTrigger value="blocked" className="shrink-0 whitespace-nowrap text-xs">
                   Bloqueados
                 </TabsTrigger>
               </TabsList>
@@ -1604,7 +1604,7 @@ function Clientes() {
               return (
                 <Card key={client.id} className="surface-card border-border/60 p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex min-w-0 items-center gap-2.5">
                       <div
                         className={`size-10 rounded-lg flex items-center justify-center font-bold text-xs shadow-sm border ${
                           client.status === "active"
@@ -1616,8 +1616,8 @@ function Clientes() {
                       >
                         {getInitials(client.name)}
                       </div>
-                      <div>
-                        <h4 className="font-semibold text-foreground text-sm leading-tight">{client.name}</h4>
+                      <div className="min-w-0">
+                        <h4 className="truncate font-semibold text-foreground text-sm leading-tight">{client.name}</h4>
                         <a
                           href={`https://wa.me/55${cleanPhoneDigits(client.phone)}`}
                           target="_blank"
@@ -1674,11 +1674,11 @@ function Clientes() {
                   ) : null}
 
                   {/* Ações Mobile com rótulos explícitos */}
-                  <div className="grid grid-cols-5 gap-1.5 pt-2 border-t border-border/40">
+                   <div className="grid grid-cols-2 gap-2 border-t border-border/40 pt-2 min-[430px]:grid-cols-3">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs gap-1 px-1"
+                      className="min-h-11 text-xs gap-1 px-2"
                       onClick={() => copiarDadosAcesso(client)}
                       title="Copiar dados de acesso"
                     >
@@ -1690,7 +1690,7 @@ function Clientes() {
                       variant="outline"
                       size="sm"
                       disabled={isBusy}
-                      className="h-8 text-xs gap-1 px-1 text-sky-400 hover:bg-sky-500/10"
+                      className="min-h-11 text-xs gap-1 px-2 text-sky-400 hover:bg-sky-500/10"
                       onClick={() => enviarLinksApps(client)}
                       title="Enviar Links dos Aplicativos via WhatsApp"
                     >

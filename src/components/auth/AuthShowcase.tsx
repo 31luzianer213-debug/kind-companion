@@ -10,7 +10,7 @@ const benefits = [
 
 export function AuthShowcase() {
   return (
-    <aside className="relative hidden min-h-screen overflow-hidden border-r border-primary/15 bg-primary text-primary-foreground lg:flex lg:w-[46%] lg:flex-col lg:justify-between lg:p-10 xl:p-14">
+    <aside className="relative hidden min-h-screen overflow-hidden border-r border-primary/15 bg-primary text-primary-foreground md:flex md:w-[38%] md:flex-col md:justify-between md:p-7 lg:w-[46%] lg:p-10 xl:p-14">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,color-mix(in_oklch,var(--primary-foreground)_6%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklch,var(--primary-foreground)_6%,transparent)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
 
       <Link to="/" className="relative z-10 flex w-fit items-center gap-3">

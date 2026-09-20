@@ -482,7 +482,7 @@ function SubscriptionsCard() {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
           { label: "Revendedores", value: stats.total },
           { label: "Assinaturas ativas", value: stats.active, tone: "text-emerald-600 dark:text-emerald-400" },

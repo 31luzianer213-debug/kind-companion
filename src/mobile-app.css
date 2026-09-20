@@ -77,22 +77,6 @@
     min-height: 44px !important;
   }
 
-  /* Data-heavy sections become contained swipe regions rather than stretching the whole page. */
-  .mobile-app-content [class*="overflow-hidden"]:has(> table),
-  .mobile-app-content [class*="overflow-x-auto"] {
-    border-radius: 8px !important;
-    scrollbar-width: none;
-  }
-
-  .mobile-app-content [class*="overflow-hidden"]:has(> table)::-webkit-scrollbar,
-  .mobile-app-content [class*="overflow-x-auto"]::-webkit-scrollbar {
-    display: none;
-  }
-
-  .mobile-app-content table {
-    min-width: 620px !important;
-  }
-
   .mobile-app-content thead th {
     padding: 10px 12px !important;
     font-size: 9px !important;
@@ -116,11 +100,6 @@
   }
 
   /* Avoid stacked desktop action bars taking a whole screen. */
-  .mobile-app-content .page-header > div:last-child > button,
-  .mobile-app-content .page-header > div:last-child > a {
-    flex: 1 1 auto;
-  }
-
   .mobile-menu-sheet {
     box-shadow: 0 -24px 70px -28px color-mix(in oklch, var(--foreground) 55%, transparent);
   }
@@ -142,7 +121,7 @@
   }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 479px) {
   .mobile-app-content {
     padding-left: .6rem !important;
     padding-right: .6rem !important;

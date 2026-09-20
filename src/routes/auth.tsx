@@ -262,7 +262,7 @@ function AuthPage() {
         </header>
 
         <div className="relative z-10 mx-auto flex w-full max-w-[520px] flex-1 flex-col justify-center px-4 pb-8 pt-2 sm:px-8 sm:pb-12">
-          <div className="mb-7 lg:hidden">
+          <div className="mb-7 md:hidden">
             <Link to="/" className="inline-flex items-center gap-2.5">
               <SigmaLogo size="md" />
               <div>

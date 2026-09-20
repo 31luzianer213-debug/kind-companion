@@ -1,9 +1,8 @@
 # Roadmap
 
-- [x] Reconstruir a entrada de mensagens Evolution v1/v2
-- [x] Tornar a resposta confiável em texto simples
-- [x] Confirmar envio e registrar falhas
-- [x] Validar tipos, compilação e webhook
-- [x] Aplicar a direção visual Enterprise Cobalt Premium
-- [x] Refinar navegação e estrutura responsiva
-- [x] Validar páginas pública e estrutura compartilhada em desktop e celular
+- [x] Auditar rotas, componentes e estilos responsivos
+- [x] Reforçar estrutura, navegação, tabelas e janelas compartilhadas
+- [x] Consolidar regras responsivas conflitantes
+- [x] Corrigir páginas densas e controles estreitos
+- [x] Validar rotas em cinco tamanhos de tela
+- [x] Confirmar compilação e ausência de regressões

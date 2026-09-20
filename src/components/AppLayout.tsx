@@ -165,8 +165,8 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
   };
 
   return (
-    <div className="app-aurora mobile-native-shell min-h-[100dvh] bg-background text-foreground md:flex">
-      <header className="mobile-app-header sticky top-0 z-30 flex min-h-[62px] items-center justify-between border-b border-border bg-background/94 px-4 py-2 backdrop-blur-xl md:hidden">
+    <div className="app-aurora mobile-native-shell min-h-[100dvh] bg-background text-foreground lg:flex">
+      <header className="mobile-app-header sticky top-0 z-30 grid min-h-[62px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-background/94 px-3 py-2 backdrop-blur-xl lg:hidden sm:px-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <div className="grid size-9 shrink-0 place-items-center rounded-lg border border-border bg-card shadow-sm">
             <SigmaLogo size="sm" />
@@ -176,7 +176,7 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
             <h1 className="truncate font-display text-[15px] font-bold text-foreground">{mobilePageTitle(pathname)}</h1>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         <GlobalSearch enableShortcut={false} />
         <Button
           variant="ghost"
@@ -191,14 +191,14 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
         </div>
       </header>
 
-      <div className="pointer-events-none fixed right-6 top-4 z-40 hidden md:block">
+      <div className="pointer-events-none fixed right-6 top-4 z-40 hidden lg:block">
         <div className="pointer-events-auto">
           <GlobalSearch />
         </div>
       </div>
 
       {drawerOpen && (
-        <div className="fixed inset-0 z-50 md:hidden" role="presentation">
+        <div className="fixed inset-0 z-50 lg:hidden" role="presentation">
           <button
             type="button"
             className="absolute inset-0 bg-black/55 backdrop-blur-[2px]"
@@ -209,7 +209,8 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
             role="dialog"
             aria-modal="true"
             aria-label="Menu principal"
-            className="mobile-menu-sheet absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col rounded-t-2xl border border-b-0 border-border bg-background px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-2xl animate-in slide-in-from-bottom duration-200"
+            data-mobile-navigation
+            className="mobile-menu-sheet absolute inset-x-0 bottom-0 flex max-h-[min(88dvh,760px)] flex-col rounded-t-2xl border border-b-0 border-border bg-background px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-2xl animate-in slide-in-from-bottom duration-200 sm:px-4"
           >
             <div className="mx-auto mb-1 h-1.5 w-11 rounded-full bg-muted-foreground/20" />
             <div className="flex items-center justify-between pb-1">
@@ -226,12 +227,12 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
         </div>
       )}
 
-      <aside className="sticky top-0 hidden h-[100dvh] w-[260px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-4 md:flex">
+      <aside className="app-sidebar sticky top-0 hidden h-[100dvh] w-[var(--ui-sidebar-width)] shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-4 lg:flex">
         <DesktopNavigation {...navigationProps} />
       </aside>
 
       <main className="relative min-w-0 flex-1 overflow-x-hidden">
-        <div className="mobile-app-content relative mx-auto min-h-full w-full max-w-[1480px] px-3 pb-28 pt-3 sm:px-5 sm:pt-5 md:px-7 md:pb-12 md:pt-7 lg:px-9 xl:px-10">
+        <div className="mobile-app-content relative mx-auto min-h-full w-full max-w-[var(--ui-page-max)] px-3 pb-28 pt-3 sm:px-5 sm:pt-5 md:px-6 md:pb-12 md:pt-6 lg:px-8 lg:pt-7 xl:px-10">
           {children}
         </div>
       </main>
