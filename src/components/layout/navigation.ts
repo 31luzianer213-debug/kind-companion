@@ -62,16 +62,14 @@ export const navigationGroups: NavigationGroup[] = [
       { to: "/clientes", label: "Clientes", shortLabel: "Clientes", icon: Users, badgeKey: "clients", mobilePrimary: true },
       { to: "/pedidos", label: "Pedidos", shortLabel: "Pedidos", icon: ShoppingBag, badgeKey: "orders", mobilePrimary: true },
       { to: "/cobrancas", label: "Cobranças", shortLabel: "Cobrar", icon: Receipt, badgeKey: "invoices", mobilePrimary: true },
-      { to: "/indicadores", label: "Indicadores", shortLabel: "Dados", icon: BarChart3 },
     ],
   },
   {
     title: "Automação",
     items: [
+      { to: "/bot", label: "Robô WhatsApp", shortLabel: "Robô", icon: Bot },
       { to: "/cobranca-automatica", label: "Cobrança automática", shortLabel: "Automação", icon: Timer },
       { to: "/mensagens", label: "Modelos de mensagem", shortLabel: "Mensagens", icon: MessageSquareText },
-      { to: "/bot", label: "Robô WhatsApp", shortLabel: "Robô", icon: Bot },
-      { to: "/pagamentos", label: "Recebimentos (Pix)", shortLabel: "Pix", icon: CreditCard },
     ],
   },
   {
@@ -79,18 +77,19 @@ export const navigationGroups: NavigationGroup[] = [
     items: [
       { to: "/sigma", label: "Painel Sigma", shortLabel: "Sigma", icon: Server, badgeKey: "sigma" },
       { to: "/whatsapp", label: "WhatsApp", shortLabel: "WhatsApp", icon: MessageCircle, badgeKey: "whatsapp" },
+      { to: "/pagamentos", label: "Recebimentos (Pix)", shortLabel: "Pix", icon: CreditCard },
     ],
   },
   {
     title: "Conta",
     items: [
-      { to: "/atividades", label: "Atividades", shortLabel: "Histórico", icon: Activity },
       { to: "/assinatura", label: "Assinatura", shortLabel: "Plano", icon: Crown },
       { to: "/admin", label: "Administração", shortLabel: "Admin", icon: ShieldCheck, adminOnly: true },
       { to: "/configuracoes", label: "Configurações", shortLabel: "Ajustes", icon: Settings },
     ],
   },
 ];
+
 
 export const primaryMobileNavigation = navigationGroups
   .flatMap((group) => group.items)
