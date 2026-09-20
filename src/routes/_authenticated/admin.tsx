@@ -23,7 +23,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAdminSettings, saveAdminSettings, testMercadoPagoToken } from "@/lib/admin.functions";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  getAdminPlan,
+  getAdminSettings,
+  listAdminSubscriptions,
+  saveAdminPlan,
+  saveAdminSettings,
+  testMercadoPagoToken,
+  updateAdminSubscription,
+} from "@/lib/admin.functions";
+
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Administração — Sigma Control" }] }),
