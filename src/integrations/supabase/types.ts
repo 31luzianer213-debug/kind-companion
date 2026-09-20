@@ -358,6 +358,65 @@ export type Database = {
         }
         Relationships: []
       }
+      saas_payments: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          created_at: string
+          id: string
+          months: number
+          pix_code: string | null
+          pix_qr_base64: string | null
+          plan_id: string
+          provider: string
+          provider_payment_id: string | null
+          status: string
+          ticket_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          months?: number
+          pix_code?: string | null
+          pix_qr_base64?: string | null
+          plan_id: string
+          provider?: string
+          provider_payment_id?: string | null
+          status?: string
+          ticket_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          months?: number
+          pix_code?: string | null
+          pix_qr_base64?: string | null
+          plan_id?: string
+          provider?: string
+          provider_payment_id?: string | null
+          status?: string
+          ticket_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saas_payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saas_plans: {
         Row: {
           active: boolean
@@ -438,57 +497,6 @@ export type Database = {
           },
         ]
       }
-      saas_payments: {
-        Row: {
-          amount: number
-          approved_at: string | null
-          created_at: string
-          id: string
-          months: number
-          pix_code: string | null
-          pix_qr_base64: string | null
-          plan_id: string
-          provider: string
-          provider_payment_id: string | null
-          status: string
-          ticket_url: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          approved_at?: string | null
-          created_at?: string
-          id?: string
-          months?: number
-          pix_code?: string | null
-          pix_qr_base64?: string | null
-          plan_id: string
-          provider?: string
-          provider_payment_id?: string | null
-          status?: string
-          ticket_url?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          approved_at?: string | null
-          created_at?: string
-          id?: string
-          months?: number
-          pix_code?: string | null
-          pix_qr_base64?: string | null
-          plan_id?: string
-          provider?: string
-          provider_payment_id?: string | null
-          status?: string
-          ticket_url?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       sigma_panels: {
         Row: {
           auto_renew: boolean | null
@@ -534,6 +542,33 @@ export type Database = {
           url?: string
           user_id?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          admin_email: string | null
+          created_at: string
+          id: string
+          mercadopago_token: string | null
+          saas_provider: string
+          updated_at: string
+        }
+        Insert: {
+          admin_email?: string | null
+          created_at?: string
+          id?: string
+          mercadopago_token?: string | null
+          saas_provider?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_email?: string | null
+          created_at?: string
+          id?: string
+          mercadopago_token?: string | null
+          saas_provider?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -667,7 +702,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      subscription_state: { Args: { p_user: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
