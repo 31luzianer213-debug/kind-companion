@@ -98,8 +98,9 @@ function PagamentosPage() {
         pix_holder: data.pix_holder ?? prev.pix_holder,
         payment_link: data.payment_link ?? prev.payment_link,
         payment_provider: data.payment_provider ?? prev.payment_provider ?? "pix",
-        mercadopago_token: data.mercadopago_token ?? prev.mercadopago_token,
-        asaas_token: data.asaas_token ?? prev.asaas_token,
+        // Tokens ficam guardados só no servidor; o campo continua em branco.
+        mercadopago_token: prev.mercadopago_token,
+        asaas_token: prev.asaas_token,
         asaas_env: data.asaas_env ?? prev.asaas_env,
       }));
     }
