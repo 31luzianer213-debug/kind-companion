@@ -103,20 +103,14 @@
   .app-aurora main h1 { font-size: 1.38rem !important; line-height: 1.18 !important; overflow-wrap: anywhere; }
   .app-aurora main h2 { font-size: 1.12rem !important; }
   .app-aurora main [class*="grid"] { gap: 12px !important; }
-  .app-aurora main table { display: block; width: 100%; max-width: 100%; min-width: 680px; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
-  .app-aurora main [class*="overflow-hidden"]:has(> table) { overflow-x: auto !important; overflow-y: hidden !important; -webkit-overflow-scrolling: touch; }
-  .app-aurora main [class*="overflow-x-auto"] { margin-inline: -.5rem; padding-inline: .5rem; scroll-padding-inline: .5rem; -webkit-overflow-scrolling: touch; }
-  .app-aurora main button,
-  .app-aurora main a[class*="inline-flex"] { min-height: 44px; touch-action: manipulation; }
   .app-aurora main [role="tablist"] { max-width: 100%; overflow-x: auto; justify-content: flex-start; scrollbar-width: none; }
   .app-aurora main [role="tablist"]::-webkit-scrollbar { display: none; }
   .app-aurora main [role="tab"] { flex: 0 0 auto; white-space: nowrap; }
-  .app-aurora main [role="dialog"] { width: calc(100vw - 1rem) !important; max-width: calc(100vw - 1rem) !important; max-height: calc(100dvh - 1rem) !important; overflow-y: auto; padding: 1rem !important; }
   .app-aurora main .page-header { align-items: stretch !important; }
   .mobile-bottom-nav { padding-left: max(.375rem, env(safe-area-inset-left)); padding-right: max(.375rem, env(safe-area-inset-right)); }
 }
 
-@media (max-width: 390px) {
+@media (max-width: 479px) {
   .app-aurora main h1 { font-size: 1.28rem !important; }
   .mobile-bottom-nav a, .mobile-bottom-nav button { font-size: 8px !important; }
 }

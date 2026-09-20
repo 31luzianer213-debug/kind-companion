@@ -155,10 +155,10 @@ function Index() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <header className="sticky top-0 z-50 border-b border-border bg-background/92 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-2.5" aria-label="Sigma Control">
+        <div className="mx-auto grid h-16 max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 sm:px-6 md:flex md:justify-between md:gap-3">
+          <Link to="/" className="flex min-w-0 items-center gap-2.5" aria-label="Sigma Control">
             <SigmaLogo size="sm" />
-            <div><p className="font-display text-sm font-bold text-foreground sm:text-base">Sigma Control</p><p className="hidden text-[9px] font-bold uppercase tracking-[0.12em] text-primary sm:block">Gestão de revenda IPTV</p></div>
+            <div className="min-w-0"><p className="truncate font-display text-sm font-bold text-foreground sm:text-base">Sigma Control</p><p className="hidden text-[9px] font-bold uppercase tracking-[0.12em] text-primary sm:block">Gestão de revenda IPTV</p></div>
           </Link>
           <nav className="hidden items-center gap-6 text-sm font-semibold text-muted-foreground md:flex">
             <a href="#recursos" className="hover:text-foreground">Recursos</a>
@@ -166,7 +166,7 @@ function Index() {
             <a href="#planos" className="hover:text-foreground">Planos</a>
             <a href="#faq" className="hover:text-foreground">Dúvidas</a>
           </nav>
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <ThemeToggle />
             <Button asChild variant="ghost" size="sm"><Link to="/auth" data-testid="landing-login">Entrar</Link></Button>
             <Button asChild size="sm" className="hidden sm:inline-flex"><Link to="/auth" data-testid="landing-signup">Teste grátis <ArrowRight /></Link></Button>
@@ -175,7 +175,7 @@ function Index() {
       </header>
 
       <section className="border-b border-border">
-        <div className="mx-auto grid min-h-[640px] max-w-7xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.02fr_.98fr] lg:gap-20 lg:py-24">
+        <div className="mx-auto grid min-h-[calc(100svh-4rem)] max-w-7xl items-center gap-10 px-4 py-12 sm:min-h-[640px] sm:px-6 sm:py-20 lg:grid-cols-[1.02fr_.98fr] lg:gap-20 lg:py-24">
           <div className="space-y-7 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
               <span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" /><span className="relative inline-flex size-2 rounded-full bg-primary" /></span>
