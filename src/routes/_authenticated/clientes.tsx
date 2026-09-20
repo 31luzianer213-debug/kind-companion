@@ -307,7 +307,8 @@ function Clientes() {
     if (typeof window !== "undefined") {
       try {
         const params = new URLSearchParams(window.location.search);
-        if (params.get("novo") === "1" || params.get("novo") === "true") {
+        const novo = (params.get("novo") ?? "").replace(/^"|"$/g, "");
+        if (novo === "1" || novo === "true") {
           setForm({ ...empty, next_due_date: defaultNextDueDate() });
           setOpen(true);
           const url = new URL(window.location.href);
