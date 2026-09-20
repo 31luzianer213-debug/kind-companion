@@ -88,6 +88,19 @@ export const savePaymentSettings = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
+    // Token em branco = manter o token já salvo (a tela nunca recebe o valor real).
+    let existing: any = null;
+    try {
+      const { data: row } = await supabase
+        .from("whatsapp_settings")
+        .select("mercadopago_token, asaas_token")
+        .eq("user_id", userId)
+        .maybeSingle();
+      existing = row ?? null;
+    } catch {
+      existing = null;
+    }
+
     const payload = {
       user_id: userId,
       pix_key: (data.pix_key ?? "").trim(),
