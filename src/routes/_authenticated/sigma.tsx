@@ -106,8 +106,9 @@ function SigmaServersPage() {
       panel_url: server.panel_url ?? server.url ?? "",
       streaming_dns: server.streaming_dns ?? "",
       username: server.username ?? "",
-      password: server.password ?? "",
-      token: server.token ?? "",
+      // Senha e token ficam apenas no servidor: em branco = manter os atuais.
+      password: "",
+      token: "",
       enabled: server.enabled ?? true,
       auto_renew: server.auto_renew ?? true,
       is_default: server.is_default ?? false,
