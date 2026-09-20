@@ -1,9 +1,8 @@
 import {
-  Activity,
-  BarChart3,
   Bot,
   CreditCard,
   Crown,
+
   LayoutDashboard,
   MessageCircle,
   MessageSquareText,
