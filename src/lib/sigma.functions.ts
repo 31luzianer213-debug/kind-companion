@@ -455,7 +455,6 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
         detectedServerName,
         packagesCount: details.packages.length,
         credits: details.credits,
-        token: activeToken,
       };
     } catch (error) {
       return {
