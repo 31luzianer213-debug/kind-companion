@@ -488,7 +488,7 @@ function PagamentosPage() {
                 <div className="relative flex items-center">
                   <Input
                     type={showMpToken ? "text" : "password"}
-                    placeholder="APP_USR-0000000000000000-000000-..."
+                    placeholder={(data as any)?.has_mercadopago_token ? "Token salvo — deixe em branco para manter" : "APP_USR-0000000000000000-000000-..."}
                     value={form.mercadopago_token}
                     onChange={(e) => {
                       setForm({ ...form, mercadopago_token: e.target.value });
