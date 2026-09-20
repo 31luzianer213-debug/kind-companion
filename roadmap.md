@@ -4,5 +4,5 @@
 - [x] Reforçar estrutura, navegação, tabelas e janelas compartilhadas
 - [x] Consolidar regras responsivas conflitantes
 - [x] Corrigir páginas densas e controles estreitos
-- [ ] Validar rotas em cinco tamanhos de tela
-- [ ] Confirmar compilação e ausência de regressões
+- [x] Validar rotas em cinco tamanhos de tela
+- [x] Confirmar compilação e ausência de regressões
