@@ -294,13 +294,24 @@ async function cleanupOrphanRows(supabase: any, userId: string) {
 export const testSigmaServer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: SigmaServerInput) => input)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { ensureSigmaToken, listSigmaCustomers, fetchSigmaPanelDetails } = await import("./sigma.server");
+    // Ao editar um painel já salvo, as credenciais em branco são recuperadas do banco.
+    let stored: { username: string | null; password: string | null; token: string | null } | null = null;
+    if (data.id) {
+      const { data: row } = await context.supabase
+        .from("sigma_panels")
+        .select("username, password, token")
+        .eq("id", data.id)
+        .eq("user_id", context.userId)
+        .maybeSingle();
+      stored = (row as any) ?? null;
+    }
     const config: SigmaConfig = {
       url: data.panel_url.trim(),
-      username: data.username?.trim() || "",
-      password: data.password || "",
-      token: data.token?.trim() || null,
+      username: data.username?.trim() || stored?.username || "",
+      password: data.password || stored?.password || "",
+      token: data.token?.trim() || stored?.token || null,
     };
     try {
       const token = await ensureSigmaToken(config);
@@ -310,7 +321,6 @@ export const testSigmaServer = createServerFn({ method: "POST" })
       ]);
       return {
         ok: true as const,
-        token,
         customersCount: customers.length,
         serverName: details.serverName,
         streamingDns: details.dns,
