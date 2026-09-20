@@ -216,3 +216,123 @@ export const updateAdminSubscription = createServerFn({ method: "POST" })
     if (error) return { ok: false as const, error: error.message };
     return { ok: true as const };
   });
+
+async function assertAdmin(claims: any) {
+  const { isAdminEmail } = await import("./system-settings.server");
+  return isAdminEmail(emailFromClaims(claims));
+}
+
+/** Cria um novo revendedor (conta de acesso + assinatura ativa). */
+export const createAdminReseller = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { email: string; password: string; days?: number }) => input)
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await assertAdmin(context.claims))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
+    }
+    const email = data.email?.trim().toLowerCase();
+    const password = data.password ?? "";
+    if (!email || !email.includes("@")) return { ok: false as const, error: "Informe um e-mail válido." };
+    if (password.length < 6) return { ok: false as const, error: "A senha precisa ter ao menos 6 caracteres." };
+
+    const { data: created, error } = await (supabaseAdmin as any).auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (error) return { ok: false as const, error: error.message };
+    const userId = created?.user?.id as string | undefined;
+    if (!userId) return { ok: false as const, error: "Não foi possível criar a conta." };
+
+    const days = Math.max(1, Math.min(365, Number(data.days) || 30));
+    const periodEnd = new Date(Date.now() + days * 86_400_000).toISOString();
+    const { error: subError } = await (supabaseAdmin as any)
+      .from("saas_subscriptions")
+      .upsert(
+        { user_id: userId, status: "active", current_period_end: periodEnd, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" },
+      );
+    if (subError) return { ok: false as const, error: subError.message };
+    return { ok: true as const, userId };
+  });
+
+/** Define uma nova senha para o revendedor. */
+export const resetAdminResellerPassword = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { userId: string; password: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await assertAdmin(context.claims))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
+    }
+    if (!data.password || data.password.length < 6) {
+      return { ok: false as const, error: "A senha precisa ter ao menos 6 caracteres." };
+    }
+    const { error } = await (supabaseAdmin as any).auth.admin.updateUserById(data.userId, {
+      password: data.password,
+    });
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
+  });
+
+/** Exclui um revendedor e todos os dados ligados a ele. */
+export const deleteAdminReseller = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { userId: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await assertAdmin(context.claims))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
+    }
+    if (data.userId === (context as any).userId) {
+      return { ok: false as const, error: "Você não pode excluir a sua própria conta de administrador." };
+    }
+    const tables = [
+      "billing_rule_sends",
+      "billing_rules",
+      "message_logs",
+      "invoices",
+      "orders",
+      "iptv_lists",
+      "clients",
+      "sigma_panels",
+      "whatsapp_settings",
+      "bot_settings",
+      "activity_logs",
+      "saas_payments",
+      "saas_subscriptions",
+    ];
+    for (const table of tables) {
+      await (supabaseAdmin as any).from(table).delete().eq("user_id", data.userId);
+    }
+    await (supabaseAdmin as any).from("profiles").delete().eq("id", data.userId);
+    const { error } = await (supabaseAdmin as any).auth.admin.deleteUser(data.userId);
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
+  });
+
+/** Coloca a assinatura em teste grátis por alguns dias. */
+export const startAdminTrial = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { userId: string; days?: number }) => input)
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await assertAdmin(context.claims))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
+    }
+    const days = Math.max(1, Math.min(90, Number(data.days) || 7));
+    const { error } = await (supabaseAdmin as any)
+      .from("saas_subscriptions")
+      .upsert(
+        {
+          user_id: data.userId,
+          status: "trialing",
+          trial_ends_at: new Date(Date.now() + days * 86_400_000).toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      );
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
+  });
