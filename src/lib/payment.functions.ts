@@ -64,9 +64,18 @@ export const getPaymentSettings = createServerFn({ method: "POST" })
       } catch {}
     }
 
+    // Os tokens dos gateways nunca são enviados ao navegador.
+    const { mercadopago_token, asaas_token, ...publicSettings } = resolvedSettings;
+
     return {
       ok: true as const,
-      settings: resolvedSettings,
+      settings: {
+        ...publicSettings,
+        mercadopago_token: "",
+        asaas_token: "",
+        has_mercadopago_token: Boolean(mercadopago_token),
+        has_asaas_token: Boolean(asaas_token),
+      },
     };
   });
 
