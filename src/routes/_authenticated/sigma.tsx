@@ -144,7 +144,7 @@ function SigmaServersPage() {
 
       const preparedForm: SigmaServerInput = {
         ...form,
-        token: tested.token || form.token,
+        token: form.token,
         name: form.name.trim() || tested.serverName || "Servidor Sigma",
         streaming_dns: form.streaming_dns?.trim() || tested.streamingDns || "",
       };
