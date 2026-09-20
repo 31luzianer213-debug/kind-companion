@@ -48,7 +48,23 @@ export const listSigmaServers = createServerFn({ method: "GET" })
       .eq("user_id", context.userId)
       .order("created_at", { ascending: true });
     if (error) return { ok: false as const, servers: [], error: error.message };
-    return { ok: true as const, servers: (data ?? []).map((server, index) => ({ ...server, panel_url: server.url, is_default: index === 0, last_sync_status: null, last_sync_error: null })), error: null };
+    // Segurança: as credenciais do painel NUNCA são enviadas ao navegador.
+    return {
+      ok: true as const,
+      servers: (data ?? []).map((server: any, index: number) => {
+        const { password, token, ...safe } = server;
+        return {
+          ...safe,
+          panel_url: server.url,
+          is_default: index === 0,
+          has_password: Boolean(password),
+          has_token: Boolean(token),
+          last_sync_status: null,
+          last_sync_error: null,
+        };
+      }),
+      error: null,
+    };
   });
 
 export const saveSigmaServer = createServerFn({ method: "POST" })
