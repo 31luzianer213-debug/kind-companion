@@ -48,21 +48,50 @@ export const listSigmaServers = createServerFn({ method: "GET" })
       .eq("user_id", context.userId)
       .order("created_at", { ascending: true });
     if (error) return { ok: false as const, servers: [], error: error.message };
-    return { ok: true as const, servers: (data ?? []).map((server, index) => ({ ...server, panel_url: server.url, is_default: index === 0, last_sync_status: null, last_sync_error: null })), error: null };
+    // Segurança: as credenciais do painel NUNCA são enviadas ao navegador.
+    return {
+      ok: true as const,
+      servers: (data ?? []).map((server: any, index: number) => {
+        const { password, token, ...safe } = server;
+        return {
+          ...safe,
+          panel_url: server.url,
+          is_default: index === 0,
+          has_password: Boolean(password),
+          has_token: Boolean(token),
+          last_sync_status: null,
+          last_sync_error: null,
+        };
+      }),
+      error: null,
+    };
   });
 
 export const saveSigmaServer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: SigmaServerInput) => input)
   .handler(async ({ data, context }) => {
+    // Credenciais existentes são preservadas quando o campo vier em branco
+    // (o navegador nunca recebe a senha/token salvos).
+    let existing: { password: string | null; token: string | null } | null = null;
+    if (data.id) {
+      const { data: row } = await context.supabase
+        .from("sigma_panels")
+        .select("password, token")
+        .eq("id", data.id)
+        .eq("user_id", context.userId)
+        .maybeSingle();
+      existing = (row as any) ?? null;
+    }
+
     const payload = {
       user_id: context.userId,
       name: data.name.trim() || "Servidor Sigma",
       url: data.panel_url.trim().replace(/\/$/, ""),
       streaming_dns: data.streaming_dns?.trim() || null,
       username: data.username?.trim() || null,
-      password: data.password || null,
-      token: data.token?.trim() || null,
+      password: data.password || existing?.password || null,
+      token: data.token?.trim() || existing?.token || null,
       enabled: data.enabled ?? true,
       auto_renew: data.auto_renew ?? true,
     };
@@ -70,6 +99,11 @@ export const saveSigmaServer = createServerFn({ method: "POST" })
     if (!payload.token && (!payload.username || !payload.password)) {
       return { ok: false as const, server: null, error: "Informe usuário e senha ou um token." };
     }
+
+    const sanitize = (server: any) => {
+      const { password, token, ...safe } = server ?? {};
+      return { ...safe, panel_url: server?.url, is_default: false, has_password: Boolean(password), has_token: Boolean(token) };
+    };
 
     if (data.id) {
       const { data: server, error } = await context.supabase
@@ -81,7 +115,7 @@ export const saveSigmaServer = createServerFn({ method: "POST" })
         .single();
       return error
         ? { ok: false as const, server: null, error: error.message }
-        : { ok: true as const, server: { ...server, panel_url: server.url, is_default: false }, error: null };
+        : { ok: true as const, server: sanitize(server), error: null };
     }
 
     const { data: server, error } = await context.supabase
@@ -91,7 +125,7 @@ export const saveSigmaServer = createServerFn({ method: "POST" })
       .single();
     return error
       ? { ok: false as const, server: null, error: error.message }
-      : { ok: true as const, server, error: null };
+      : { ok: true as const, server: sanitize(server), error: null };
   });
 
 export const deleteSigmaServer = createServerFn({ method: "POST" })
@@ -260,13 +294,24 @@ async function cleanupOrphanRows(supabase: any, userId: string) {
 export const testSigmaServer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: SigmaServerInput) => input)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { ensureSigmaToken, listSigmaCustomers, fetchSigmaPanelDetails } = await import("./sigma.server");
+    // Ao editar um painel já salvo, as credenciais em branco são recuperadas do banco.
+    let stored: { username: string | null; password: string | null; token: string | null } | null = null;
+    if (data.id) {
+      const { data: row } = await context.supabase
+        .from("sigma_panels")
+        .select("username, password, token")
+        .eq("id", data.id)
+        .eq("user_id", context.userId)
+        .maybeSingle();
+      stored = (row as any) ?? null;
+    }
     const config: SigmaConfig = {
       url: data.panel_url.trim(),
-      username: data.username?.trim() || "",
-      password: data.password || "",
-      token: data.token?.trim() || null,
+      username: data.username?.trim() || stored?.username || "",
+      password: data.password || stored?.password || "",
+      token: data.token?.trim() || stored?.token || null,
     };
     try {
       const token = await ensureSigmaToken(config);
@@ -276,7 +321,6 @@ export const testSigmaServer = createServerFn({ method: "POST" })
       ]);
       return {
         ok: true as const,
-        token,
         customersCount: customers.length,
         serverName: details.serverName,
         streamingDns: details.dns,

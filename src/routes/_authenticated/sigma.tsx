@@ -106,8 +106,9 @@ function SigmaServersPage() {
       panel_url: server.panel_url ?? server.url ?? "",
       streaming_dns: server.streaming_dns ?? "",
       username: server.username ?? "",
-      password: server.password ?? "",
-      token: server.token ?? "",
+      // Senha e token ficam apenas no servidor: em branco = manter os atuais.
+      password: "",
+      token: "",
       enabled: server.enabled ?? true,
       auto_renew: server.auto_renew ?? true,
       is_default: server.is_default ?? false,
@@ -143,7 +144,7 @@ function SigmaServersPage() {
 
       const preparedForm: SigmaServerInput = {
         ...form,
-        token: tested.token || form.token,
+        token: form.token,
         name: form.name.trim() || tested.serverName || "Servidor Sigma",
         streaming_dns: form.streaming_dns?.trim() || tested.streamingDns || "",
       };
@@ -401,13 +402,13 @@ function SigmaServersPage() {
                 <Field label="Usuário"><Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} autoComplete="username" /></Field>
                 <Field label="Senha">
                   <div className="relative">
-                    <Input type={showPassword ? "text" : "password"} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} autoComplete="current-password" className="pr-10" />
+                    <Input type={showPassword ? "text" : "password"} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} autoComplete="new-password" placeholder={form.id ? "Deixe em branco para manter a senha atual" : ""} className="pr-10" />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-muted-foreground" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>
                       {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>
                   </div>
                 </Field>
-                <Field label="Token da API (opcional)"><Input value={form.token} onChange={(e) => setForm({ ...form, token: e.target.value })} /></Field>
+                <Field label="Token da API (opcional)"><Input value={form.token} onChange={(e) => setForm({ ...form, token: e.target.value })} placeholder={form.id ? "Deixe em branco para manter o token atual" : ""} /></Field>
                 <Field label="DNS de streaming (opcional)"><Input value={form.streaming_dns} onChange={(e) => setForm({ ...form, streaming_dns: e.target.value })} placeholder="http://dns.exemplo.com:8080" /></Field>
               </div>
             </div>

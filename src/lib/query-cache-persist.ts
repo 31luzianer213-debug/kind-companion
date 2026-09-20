@@ -26,9 +26,8 @@ const PERSISTED_KEYS = new Set([
   "invoices",
   "orders-list",
   "billing-rules",
-  "bot-settings",
-  "payment-settings",
-  "whatsapp-settings",
+  // bot-settings / payment-settings / whatsapp-settings não são persistidos:
+  // podem conter dados de pagamento e conexão.
   "activities",
   "reseller-trial-server-settings",
 ]);

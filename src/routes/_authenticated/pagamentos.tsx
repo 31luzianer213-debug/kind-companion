@@ -98,8 +98,9 @@ function PagamentosPage() {
         pix_holder: data.pix_holder ?? prev.pix_holder,
         payment_link: data.payment_link ?? prev.payment_link,
         payment_provider: data.payment_provider ?? prev.payment_provider ?? "pix",
-        mercadopago_token: data.mercadopago_token ?? prev.mercadopago_token,
-        asaas_token: data.asaas_token ?? prev.asaas_token,
+        // Tokens ficam guardados só no servidor; o campo continua em branco.
+        mercadopago_token: prev.mercadopago_token,
+        asaas_token: prev.asaas_token,
         asaas_env: data.asaas_env ?? prev.asaas_env,
       }));
     }
@@ -487,14 +488,14 @@ function PagamentosPage() {
                 <div className="relative flex items-center">
                   <Input
                     type={showMpToken ? "text" : "password"}
-                    placeholder="APP_USR-0000000000000000-000000-..."
+                    placeholder={(data as any)?.has_mercadopago_token ? "Token salvo — deixe em branco para manter" : "APP_USR-0000000000000000-000000-..."}
                     value={form.mercadopago_token}
                     onChange={(e) => {
                       setForm({ ...form, mercadopago_token: e.target.value });
                       setMpStatus(null);
                     }}
                     className="rounded-xl font-mono text-sm pr-20"
-                    required={activeProvider === "mercadopago"}
+                    required={activeProvider === "mercadopago" && !(data as any)?.has_mercadopago_token}
                   />
                   <div className="absolute right-1 flex items-center gap-1">
                     <Button
@@ -609,14 +610,14 @@ function PagamentosPage() {
                   <div className="relative flex items-center">
                     <Input
                       type={showAsaasToken ? "text" : "password"}
-                      placeholder="$aact_YTU5YTE0M2M6N2Z..."
+                      placeholder={(data as any)?.has_asaas_token ? "Token salvo — deixe em branco para manter" : "$aact_YTU5YTE0M2M6N2Z..."}
                       value={form.asaas_token}
                       onChange={(e) => {
                         setForm({ ...form, asaas_token: e.target.value });
                         setAsaasStatus(null);
                       }}
                       className="rounded-xl font-mono text-sm pr-10"
-                      required={activeProvider === "asaas"}
+                      required={activeProvider === "asaas" && !(data as any)?.has_asaas_token}
                     />
                     <Button
                       type="button"

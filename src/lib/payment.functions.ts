@@ -64,9 +64,18 @@ export const getPaymentSettings = createServerFn({ method: "POST" })
       } catch {}
     }
 
+    // Os tokens dos gateways nunca são enviados ao navegador.
+    const { mercadopago_token, asaas_token, ...publicSettings } = resolvedSettings;
+
     return {
       ok: true as const,
-      settings: resolvedSettings,
+      settings: {
+        ...publicSettings,
+        mercadopago_token: "",
+        asaas_token: "",
+        has_mercadopago_token: Boolean(mercadopago_token),
+        has_asaas_token: Boolean(asaas_token),
+      },
     };
   });
 
@@ -79,6 +88,19 @@ export const savePaymentSettings = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
+    // Token em branco = manter o token já salvo (a tela nunca recebe o valor real).
+    let existing: any = null;
+    try {
+      const { data: row } = await supabase
+        .from("whatsapp_settings")
+        .select("mercadopago_token, asaas_token")
+        .eq("user_id", userId)
+        .maybeSingle();
+      existing = row ?? null;
+    } catch {
+      existing = null;
+    }
+
     const payload = {
       user_id: userId,
       pix_key: (data.pix_key ?? "").trim(),
@@ -86,8 +108,8 @@ export const savePaymentSettings = createServerFn({ method: "POST" })
       pix_holder: (data.pix_holder ?? "").trim(),
       payment_link: (data.payment_link ?? "").trim(),
       payment_provider: data.payment_provider ?? "pix",
-      mercadopago_token: (data.mercadopago_token ?? "").trim(),
-      asaas_token: (data.asaas_token ?? "").trim(),
+      mercadopago_token: (data.mercadopago_token ?? "").trim() || existing?.mercadopago_token || "",
+      asaas_token: (data.asaas_token ?? "").trim() || existing?.asaas_token || "",
       asaas_env: data.asaas_env ?? "production",
     };
 
@@ -135,12 +157,14 @@ export const savePaymentSettings = createServerFn({ method: "POST" })
       }
     }
 
-    // 2. Salva no user_metadata como garantia absoluta
+    // 2. Salva no user_metadata apenas o que NÃO é segredo
+    // (metadata viaja dentro do token de sessão do usuário).
     try {
+      const { mercadopago_token, asaas_token, ...safePayload } = payload;
       await supabase.auth.updateUser({
         data: {
           payment_settings: {
-            ...payload,
+            ...safePayload,
             updated_at: new Date().toISOString(),
           },
         },
