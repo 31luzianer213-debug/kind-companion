@@ -264,8 +264,11 @@ export const getSigmaSettings = createServerFn({ method: "GET" })
         sigma_server_display_name: config.server_display_name,
         sigma_streaming_dns: config.streaming_dns ?? "",
         sigma_username: config.username ?? "",
-        sigma_password: config.password ?? "",
-        sigma_token: config.token ?? "",
+        // Segredos nunca saem do servidor: só indicamos se já existem.
+        sigma_password: "",
+        sigma_token: "",
+        has_sigma_password: Boolean(config.password),
+        has_sigma_token: Boolean(config.token),
         sigma_enabled: config.enabled,
         sigma_auto_renew: config.auto_renew,
         sigma_last_sync_at: config.last_sync_at,
