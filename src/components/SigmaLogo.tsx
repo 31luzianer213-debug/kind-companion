@@ -29,19 +29,19 @@ export function SigmaLogo({ className, size = "md", showGlow = true }: SigmaLogo
         viewBox="0 0 48 48"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={cn("h-full w-full", showGlow && "drop-shadow-[0_8px_16px_rgba(15,118,110,0.22)]")}
+        className={cn("h-full w-full", showGlow && "drop-shadow-[0_8px_16px_rgba(22,163,74,0.24)]")}
         role="img"
         aria-label="Logo Sigma Control"
       >
         <defs>
           <linearGradient id={backgroundId} x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#13263D" />
-            <stop offset="1" stopColor="#07111F" />
+            <stop stopColor="#12301F" />
+            <stop offset="1" stopColor="#07160F" />
           </linearGradient>
           <linearGradient id={accentId} x1="12" y1="10" x2="38" y2="39" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#5EEAD4" />
-            <stop offset="0.52" stopColor="#14B8A6" />
-            <stop offset="1" stopColor="#0F766E" />
+            <stop stopColor="#86EFAC" />
+            <stop offset="0.52" stopColor="#22C55E" />
+            <stop offset="1" stopColor="#15803D" />
           </linearGradient>
           <filter id={glowId} x="-35%" y="-35%" width="170%" height="170%">
             <feGaussianBlur stdDeviation="1.2" result="blur" />
@@ -65,8 +65,8 @@ export function SigmaLogo({ className, size = "md", showGlow = true }: SigmaLogo
           filter={`url(#${glowId})`}
         />
         <path d="M27.2 19.7L34.7 24L27.2 28.3V19.7Z" fill="#F8FAFC" />
-        <circle cx="37.8" cy="10.3" r="2.1" fill="#2DD4BF" />
-        <circle cx="37.8" cy="10.3" r="3.8" stroke="#2DD4BF" strokeOpacity="0.25" />
+        <circle cx="37.8" cy="10.3" r="2.1" fill="#4ADE80" />
+        <circle cx="37.8" cy="10.3" r="3.8" stroke="#4ADE80" strokeOpacity="0.25" />
       </svg>
     </div>
   );

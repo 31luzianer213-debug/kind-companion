@@ -369,7 +369,7 @@ function PedidosPage() {
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Faturamento Aprovado
             </CardTitle>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/25">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 border border-teal-500/25">
               <DollarSign className="h-5 w-5" />
             </div>
           </CardHeader>
