@@ -224,7 +224,8 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
       }
     } catch {}
 
-    // 5. Salva SEMPRE no user_metadata como garantia adicional
+    // 5. Salva no user_metadata apenas dados NÃO sensíveis
+    // (metadata viaja dentro do token do usuário, então senha/token ficam de fora).
     try {
       await supabase.auth.updateUser({
         data: {
@@ -233,8 +234,6 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
             server_name: finalServerName,
             streaming_dns: finalStreamingDns,
             username,
-            password,
-            token,
             enabled,
             auto_renew,
             updated_at: new Date().toISOString(),
