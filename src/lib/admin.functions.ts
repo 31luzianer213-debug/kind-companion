@@ -171,14 +171,20 @@ export const listAdminSubscriptions = createServerFn({ method: "GET" })
     for (const u of users?.data?.users ?? []) emails.set(u.id, u.email ?? "");
     const counts = new Map<string, number>();
     for (const c of clients ?? []) counts.set(c.user_id, (counts.get(c.user_id) ?? 0) + 1);
-    const rows: AdminSubscriptionRow[] = (subs ?? []).map((s: any) => ({
-      user_id: s.user_id,
-      email: emails.get(s.user_id) ?? s.user_id.slice(0, 8),
-      status: s.status,
-      trial_ends_at: s.trial_ends_at,
-      current_period_end: s.current_period_end,
-      clients: counts.get(s.user_id) ?? 0,
-    }));
+    const subsById = new Map<string, any>();
+    for (const s of subs ?? []) subsById.set(s.user_id, s);
+    const ids = new Set<string>([...subsById.keys(), ...emails.keys()]);
+    const rows: AdminSubscriptionRow[] = [...ids].map((id) => {
+      const s = subsById.get(id);
+      return {
+        user_id: id,
+        email: emails.get(id) ?? id.slice(0, 8),
+        status: s?.status ?? "sem_assinatura",
+        trial_ends_at: s?.trial_ends_at ?? null,
+        current_period_end: s?.current_period_end ?? null,
+        clients: counts.get(id) ?? 0,
+      };
+    });
     rows.sort((a, b) => a.email.localeCompare(b.email));
     return { ok: true as const, rows };
   });
