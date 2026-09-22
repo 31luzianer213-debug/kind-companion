@@ -106,12 +106,12 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
   renewalPrice: 35.0,
   mercadopago_token: "",
   payment_provider: "mercadopago",
-  appAndroidApk: "https://bit.ly/app-xciptv-oficial",
-  appAndroidDownloaderCode: "389471",
-  appIosLink: "https://apps.apple.com/app/smarters-player-lite/id1628995509",
-  appWindowsLink: "https://www.iptvsmarters.com/download?download=windows",
-  appWebPlayerLink: "http://webtv.iptvsmarters.com",
-  appSmartTvText: "• Smart TV Samsung / LG: Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.",
+  appAndroidApk: "",
+  appAndroidDownloaderCode: "",
+  appIosLink: "",
+  appWindowsLink: "",
+  appWebPlayerLink: "",
+  appSmartTvText: "",
   appsCustomText: "",
   aiEnabled: true,
   aiAgentName: "Ana",
@@ -141,22 +141,36 @@ export function generateDefaultPlansText(params: {
   );
 }
 
-export function generateAppsMessage(config: BotConfigData, serverName: string): string {
-  if (config.appsCustomText && config.appsCustomText.trim().length > 10) {
+/**
+ * Monta o texto de aplicativos APENAS com o que o revendedor configurou.
+ * Sem nada configurado, devolve string vazia (o bot não inventa apps).
+ */
+export function generateAppsMessage(config: BotConfigData, _serverName?: string): string {
+  if (config.appsCustomText && config.appsCustomText.trim().length > 5) {
     return config.appsCustomText.trim();
   }
 
-  const code = config.appAndroidDownloaderCode || DEFAULT_BOT_CONFIG.appAndroidDownloaderCode;
-  const smartTv = config.appSmartTvText || DEFAULT_BOT_CONFIG.appSmartTvText;
+  const lines: string[] = [];
+  const code = (config.appAndroidDownloaderCode || "").trim();
+  const apk = (config.appAndroidApk || "").trim();
+  const ios = (config.appIosLink || "").trim();
+  const win = (config.appWindowsLink || "").trim();
+  const web = (config.appWebPlayerLink || "").trim();
+  const smartTv = (config.appSmartTvText || "").trim();
+
+  if (code) lines.push(`Na TV Box, Android TV ou Fire Stick: abra o app Downloader e digite o código ${code}.`);
+  if (apk) lines.push(`No celular ou tablet Android: ${apk}`);
+  if (ios) lines.push(`No iPhone, iPad ou Apple TV: ${ios}`);
+  if (win) lines.push(`No computador com Windows: ${win}`);
+  if (web) lines.push(`Direto pelo navegador: ${web}`);
+  if (smartTv) lines.push(smartTv);
+
+  if (lines.length === 0) return "";
 
   return (
     `Sobre os aplicativos, vai depender do aparelho que você usa:\n\n` +
-    `Na TV Box, Android TV ou Fire Stick: abre o app Downloader e digita o código ${code}.\n` +
-    `No celular ou tablet Android: é só instalar o APK que eu te mando.\n` +
-    `No iPhone, iPad ou Apple TV: uso o app indicado pra iOS, te passo o link.\n` +
-    `No computador com Windows: tem a versão pra PC também.\n` +
-    `${smartTv}\n\n` +
-    `Depois de instalar, abre o app e coloca seu usuário, senha e o endereço do servidor. Se travar em algum passo me fala que eu te ajudo.`
+    lines.join("\n") +
+    `\n\nDepois de instalar, abra o app e coloque seu usuário, senha e o endereço do servidor. Se travar em algum passo me fala que eu te ajudo.`
   );
 }
 
@@ -491,15 +505,27 @@ export async function createTrialForBot(
   const expiryDate = new Date(Date.now() + hours * 60 * 60 * 1000);
   const expiryIso = expiryDate.toISOString().slice(0, 10);
 
-  // 4. O teste só existe se houver um painel Sigma configurado e a criação der certo
+  // 4. O teste só existe com painel Sigma configurado E endereço do servidor definido
   const hasPanel = Boolean(panelUrl && (panelToken || (panelUser && panelPass)));
-  if (!hasPanel) {
+  const hasDns = Boolean(extractCleanIptvDns(streamingDns));
+  if (!hasPanel || !hasDns) {
+    const motivo = !hasPanel
+      ? "Nenhum servidor/painel está conectado na conta."
+      : "O endereço (DNS) do servidor não está preenchido nas configurações.";
+    try {
+      await supabase.from("message_logs").insert({
+        user_id: userId,
+        phone: cleanPhone,
+        body: "Pedido de teste grátis recusado pelo robô.",
+        status: "failed",
+        error: motivo,
+      });
+    } catch {}
     return {
       ok: false,
       error:
-        `😕 *Teste indisponível no momento*\n\n` +
-        `Nosso sistema de testes está temporariamente fora do ar.\n` +
-        `Fale com o atendimento ou digite *3* para ver os planos.`,
+        `Poxa, agora não consigo liberar teste 😕\n\n` +
+        `Vou chamar o atendimento pra te responder rapidinho. Se preferir, posso te passar os valores.`,
     };
   }
 
@@ -1386,7 +1412,7 @@ export async function processBotMessage(
       };
     }
 
-    const appsBlock = generateAppsMessage(config, trialRes.serverName || "IPTV");
+    const appsBlock = generateAppsMessage(config);
     const firstName = (params.pushName || "").split(" ")[0];
     const reply =
       `Prontinho${firstName ? `, ${firstName}` : ""}! Liberei seu teste por ${config.testDurationHours} horas 🙂\n\n` +
@@ -1396,10 +1422,10 @@ export async function processBotMessage(
       `Senha: ${trialRes.password}\n\n` +
       `Sua lista:\n${trialRes.m3uUrl}\n\n` +
       `Guia de programação:\n${trialRes.epgUrl}\n\n` +
-      `${appsBlock}\n\n` +
+      (appsBlock ? `${appsBlock}\n\n` : "") +
       `Bom teste! Se travar alguma coisa é só me chamar aqui.`;
 
-    const apkUrl = config.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
+    const apkUrl = (config.appAndroidApk || "").trim();
 
     return {
       reply:
@@ -1409,17 +1435,21 @@ export async function processBotMessage(
       interactive: {
         type: "buttons",
         title: "Teste liberado",
-        description: "Seu teste já está ativo. Se precisar do aplicativo ou dos valores, é só tocar abaixo.",
+        description: "Seu teste já está ativo. Se precisar dos valores, é só tocar abaixo.",
         footer: serverName,
         buttons: [
-          {
-            id: "btn_download_apk",
-            displayText: "Baixar aplicativo",
-            type: "url",
-            url: apkUrl,
-          },
-          { id: "3", displayText: "Ver valores", type: "reply" },
-          { id: "0", displayText: "Voltar", type: "reply" },
+          ...(apkUrl
+            ? [
+                {
+                  id: "btn_download_apk",
+                  displayText: "Baixar aplicativo",
+                  type: "url" as const,
+                  url: apkUrl,
+                },
+              ]
+            : []),
+          { id: "3", displayText: "Ver valores", type: "reply" as const },
+          { id: "0", displayText: "Voltar", type: "reply" as const },
         ],
       },
     };
@@ -1668,39 +1698,39 @@ export async function processBotMessage(
     text.includes("firestick") ||
     text.includes("downloader")
   ) {
-    const appsReply = generateAppsMessage(config, serverName);
-    const apkUrl = config.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
-    const iosUrl = config.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509";
-    const winUrl = config.appWindowsLink || "https://www.iptvsmarters.com/download?download=windows";
+    const appsReply = generateAppsMessage(config);
+    const apkUrl = (config.appAndroidApk || "").trim();
+    const iosUrl = (config.appIosLink || "").trim();
+    const winUrl = (config.appWindowsLink || "").trim();
+
+    if (!appsReply) {
+      return {
+        reply:
+          `Sobre o aplicativo, deixa eu confirmar direitinho qual é o certo pro seu aparelho e já te mando aqui 🙂\n\n` +
+          `Me diz qual você usa: TV Box, Smart TV, celular Android, iPhone ou computador?`,
+        action: "apps_not_configured",
+      };
+    }
+
+    const urlButtons = [
+      apkUrl ? { id: "btn_download_apk", displayText: "Android", type: "url" as const, url: apkUrl } : null,
+      iosUrl ? { id: "btn_download_ios", displayText: "iPhone / iPad", type: "url" as const, url: iosUrl } : null,
+      winUrl ? { id: "btn_download_pc", displayText: "Computador", type: "url" as const, url: winUrl } : null,
+    ].filter(Boolean) as any[];
+
+    if (urlButtons.length === 0) {
+      return { reply: appsReply, action: "apps_links_sent" };
+    }
 
     return {
       reply: appsReply,
       action: "apps_links_sent",
       interactive: {
         type: "buttons",
-        title: "📲 Aplicativos de Streaming",
-        description: "Toque nos botões abaixo para baixar direto no seu dispositivo:",
-        footer: `${serverName} • Suporte 24h`,
-        buttons: [
-          {
-            id: "btn_download_apk",
-            displayText: "🤖 Baixar APK Android",
-            type: "url",
-            url: apkUrl,
-          },
-          {
-            id: "btn_download_ios",
-            displayText: "🍏 App iPhone / iPad",
-            type: "url",
-            url: iosUrl,
-          },
-          {
-            id: "btn_download_pc",
-            displayText: "💻 App Windows (PC)",
-            type: "url",
-            url: winUrl,
-          },
-        ],
+        title: "Aplicativos",
+        description: "Toque no aparelho que você usa:",
+        footer: serverName,
+        buttons: urlButtons,
       },
     };
   }
@@ -1756,7 +1786,7 @@ export async function processBotMessage(
     const m3uUrl = generateM3uUrl(cleanDns, u, p, "ts");
     const epgUrl = generateEpgUrl(cleanDns, u, p);
 
-    const appsBlock = generateAppsMessage(config, serverName);
+    const appsBlock = generateAppsMessage(config);
     const reply =
       `Claro! Seguem seus dados${client.name ? `, ${String(client.name).split(" ")[0]}` : ""}:\n\n` +
       `Servidor: ${serverName}\n` +
@@ -1767,10 +1797,10 @@ export async function processBotMessage(
       (client.next_due_date ? `Vence em: ${client.next_due_date}\n` : "") +
       `\nSua lista:\n${m3uUrl}\n\n` +
       `Guia de programação:\n${epgUrl}\n\n` +
-      `${appsBlock}\n\n` +
+      (appsBlock ? `${appsBlock}\n\n` : "") +
       `Qualquer coisa me chama 🙂`;
 
-    const apkUrl = config.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
+    const apkUrl = (config.appAndroidApk || "").trim();
 
     return {
       reply,
@@ -1778,17 +1808,21 @@ export async function processBotMessage(
       interactive: {
         type: "buttons",
         title: "Seus dados",
-        description: "Se precisar do aplicativo ou quiser renovar, é só tocar aqui.",
+        description: "Se quiser renovar, é só tocar aqui.",
         footer: serverName,
         buttons: [
-          {
-            id: "btn_download_apk",
-            displayText: "Baixar aplicativo",
-            type: "url",
-            url: apkUrl,
-          },
-          { id: "2", displayText: "Quero renovar", type: "reply" },
-          { id: "0", displayText: "Voltar", type: "reply" },
+          ...(apkUrl
+            ? [
+                {
+                  id: "btn_download_apk",
+                  displayText: "Baixar aplicativo",
+                  type: "url" as const,
+                  url: apkUrl,
+                },
+              ]
+            : []),
+          { id: "2", displayText: "Quero renovar", type: "reply" as const },
+          { id: "0", displayText: "Voltar", type: "reply" as const },
         ],
       },
     };

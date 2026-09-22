@@ -125,12 +125,12 @@ function BotPage() {
     pixHolder: "Minha Revenda IPTV",
     mercadopago_token: "",
     payment_provider: "mercadopago",
-    appAndroidApk: "https://bit.ly/app-xciptv-oficial",
-    appAndroidDownloaderCode: "389471",
-    appIosLink: "https://apps.apple.com/app/smarters-player-lite/id1628995509",
-    appWindowsLink: "https://www.iptvsmarters.com/download?download=windows",
-    appWebPlayerLink: "http://webtv.iptvsmarters.com",
-    appSmartTvText: "• Smart TV Samsung / LG: Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.",
+    appAndroidApk: "",
+    appAndroidDownloaderCode: "",
+    appIosLink: "",
+    appWindowsLink: "",
+    appWebPlayerLink: "",
+    appSmartTvText: "",
     appsCustomText: "",
     aiEnabled: true,
     aiAgentName: "Ana",
@@ -206,12 +206,12 @@ function BotPage() {
         pixHolder: c.pixHolder || "Minha Revenda IPTV",
         mercadopago_token: c.mercadopago_token || "",
         payment_provider: c.payment_provider || "mercadopago",
-        appAndroidApk: c.appAndroidApk || "https://bit.ly/app-xciptv-oficial",
-        appAndroidDownloaderCode: c.appAndroidDownloaderCode || "389471",
-        appIosLink: c.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509",
-        appWindowsLink: c.appWindowsLink || "https://www.iptvsmarters.com/download?download=windows",
-        appWebPlayerLink: c.appWebPlayerLink || "http://webtv.iptvsmarters.com",
-        appSmartTvText: c.appSmartTvText || "• Smart TV Samsung / LG: Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.",
+        appAndroidApk: c.appAndroidApk || "",
+        appAndroidDownloaderCode: c.appAndroidDownloaderCode || "",
+        appIosLink: c.appIosLink || "",
+        appWindowsLink: c.appWindowsLink || "",
+        appWebPlayerLink: c.appWebPlayerLink || "",
+        appSmartTvText: c.appSmartTvText || "",
         appsCustomText: c.appsCustomText || "",
         aiEnabled: c.aiEnabled ?? true,
         aiAgentName: c.aiAgentName || "Ana",
@@ -314,15 +314,15 @@ function BotPage() {
   function handleRestoreDefaultAppLinks() {
     setForm((prev) => ({
       ...prev,
-      appAndroidApk: "https://bit.ly/app-xciptv-oficial",
-      appAndroidDownloaderCode: "389471",
-      appIosLink: "https://apps.apple.com/app/smarters-player-lite/id1628995509",
-      appWindowsLink: "https://www.iptvsmarters.com/download?download=windows",
-      appWebPlayerLink: "http://webtv.iptvsmarters.com",
-      appSmartTvText: "• Smart TV Samsung / LG: Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.",
+      appAndroidApk: "",
+      appAndroidDownloaderCode: "",
+      appIosLink: "",
+      appWindowsLink: "",
+      appWebPlayerLink: "",
+      appSmartTvText: "",
       appsCustomText: "",
     }));
-    toast.success("Links recomendados dos aplicativos restaurados com sucesso! 📲");
+    toast.success("Campos de aplicativos limpos. Preencha com os seus.");
   }
 
   function handleResetChat() {
@@ -755,10 +755,10 @@ function BotPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
                     <CardTitle className="text-base flex items-center gap-2 text-foreground font-bold">
-                      <Download className="size-5 text-sky-400" /> Links dos Aplicativos para Baixar (Opção 4)
+                      <Download className="size-5 text-sky-400" /> Seus Aplicativos
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Enviado automaticamente quando o cliente digita <strong>4</strong>, clica em "Baixar Apps" ou pergunta sobre aplicativos.
+                      Preencha só os aplicativos que você usa. O robô envia apenas o que estiver aqui — nada vem preenchido por padrão.
                     </CardDescription>
                   </div>
                   <Button
@@ -768,7 +768,7 @@ function BotPage() {
                     onClick={handleRestoreDefaultAppLinks}
                     className="rounded-md text-xs gap-1.5 self-start sm:self-auto"
                   >
-                    <Sparkles className="size-3 text-sky-400" /> Restaurar Links Recomendados
+                    <Sparkles className="size-3 text-sky-400" /> Limpar campos
                   </Button>
                 </div>
               </CardHeader>

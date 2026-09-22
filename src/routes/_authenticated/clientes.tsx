@@ -906,42 +906,40 @@ function ClientsRegistry() {
         const botRes = await getBot({});
         if (botRes?.config) {
           const c = botRes.config;
-          const apk = c.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
-          const code = c.appAndroidDownloaderCode || "389471";
-          const ios = c.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509";
-          const win = c.appWindowsLink || "https://www.iptvsmarters.com/download?download=windows";
-          const web = c.appWebPlayerLink || "http://webtv.iptvsmarters.com";
-          const smart = c.appSmartTvText || "• Smart TV Samsung / LG: Baixe o app IBO Player ou SmartOne na loja de aplicativos da TV.";
+          const apk = (c.appAndroidApk || "").trim();
+          const code = (c.appAndroidDownloaderCode || "").trim();
+          const ios = (c.appIosLink || "").trim();
+          const win = (c.appWindowsLink || "").trim();
+          const web = (c.appWebPlayerLink || "").trim();
+          const smart = (c.appSmartTvText || "").trim();
+          const custom = (c.appsCustomText || "").trim();
 
-          appsText =
-            `📲 *APLICATIVOS OFICIAIS — ${sigmaServerName.toUpperCase()}* 🍿\n\n` +
-            `Olá ${client.name}! Seguem os links oficiais para instalar nosso aplicativo no seu dispositivo:\n\n` +
-            `🤖 *TV BOX / ANDROID TV / FIRESTICK:*\n` +
-            `• Código no Downloader: *${code}*\n` +
-            `• Baixar APK Direto: ${apk}\n\n` +
-            `📱 *CELULAR ANDROID:*\n` +
-            `• Baixar APK Direto: ${apk}\n\n` +
-            `🍏 *IPHONE / IPAD / APPLE TV (iOS):*\n` +
-            `• App Store (Smarters Player Lite):\n${ios}\n\n` +
-            `💻 *COMPUTADOR / PC (WINDOWS):*\n` +
-            `• Baixar IPTV Smarters (.exe):\n${win}\n\n` +
-            `🌐 *ASSISTIR NO NAVEGADOR (WEB PLAYER):*\n` +
-            `• ${web}\n\n` +
-            `📺 *SMART TV:*\n${smart}\n\n` +
-            `Qualquer dúvida para conectar seu acesso, é só responder aqui! 🍿`;
+          if (custom) {
+            appsText = custom;
+          } else {
+            const blocks: string[] = [];
+            if (code) blocks.push(`🤖 *TV Box / Android TV / Firestick:*\n• Código no Downloader: *${code}*`);
+            if (apk) blocks.push(`📱 *Celular Android:*\n• ${apk}`);
+            if (ios) blocks.push(`🍏 *iPhone / iPad / Apple TV:*\n• ${ios}`);
+            if (win) blocks.push(`💻 *Computador Windows:*\n• ${win}`);
+            if (web) blocks.push(`🌐 *Navegador:*\n• ${web}`);
+            if (smart) blocks.push(`📺 *Smart TV:*\n${smart}`);
+
+            if (blocks.length > 0) {
+              appsText =
+                `📲 *APLICATIVOS — ${sigmaServerName.toUpperCase()}*\n\n` +
+                `Olá ${client.name}! Seguem os aplicativos para o seu acesso:\n\n` +
+                blocks.join("\n\n") +
+                `\n\nQualquer dúvida é só responder aqui 🙂`;
+            }
+          }
         }
       } catch {}
 
       if (!appsText) {
-        appsText =
-          `📲 *APLICATIVOS OFICIAIS — ${sigmaServerName.toUpperCase()}* 🍿\n\n` +
-          `Olá ${client.name}! Seguem os links recomendados para seu acesso:\n\n` +
-          `🤖 *TV Box / Firestick:* Downloader código *389471*\n` +
-          `📱 *Android APK:* https://bit.ly/app-xciptv-oficial\n` +
-          `🍏 *iPhone / iOS:* https://apps.apple.com/app/smarters-player-lite/id1628995509\n` +
-          `💻 *Computador Windows:* https://www.iptvsmarters.com/download?download=windows\n` +
-          `🌐 *Web Player:* http://webtv.iptvsmarters.com\n\n` +
-          `Qualquer dúvida estou à disposição! 🍿`;
+        toast.error("Cadastre os aplicativos em Robô → Aplicativos antes de enviar.");
+        setActionBusyId(null);
+        return;
       }
 
       const res = await send({ data: { phone: client.phone, body: appsText, clientId: client.id } });
@@ -1205,32 +1203,46 @@ function ClientsRegistry() {
                 </div>
               </div>
 
-              {/* Seção de Aplicativos Recomendados */}
+              {/* Aplicativos cadastrados pelo revendedor */}
               <div className="space-y-2 p-3 rounded-lg bg-muted/20 border border-border/40 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-foreground flex items-center gap-1.5 text-[11px]">
-                    <Smartphone className="size-3.5 text-primary" /> Aplicativos Recomendados:
+                    <Smartphone className="size-3.5 text-primary" /> Seus aplicativos:
                   </span>
                   <span className="text-[10px] text-muted-foreground">Inclusos na mensagem</span>
                 </div>
-                <div className="grid grid-cols-1 gap-1.5 text-[11px] min-[420px]:grid-cols-2">
-                  <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
-                    <span className="text-muted-foreground">Downloader (TV):</span>
-                    <span className="font-mono font-bold text-amber-400">{botConfig?.appAndroidDownloaderCode || "389471"}</span>
+                {botConfig?.appAndroidDownloaderCode || botConfig?.appAndroidApk || botConfig?.appIosLink || botConfig?.appWindowsLink ? (
+                  <div className="grid grid-cols-1 gap-1.5 text-[11px] min-[420px]:grid-cols-2">
+                    {botConfig?.appAndroidDownloaderCode ? (
+                      <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
+                        <span className="text-muted-foreground">Downloader (TV):</span>
+                        <span className="font-mono font-bold text-foreground">{botConfig.appAndroidDownloaderCode}</span>
+                      </div>
+                    ) : null}
+                    {botConfig?.appAndroidApk ? (
+                      <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
+                        <span className="text-muted-foreground">App Android:</span>
+                        <a href={botConfig.appAndroidApk} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">Link</a>
+                      </div>
+                    ) : null}
+                    {botConfig?.appIosLink ? (
+                      <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
+                        <span className="text-muted-foreground">iPhone / iOS:</span>
+                        <a href={botConfig.appIosLink} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">Link</a>
+                      </div>
+                    ) : null}
+                    {botConfig?.appWindowsLink ? (
+                      <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
+                        <span className="text-muted-foreground">Windows PC:</span>
+                        <a href={botConfig.appWindowsLink} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">Link</a>
+                      </div>
+                    ) : null}
                   </div>
-                  <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
-                    <span className="text-muted-foreground">App Android:</span>
-                    <a href={botConfig?.appAndroidApk || "https://bit.ly/app-xciptv-oficial"} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">APK</a>
-                  </div>
-                  <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
-                    <span className="text-muted-foreground">iPhone / iOS:</span>
-                    <a href={botConfig?.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509"} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">App Store</a>
-                  </div>
-                  <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
-                    <span className="text-muted-foreground">Windows PC:</span>
-                    <a href={botConfig?.appWindowsLink || "https://www.iptvsmarters.com/download?download=windows"} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">.exe</a>
-                  </div>
-                </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    Nenhum aplicativo cadastrado ainda. Cadastre os seus em Robô → Aplicativos para que sejam enviados aos clientes.
+                  </p>
+                )}
               </div>
 
               <div className="flex gap-2">
@@ -1239,7 +1251,7 @@ function ClientsRegistry() {
                   size="sm"
                   onClick={() => {
                     const appsBlock = formatAppsLinksBlock(botConfig, testCredentials.serverName || sigmaServerName || "IPTV");
-                    const text = `📺 *SEU TESTE GRÁTIS DE IPTV (${testCredentials.hours}h)*\n\n👤 *Usuário:* ${testCredentials.username}\n🔑 *Senha:* ${testCredentials.password}\n🌐 *Servidor:* ${testCredentials.serverUrl || sigmaServerUrl}\n\n🔗 *Lista M3U:*\n${testCredentials.m3uUrl}\n\n━━━━━━━━━━━━━━━━━━━\n${appsBlock}\n\nAproveite sua programação! 🍿`;
+                    const text = `📺 *SEU TESTE GRÁTIS DE IPTV (${testCredentials.hours}h)*\n\n👤 *Usuário:* ${testCredentials.username}\n🔑 *Senha:* ${testCredentials.password}\n🌐 *Servidor:* ${testCredentials.serverUrl || sigmaServerUrl}\n\n🔗 *Lista M3U:*\n${testCredentials.m3uUrl}\n\n${appsBlock ? `━━━━━━━━━━━━━━━━━━━\n${appsBlock}\n\n` : ""}Aproveite sua programação! 🍿`;
                     navigator.clipboard.writeText(text);
                     toast.success("Dados do teste e links dos apps copiados!");
                   }}
