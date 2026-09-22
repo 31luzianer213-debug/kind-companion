@@ -39,11 +39,7 @@ export function WhatsAppDiagnosticsPanel() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">WhatsApp</p>
-          <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Diagnóstico da conexão</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Informações da instância Evolution exclusiva da sua conta.</p>
-        </div>
+        <p className="text-sm text-muted-foreground">Informações da conexão exclusiva da sua conta.</p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => query.refetch()} disabled={query.isFetching}>
             <RefreshCw className={query.isFetching ? "animate-spin" : ""} /> Atualizar
