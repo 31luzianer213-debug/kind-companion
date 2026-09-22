@@ -14,6 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      billing_rule_sends: {
+        Row: {
+          client_id: string
+          created_at: string
+          due_date: string
+          error: string | null
+          id: string
+          rule_id: string
+          sent_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          due_date: string
+          error?: string | null
+          id?: string
+          rule_id: string
+          sent_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          due_date?: string
+          error?: string | null
+          id?: string
+          rule_id?: string
+          sent_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_rule_sends_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_rule_sends_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "billing_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_rules: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          message_template: string
+          offset_days: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          message_template?: string
+          offset_days: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          message_template?: string
+          offset_days?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bot_settings: {
         Row: {
           config: Json
@@ -32,6 +113,45 @@ export type Database = {
           created_at?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      client_trials: {
+        Row: {
+          converted: boolean
+          created_at: string
+          expires_at: string
+          id: string
+          name: string | null
+          notified_at: string | null
+          password: string | null
+          phone: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          converted?: boolean
+          created_at?: string
+          expires_at: string
+          id?: string
+          name?: string | null
+          notified_at?: string | null
+          password?: string | null
+          phone: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          converted?: boolean
+          created_at?: string
+          expires_at?: string
+          id?: string
+          name?: string | null
+          notified_at?: string | null
+          password?: string | null
+          phone?: string
+          user_id?: string
+          username?: string | null
         }
         Relationships: []
       }
@@ -497,6 +617,42 @@ export type Database = {
           },
         ]
       }
+      sale_plans: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          months: number
+          name: string
+          price: number
+          screens: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          months?: number
+          name: string
+          price?: number
+          screens?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          months?: number
+          name?: string
+          price?: number
+          screens?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sigma_panels: {
         Row: {
           auto_renew: boolean | null
@@ -617,6 +773,7 @@ export type Database = {
           sigma_url: string | null
           sigma_username: string | null
           test_server_id: string | null
+          trial_reminder_enabled: boolean
           updated_at: string
           user_id: string
           welcome_template: string
@@ -650,6 +807,7 @@ export type Database = {
           sigma_url?: string | null
           sigma_username?: string | null
           test_server_id?: string | null
+          trial_reminder_enabled?: boolean
           updated_at?: string
           user_id: string
           welcome_template?: string
@@ -683,6 +841,7 @@ export type Database = {
           sigma_url?: string | null
           sigma_username?: string | null
           test_server_id?: string | null
+          trial_reminder_enabled?: boolean
           updated_at?: string
           user_id?: string
           welcome_template?: string

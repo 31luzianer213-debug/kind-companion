@@ -47,11 +47,11 @@ import {
 export const Route = createFileRoute("/_authenticated/bot")({
   head: () => ({
     meta: [
-      { title: "Robô WhatsApp — Auto-Atendimento & PIX Automático" },
+      { title: "Robô WhatsApp — Auto-Atendimento & Pix Automático" },
       {
         name: "description",
         content:
-          "Configure o bot do WhatsApp para auto-atendimento 24h, geração de testes, renovação automática no PIX do Mercado Pago e entrega de lista M3U.",
+          "Configure o bot do WhatsApp para auto-atendimento 24h, geração de testes, renovação automática no Pix do Mercado Pago e entrega de lista M3U.",
       },
     ],
   }),
@@ -88,7 +88,7 @@ function formatPlansText(prices: {
     `• Mais de 80.000 conteúdos (Canais 4K/FHD, Filmes e Séries atualizados)\n` +
     `• Guia de Canais completo (EPG)\n` +
     `• Compatível com TV Box, Smart TV, Celular, Computador e Tablet\n` +
-    `• Liberação Imediata com PIX Automático!`
+    `• Liberação Imediata com Pix Automático!`
   );
 }
 
@@ -148,7 +148,7 @@ function BotPage() {
         "Eu sou o assistente virtual do *{servidor}* e estou aqui para te atender 24h por dia.\n\n" +
         "Como posso te ajudar hoje? Digite o *número* da opção desejada:\n\n" +
         "1️⃣ *Gerar Teste Grátis* (Acesso Imediato)\n" +
-        "2️⃣ *Renovar Minha Assinatura* (PIX Automático)\n" +
+        "2️⃣ *Renovar Minha Assinatura* (Pix Automático)\n" +
         "3️⃣ *Comprar Novo Acesso / Planos*\n" +
         "4️⃣ *Baixar Aplicativos* (Celular, TV Box, PC, iOS) 📲\n" +
         "5️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n" +
@@ -338,7 +338,7 @@ function BotPage() {
               "Eu sou o assistente virtual do *{servidor}* e estou aqui para te atender 24h por dia.\n\n" +
               "Como posso te ajudar hoje? Digite o *número* da opção desejada:\n\n" +
               "1️⃣ *Gerar Teste Grátis* (Acesso Imediato)\n" +
-              "2️⃣ *Renovar Minha Assinatura* (PIX Automático)\n" +
+              "2️⃣ *Renovar Minha Assinatura* (Pix Automático)\n" +
               "3️⃣ *Comprar Novo Acesso / Planos*\n" +
               "4️⃣ *Baixar Aplicativos* (Celular, TV Box, PC, iOS) 📲\n" +
               "5️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n" +
@@ -376,7 +376,7 @@ function BotPage() {
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            Personalize os preços dos planos, configure o servidor IPTV e ative o PIX Copia e Cola automático do Mercado Pago para renovação e compras.
+            Personalize os preços dos planos, configure o servidor IPTV e ative o Pix Copia e Cola automático do Mercado Pago para renovação e compras.
           </p>
         </div>
 
@@ -414,7 +414,7 @@ function BotPage() {
           </CardTitle>
           <CardDescription className="text-xs">
             Em vez de um menu com números, a atendente conversa naturalmente, entende o que o cliente quer e já
-            libera teste, envia planos, gera o PIX de renovação ou reenvia os dados de acesso.
+            libera teste, envia planos, gera o Pix de renovação ou reenvia os dados de acesso.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -469,7 +469,7 @@ function BotPage() {
         <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {[
             ["1", "Teste grátis", "Gera acesso temporário no Sigma"],
-            ["2", "Renovação", "Localiza o cliente e prepara o PIX"],
+            ["2", "Renovação", "Localiza o cliente e prepara o Pix"],
             ["3", "Planos", "Apresenta preços e períodos"],
             ["4", "Aplicativos", "Envia links para cada aparelho"],
             ["5", "Reenviar acesso", "Entrega usuário, senha e lista M3U"],
@@ -554,7 +554,7 @@ function BotPage() {
                   </Button>
                 </div>
                 <CardDescription>
-                  Defina os valores cobrados nos pedidos do WhatsApp. O robô usará esses preços exatos ao gerar os pagamentos PIX.
+                  Defina os valores cobrados nos pedidos do WhatsApp. O robô usará esses preços exatos ao gerar os pagamentos Pix.
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
@@ -996,7 +996,7 @@ function BotPage() {
                 </p>
               </div>
               <Badge variant="outline" className={isMpActive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px]" : "border-border bg-muted/40 text-muted-foreground text-[10px]"}>
-                {isMpActive ? "PIX MP Ativo" : "Robô Ativo"}
+                {isMpActive ? "Pix MP Ativo" : "Robô Ativo"}
               </Badge>
             </div>
 
@@ -1064,7 +1064,7 @@ function BotPage() {
                   disabled={simLoading}
                   className="h-6 text-[10px] rounded-lg px-2 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
                 >
-                  2 114818587 (PIX)
+                  2 114818587 (Pix)
                 </Button>
                 <Button
                   type="button"

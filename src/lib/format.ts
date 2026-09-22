@@ -385,8 +385,8 @@ export const TEMPLATE_VARS: { key: string; label: string }[] = [
   { key: "apps", label: "links dos aplicativos oficiais (Android, iOS, PC, Downloader, Smart TV)" },
   { key: "telas", label: "quantidade de telas" },
   { key: "empresa", label: "nome do seu negócio" },
-  { key: "pix", label: "sua chave PIX" },
-  { key: "titular", label: "titular do PIX" },
+  { key: "pix", label: "sua chave Pix" },
+  { key: "titular", label: "titular do Pix" },
   { key: "link", label: "link de pagamento" },
 ];
 

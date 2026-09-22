@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatBRL, formatDate } from "@/lib/format";
+import { FinancePanel } from "@/components/panels/FinancePanel";
 import {
   AlertTriangle,
   Calendar,
@@ -36,8 +37,23 @@ export const Route = createFileRoute("/_authenticated/cobrancas")({
       { name: "description", content: "Acompanhe cobranças, pagamentos e renovações processadas automaticamente." },
     ],
   }),
-  component: Cobrancas,
+  component: CobrancasPage,
 });
+
+function CobrancasPage() {
+  const [tab, setTab] = useState("cobrancas");
+  return (
+    <div className="space-y-4">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="cobrancas">Cobranças</TabsTrigger>
+          <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {tab === "cobrancas" ? <Cobrancas /> : <FinancePanel />}
+    </div>
+  );
+}
 
 type InvoiceRow = Tables<"invoices"> & { clients: { name: string; phone: string } | null };
 

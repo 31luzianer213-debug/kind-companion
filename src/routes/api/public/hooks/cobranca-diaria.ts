@@ -17,6 +17,8 @@ async function handleBillingExecution(request: Request) {
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { runBillingForUser } = await import("@/lib/billing.server");
+  const { runAutomaticBillingForUser } = await import("@/lib/billing-automation.server");
+  const { runTrialRemindersForUser } = await import("@/lib/trials.server");
 
   // Localiza contas com auto_send_enabled ou todas ativas
   const { data: accounts, error } = await supabaseAdmin
@@ -32,8 +34,13 @@ async function handleBillingExecution(request: Request) {
 
   for (const account of targetAccounts) {
     try {
-      const result = await runBillingForUser(supabaseAdmin, account.user_id);
-      results.push({ user_id: account.user_id, ...result });
+      // 1) Gera/atualiza as faturas do dia (sem enviar nada).
+      const result = await runBillingForUser(supabaseAdmin, account.user_id, { sendReminders: false });
+      // 2) A régua de cobrança é a única responsável pelos envios, evitando mensagens duplicadas.
+      const reminders = await runAutomaticBillingForUser(supabaseAdmin, account.user_id);
+      // 3) Avisa quem está com teste grátis prestes a expirar.
+      const trials = await runTrialRemindersForUser(supabaseAdmin, account.user_id);
+      results.push({ user_id: account.user_id, ...result, ...reminders, ...trials });
     } catch (err) {
       results.push({
         user_id: account.user_id,

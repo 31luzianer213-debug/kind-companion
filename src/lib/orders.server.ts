@@ -171,8 +171,8 @@ export async function listOrdersServer(
 /**
  * Aprova o pedido e libera o acesso no Sigma e WhatsApp.
  * Pode ser chamado:
- * 1. Pelo Admin no painel ao clicar em "Confirmar PIX & Liberar Acesso"
- * 2. Automaticamente pelo Webhook do Mercado Pago quando o PIX for pago.
+ * 1. Pelo Admin no painel ao clicar em "Confirmar Pix & Liberar Acesso"
+ * 2. Automaticamente pelo Webhook do Mercado Pago quando o Pix for pago.
  */
 export async function approveAndReleaseOrderServer(
   userId: string,

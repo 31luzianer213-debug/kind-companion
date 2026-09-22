@@ -51,7 +51,7 @@ function buildSystemPrompt(config: BotConfigData, serverName: string, customerNa
     config.testEnabled
       ? `Você pode liberar um teste grátis de ${config.testDurationHours} horas na hora, sem pedir cartão.`
       : `No momento não há teste grátis disponível; ofereça os planos.`,
-    `O sistema executa as ações reais (gerar teste, criar cobrança PIX, enviar dados de acesso, links de aplicativos). Você apenas escolhe a ação e escreve a fala curta que acompanha.`,
+    `O sistema executa as ações reais (gerar teste, criar cobrança Pix, enviar dados de acesso, links de aplicativos). Você apenas escolhe a ação e escreve a fala curta que acompanha.`,
     extra ? `Orientações do dono da revenda: ${extra}` : "",
     `Responda SEMPRE em JSON válido, sem markdown, no formato:`,
     `{"intent":"<intencao>","reply":"<mensagem curta>","username":"<login citado pelo cliente, se houver>"}`,

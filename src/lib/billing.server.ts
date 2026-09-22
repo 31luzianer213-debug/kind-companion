@@ -273,7 +273,12 @@ function iso(date: Date) {
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export async function runBillingForUser(supabase: SupabaseClient<any>, userId: string) {
+export async function runBillingForUser(
+  supabase: SupabaseClient<any>,
+  userId: string,
+  options?: { sendReminders?: boolean },
+) {
+  const sendReminders = options?.sendReminders !== false;
   const today = new Date();
   const todayIso = iso(today);
 
@@ -317,6 +322,10 @@ export async function runBillingForUser(supabase: SupabaseClient<any>, userId: s
     .eq("user_id", userId)
     .eq("status", "pending")
     .lt("due_date", todayIso);
+
+  if (!sendReminders) {
+    return { created, sent, failed, errors };
+  }
 
   const { data: invoices } = await supabase
     .from("invoices")
