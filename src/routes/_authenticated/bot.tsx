@@ -43,6 +43,7 @@ import {
   Laptop,
   Monitor,
 } from "lucide-react";
+import { TelegramPanel } from "@/components/panels/TelegramPanel";
 
 export const Route = createFileRoute("/_authenticated/bot")({
   head: () => ({
