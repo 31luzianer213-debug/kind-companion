@@ -87,12 +87,12 @@ export async function sendViaBaileys(
 }
 
 export async function sendViaEvolution(
-  _settings: WhatsAppSettings & { user_id?: string },
+  settings: WhatsAppSettings & { user_id?: string },
   phone: string,
   text: string,
-  _userId?: string,
+  userId?: string,
 ) {
-  return await sendViaBaileys(phone, text);
+  return await sendViaBaileys(phone, text, { userId: userId || settings?.user_id || null });
 }
 
 export async function sendMediaViaBaileys(
@@ -102,8 +102,26 @@ export async function sendMediaViaBaileys(
     caption?: string;
     mimetype?: string;
     fileName?: string;
+    userId?: string | null;
   },
 ) {
+  const tenant = await import("./evolution-tenant.server");
+  if (tenant.isTenantEvolutionEnabled() && mediaOptions.userId) {
+    const sent = await tenant.tenantSendMedia(
+      tenant.tenantInstanceName(mediaOptions.userId),
+      normalizeNumber(phone),
+      {
+        base64: mediaOptions.base64,
+        caption: mediaOptions.caption,
+        mimetype: mediaOptions.mimetype || "image/png",
+        fileName: mediaOptions.fileName || "qrcode-pix.png",
+      },
+      true,
+    );
+    if (!sent.ok) throw new Error(sent.error || "Falha no envio de mídia pela Evolution API");
+    return { ok: true };
+  }
+
   const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
