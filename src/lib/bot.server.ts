@@ -494,40 +494,17 @@ export async function createTrialForBot(
     }
   }
 
-  // 2. Carrega as credenciais salvas do Sigma
-  let wsRow: any = null;
-  try {
-    const { data } = await supabase
-      .from("whatsapp_settings")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
-    wsRow = data;
-  } catch {}
+  // 2. Carrega as credenciais do painel cadastrado na tela Sigma (com fallback legado)
+  const { resolveSigmaPanel } = await import("./sigma-credentials.server");
+  const panel = await resolveSigmaPanel(supabase, userId);
 
-  let userMetaSigma: any = null;
-  try {
-    const { data: authUser } = await supabase.auth.getUser();
-    userMetaSigma = authUser?.user?.user_metadata?.sigma_settings ?? null;
-  } catch {}
+  const panelUrl = panel.url;
+  const panelToken = panel.token;
+  const panelUser = panel.username;
+  const panelPass = panel.password;
 
-  const panelUrl = wsRow?.sigma_url || userMetaSigma?.url;
-  const panelToken = wsRow?.sigma_token || userMetaSigma?.token;
-  const panelUser = wsRow?.sigma_username || userMetaSigma?.username;
-  const panelPass = wsRow?.sigma_password || userMetaSigma?.password;
-
-  const serverName =
-    botConfig.serverName ||
-    wsRow?.sigma_server_name?.trim() ||
-    userMetaSigma?.server_name?.trim() ||
-    botConfig.businessName ||
-    "Meu Servidor";
-
-  const streamingDns =
-    botConfig.streamingDns ||
-    wsRow?.sigma_streaming_dns?.trim() ||
-    userMetaSigma?.streaming_dns?.trim() ||
-    "";
+  const serverName = botConfig.serverName || panel.serverName || botConfig.businessName || "Meu Servidor";
+  const streamingDns = botConfig.streamingDns || panel.streamingDns || "";
 
   // 3. Gera credenciais aleatórias para o teste
   const trialUsername = Math.floor(10000000 + Math.random() * 90000000).toString();
