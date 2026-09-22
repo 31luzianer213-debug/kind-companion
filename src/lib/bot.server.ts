@@ -590,6 +590,20 @@ export async function createTrialForBot(
     console.error("Erro ao registrar cliente teste no banco:", dbErr);
   }
 
+  // 7. Registra o teste para o lembrete automático antes de expirar
+  try {
+    await supabase.from("client_trials").insert({
+      user_id: userId,
+      name: params.senderName?.trim() || null,
+      phone: cleanPhone,
+      username: trialUsername,
+      password: trialPassword,
+      expires_at: expiryDate.toISOString(),
+    });
+  } catch (trialErr) {
+    console.error("Erro ao registrar teste para lembrete:", trialErr);
+  }
+
   return {
     ok: true,
     username: trialUsername,
