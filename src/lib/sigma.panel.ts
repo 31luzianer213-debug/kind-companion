@@ -1653,7 +1653,8 @@ export async function createSigmaCustomer(
   }
 
   const sample = attempts.slice(0, 4).join(" • ");
-  throw new Error(`Falha ao criar cliente no painel Sigma. Respostas: ${sample}`);
+  const diag = `[pkg=${packageId ?? "-"} srv=${serverId ?? "-"} | ${discovery.join(", ") || "sem descoberta"}]`;
+  throw new Error(`Falha ao criar cliente no painel Sigma. Respostas: ${sample} ${diag}`);
 }
 
 /** Remove (exclui) uma linha/cliente do painel Sigma. */
