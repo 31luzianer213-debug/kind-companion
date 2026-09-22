@@ -37,6 +37,7 @@ export function SigmaSyncPanel() {
       queryClient.invalidateQueries({ queryKey: ["sigma-sync-health"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
     },
+    onError: (error: any) => toast.error(error?.message || "Não foi possível sincronizar esse servidor."),
   });
   const allMutation = useMutation({
     mutationFn: () => syncAll({}),
@@ -46,7 +47,9 @@ export function SigmaSyncPanel() {
       queryClient.invalidateQueries({ queryKey: ["sigma-sync-health"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
     },
+    onError: (error: any) => toast.error(error?.message || "Não foi possível sincronizar os servidores."),
   });
+
 
   return <div className="space-y-6">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-muted-foreground">Acompanhe importados, atualizados, ignorados e erros por servidor.</p><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => query.refetch()} disabled={query.isFetching}><RefreshCw className={query.isFetching ? "animate-spin" : ""} /> Atualizar</Button><Button size="sm" onClick={() => allMutation.mutate()} disabled={allMutation.isPending || servers.length === 0}>{allMutation.isPending ? "Sincronizando..." : "Sincronizar todos"}</Button></div></div>
