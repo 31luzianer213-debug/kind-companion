@@ -1412,7 +1412,7 @@ export async function processBotMessage(
       };
     }
 
-    const appsBlock = generateAppsMessage(config, trialRes.serverName || "IPTV");
+    const appsBlock = generateAppsMessage(config);
     const firstName = (params.pushName || "").split(" ")[0];
     const reply =
       `Prontinho${firstName ? `, ${firstName}` : ""}! Liberei seu teste por ${config.testDurationHours} horas 🙂\n\n` +
@@ -1422,10 +1422,10 @@ export async function processBotMessage(
       `Senha: ${trialRes.password}\n\n` +
       `Sua lista:\n${trialRes.m3uUrl}\n\n` +
       `Guia de programação:\n${trialRes.epgUrl}\n\n` +
-      `${appsBlock}\n\n` +
+      (appsBlock ? `${appsBlock}\n\n` : "") +
       `Bom teste! Se travar alguma coisa é só me chamar aqui.`;
 
-    const apkUrl = config.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
+    const apkUrl = (config.appAndroidApk || "").trim();
 
     return {
       reply:
@@ -1435,17 +1435,21 @@ export async function processBotMessage(
       interactive: {
         type: "buttons",
         title: "Teste liberado",
-        description: "Seu teste já está ativo. Se precisar do aplicativo ou dos valores, é só tocar abaixo.",
+        description: "Seu teste já está ativo. Se precisar dos valores, é só tocar abaixo.",
         footer: serverName,
         buttons: [
-          {
-            id: "btn_download_apk",
-            displayText: "Baixar aplicativo",
-            type: "url",
-            url: apkUrl,
-          },
-          { id: "3", displayText: "Ver valores", type: "reply" },
-          { id: "0", displayText: "Voltar", type: "reply" },
+          ...(apkUrl
+            ? [
+                {
+                  id: "btn_download_apk",
+                  displayText: "Baixar aplicativo",
+                  type: "url" as const,
+                  url: apkUrl,
+                },
+              ]
+            : []),
+          { id: "3", displayText: "Ver valores", type: "reply" as const },
+          { id: "0", displayText: "Voltar", type: "reply" as const },
         ],
       },
     };
