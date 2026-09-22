@@ -14,11 +14,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { navigationGroups, type AppRoute } from "@/components/layout/navigation";
 
-const extraPages: { to: AppRoute; label: string }[] = [
-  { to: "/cobranca-automatica", label: "Régua de cobrança" },
-  { to: "/mensagens", label: "Mensagens enviadas" },
-  { to: "/pagamentos", label: "Pagamentos" },
-];
+const extraPages: { to: AppRoute; label: string }[] = [];
 
 function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
