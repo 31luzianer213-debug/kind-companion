@@ -1,3 +1,5 @@
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SigmaSyncPanel } from "@/components/panels/SigmaSyncPanel";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -57,7 +59,7 @@ const emptyForm: SigmaServerInput = {
 
 type SyncStage = "idle" | "testing" | "saving" | "syncing";
 
-function SigmaServersPage() {
+function SigmaServersSettings() {
   const queryClient = useQueryClient();
   const listFn = useServerFn(listSigmaServers);
   const saveFn = useServerFn(saveSigmaServer);
@@ -516,6 +518,21 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
     <div className="flex items-center justify-between rounded-xl border border-border/60 p-3">
       <Label className="text-xs font-semibold">{label}</Label>
       <Switch checked={checked} onCheckedChange={onChange} />
+    </div>
+  );
+}
+
+function SigmaServersPage() {
+  const [tab, setTab] = useState("servidores");
+  return (
+    <div className="mx-auto w-full max-w-5xl space-y-4">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="servidores">Servidores</TabsTrigger>
+          <TabsTrigger value="sincronizacao">Sincronização</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {tab === "servidores" ? <SigmaServersSettings /> : <SigmaSyncPanel />}
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Activity, AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react";
@@ -6,27 +5,14 @@ import { listActivities } from "@/lib/activity.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const Route = createFileRoute("/_authenticated/atividades")({
-  head: () => ({
-    meta: [
-      { title: "Atividades — Sigma Control" },
-      { name: "description", content: "Acompanhe as ações recentes realizadas no seu painel." },
-    ],
-  }),
-  component: ActivitiesPage,
-});
-
 function formatDateTime(value?: string | null) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date);
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
 }
 
-function ActivitiesPage() {
+export function ActivitiesPanel() {
   const loadActivities = useServerFn(listActivities);
   const query = useQuery({
     queryKey: ["activities"],
@@ -40,32 +26,24 @@ function ActivitiesPage() {
   const activities = Array.isArray(query.data) ? query.data : [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Auditoria</p>
-          <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Atividades</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Veja as ações recentes feitas na sua conta.</p>
-        </div>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">Ações recentes feitas na sua conta.</p>
         <Button variant="outline" size="sm" onClick={() => query.refetch()} disabled={query.isFetching}>
-          <RefreshCw className={query.isFetching ? "animate-spin" : ""} />
-          Atualizar
+          <RefreshCw className={query.isFetching ? "animate-spin" : ""} /> Atualizar
         </Button>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Activity className="size-4" />
-            Histórico recente
+            <Activity className="size-4" /> Histórico recente
           </CardTitle>
         </CardHeader>
         <CardContent>
           {query.isLoading ? (
             <div className="space-y-3">
-              {[0, 1, 2, 3].map((item) => (
-                <div key={item} className="h-16 animate-pulse rounded-xl bg-muted/60" />
-              ))}
+              {[0, 1, 2, 3].map((item) => <div key={item} className="h-16 animate-pulse rounded-xl bg-muted/60" />)}
             </div>
           ) : query.isError ? (
             <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-5 text-center">
@@ -79,7 +57,9 @@ function ActivitiesPage() {
             <div className="rounded-xl border border-dashed p-8 text-center">
               <CheckCircle2 className="mx-auto mb-3 size-7 text-muted-foreground" />
               <p className="font-semibold">Nenhuma atividade registrada ainda</p>
-              <p className="mt-1 text-sm text-muted-foreground">As próximas ações importantes do painel aparecerão aqui.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                As próximas ações importantes do painel aparecerão aqui.
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-border/60">

@@ -1,3 +1,6 @@
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { IndicatorsPanel } from "@/components/panels/IndicatorsPanel";
+import { ActivitiesPanel } from "@/components/panels/ActivitiesPanel";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -182,7 +185,7 @@ function EmptyState({ title, description }: { title: string; description: string
   );
 }
 
-function Painel() {
+function PainelOverview() {
   useSigmaAutoSync();
   const queryClient = useQueryClient();
   const billing = useServerFn(runAutoBilling);
@@ -498,7 +501,7 @@ function Painel() {
           { label: "Clientes ativos", value: activeClients.length, tone: "text-emerald-600 dark:text-emerald-400", to: "/clientes" },
           { label: "Vencendo em 7 dias", value: clientHealth.due7, tone: "text-amber-600 dark:text-amber-400", to: "/clientes" },
           { label: "Vencidos", value: clientHealth.expired, tone: "text-rose-600 dark:text-rose-400", to: "/cobrancas" },
-          { label: "Inativos / bloqueados", value: clientHealth.inactive, tone: "text-muted-foreground", to: "/clientes-operacao" },
+          { label: "Inativos / bloqueados", value: clientHealth.inactive, tone: "text-muted-foreground", to: "/clientes" },
         ].map((item) => (
           <Link
             key={item.label}
@@ -815,6 +818,22 @@ function Painel() {
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function Painel() {
+  const [tab, setTab] = useState("visao");
+  return (
+    <div className="space-y-4">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="visao">Visão geral</TabsTrigger>
+          <TabsTrigger value="indicadores">Indicadores</TabsTrigger>
+          <TabsTrigger value="historico">Histórico</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {tab === "visao" ? <PainelOverview /> : tab === "indicadores" ? <IndicatorsPanel /> : <ActivitiesPanel />}
     </div>
   );
 }

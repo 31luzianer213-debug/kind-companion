@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, CheckCircle2, RefreshCw, Server, Smartphone, Webhook } from "lucide-react";
@@ -8,18 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const Route = createFileRoute("/_authenticated/whatsapp-diagnostico")({
-  head: () => ({ meta: [{ title: "Diagnóstico WhatsApp — Sigma Control" }] }),
-  component: WhatsAppDiagnosticsPage,
-});
-
 function formatCheckedAt(value?: string | null) {
   if (!value) return "—";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("pt-BR");
 }
 
-function WhatsAppDiagnosticsPage() {
+export function WhatsAppDiagnosticsPanel() {
   const load = useServerFn(getWhatsAppDiagnostics);
   const test = useServerFn(testWhatsAppConnection);
   const query = useQuery({
@@ -45,11 +39,7 @@ function WhatsAppDiagnosticsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">WhatsApp</p>
-          <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Diagnóstico da conexão</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Informações da instância Evolution exclusiva da sua conta.</p>
-        </div>
+        <p className="text-sm text-muted-foreground">Informações da conexão exclusiva da sua conta.</p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => query.refetch()} disabled={query.isFetching}>
             <RefreshCw className={query.isFetching ? "animate-spin" : ""} /> Atualizar

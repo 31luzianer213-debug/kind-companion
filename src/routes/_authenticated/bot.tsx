@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
@@ -491,22 +491,19 @@ function BotPage() {
         {/* Coluna Esquerda: Configurações do Robô (7 colunas) */}
         <div className="lg:col-span-7 space-y-5">
           <form onSubmit={handleSave} className="space-y-5">
-            {/* CARD 1: MERCADO PAGO (PIX COPIA E COLA) */}
+            {/* CARD 1: STATUS DO RECEBIMENTO (configurado em Recebimentos) */}
             <Card className="surface-card border-border/60 shadow-sm">
               <CardHeader className="pb-3 border-b border-border/50">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2 text-foreground font-bold">
-                    <Wallet className="size-5 text-emerald-500" /> Mercado Pago (PIX Automático)
+                    <Wallet className="size-5 text-emerald-500" /> Recebimento por Pix
                   </CardTitle>
-                  <Badge
-                    variant={isMpActive ? "success" : "warning"}
-                    className="text-xs"
-                  >
-                    {isMpActive ? "⚡ PIX Dinâmico Ativo" : "📋 Chave PIX Manual"}
+                  <Badge variant={isMpActive ? "success" : "warning"} className="text-xs">
+                    {isMpActive ? "Pix automático ativo" : "Chave Pix manual"}
                   </Badge>
                 </div>
                 <CardDescription>
-                  Com o Mercado Pago ativado, o robô envia na hora o código <strong>PIX Copia e Cola</strong> e o link de pagamento para renovações e planos!
+                  A chave Pix e o token do Mercado Pago ficam em um único lugar: a tela Recebimentos (Pix).
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
@@ -514,9 +511,9 @@ function BotPage() {
                   <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-start gap-2.5 text-xs text-foreground">
                     <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-emerald-400">PIX Automático Ativado!</p>
+                      <p className="font-semibold text-emerald-400">Pix automático ativado</p>
                       <p className="text-muted-foreground text-[11px] mt-0.5">
-                        As opções 2 (Renovar) e 3 (Comprar Planos) geram códigos PIX Copia e Cola dinâmicos do Mercado Pago com baixa automática no Sigma.
+                        Renovações e compras pelo robô geram o código Pix copia e cola com baixa automática no Sigma.
                       </p>
                     </div>
                   </div>
@@ -524,79 +521,20 @@ function BotPage() {
                   <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-2.5 text-xs text-foreground">
                     <AlertCircle className="size-4 text-amber-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-amber-400">Modo Manual Ativo</p>
+                      <p className="font-semibold text-amber-400">Modo manual</p>
                       <p className="text-muted-foreground text-[11px] mt-0.5">
-                        Cole seu <strong>Access Token</strong> abaixo para o robô gerar PIX Copia e Cola na hora. Caso não tenha, o robô enviará sua chave PIX estática.
+                        O robô envia sua chave Pix e você aprova o pagamento em Pedidos. Configure o Mercado Pago para liberar na hora.
                       </p>
                     </div>
                   </div>
                 )}
 
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold flex items-center gap-1.5">
-                      <Lock className="size-3.5 text-primary" /> Access Token do Mercado Pago
-                    </Label>
-                    <a
-                      href="https://www.mercadopago.com.br/developers/panel/app"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[11px] text-primary hover:underline flex items-center gap-1"
-                    >
-                      Onde pegar meu Token? <ExternalLink className="size-3" />
-                    </a>
-                  </div>
-                  <div className="relative flex items-center">
-                    <Input
-                      type={showMpToken ? "text" : "password"}
-                      placeholder="APP_USR-0000000000000000-000000-..."
-                      value={form.mercadopago_token}
-                      onChange={(e) => setForm({ ...form, mercadopago_token: e.target.value })}
-                      className="rounded-xl font-mono text-xs pr-20"
-                    />
-                    <div className="absolute right-1 flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowMpToken(!showMpToken)}
-                        className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showMpToken ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-border/40 pt-3">
-                  <p className="text-[11px] font-semibold text-muted-foreground mb-2">
-                    🔑 Chave PIX Manual (Fallback de contingência):
-                  </p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-medium">Chave PIX</Label>
-                      <Input
-                        type="text"
-                        placeholder="Ex: seu-pix@email.com"
-                        value={form.pixKey}
-                        onChange={(e) => setForm({ ...form, pixKey: e.target.value })}
-                        className="rounded-xl text-xs font-mono"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-medium">Titular da Chave</Label>
-                      <Input
-                        type="text"
-                        placeholder="Ex: Minha Revenda IPTV"
-                        value={form.pixHolder}
-                        onChange={(e) => setForm({ ...form, pixHolder: e.target.value })}
-                        className="rounded-xl text-xs"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <Button asChild type="button" variant="outline" size="sm" className="rounded-xl text-xs">
+                  <Link to="/pagamentos">Abrir Recebimentos (Pix)</Link>
+                </Button>
               </CardContent>
             </Card>
+
 
             {/* CARD 2: PREÇOS DOS PLANOS & RENOVAÇÃO */}
             <Card className="surface-card border-border/60 shadow-sm">

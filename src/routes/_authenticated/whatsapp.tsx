@@ -1,3 +1,5 @@
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WhatsAppDiagnosticsPanel } from "@/components/panels/WhatsAppDiagnosticsPanel";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -74,7 +76,7 @@ function statusBadge(status: string) {
   };
 }
 
-function WhatsAppPage() {
+function WhatsAppConnection() {
   const qc = useQueryClient();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loadingAction, setLoadingAction] = useState(false);
@@ -529,6 +531,21 @@ function WhatsAppPage() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function WhatsAppPage() {
+  const [tab, setTab] = useState("conexao");
+  return (
+    <div className="mx-auto w-full max-w-6xl space-y-4">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="conexao">Conexão</TabsTrigger>
+          <TabsTrigger value="diagnostico">Diagnóstico</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {tab === "conexao" ? <WhatsAppConnection /> : <WhatsAppDiagnosticsPanel />}
     </div>
   );
 }

@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 export const Route = createFileRoute("/_authenticated/cobranca-automatica")({
   head: () => ({
     meta: [
-      { title: "Cobrança automática — Sigma Control" },
+      { title: "Régua de cobrança — Sigma Control" },
       { name: "description", content: "Configure lembretes automáticos de vencimento para seus clientes." },
     ],
   }),
@@ -113,7 +113,7 @@ function AutomaticBillingPage() {
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Automação</p>
         <h1 className="mt-1 flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
           <BellRing className="size-6 text-primary" />
-          Cobrança automática
+          Régua de cobrança
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
           Configure quando o painel deve lembrar seus clientes. O controle de duplicidade impede a mesma regra de ser enviada duas vezes para o mesmo vencimento.

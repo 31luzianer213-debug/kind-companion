@@ -14,16 +14,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { navigationGroups, type AppRoute } from "@/components/layout/navigation";
 
-const extraPages: { to: AppRoute; label: string }[] = [
-  { to: "/indicadores", label: "Indicadores" },
-  { to: "/atividades", label: "Histórico de atividades" },
-  { to: "/clientes-operacao", label: "Ações em massa" },
-  { to: "/cobranca-automatica", label: "Regras automáticas" },
-  { to: "/sigma-sincronizacao", label: "Sincronização Sigma" },
-  { to: "/whatsapp-diagnostico", label: "Diagnóstico WhatsApp" },
-  { to: "/mensagens", label: "Mensagens enviadas" },
-  { to: "/pagamentos", label: "Pagamentos" },
-];
+const extraPages: { to: AppRoute; label: string }[] = [];
 
 function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
