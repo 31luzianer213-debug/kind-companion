@@ -1077,7 +1077,7 @@ export async function processBotMessage(
 
     if (!order) {
       return {
-        reply: "🔍 Não encontrei nenhum pedido pendente para o seu número. Digite *3* para ver nossos planos e assinar!",
+        reply: "Olhei aqui e não achei nenhum pagamento em aberto no seu número. Se quiser, te passo os valores dos planos 🙂",
         action: "order_not_found",
       };
     }
@@ -1085,12 +1085,9 @@ export async function processBotMessage(
     if (order.status === "approved") {
       return {
         reply:
-          `🎉 *PEDIDO #${order.order_number} APROVADO E LIBERADO!* 🍿\n\n` +
-          `📦 *Plano:* ${order.plan_name}\n` +
-          `🔑 *Usuário:* *${order.target_username}*\n` +
-          `📺 *Servidor:* ${serverName}\n\n` +
-          `• Digite *5* para ver seus dados de acesso completos (usuário, senha e M3U)!\n` +
-          `• Digite *4* para baixar os aplicativos de TV Box, Celular e PC! 📲`,
+          `Esse já está pago e liberado 👍\n\n` +
+          `É o ${order.plan_name}, no usuário ${order.target_username}.\n\n` +
+          `Se quiser eu reenvio seus dados de acesso ou o link dos aplicativos, é só pedir.`,
         action: "order_already_approved",
       };
     }
@@ -1108,11 +1105,8 @@ export async function processBotMessage(
             if (approvedRes.ok) {
               return {
                 reply:
-                  `🎉 *PAGAMENTO CONFIRMADO COM SUCESSO!* 🍿\n\n` +
-                  `Identificamos seu pagamento do Pedido *#${order.order_number}* via Mercado Pago!\n` +
-                  `Seu acesso acabou de ser ativado no servidor.\n\n` +
-                  `• Digite *5* para ver seus dados de conexão e lista M3U!\n` +
-                  `• Digite *4* para baixar os aplicativos oficiais! 📲`,
+                  `Seu pagamento caiu aqui, obrigado! 🙌\n\n` +
+                  `Já ativei seu acesso. Quer que eu mande seus dados de conexão ou o link do aplicativo?`,
                 action: "order_auto_approved",
               };
             }
@@ -1122,39 +1116,37 @@ export async function processBotMessage(
     }
 
     const pixCodeNotice = order.pix_code
-      ? `\n\n👇 *Pix Copia e Cola:*\n\`${order.pix_code}\``
+      ? `\n\nSegue o código do Pix:\n${order.pix_code}`
       : "";
 
     const orderButtons: any[] = [];
     if (order.pix_code) {
       orderButtons.push({
         id: "btn_copy_pix",
-        displayText: "📋 Copiar Código Pix",
+        displayText: "Copiar código Pix",
         type: "copy",
         copyCode: order.pix_code,
       });
     } else {
       orderButtons.push({
         id: "0",
-        displayText: "⬅️ Menu Principal",
+        displayText: "Voltar",
         type: "reply",
       });
     }
 
     return {
       reply:
-        `⏳ *PEDIDO #${order.order_number} AGUARDANDO PAGAMENTO* ⏳\n\n` +
-        `📦 *Plano:* ${order.plan_name}\n` +
-        `💰 *Valor:* R$ ${Number(order.amount).toFixed(2).replace(".", ",")}\n` +
+        `Ainda não caiu o pagamento do seu ${order.plan_name} (R$ ${Number(order.amount).toFixed(2).replace(".", ",")}).\n` +
         (order.payment_method === "mercadopago_pix"
-          ? `⚡ O Mercado Pago confirmará automaticamente assim que o Pix for concluído.${pixCodeNotice}\n\n_Toque no botão abaixo para copiar a chave Pix ou verificar o pagamento._`
-          : `💳 *Chave Pix:* \`${pixKey}\`\n👤 *Titular:* ${pixHolder}\n\nPor favor, envie o comprovante do Pix aqui para liberação pelo administrador!`),
+          ? `Assim que o Pix for concluído eu libero automaticamente, não precisa avisar.${pixCodeNotice}`
+          : `Minha chave Pix é ${pixKey} (em nome de ${pixHolder}). Depois me manda o comprovante aqui que eu libero 🙂`),
       action: "order_status_checked",
       interactive: {
         type: "buttons",
-        title: `Pedido #${order.order_number}`,
-        description: `Aguardando confirmação do Pix (R$ ${Number(order.amount).toFixed(2).replace(".", ",")}):`,
-        footer: `${serverName} • Liberação Automática`,
+        title: `Pagamento em aberto`,
+        description: `Esperando o Pix de R$ ${Number(order.amount).toFixed(2).replace(".", ",")} cair.`,
+        footer: serverName,
         buttons: orderButtons,
       },
     };
@@ -1392,48 +1384,45 @@ export async function processBotMessage(
 
     if (!trialRes.ok) {
       return {
-        reply: trialRes.error || "Não foi possível gerar seu teste agora. Tente novamente em alguns instantes.",
+        reply: trialRes.error || "Deu um probleminha aqui pra gerar seu teste agora. Tenta de novo daqui a pouco que eu resolvo 🙏",
         action: "trial_failed",
       };
     }
 
     const appsBlock = generateAppsMessage(config, trialRes.serverName || "IPTV");
+    const firstName = (params.pushName || "").split(" ")[0];
     const reply =
-      `🎉 *SEU TESTE GRÁTIS ESTÁ LIBERADO!* 🍿\n\n` +
-      `👤 *Cliente:* ${params.pushName || "Cliente"}\n` +
-      `📺 *Servidor:* ${trialRes.serverName}\n` +
-      `🌐 *URL / DNS:* ${trialRes.streamingDns}\n` +
-      `🔑 *Usuário:* ${trialRes.username}\n` +
-      `🔒 *Senha:* ${trialRes.password}\n` +
-      `🖥️ *Telas:* 1 Tela\n` +
-      `⏳ *Validade:* ${config.testDurationHours} Horas\n\n` +
-      `🔗 *Lista M3U Plus Completa:*\n${trialRes.m3uUrl}\n\n` +
-      `📺 *Guia de Canais (EPG):*\n${trialRes.epgUrl}\n\n` +
-      `━━━━━━━━━━━━━━━━━━━\n` +
+      `Prontinho${firstName ? `, ${firstName}` : ""}! Liberei seu teste por ${config.testDurationHours} horas 🙂\n\n` +
+      `Servidor: ${trialRes.serverName}\n` +
+      `Endereço: ${trialRes.streamingDns}\n` +
+      `Usuário: ${trialRes.username}\n` +
+      `Senha: ${trialRes.password}\n\n` +
+      `Sua lista:\n${trialRes.m3uUrl}\n\n` +
+      `Guia de programação:\n${trialRes.epgUrl}\n\n` +
       `${appsBlock}\n\n` +
-      `Bom divertimento! Qualquer dúvida, digite *6* para falar conosco. 🍿`;
+      `Bom teste! Se travar alguma coisa é só me chamar aqui.`;
 
     const apkUrl = config.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
 
     return {
       reply:
         reply +
-        `\n\n_Gostou e quer assinar? Toque no botão de planos abaixo para garantir seu acesso definitivo!_ 🚀`,
+        `\n\nSe gostar, me avisa que eu te passo os valores pra deixar fixo.`,
       action: "trial_created",
       interactive: {
         type: "buttons",
-        title: "🎉 Teste Liberado!",
-        description: "Seu teste gratuito foi ativado com sucesso! Baixe o app oficial ou veja nossos planos:",
-        footer: `${serverName} • Suporte 24h`,
+        title: "Teste liberado",
+        description: "Seu teste já está ativo. Se precisar do aplicativo ou dos valores, é só tocar abaixo.",
+        footer: serverName,
         buttons: [
           {
             id: "btn_download_apk",
-            displayText: "📲 Baixar App Oficial (APK)",
+            displayText: "Baixar aplicativo",
             type: "url",
             url: apkUrl,
           },
-          { id: "3", displayText: "🛒 Ver Nossos Planos", type: "reply" },
-          { id: "0", displayText: "⬅️ Menu Principal", type: "reply" },
+          { id: "3", displayText: "Ver valores", type: "reply" },
+          { id: "0", displayText: "Voltar", type: "reply" },
         ],
       },
     };
