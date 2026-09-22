@@ -17,6 +17,8 @@ async function handleBillingExecution(request: Request) {
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { runBillingForUser } = await import("@/lib/billing.server");
+  const { runAutomaticBillingForUser } = await import("@/lib/billing-automation.server");
+  const { runTrialRemindersForUser } = await import("@/lib/trials.server");
 
   // Localiza contas com auto_send_enabled ou todas ativas
   const { data: accounts, error } = await supabaseAdmin
