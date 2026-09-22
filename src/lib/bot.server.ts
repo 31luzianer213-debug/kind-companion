@@ -228,10 +228,12 @@ function writeLocalConfig(userId: string | undefined, data: BotConfigData): void
 export async function loadBotConfig(supabase: any, userId: string): Promise<BotConfigData> {
   const uid = userId || "default";
 
-  // 1. Cache em memória de curta duração (30s) para resposta instantânea
+  // 1. Cache em memória bem curto (5s). Se o cache disser que o robô está
+  //    desligado, sempre reconsulta o banco para que ligar no painel valha na hora.
   const cachedAt = botConfigCacheAt.get(uid) || 0;
-  if (botConfigCache.has(uid) && Date.now() - cachedAt < 30_000) {
-    return botConfigCache.get(uid)!;
+  const cached = botConfigCache.get(uid);
+  if (cached && cached.enabled && Date.now() - cachedAt < 5_000) {
+    return cached;
   }
 
 
@@ -288,12 +290,9 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
 
     // O robô de atendimento é independente da cobrança automática:
     // só fica desligado se o painel desligar explicitamente.
-    const enabled =
-      metaBot?.enabled !== undefined
-        ? Boolean(metaBot.enabled)
-        : wsRow?.auto_send_enabled !== undefined
-          ? Boolean(wsRow.auto_send_enabled)
-          : DEFAULT_BOT_CONFIG.enabled;
+    // Só o interruptor do próprio robô desliga o atendimento. A cobrança
+    // automática (auto_send_enabled) é outro recurso e não pode derrubá-lo.
+    const enabled = metaBot?.enabled !== undefined ? Boolean(metaBot.enabled) : DEFAULT_BOT_CONFIG.enabled;
 
 
     const config: BotConfigData = {
@@ -494,40 +493,17 @@ export async function createTrialForBot(
     }
   }
 
-  // 2. Carrega as credenciais salvas do Sigma
-  let wsRow: any = null;
-  try {
-    const { data } = await supabase
-      .from("whatsapp_settings")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
-    wsRow = data;
-  } catch {}
+  // 2. Carrega as credenciais do painel cadastrado na tela Sigma (com fallback legado)
+  const { resolveSigmaPanel } = await import("./sigma-credentials.server");
+  const panel = await resolveSigmaPanel(supabase, userId);
 
-  let userMetaSigma: any = null;
-  try {
-    const { data: authUser } = await supabase.auth.getUser();
-    userMetaSigma = authUser?.user?.user_metadata?.sigma_settings ?? null;
-  } catch {}
+  const panelUrl = panel.url;
+  const panelToken = panel.token;
+  const panelUser = panel.username;
+  const panelPass = panel.password;
 
-  const panelUrl = wsRow?.sigma_url || userMetaSigma?.url;
-  const panelToken = wsRow?.sigma_token || userMetaSigma?.token;
-  const panelUser = wsRow?.sigma_username || userMetaSigma?.username;
-  const panelPass = wsRow?.sigma_password || userMetaSigma?.password;
-
-  const serverName =
-    botConfig.serverName ||
-    wsRow?.sigma_server_name?.trim() ||
-    userMetaSigma?.server_name?.trim() ||
-    botConfig.businessName ||
-    "Meu Servidor";
-
-  const streamingDns =
-    botConfig.streamingDns ||
-    wsRow?.sigma_streaming_dns?.trim() ||
-    userMetaSigma?.streaming_dns?.trim() ||
-    "";
+  const serverName = botConfig.serverName || panel.serverName || botConfig.businessName || "Meu Servidor";
+  const streamingDns = botConfig.streamingDns || panel.streamingDns || "";
 
   // 3. Gera credenciais aleatórias para o teste
   const trialUsername = Math.floor(10000000 + Math.random() * 90000000).toString();
@@ -569,7 +545,18 @@ export async function createTrialForBot(
       notes: `Teste automático gerado via Bot WhatsApp (${hours}h)`,
     });
   } catch (sigmaErr) {
-    console.error("Erro ao criar teste no Sigma:", sigmaErr);
+    const detail = sigmaErr instanceof Error ? sigmaErr.message : String(sigmaErr);
+    console.error("Erro ao criar teste no Sigma:", detail);
+    // Deixa o motivo real registrado para o revendedor ver em Histórico/Logs.
+    try {
+      await supabase.from("message_logs").insert({
+        user_id: userId,
+        phone: cleanPhone,
+        body: `Falha ao criar teste grátis no painel "${panel.serverName}".`,
+        status: "failed",
+        error: detail.slice(0, 500),
+      });
+    } catch {}
     return {
       ok: false,
       error:
@@ -600,6 +587,20 @@ export async function createTrialForBot(
     });
   } catch (dbErr) {
     console.error("Erro ao registrar cliente teste no banco:", dbErr);
+  }
+
+  // 7. Registra o teste para o lembrete automático antes de expirar
+  try {
+    await supabase.from("client_trials").insert({
+      user_id: userId,
+      name: params.senderName?.trim() || null,
+      phone: cleanPhone,
+      username: trialUsername,
+      password: trialPassword,
+      expires_at: expiryDate.toISOString(),
+    });
+  } catch (trialErr) {
+    console.error("Erro ao registrar teste para lembrete:", trialErr);
   }
 
   return {
