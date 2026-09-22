@@ -155,7 +155,12 @@ export function generateAppsMessage(config: BotConfigData, _serverName?: string)
   const apk = (config.appAndroidApk || "").trim();
   const ios = (config.appIosLink || "").trim();
   const win = (config.appWindowsLink || "").trim();
-  const web = (config.appWebPlayerLink || "").trim();
+  // Se o revendedor não preencher, o link do navegador sai do próprio
+  // servidor sincronizado (DNS) — nada é inventado.
+  const dns = (config.streamingDns || "").trim();
+  const web =
+    (config.appWebPlayerLink || "").trim() ||
+    (dns ? (dns.startsWith("http") ? dns : `http://${dns}`) : "");
   const smartTv = (config.appSmartTvText || "").trim();
 
   if (code) lines.push(`Na TV Box, Android TV ou Fire Stick: abra o app Downloader e digite o código ${code}.`);
