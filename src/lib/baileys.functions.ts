@@ -78,6 +78,8 @@ export const getBaileysStatus = createServerFn({ method: "POST" })
           console.warn("[WhatsApp] Falha ao garantir webhook do robô:", error);
         });
       }
+      const { persistConnectionState } = await import("./whatsapp-presence.server");
+      await persistConnectionState(context.userId, { status: st.state, number: st.number });
       const connectionCode = st.state === "connecting" ? await tenantCurrentConnectionCode(context.userId) : null;
       return {
         ok: true as const,
