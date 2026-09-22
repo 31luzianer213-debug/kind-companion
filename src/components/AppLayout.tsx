@@ -205,7 +205,7 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
             aria-modal="true"
             aria-label="Menu principal"
             data-mobile-navigation
-            className="mobile-menu-sheet absolute inset-x-0 bottom-0 flex max-h-[min(88dvh,760px)] flex-col rounded-t-2xl border border-b-0 border-border bg-background px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-2xl animate-in slide-in-from-bottom duration-200 sm:px-4"
+            className="mobile-menu-sheet absolute inset-x-0 bottom-0 flex max-h-[min(88dvh,760px)] flex-col rounded-t-2xl border border-b-0 border-border bg-background px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-md animate-in slide-in-from-bottom duration-200 sm:px-4"
           >
             <div className="mx-auto mb-1 h-1.5 w-11 rounded-full bg-muted-foreground/20" />
             <div className="flex items-center justify-between pb-1">

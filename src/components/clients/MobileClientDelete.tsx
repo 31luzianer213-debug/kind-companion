@@ -93,7 +93,7 @@ export function MobileClientDelete() {
         type="button"
         variant="outline"
         onClick={() => setOpen(true)}
-        className="fixed bottom-[5.6rem] right-3 z-30 h-11 gap-2 rounded-full border-destructive/35 bg-background/95 px-4 text-xs font-bold text-destructive shadow-xl backdrop-blur md:hidden"
+        className="fixed bottom-[5.6rem] right-3 z-30 h-11 gap-2 rounded-full border-destructive/35 bg-background/95 px-4 text-xs font-bold text-destructive shadow-sm backdrop-blur md:hidden"
         aria-label="Excluir cliente"
       >
         <Trash2 className="size-4" />
