@@ -339,7 +339,6 @@ function AuthPage() {
 
               <TabsContent value="signup" className="mt-0">
                 <form onSubmit={signUp} className="space-y-4">
-                  <AuthField id="signup-name" label="Seu nome" icon={<User className="size-4" />} required value={name} onChange={(e) => setName(e.target.value)} placeholder="Como podemos chamar você?" autoComplete="name" />
                   <AuthField id="signup-email" label="E-mail" icon={<Mail className="size-4" />} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" autoComplete="email" />
                   <AuthField
                     id="signup-password"
@@ -362,23 +361,7 @@ function AuthPage() {
                       {[1, 2, 3, 4].map((level) => <span key={level} className={cn("h-1 rounded-full bg-muted", strength.score >= level && strength.color)} />)}
                     </div>
                   )}
-                  <AuthField
-                    id="signup-confirmation"
-                    label="Confirme a senha"
-                    icon={<Lock className="size-4" />}
-                    type={showConfirmation ? "text" : "password"}
-                    required
-                    minLength={6}
-                    value={confirmation}
-                    onChange={(e) => setConfirmation(e.target.value)}
-                    placeholder="Repita a senha"
-                    autoComplete="new-password"
-                    invalid={mismatch}
-                    revealable
-                    revealed={showConfirmation}
-                    onReveal={() => setShowConfirmation((value) => !value)}
-                    hint={matches ? <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-500"><Check className="size-3" /> Confere</span> : mismatch ? <span className="flex items-center gap-1 text-[11px] font-bold text-destructive"><X className="size-3" /> Diferente</span> : null}
-                  />
+
                   <Button type="submit" disabled={loading} className="h-12 w-full rounded-md text-sm font-bold shadow-lg shadow-primary/15">
                     {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
                     {loading ? "Criando conta…" : "Criar minha conta"}
