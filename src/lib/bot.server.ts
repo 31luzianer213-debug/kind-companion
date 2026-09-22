@@ -1786,7 +1786,7 @@ export async function processBotMessage(
     const m3uUrl = generateM3uUrl(cleanDns, u, p, "ts");
     const epgUrl = generateEpgUrl(cleanDns, u, p);
 
-    const appsBlock = generateAppsMessage(config, serverName);
+    const appsBlock = generateAppsMessage(config);
     const reply =
       `Claro! Seguem seus dados${client.name ? `, ${String(client.name).split(" ")[0]}` : ""}:\n\n` +
       `Servidor: ${serverName}\n` +
