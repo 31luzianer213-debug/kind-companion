@@ -222,13 +222,19 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
       </aside>
 
       <main className="relative min-w-0 flex-1 overflow-x-hidden">
+        <div className="sticky top-0 z-40 hidden border-b border-border bg-background/90 backdrop-blur-xl lg:block">
+          <div className="mx-auto flex w-full max-w-[var(--ui-page-max)] justify-end px-8 py-2.5 xl:px-10">
+            <GlobalSearch />
+          </div>
+        </div>
         <div
           key={pathname}
-          className="page-enter mobile-app-content relative mx-auto min-h-full w-full max-w-[var(--ui-page-max)] px-3 pb-28 pt-3 sm:px-5 sm:pt-5 md:px-6 md:pb-12 md:pt-6 lg:px-8 lg:pt-7 xl:px-10"
+          className="page-enter mobile-app-content relative mx-auto min-h-full w-full max-w-[var(--ui-page-max)] px-3 pb-28 pt-3 sm:px-5 sm:pt-5 md:px-6 md:pb-12 md:pt-6 lg:px-8 lg:pt-6 xl:px-10"
         >
           {children}
         </div>
       </main>
+
 
       {pathname === "/clientes" ? <MobileClientDelete /> : null}
 
