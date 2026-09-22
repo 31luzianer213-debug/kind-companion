@@ -546,7 +546,18 @@ export async function createTrialForBot(
       notes: `Teste automático gerado via Bot WhatsApp (${hours}h)`,
     });
   } catch (sigmaErr) {
-    console.error("Erro ao criar teste no Sigma:", sigmaErr);
+    const detail = sigmaErr instanceof Error ? sigmaErr.message : String(sigmaErr);
+    console.error("Erro ao criar teste no Sigma:", detail);
+    // Deixa o motivo real registrado para o revendedor ver em Histórico/Logs.
+    try {
+      await supabase.from("message_logs").insert({
+        user_id: userId,
+        phone: cleanPhone,
+        message: `Falha ao criar teste grátis no painel "${panel.serverName}": ${detail}`,
+        status: "failed",
+        message_type: "trial_error",
+      });
+    } catch {}
     return {
       ok: false,
       error:
