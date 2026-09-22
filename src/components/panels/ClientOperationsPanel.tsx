@@ -89,11 +89,7 @@ export function ClientOperationsPanel() {
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Clientes</p>
-          <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Operação de clientes</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Filtre, selecione e execute ações em massa com segurança.</p>
-        </div>
+        <p className="text-sm text-muted-foreground">Filtre, selecione e execute ações em massa com segurança.</p>
         <Button variant="outline" size="sm" onClick={() => query.refetch()} disabled={query.isFetching}>
           <RefreshCw className={query.isFetching ? "animate-spin" : ""} /> Atualizar
         </Button>
