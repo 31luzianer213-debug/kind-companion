@@ -182,16 +182,14 @@ function AuthPage() {
 
   async function signUp(event: React.FormEvent) {
     event.preventDefault();
-    if (!name.trim()) return toast.error("Informe seu nome.");
     if (!email.trim()) return toast.error("Informe seu e-mail.");
     if (password.length < 6) return toast.error("A senha precisa ter pelo menos 6 caracteres.");
-    if (password !== confirmation) return toast.error("As senhas não coincidem.");
 
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { display_name: name.trim() } },
+      options: { data: { display_name: name.trim() || email.trim().split("@")[0] } },
     });
 
     if (error) {
@@ -205,18 +203,25 @@ function AuthPage() {
       return;
     }
 
-    if (!data.session) {
-      setLoading(false);
-      toast.success("Conta criada! Confira seu e-mail para confirmar o acesso.");
-      setTab("login");
-      return;
+    let session = data.session;
+    if (!session) {
+      const signIn = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (signIn.error) {
+        setLoading(false);
+        toast.error(friendlyError(signIn.error.message));
+        return;
+      }
+      session = signIn.data.session;
     }
 
-    await supabase.from("profiles").upsert({ id: data.session.user.id, display_name: name.trim() });
+    if (session) {
+      await supabase.from("profiles").upsert({ id: session.user.id, display_name: name.trim() || email.trim().split("@")[0] });
+    }
     setLoading(false);
     toast.success("Conta criada com sucesso!");
     navigate({ to: "/painel" });
   }
+
 
   async function signInWithGoogle() {
     setGoogleLoading(true);
