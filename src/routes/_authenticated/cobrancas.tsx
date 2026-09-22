@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatBRL, formatDate } from "@/lib/format";
+import { FinancePanel } from "@/components/panels/FinancePanel";
 import {
   AlertTriangle,
   Calendar,
