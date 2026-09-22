@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
+import { importSigmaPanelApps } from "@/lib/sigma.functions";
 import {
   getBotSettings,
   saveBotSettings,
