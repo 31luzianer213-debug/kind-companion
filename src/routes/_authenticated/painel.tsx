@@ -426,6 +426,23 @@ function PainelOverview() {
         </div>
       </header>
 
+      {!isWaOk && (
+        <section className="flex flex-col gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex gap-3">
+            <AlertTriangle className="mt-0.5 size-5 shrink-0 text-rose-500" />
+            <div>
+              <p className="text-sm font-bold text-foreground">Seu WhatsApp está desconectado</p>
+              <p className="text-xs text-muted-foreground">
+                Enquanto isso, nenhuma cobrança e nenhuma mensagem do robô são enviadas. Leia o QR Code para voltar a cobrar.
+              </p>
+            </div>
+          </div>
+          <Button asChild size="sm" className="shrink-0">
+            <Link to="/whatsapp">Reconectar agora</Link>
+          </Button>
+        </section>
+      )}
+
       {showOnboarding && completedSteps < 3 && (
         <section className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card p-4 shadow-sm sm:p-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
