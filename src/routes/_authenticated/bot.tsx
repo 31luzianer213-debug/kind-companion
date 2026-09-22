@@ -793,15 +793,28 @@ function BotPage() {
                       Preencha só os aplicativos que você usa. O robô envia apenas o que estiver aqui — nada vem preenchido por padrão.
                     </CardDescription>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRestoreDefaultAppLinks}
-                    className="rounded-md text-xs gap-1.5 self-start sm:self-auto"
-                  >
-                    <Sparkles className="size-3 text-sky-400" /> Limpar campos
-                  </Button>
+                  <div className="flex flex-wrap gap-2 self-start sm:self-auto">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={importingApps}
+                      onClick={handleImportPanelApps}
+                      className="rounded-md text-xs gap-1.5"
+                    >
+                      <Download className="size-3" />
+                      {importingApps ? "Buscando..." : "Buscar no painel Sigma"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRestoreDefaultAppLinks}
+                      className="rounded-md text-xs gap-1.5"
+                    >
+                      <Sparkles className="size-3 text-sky-400" /> Limpar campos
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
