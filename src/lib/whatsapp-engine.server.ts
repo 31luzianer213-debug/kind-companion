@@ -250,6 +250,14 @@ export async function processIncomingWhatsAppEvent(
         status: "failed",
         error: sent.error,
       });
+      // Libera a marca de "já processada" para que a mensagem possa ser reprocessada.
+      if (message.messageId) {
+        processedMessages.delete(message.messageId);
+        await supabaseAdmin
+          .from("whatsapp_processed_messages")
+          .delete()
+          .eq("message_id", message.messageId);
+      }
       throw new Error(`A resposta foi gerada, mas o WhatsApp recusou o envio: ${sent.error}`);
     }
 
