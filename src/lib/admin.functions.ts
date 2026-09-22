@@ -342,3 +342,127 @@ export const startAdminTrial = createServerFn({ method: "POST" })
     if (error) return { ok: false as const, error: error.message };
     return { ok: true as const };
   });
+
+export type AdminOverview = {
+  resellers: number;
+  active: number;
+  trialing: number;
+  expired: number;
+  clients: number;
+  connected: number;
+  messages24h: number;
+  failed24h: number;
+  monthlyRevenue: number;
+};
+
+/** Números gerais do negócio para o administrador. */
+export const getAdminOverview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await assertAdmin(context.claims))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
+    }
+    const since = new Date(Date.now() - 86_400_000).toISOString();
+    const [{ data: subs }, { data: clients }, { data: logs }, { data: conns }, { data: plan }] = await Promise.all([
+      (supabaseAdmin as any).from("saas_subscriptions").select("user_id, status, current_period_end"),
+      (supabaseAdmin as any).from("clients").select("id"),
+      (supabaseAdmin as any).from("message_logs").select("status, created_at").gte("created_at", since),
+      (supabaseAdmin as any).from("whatsapp_settings").select("user_id, connection_status"),
+      (supabaseAdmin as any).from("saas_plans").select("price_monthly").eq("active", true).order("sort_order").limit(1).maybeSingle(),
+    ]);
+
+    const rows = subs ?? [];
+    const active = rows.filter((s: any) => s.status === "active").length;
+    const trialing = rows.filter((s: any) => s.status === "trialing").length;
+    const expired = rows.filter((s: any) => s.status !== "active" && s.status !== "trialing").length;
+    const messages = logs ?? [];
+
+    const overview: AdminOverview = {
+      resellers: rows.length,
+      active,
+      trialing,
+      expired,
+      clients: (clients ?? []).length,
+      connected: (conns ?? []).filter((c: any) => c.connection_status === "open").length,
+      messages24h: messages.length,
+      failed24h: messages.filter((m: any) => m.status === "failed").length,
+      monthlyRevenue: active * (Number(plan?.price_monthly) || 0),
+    };
+    return { ok: true as const, overview };
+  });
+
+export type AdminConnectionRow = {
+  user_id: string;
+  email: string;
+  instance: string;
+  status: string;
+  number: string | null;
+  last_connected_at: string | null;
+  last_error: string | null;
+};
+
+/** Mostra a conexão de WhatsApp de cada revendedor, comparando banco e Evolution. */
+export const listAdminConnections = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await assertAdmin(context.claims))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema.", rows: [] as AdminConnectionRow[] };
+    }
+    const { isTenantEvolutionEnabled, tenantInstanceName, tenantListInstances } = await import("./evolution-tenant.server");
+
+    const [{ data: settings }, users] = await Promise.all([
+      (supabaseAdmin as any).from("whatsapp_settings").select("user_id, instance_name, connection_status, connected_number, last_connected_at, last_connection_error"),
+      (supabaseAdmin as any).auth.admin.listUsers({ page: 1, perPage: 200 }),
+    ]);
+
+    const live = isTenantEvolutionEnabled() ? await tenantListInstances().catch(() => []) : [];
+    const liveByInstance = new Map(live.map((i: any) => [i.instance, i]));
+    const settingsByUser = new Map((settings ?? []).map((s: any) => [s.user_id, s]));
+
+    const rows: AdminConnectionRow[] = (users?.data?.users ?? []).map((u: any) => {
+      let instance = "";
+      try {
+        instance = tenantInstanceName(u.id);
+      } catch {
+        instance = "";
+      }
+      const saved = settingsByUser.get(u.id) as any;
+      const found = liveByInstance.get(instance) as any;
+      return {
+        user_id: u.id,
+        email: u.email ?? u.id.slice(0, 8),
+        instance,
+        status: found?.state ?? saved?.connection_status ?? "none",
+        number: found?.number ?? saved?.connected_number ?? null,
+        last_connected_at: saved?.last_connected_at ?? null,
+        last_error: saved?.last_connection_error ?? null,
+      };
+    });
+    rows.sort((a, b) => a.email.localeCompare(b.email));
+    return { ok: true as const, rows };
+  });
+
+/** Desconecta ou recria a sessão de WhatsApp de um revendedor. */
+export const adminManageConnection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { userId: string; action: "logout" | "reset" }) => input)
+  .handler(async ({ data, context }) => {
+    if (!(await assertAdmin(context.claims))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
+    }
+    const { isTenantEvolutionEnabled, tenantDeleteInstance, tenantLogout } = await import("./evolution-tenant.server");
+    if (!isTenantEvolutionEnabled()) {
+      return { ok: false as const, error: "A conexão de WhatsApp ainda não está configurada no servidor." };
+    }
+    try {
+      if (data.action === "reset") await tenantDeleteInstance(data.userId);
+      else await tenantLogout(data.userId);
+      const { persistConnectionState } = await import("./whatsapp-presence.server");
+      await persistConnectionState(data.userId, { status: "close", number: null });
+      return { ok: true as const };
+    } catch (error) {
+      return { ok: false as const, error: error instanceof Error ? error.message : "Falha ao atualizar a conexão." };
+    }
+  });
