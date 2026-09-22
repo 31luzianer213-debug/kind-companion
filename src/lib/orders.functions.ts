@@ -23,6 +23,15 @@ export const approveOrder = createServerFn({ method: "POST" })
     return approveAndReleaseOrderServer(context.userId, data.orderId);
   });
 
+/** Reenvia no WhatsApp as credenciais de um pedido já aprovado */
+export const resendOrderAccess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { orderId: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { resendApprovedOrderServer } = await import("./orders.server");
+    return resendApprovedOrderServer(context.userId, data.orderId);
+  });
+
 /** Cancela um pedido */
 export const cancelOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
