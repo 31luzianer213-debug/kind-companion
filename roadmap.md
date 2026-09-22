@@ -10,6 +10,6 @@
 - [x] Refazer o painel (visão geral)
 - [x] Corrigir abertura do formulário de novo cliente vindo do painel
 - [x] Varredura de 18 telas internas sem erros de console e sem rolagem lateral
-- [ ] Confirmar entrega real do acesso pelo WhatsApp
-- [ ] Registrar tentativas de envio no histórico
-- [ ] Permitir reenvio de pedidos aprovados
+- [x] Confirmar entrega real do acesso pelo WhatsApp
+- [x] Registrar tentativas de envio no histórico
+- [x] Permitir reenvio de pedidos aprovados

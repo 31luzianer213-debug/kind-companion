@@ -3,6 +3,7 @@ import { generateM3uUrl, generateEpgUrl, extractCleanIptvDns } from "./format";
 import type { SigmaConfig } from "./sigma.panel";
 import { sendViaBaileys } from "./billing.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { onlyDigits } from "./phone";
 
 export type OrderItem = {
   id: string;
@@ -184,6 +185,8 @@ export async function approveAndReleaseOrderServer(
   username?: string;
   password?: string;
   m3uUrl?: string;
+  whatsappSent?: boolean;
+  whatsappWarning?: string;
 }> {
   const order = await getOrder(userId, orderId);
   if (!order) {
@@ -191,7 +194,7 @@ export async function approveAndReleaseOrderServer(
   }
 
   if (order.status === "approved") {
-    return { ok: true, message: "Este pedido já foi liberado anteriormente.", order };
+    return resendApprovedOrderServer(userId, orderId);
   }
 
 
@@ -285,6 +288,7 @@ export async function approveAndReleaseOrderServer(
 
   // 4. Cadastra ou atualiza na tabela `clients`
   let clientWarning = "";
+  let clientId: string | null = null;
   try {
     const { data: existingClient } = await supabaseAdmin
       .from("clients")
@@ -295,6 +299,7 @@ export async function approveAndReleaseOrderServer(
       .maybeSingle();
 
     if (existingClient?.id) {
+      clientId = existingClient.id;
       const { error: updErr } = await supabaseAdmin
         .from("clients")
         .update({
@@ -307,7 +312,7 @@ export async function approveAndReleaseOrderServer(
         .eq("id", existingClient.id);
       if (updErr) throw new Error(updErr.message);
     } else {
-      const { error: insErr } = await supabaseAdmin.from("clients").insert({
+      const { data: insertedClient, error: insErr } = await supabaseAdmin.from("clients").insert({
         user_id: userId,
         name: order.customer_name,
         phone: order.customer_phone,
@@ -319,8 +324,9 @@ export async function approveAndReleaseOrderServer(
         next_due_date: expiryIso,
         status: "active",
         notes: `M3U: ${m3uUrl}\nServidor: ${serverName}\nPedido #${order.order_number}`,
-      });
+      }).select("id").single();
       if (insErr) throw new Error(insErr.message);
+      clientId = insertedClient?.id ?? null;
     }
   } catch (dbErr) {
     clientWarning = dbErr instanceof Error ? dbErr.message : "erro desconhecido";
@@ -332,44 +338,53 @@ export async function approveAndReleaseOrderServer(
   let accessMessage = "";
   if (order.type === "renewal") {
     accessMessage =
-      `🎉 *ASSINATURA RENOVADA COM SUCESSO!* 🍿\n\n` +
-      `Olá, *${order.customer_name}*! Confirmamos o seu pagamento.\n\n` +
-      `📦 *Plano:* ${order.plan_name}\n` +
-      `🔑 *Usuário:* *${username}*\n` +
-      `📅 *Novo Vencimento:* ${expiryIso}\n` +
-      `📺 *Servidor:* ${serverName}\n` +
-      `🖥️ *Telas:* ${order.screens} Tela(s)\n\n` +
-      `🔗 *Sua Lista M3U Plus:*\n${m3uUrl}\n\n` +
-      `Muito obrigado pela preferência! Bom divertimento. 🍿`;
+      `Oi, ${order.customer_name}! Tudo bem?\n\n` +
+      `Seu pagamento foi confirmado e o acesso já está renovado.\n\n` +
+      `Plano: ${order.plan_name}\n` +
+      `Usuário: ${username}\n` +
+      `Novo vencimento: ${expiryIso}\n` +
+      `Servidor: ${serverName}\n\n` +
+      `Sua lista continua a mesma:\n${m3uUrl}\n\n` +
+      `Prontinho. Se precisar de ajuda, pode falar comigo por aqui.`;
   } else {
     accessMessage =
-      `🎉 *SEU ACESSO ESTÁ LIBERADO!* 🍿\n\n` +
-      `Olá, *${order.customer_name}*! Seja muito bem-vindo(a)!\n` +
-      `Confirmamos seu pedido *#${order.order_number}* (${order.plan_name}).\n\n` +
-      `📺 *Servidor:* ${serverName}\n` +
-      `🌐 *URL / DNS:* ${cleanDns}\n` +
-      `🔑 *Usuário:* *${username}*\n` +
-      `🔒 *Senha:* *${password}*\n` +
-      `🖥️ *Telas:* ${order.screens} Tela(s)\n` +
-      `📅 *Vencimento:* ${expiryIso}\n\n` +
-      `🔗 *Lista M3U Plus Completa:*\n${m3uUrl}\n\n` +
-      `📺 *Guia de Canais (EPG):*\n${epgUrl}\n\n` +
-      `📱 *Como Conectar:*\n` +
-      `• No IPTV Smarters Pro, XCIPTV ou TiviMate: use a opção *Xtream Codes API* com o Servidor, Usuário e Senha acima.\n` +
-      `• Em Smart TVs ou SS IPTV: adicione a *Lista M3U Plus* completa acima.\n\n` +
-      `Qualquer dúvida, estamos sempre à disposição aqui no WhatsApp! 🍿`;
+      `Oi, ${order.customer_name}! Seu acesso já está pronto.\n\n` +
+      `Servidor: ${serverName}\n` +
+      `URL: ${cleanDns}\n` +
+      `Usuário: ${username}\n` +
+      `Senha: ${password}\n` +
+      `Telas: ${order.screens || 1}\n` +
+      `Vencimento: ${expiryIso}\n\n` +
+      `Se preferir usar a lista M3U, é só copiar este link:\n${m3uUrl}\n\n` +
+      `Guia de canais:\n${epgUrl}\n\n` +
+      `Qualquer dúvida na hora de entrar, me chama por aqui que eu te ajudo.`;
   }
 
   let whatsappSent = false;
   let whatsappWarning = "";
-  try {
-    const sendResult: any = await sendViaBaileys(order.customer_phone, accessMessage, { userId });
-    whatsappSent = sendResult === undefined ? true : Boolean(sendResult?.ok ?? true);
-    if (!whatsappSent) whatsappWarning = sendResult?.error || "WhatsApp não conectado";
-  } catch (sendErr) {
-    whatsappWarning = sendErr instanceof Error ? sendErr.message : "falha ao enviar";
-    console.error("Aviso ao enviar mensagem de acesso via WhatsApp:", sendErr);
+  const normalizedPhone = onlyDigits(order.customer_phone);
+  if (normalizedPhone.length < 10) {
+    whatsappWarning = "O cliente está sem um número de WhatsApp válido";
+  } else {
+    try {
+      const sendResult: any = await sendViaBaileys(order.customer_phone, accessMessage, { userId });
+      whatsappSent = sendResult === undefined ? true : Boolean(sendResult?.ok ?? true);
+      if (!whatsappSent) whatsappWarning = sendResult?.error || "WhatsApp não conectado";
+    } catch (sendErr) {
+      whatsappWarning = sendErr instanceof Error ? sendErr.message : "falha ao enviar";
+      console.error("Aviso ao enviar mensagem de acesso via WhatsApp:", sendErr);
+    }
   }
+
+  const { error: logError } = await supabaseAdmin.from("message_logs").insert({
+    user_id: userId,
+    client_id: clientId,
+    phone: order.customer_phone || "não informado",
+    body: accessMessage,
+    status: whatsappSent ? "sent" : "failed",
+    error: whatsappSent ? null : whatsappWarning,
+  });
+  if (logError) console.error("Falha ao registrar envio da liberação:", logError);
 
   // 6. Atualiza o status do pedido para 'approved'
   const approvedNotes = `${order.notes ? order.notes + " | " : ""}Liberado em ${new Date().toLocaleString()}`;
@@ -391,7 +406,96 @@ export async function approveAndReleaseOrderServer(
     username,
     password,
     m3uUrl,
+    whatsappSent,
+    whatsappWarning: whatsappSent ? undefined : whatsappWarning,
+  };
+}
 
+/** Reenvia as credenciais já salvas sem recriar ou renovar a linha no Sigma. */
+export async function resendApprovedOrderServer(
+  userId: string,
+  orderId: string,
+): Promise<{
+  ok: boolean;
+  message: string;
+  order?: OrderItem;
+  username?: string;
+  password?: string;
+  m3uUrl?: string;
+  whatsappSent?: boolean;
+  whatsappWarning?: string;
+}> {
+  const order = await getOrder(userId, orderId);
+  if (!order) return { ok: false, message: "Pedido não encontrado." };
+  if (order.status !== "approved") return { ok: false, message: "Libere o acesso antes de tentar reenviar." };
+
+  const { data: client } = await supabaseAdmin
+    .from("clients")
+    .select("id, iptv_username, iptv_password, next_due_date, notes")
+    .eq("user_id", userId)
+    .or(`iptv_username.eq.${order.target_username || "__sem_usuario__"},phone.eq.${order.customer_phone}`)
+    .limit(1)
+    .maybeSingle();
+
+  const username = client?.iptv_username || order.target_username || "";
+  const password = client?.iptv_password || "";
+  if (!username || !password) {
+    return { ok: false, message: "As credenciais deste acesso não estão salvas. Abra o cliente e confira usuário e senha." };
+  }
+
+  const { resolveSigmaPanel } = await import("./sigma-credentials.server");
+  const panel = await resolveSigmaPanel(supabaseAdmin, userId);
+  const cleanDns = extractCleanIptvDns(panel.streamingDns) || "";
+  if (!cleanDns) return { ok: false, message: "Informe o DNS de streaming em Sigma antes de reenviar." };
+
+  const m3uUrl = generateM3uUrl(cleanDns, username, password, "ts");
+  const dueDate = client?.next_due_date || "a combinar";
+  const serverName = panel.serverName || "Meu Servidor";
+  const accessMessage =
+    `Oi, ${order.customer_name}! Estou te enviando seus dados de acesso novamente.\n\n` +
+    `Servidor: ${serverName}\n` +
+    `URL: ${cleanDns}\n` +
+    `Usuário: ${username}\n` +
+    `Senha: ${password}\n` +
+    `Vencimento: ${dueDate}\n\n` +
+    `Lista M3U:\n${m3uUrl}\n\n` +
+    `Se tiver qualquer dificuldade para entrar, me chama aqui que eu te ajudo.`;
+
+  let whatsappSent = false;
+  let whatsappWarning = "";
+  if (onlyDigits(order.customer_phone).length < 10) {
+    whatsappWarning = "O cliente está sem um número de WhatsApp válido";
+  } else {
+    try {
+      const result: any = await sendViaBaileys(order.customer_phone, accessMessage, { userId });
+      whatsappSent = result === undefined ? true : Boolean(result?.ok ?? true);
+      if (!whatsappSent) whatsappWarning = result?.error || "WhatsApp não conectado";
+    } catch (error) {
+      whatsappWarning = error instanceof Error ? error.message : "falha ao enviar";
+    }
+  }
+
+  const { error: logError } = await supabaseAdmin.from("message_logs").insert({
+    user_id: userId,
+    client_id: client?.id ?? null,
+    phone: order.customer_phone || "não informado",
+    body: accessMessage,
+    status: whatsappSent ? "sent" : "failed",
+    error: whatsappSent ? null : whatsappWarning,
+  });
+  if (logError) console.error("Falha ao registrar reenvio do acesso:", logError);
+
+  return {
+    ok: whatsappSent,
+    message: whatsappSent
+      ? `Os dados do pedido #${order.order_number} foram reenviados no WhatsApp.`
+      : `Não foi possível reenviar no WhatsApp: ${whatsappWarning}.`,
+    order,
+    username,
+    password,
+    m3uUrl,
+    whatsappSent,
+    whatsappWarning: whatsappSent ? undefined : whatsappWarning,
   };
 }
 

@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   getOrdersList,
   approveOrder,
+  resendOrderAccess,
   cancelOrder,
   deleteOrder,
   bulkDeleteOrders,
@@ -67,6 +68,7 @@ function PedidosPage() {
   const queryClient = useQueryClient();
   const getOrdersFn = useServerFn(getOrdersList);
   const approveFn = useServerFn(approveOrder);
+  const resendFn = useServerFn(resendOrderAccess);
   const cancelFn = useServerFn(cancelOrder);
   const deleteFn = useServerFn(deleteOrder);
   const bulkDeleteFn = useServerFn(bulkDeleteOrders);
@@ -83,6 +85,8 @@ function PedidosPage() {
     password?: string | undefined;
     m3uUrl?: string | undefined;
     customerPhone: string;
+    whatsappSent?: boolean;
+    whatsappWarning?: string | undefined;
   } | null>(null);
 
   // Modal de Novo Pedido Manual
@@ -131,6 +135,8 @@ function PedidosPage() {
             password: res.password,
             m3uUrl: res.m3uUrl,
             customerPhone: res.order.customer_phone,
+            whatsappSent: res.whatsappSent,
+            whatsappWarning: res.whatsappWarning,
           });
           setCredentialsModalOpen(true);
         }
@@ -141,6 +147,27 @@ function PedidosPage() {
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Falha na aprovação.");
     },
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: async (orderId: string) => resendFn({ data: { orderId } }),
+    onSuccess: (res) => {
+      if (res.ok) toast.success(res.message);
+      else toast.error(res.message);
+      if (res.order && res.username) {
+        setReleasedCredentials({
+          orderNumber: res.order.order_number,
+          username: res.username,
+          password: res.password,
+          m3uUrl: res.m3uUrl,
+          customerPhone: res.order.customer_phone,
+          whatsappSent: res.whatsappSent,
+          whatsappWarning: res.whatsappWarning,
+        });
+        setCredentialsModalOpen(true);
+      }
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Falha ao reenviar o acesso."),
   });
 
   const cancelMutation = useMutation({
@@ -721,6 +748,7 @@ function PedidosPage() {
                                     orderNumber: order.order_number,
                                     username: order.target_username || "",
                                     customerPhone: order.customer_phone,
+                                    whatsappSent: undefined,
                                   });
                                   setCredentialsModalOpen(true);
                                 }}
@@ -730,6 +758,21 @@ function PedidosPage() {
                                 Ver Acessos
                               </Button>
                             )}
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => resendMutation.mutate(order.id)}
+                              disabled={resendMutation.isPending}
+                              className="gap-1.5 text-xs"
+                            >
+                              {resendMutation.isPending ? (
+                                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <MessageCircle className="h-3.5 w-3.5" />
+                              )}
+                              Reenviar acesso
+                            </Button>
 
                             <Button
                               size="sm"
@@ -878,10 +921,14 @@ function PedidosPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-white">
               <Sparkles className="h-5 w-5 text-white" />
-              Acesso Liberado com Sucesso!
+              {releasedCredentials?.whatsappSent === false ? "Acesso criado" : "Acesso liberado"}
             </DialogTitle>
             <DialogDescription>
-              A linha foi criada no Sigma e as credenciais foram enviadas no WhatsApp.
+              {releasedCredentials?.whatsappSent === true
+                ? "A linha foi criada e o WhatsApp confirmou o envio das credenciais."
+                : releasedCredentials?.whatsappSent === false
+                  ? `A linha foi criada, mas o WhatsApp não enviou: ${releasedCredentials.whatsappWarning || "verifique a conexão e tente reenviar"}.`
+                  : "Confira as credenciais salvas deste pedido."}
             </DialogDescription>
           </DialogHeader>
 
