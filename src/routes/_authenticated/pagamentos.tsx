@@ -40,10 +40,10 @@ import {
 export const Route = createFileRoute("/_authenticated/pagamentos")({
   head: () => ({
     meta: [
-      { title: "Formas de Pagamento — PIX & Gateways" },
+      { title: "Formas de Pagamento — Pix & Gateways" },
       {
         name: "description",
-        content: "Configure sua chave PIX, Mercado Pago e Asaas para recebimento e renovação automática no Sigma.",
+        content: "Configure sua chave Pix, Mercado Pago e Asaas para recebimento e renovação automática no Sigma.",
       },
     ],
   }),
@@ -178,7 +178,7 @@ function PagamentosPage() {
     if (!form.pix_key) return;
     navigator.clipboard.writeText(form.pix_key);
     setCopiedPix(true);
-    toast.info("Chave PIX copiada!");
+    toast.info("Chave Pix copiada!");
     setTimeout(() => setCopiedPix(false), 2000);
   }
 
@@ -236,7 +236,7 @@ function PagamentosPage() {
             Escolha seu método de recebimento:
           </Label>
           <div className="grid gap-3 sm:grid-cols-3">
-            {/* Opção 1: Chave PIX Direta (Manual) */}
+            {/* Opção 1: Chave Pix Direta (Manual) */}
             <div
               onClick={() => setForm({ ...form, payment_provider: "pix" })}
               className={`cursor-pointer rounded-xl p-4 border transition-all relative ${
@@ -248,7 +248,7 @@ function PagamentosPage() {
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2 font-bold text-sm text-foreground">
                   <QrCode className="size-4 text-emerald-500" />
-                  Chave PIX Direta
+                  Chave Pix Direta
                 </div>
                 {activeProvider === "pix" ? (
                   <CheckCircle2 className="size-5 text-primary" />
@@ -313,14 +313,14 @@ function PagamentosPage() {
                 )}
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Cobranças bancárias completas (PIX, Boleto e Cartão de Crédito) para empresas.
+                Cobranças bancárias completas (Pix, Boleto e Cartão de Crédito) para empresas.
               </p>
             </div>
           </div>
         </div>
 
         {/* -------------------------------------------------------------------------------- */}
-        {/* VISÃO CONDICIONAL 1: SOMENTE PIX DIRETO                                            */}
+        {/* VISÃO CONDICIONAL 1: SOMENTE Pix DIRETO                                            */}
         {/* -------------------------------------------------------------------------------- */}
         {activeProvider === "pix" && (
           <Card className="surface-card border-border/60 shadow-sm animate-in fade-in duration-200">
@@ -329,7 +329,7 @@ function PagamentosPage() {
                 <div>
                   <CardTitle className="text-base flex items-center gap-2 text-foreground">
                     <QrCode className="size-5 text-emerald-500" />
-                    Dados da sua Chave PIX
+                    Dados da sua Chave Pix
                   </CardTitle>
                   <CardDescription className="mt-1">
                     Preencha sua chave para que o robô envie diretamente aos clientes pelo WhatsApp.
@@ -364,7 +364,7 @@ function PagamentosPage() {
                 </div>
 
                 <div className="space-y-1.5 sm:col-span-2">
-                  <Label className="text-xs font-semibold">Chave PIX *</Label>
+                  <Label className="text-xs font-semibold">Chave Pix *</Label>
                   <div className="relative flex items-center">
                     <Input
                       type="text"
@@ -379,7 +379,7 @@ function PagamentosPage() {
                         type="button"
                         onClick={handleCopyPix}
                         className="absolute right-2.5 text-muted-foreground hover:text-foreground"
-                        title="Copiar Chave PIX"
+                        title="Copiar Chave Pix"
                       >
                         {copiedPix ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
                       </button>
@@ -413,7 +413,7 @@ function PagamentosPage() {
                     className="rounded-xl text-sm font-mono"
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    Caso queira enviar um link direto do seu banco além da chave PIX.
+                    Caso queira enviar um link direto do seu banco além da chave Pix.
                   </p>
                 </div>
               </div>
@@ -427,7 +427,7 @@ function PagamentosPage() {
                       Como os clientes verão no WhatsApp:
                     </span>
                     <p className="font-mono text-muted-foreground text-[11px]">
-                      PIX ({form.pix_key_type?.toUpperCase()}): <strong className="text-foreground">{form.pix_key}</strong>
+                      Pix ({form.pix_key_type?.toUpperCase()}): <strong className="text-foreground">{form.pix_key}</strong>
                       {form.pix_holder ? ` • Titular: ${form.pix_holder}` : ""}
                     </p>
                   </div>

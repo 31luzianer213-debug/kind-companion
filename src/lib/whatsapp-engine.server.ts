@@ -10,7 +10,7 @@ import { sendWhatsAppMedia, sendWhatsAppText } from "./whatsapp-connection.serve
 import { instanceNameFor } from "./evolution.server";
 import { parseEvolutionMessages } from "./whatsapp-event.server";
 
-const PIX_MEDIA_ACTIONS = new Set([
+const Pix_MEDIA_ACTIONS = new Set([
   "order_created_mp",
   "order_created_manual",
   "renew_pix_mp_sent",
@@ -242,10 +242,10 @@ export async function processIncomingWhatsAppEvent(
 
     await recordMessage({ userId, phone: message.phone, body: reply, status: "sent" });
 
-    if (result.media?.base64 && PIX_MEDIA_ACTIONS.has(result.action)) {
+    if (result.media?.base64 && Pix_MEDIA_ACTIONS.has(result.action)) {
       const media = {
         base64: result.media.base64,
-        caption: result.media.caption || "QR Code PIX",
+        caption: result.media.caption || "QR Code Pix",
         mimetype: "image/png",
         fileName: "qrcode-pix.png",
       };

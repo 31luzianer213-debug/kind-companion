@@ -138,7 +138,7 @@ export const savePaymentSettings = createServerFn({ method: "POST" })
       dbSaved = false;
     }
 
-    // Se falhou por colunas faltantes, tenta salvar ao menos as colunas básicas de PIX
+    // Se falhou por colunas faltantes, tenta salvar ao menos as colunas básicas de Pix
     if (!dbSaved) {
       try {
         await supabase
@@ -245,7 +245,7 @@ export const testMercadoPagoConnection = createServerFn({ method: "POST" })
         return {
           ok: true as const,
           name: "Credencial Mercado Pago Ativa",
-          email: "Autorizada para Pagamentos e PIX",
+          email: "Autorizada para Pagamentos e Pix",
           error: null,
         };
       }

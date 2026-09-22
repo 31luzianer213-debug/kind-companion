@@ -41,9 +41,9 @@ type MessageTemplates = {
 
 const defaults: MessageTemplates = {
   message_template:
-    "Olá {nome}! Sua mensalidade de {valor} vence em {vencimento}. Para manter seu acesso ativo na {lista}, chave PIX: {pix} ({titular}). Qualquer dúvida estamos à disposição! 😊",
+    "Olá {nome}! Sua mensalidade de {valor} vence em {vencimento}. Para manter seu acesso ativo na {lista}, chave Pix: {pix} ({titular}). Qualquer dúvida estamos à disposição! 😊",
   overdue_template:
-    "Oi {nome}, sua mensalidade de {valor} venceu em {vencimento} ({dias} dias atrás). Para não perder o acesso à sua conta no {servidor}, pague pelo PIX {pix}. 🙏",
+    "Oi {nome}, sua mensalidade de {valor} venceu em {vencimento} ({dias} dias atrás). Para não perder o acesso à sua conta no {servidor}, pague pelo Pix {pix}. 🙏",
   welcome_template:
     "📡 *DADOS DE ACESSO IPTV* 📡\n\n👤 *Cliente:* {nome}\n📺 *Servidor:* {servidor}\n🌐 *URL / DNS:* {dns}\n🔑 *Usuário:* {usuario}\n🔒 *Senha:* {senha}\n🖥️ *Telas:* {telas}\n📅 *Vencimento:* {vencimento}\n\n🔗 *Lista M3U Plus:*\n{m3u}\n\n📺 *Guia de Canais (EPG):*\n{epg}\n\n📱 *Como Conectar:*\n• No IPTV Smarters Pro, XCIPTV ou TiviMate: use a opção *Xtream Codes API* com Servidor (ou URL), Usuário e Senha acima.\n• Em Smart TVs ou SS IPTV: use a *Lista M3U Plus* completa acima.\n\nBom divertimento! 🍿 Qualquer dúvida, estamos à disposição.",
 };

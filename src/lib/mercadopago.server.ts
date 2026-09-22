@@ -1,6 +1,6 @@
 /**
- * Serviço de Integração com Mercado Pago (PIX Dinâmico)
- * Cria cobranças PIX com QRCode Copia e Cola instantâneo e notificação via Webhook.
+ * Serviço de Integração com Mercado Pago (Pix Dinâmico)
+ * Cria cobranças Pix com QRCode Copia e Cola instantâneo e notificação via Webhook.
  */
 
 export interface CreateMercadoPagoPixInput {
@@ -77,8 +77,8 @@ export async function createMercadoPagoPixPayment(
     const data = await res.json();
 
     if (!res.ok) {
-      console.warn("Mercado Pago PIX error:", data);
-      const errMsg = data.message || data.error || (data.cause && data.cause[0]?.description) || "Erro ao gerar PIX no Mercado Pago.";
+      console.warn("Mercado Pago Pix error:", data);
+      const errMsg = data.message || data.error || (data.cause && data.cause[0]?.description) || "Erro ao gerar Pix no Mercado Pago.";
       return { ok: false, error: errMsg };
     }
 
@@ -96,7 +96,7 @@ export async function createMercadoPagoPixPayment(
       ticketUrl,
     };
   } catch (err) {
-    console.error("Exceção ao criar PIX Mercado Pago:", err);
+    console.error("Exceção ao criar Pix Mercado Pago:", err);
     return {
       ok: false,
       error: err instanceof Error ? err.message : "Falha na conexão com Mercado Pago.",

@@ -289,7 +289,7 @@ function PedidosPage() {
             </Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Acompanhe pedidos gerados pelo Bot WhatsApp e Loja. Você pode aprovar e liberar acessos no Sigma e WhatsApp a qualquer momento (mesmo antes do cliente pagar o PIX).
+            Acompanhe pedidos gerados pelo Bot WhatsApp e Loja. Você pode aprovar e liberar acessos no Sigma e WhatsApp a qualquer momento (mesmo antes do cliente pagar o Pix).
           </p>
         </div>
 
@@ -321,7 +321,7 @@ function PedidosPage() {
         <Card className="surface-card hover-lift">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Aguardando PIX (Pendentes)
+              Aguardando Pix (Pendentes)
             </CardTitle>
             <div className="relative">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/25">
@@ -378,7 +378,7 @@ function PedidosPage() {
               R$ {totalApprovedRevenue.toFixed(2).replace(".", ",")}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Total faturado via PIX
+              Total faturado via Pix
             </p>
           </CardContent>
         </Card>
@@ -580,7 +580,7 @@ function PedidosPage() {
                           {/* Status Badge */}
                           {isPending && (
                             <Badge variant="warning" className="text-[10px] font-bold">
-                              ⏳ Aguardando PIX
+                              ⏳ Aguardando Pix
                             </Badge>
                           )}
                           {isApproved && (
@@ -659,7 +659,7 @@ function PedidosPage() {
                             variant="outline"
                             className="border-border text-foreground bg-muted/40 text-[9px] font-bold"
                           >
-                            {isMercadoPago ? "⚡ Mercado Pago" : "📋 PIX Manual"}
+                            {isMercadoPago ? "⚡ Mercado Pago" : "📋 Pix Manual"}
                           </Badge>
                         </div>
                       </div>
@@ -672,12 +672,12 @@ function PedidosPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => copyToClipboard(order.pix_code!, "Código PIX Copia e Cola")}
+                                onClick={() => copyToClipboard(order.pix_code!, "Código Pix Copia e Cola")}
                                 className="gap-1 text-xs border-border text-foreground hover:border-primary/40 hover:text-primary"
-                                title="Copiar código PIX para testar ou enviar"
+                                title="Copiar código Pix para testar ou enviar"
                               >
                                 <Copy className="h-3.5 w-3.5" />
-                                Copiar PIX
+                                Copiar Pix
                               </Button>
                             )}
 
@@ -786,7 +786,7 @@ function PedidosPage() {
               Liberar Acesso do Pedido #{selectedOrder?.order_number}
             </DialogTitle>
             <DialogDescription>
-              Você pode liberar o acesso imediatamente (mesmo antes do cliente pagar o PIX).
+              Você pode liberar o acesso imediatamente (mesmo antes do cliente pagar o Pix).
             </DialogDescription>
           </DialogHeader>
 
@@ -810,21 +810,21 @@ function PedidosPage() {
                   <span className="min-w-0 break-words text-right font-bold text-white">{selectedOrder.plan_name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Valor PIX:</span>
+                  <span className="text-muted-foreground">Valor Pix:</span>
                   <span className="font-bold text-white">
                     R$ {Number(selectedOrder.amount).toFixed(2).replace(".", ",")}
                   </span>
                 </div>
                 {selectedOrder.pix_code && (
                   <div className="pt-2 border-t border-border/40 flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">PIX Copia e Cola:</span>
+                    <span className="text-xs text-muted-foreground">Pix Copia e Cola:</span>
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => copyToClipboard(selectedOrder.pix_code!, "Código PIX Copia e Cola")}
+                      onClick={() => copyToClipboard(selectedOrder.pix_code!, "Código Pix Copia e Cola")}
                       className="h-7 text-xs gap-1 text-white hover:bg-white/10"
                     >
-                      <Copy className="h-3 w-3" /> Copiar Código PIX
+                      <Copy className="h-3 w-3" /> Copiar Código Pix
                     </Button>
                   </div>
                 )}
