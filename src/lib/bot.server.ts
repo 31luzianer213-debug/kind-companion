@@ -80,30 +80,25 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
   testPackageName: "Teste grátis",
   blockRepeatDays: 7,
   menuGreeting:
-    "👋 Olá! Seja muito bem-vindo(a) à *{empresa}*! 🍿\n" +
-    "Eu sou o assistente virtual do *{servidor}* e estou aqui para te atender 24h por dia.\n\n" +
-    "Como posso te ajudar hoje? Digite o *número* da opção desejada:\n\n" +
-    "1️⃣ *Gerar Teste Grátis* (Acesso Imediato)\n" +
-    "2️⃣ *Renovar Minha Assinatura* (Pix Automático)\n" +
-    "3️⃣ *Comprar Novo Acesso / Planos*\n" +
-    "4️⃣ *Baixar Aplicativos* (Celular, TV Box, PC, iOS) 📲\n" +
-    "5️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n" +
-    "6️⃣ *Falar com Atendente Humano*\n\n" +
-    "_Responda com 1, 2, 3, 4, 5 ou 6._",
+    "Oi! Tudo bem? 😊 Aqui é da {empresa}.\n\n" +
+    "Me diz o que você precisa que eu já resolvo por aqui:\n\n" +
+    "• teste grátis\n" +
+    "• renovar\n" +
+    "• planos e valores\n" +
+    "• aplicativos\n" +
+    "• meus dados de acesso\n" +
+    "• falar comigo sobre outra coisa\n\n" +
+    "Pode escrever do seu jeito que eu entendo.",
   plansText:
-    "🛒 *PLANOS E ASSINATURAS DISPONÍVEIS* 🍿\n\n" +
-    "📺 *1 Mês (1 Tela):* R$ 35,00\n" +
-    "📺 *3 Meses (Trimestral):* R$ 90,00 (Mais econômico!)\n" +
-    "📺 *6 Meses (Semestral):* R$ 160,00\n" +
-    "📺 *12 Meses (Anual):* R$ 290,00 (Melhor custo-benefício!)\n\n" +
-    "⭐ *Todos os planos incluem:*\n" +
-    "• Mais de 80.000 conteúdos (Canais 4K/FHD, Filmes e Séries atualizados)\n" +
-    "• Guia de Canais completo (EPG)\n" +
-    "• Funciona em TV Box, Smart TV, Celular, Computador e Tablet.",
+    "Claro! Deixa eu te passar os valores:\n\n" +
+    "• 1 mês — R$ 35,00\n" +
+    "• 3 meses — R$ 90,00\n" +
+    "• 6 meses — R$ 160,00 (o pessoal costuma pegar esse)\n" +
+    "• 12 meses — R$ 290,00 (sai bem mais em conta)\n\n" +
+    "Em todos vem canais em 4K e Full HD, filmes e séries sempre atualizados, guia de programação e funciona na TV Box, Smart TV, celular, computador e tablet.",
   supportMessage:
-    "👨‍💼 *ATENDIMENTO HUMANO*\n\n" +
-    "Sua solicitação foi recebida! Um de nossos atendentes irá te responder diretamente aqui em instantes.\n" +
-    "Por favor, deixe sua dúvida ou mensagem abaixo para agilizar seu atendimento. 👇",
+    "Beleza, já te chamo aqui na conversa 🙂\n\n" +
+    "Me conta com suas palavras o que aconteceu que eu te respondo assim que ver a mensagem.",
   planMonthlyPrice: 35.0,
   planQuarterlyPrice: 90.0,
   planSemiannualPrice: 160.0,
@@ -137,16 +132,12 @@ export function generateDefaultPlansText(params: {
   const srv = params.serverName || "Meu Servidor";
 
   return (
-    `🛒 *PLANOS E ASSINATURAS ${srv.toUpperCase()}* 🍿\n\n` +
-    `📺 *1 Mês (Mensal):* R$ ${m}\n` +
-    `📺 *3 Meses (Trimestral):* R$ ${q} (Econômico!)\n` +
-    `📺 *6 Meses (Semestral):* R$ ${s} (Mais Vendido! 🔥)\n` +
-    `📺 *12 Meses (Anual):* R$ ${a} (Super Desconto ⭐)\n\n` +
-    `⭐ *Todos os planos incluem:*\n` +
-    `• Mais de 80.000 conteúdos (Canais 4K/FHD, Filmes e Séries atualizados)\n` +
-    `• Guia de Canais completo (EPG)\n` +
-    `• Compatível com TV Box, Smart TV, Celular, Computador e Tablet\n` +
-    `• Ativação Imediata via Pix Automático!`
+    `Claro! Os valores aqui do ${srv} são esses:\n\n` +
+    `• 1 mês — R$ ${m}\n` +
+    `• 3 meses — R$ ${q}\n` +
+    `• 6 meses — R$ ${s} (o mais pedido)\n` +
+    `• 12 meses — R$ ${a} (sai bem mais barato)\n\n` +
+    `Em todos vem canais em 4K e Full HD, filmes e séries atualizados, guia de programação e funciona na TV Box, Smart TV, celular, computador e tablet. O acesso é liberado assim que o Pix cai.`
   );
 }
 
@@ -159,24 +150,13 @@ export function generateAppsMessage(config: BotConfigData, serverName: string): 
   const smartTv = config.appSmartTvText || DEFAULT_BOT_CONFIG.appSmartTvText;
 
   return (
-    `📲 *APLICATIVOS OFICIAIS — ${serverName.toUpperCase()}* 🍿\n\n` +
-    `Escolha o aplicativo compatível com seu aparelho e siga as instruções de instalação:\n\n` +
-    `🤖 *TV BOX / ANDROID TV / FIRESTICK:*\n` +
-    `• No aplicativo *Downloader* da TV, digite o código rápido: *${code}*\n` +
-    `• Instale o APK Android disponibilizado no painel.\n\n` +
-    `📱 *CELULAR & TABLET ANDROID:*\n` +
-    `• Baixe o APK Android pelo link configurado no painel.\n\n` +
-    `🍏 *IPHONE / IPAD / APPLE TV (iOS):*\n` +
-    `• Use o aplicativo indicado para iPhone/iPad conforme o link configurado.\n\n` +
-    `💻 *COMPUTADOR & NOTEBOOK (WINDOWS):*\n` +
-    `• Baixe o aplicativo para Windows pelo link configurado no painel.\n\n` +
-    `📺 *SMART TV (SAMSUNG / LG / ROKU):*\n` +
+    `Sobre os aplicativos, vai depender do aparelho que você usa:\n\n` +
+    `Na TV Box, Android TV ou Fire Stick: abre o app Downloader e digita o código ${code}.\n` +
+    `No celular ou tablet Android: é só instalar o APK que eu te mando.\n` +
+    `No iPhone, iPad ou Apple TV: uso o app indicado pra iOS, te passo o link.\n` +
+    `No computador com Windows: tem a versão pra PC também.\n` +
     `${smartTv}\n\n` +
-    `━━━━━━━━━━━━━━━━━━━\n` +
-    `🔑 *Como Conectar:*\n` +
-    `Após instalar, abra o app e entre com seus dados (Usuário, Senha e URL/DNS do servidor).\n\n` +
-    `_Precisa dos seus dados de acesso? Digite *5*._\n` +
-    `_Dúvidas na instalação? Digite *6* para falar com o suporte._`
+    `Depois de instalar, abre o app e coloca seu usuário, senha e o endereço do servidor. Se travar em algum passo me fala que eu te ajudo.`
   );
 }
 
