@@ -1540,16 +1540,25 @@ export async function createSigmaCustomer(
         };
       }
 
+      // Guarda a lista completa de erros de validação para facilitar o diagnóstico
+      let details = "";
+      const errs = result.payload?.errors;
+      if (errs && typeof errs === "object") {
+        details = Object.entries(errs)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(", ") : String(msgs)}`)
+          .join(" | ");
+      }
       const errorMsg =
+        details ||
         result.payload?.message ||
         result.payload?.error ||
         result.payload?.msg ||
-        result.text?.slice(0, 80);
+        result.text?.slice(0, 120);
       attempts.push(`${endpoint} (${result.status}): ${errorMsg || "falha"}`);
     }
   }
 
-  const sample = attempts.slice(0, 3).join(" • ");
+  const sample = attempts.slice(0, 4).join(" • ");
   throw new Error(`Falha ao criar cliente no painel Sigma. Respostas: ${sample}`);
 }
 
