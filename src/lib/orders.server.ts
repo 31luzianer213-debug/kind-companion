@@ -206,12 +206,15 @@ export async function approveAndReleaseOrderServer(
     wsRow = data;
   } catch {}
 
-  const panelUrl = wsRow?.sigma_url?.trim() || "";
-  const panelToken = wsRow?.sigma_token || null;
-  const panelUser = wsRow?.sigma_username || "";
-  const panelPass = wsRow?.sigma_password || "";
-  const serverName = wsRow?.sigma_server_name?.trim() || wsRow?.business_name || "Meu Servidor";
-  const streamingDns = wsRow?.sigma_streaming_dns?.trim() || "";
+  const { resolveSigmaPanel } = await import("./sigma-credentials.server");
+  const panel = await resolveSigmaPanel(supabaseAdmin, userId);
+
+  const panelUrl = panel.url;
+  const panelToken = panel.token;
+  const panelUser = panel.username;
+  const panelPass = panel.password;
+  const serverName = panel.serverName || wsRow?.business_name || "Meu Servidor";
+  const streamingDns = panel.streamingDns;
   const cleanDns = extractCleanIptvDns(streamingDns) || "";
 
   if (!panelUrl || !(panelToken || (panelUser && panelPass))) {
