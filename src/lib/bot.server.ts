@@ -1698,39 +1698,39 @@ export async function processBotMessage(
     text.includes("firestick") ||
     text.includes("downloader")
   ) {
-    const appsReply = generateAppsMessage(config, serverName);
-    const apkUrl = config.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
-    const iosUrl = config.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509";
-    const winUrl = config.appWindowsLink || "https://www.iptvsmarters.com/download?download=windows";
+    const appsReply = generateAppsMessage(config);
+    const apkUrl = (config.appAndroidApk || "").trim();
+    const iosUrl = (config.appIosLink || "").trim();
+    const winUrl = (config.appWindowsLink || "").trim();
+
+    if (!appsReply) {
+      return {
+        reply:
+          `Sobre o aplicativo, deixa eu confirmar direitinho qual é o certo pro seu aparelho e já te mando aqui 🙂\n\n` +
+          `Me diz qual você usa: TV Box, Smart TV, celular Android, iPhone ou computador?`,
+        action: "apps_not_configured",
+      };
+    }
+
+    const urlButtons = [
+      apkUrl ? { id: "btn_download_apk", displayText: "Android", type: "url" as const, url: apkUrl } : null,
+      iosUrl ? { id: "btn_download_ios", displayText: "iPhone / iPad", type: "url" as const, url: iosUrl } : null,
+      winUrl ? { id: "btn_download_pc", displayText: "Computador", type: "url" as const, url: winUrl } : null,
+    ].filter(Boolean) as any[];
+
+    if (urlButtons.length === 0) {
+      return { reply: appsReply, action: "apps_links_sent" };
+    }
 
     return {
       reply: appsReply,
       action: "apps_links_sent",
       interactive: {
         type: "buttons",
-        title: "📲 Aplicativos de Streaming",
-        description: "Toque nos botões abaixo para baixar direto no seu dispositivo:",
-        footer: `${serverName} • Suporte 24h`,
-        buttons: [
-          {
-            id: "btn_download_apk",
-            displayText: "🤖 Baixar APK Android",
-            type: "url",
-            url: apkUrl,
-          },
-          {
-            id: "btn_download_ios",
-            displayText: "🍏 App iPhone / iPad",
-            type: "url",
-            url: iosUrl,
-          },
-          {
-            id: "btn_download_pc",
-            displayText: "💻 App Windows (PC)",
-            type: "url",
-            url: winUrl,
-          },
-        ],
+        title: "Aplicativos",
+        description: "Toque no aparelho que você usa:",
+        footer: serverName,
+        buttons: urlButtons,
       },
     };
   }
