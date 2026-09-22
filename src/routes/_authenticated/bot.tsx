@@ -755,10 +755,10 @@ function BotPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
                     <CardTitle className="text-base flex items-center gap-2 text-foreground font-bold">
-                      <Download className="size-5 text-sky-400" /> Links dos Aplicativos para Baixar (Opção 4)
+                      <Download className="size-5 text-sky-400" /> Seus Aplicativos
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Enviado automaticamente quando o cliente digita <strong>4</strong>, clica em "Baixar Apps" ou pergunta sobre aplicativos.
+                      Preencha só os aplicativos que você usa. O robô envia apenas o que estiver aqui — nada vem preenchido por padrão.
                     </CardDescription>
                   </div>
                   <Button
