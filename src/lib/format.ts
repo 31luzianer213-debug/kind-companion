@@ -282,8 +282,8 @@ export function formatCredentialsMessage(params: {
   }
 
   msg += `📱 *Como Conectar:*\n` +
-    `• No IPTV Smarters Pro, XCIPTV ou TiviMate: use a opção *Xtream Codes API* com o Servidor (ou URL), Usuário e Senha.\n` +
-    `• Em Smart TVs ou SS IPTV: adicione a *Lista M3U Plus* completa acima.\n\n` +
+    `• No seu aplicativo de IPTV: use a opção *Xtream Codes API* com o Servidor (ou URL), Usuário e Senha.\n` +
+    `• Se o app pedir lista: adicione a *Lista M3U Plus* completa acima.\n\n` +
     `Bom divertimento! 🍿 Qualquer dúvida, estamos à disposição.`;
 
   if (params.appLinksText) {
