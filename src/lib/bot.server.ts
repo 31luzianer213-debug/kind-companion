@@ -228,10 +228,12 @@ function writeLocalConfig(userId: string | undefined, data: BotConfigData): void
 export async function loadBotConfig(supabase: any, userId: string): Promise<BotConfigData> {
   const uid = userId || "default";
 
-  // 1. Cache em memória de curta duração (30s) para resposta instantânea
+  // 1. Cache em memória bem curto (5s). Se o cache disser que o robô está
+  //    desligado, sempre reconsulta o banco para que ligar no painel valha na hora.
   const cachedAt = botConfigCacheAt.get(uid) || 0;
-  if (botConfigCache.has(uid) && Date.now() - cachedAt < 30_000) {
-    return botConfigCache.get(uid)!;
+  const cached = botConfigCache.get(uid);
+  if (cached && cached.enabled && Date.now() - cachedAt < 5_000) {
+    return cached;
   }
 
 
