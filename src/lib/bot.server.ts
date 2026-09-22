@@ -505,15 +505,27 @@ export async function createTrialForBot(
   const expiryDate = new Date(Date.now() + hours * 60 * 60 * 1000);
   const expiryIso = expiryDate.toISOString().slice(0, 10);
 
-  // 4. O teste só existe se houver um painel Sigma configurado e a criação der certo
+  // 4. O teste só existe com painel Sigma configurado E endereço do servidor definido
   const hasPanel = Boolean(panelUrl && (panelToken || (panelUser && panelPass)));
-  if (!hasPanel) {
+  const hasDns = Boolean(extractCleanIptvDns(streamingDns));
+  if (!hasPanel || !hasDns) {
+    const motivo = !hasPanel
+      ? "Nenhum servidor/painel está conectado na conta."
+      : "O endereço (DNS) do servidor não está preenchido nas configurações.";
+    try {
+      await supabase.from("message_logs").insert({
+        user_id: userId,
+        phone: cleanPhone,
+        body: "Pedido de teste grátis recusado pelo robô.",
+        status: "failed",
+        error: motivo,
+      });
+    } catch {}
     return {
       ok: false,
       error:
-        `😕 *Teste indisponível no momento*\n\n` +
-        `Nosso sistema de testes está temporariamente fora do ar.\n` +
-        `Fale com o atendimento ou digite *3* para ver os planos.`,
+        `Poxa, agora não consigo liberar teste 😕\n\n` +
+        `Vou chamar o atendimento pra te responder rapidinho. Se preferir, posso te passar os valores.`,
     };
   }
 
