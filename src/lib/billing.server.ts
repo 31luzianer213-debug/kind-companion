@@ -273,7 +273,12 @@ function iso(date: Date) {
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export async function runBillingForUser(supabase: SupabaseClient<any>, userId: string) {
+export async function runBillingForUser(
+  supabase: SupabaseClient<any>,
+  userId: string,
+  options?: { sendReminders?: boolean },
+) {
+  const sendReminders = options?.sendReminders !== false;
   const today = new Date();
   const todayIso = iso(today);
 
