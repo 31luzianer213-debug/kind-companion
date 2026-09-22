@@ -84,7 +84,7 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
     "Eu sou o assistente virtual do *{servidor}* e estou aqui para te atender 24h por dia.\n\n" +
     "Como posso te ajudar hoje? Digite o *número* da opção desejada:\n\n" +
     "1️⃣ *Gerar Teste Grátis* (Acesso Imediato)\n" +
-    "2️⃣ *Renovar Minha Assinatura* (PIX Automático)\n" +
+    "2️⃣ *Renovar Minha Assinatura* (Pix Automático)\n" +
     "3️⃣ *Comprar Novo Acesso / Planos*\n" +
     "4️⃣ *Baixar Aplicativos* (Celular, TV Box, PC, iOS) 📲\n" +
     "5️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n" +
@@ -146,7 +146,7 @@ export function generateDefaultPlansText(params: {
     `• Mais de 80.000 conteúdos (Canais 4K/FHD, Filmes e Séries atualizados)\n` +
     `• Guia de Canais completo (EPG)\n` +
     `• Compatível com TV Box, Smart TV, Celular, Computador e Tablet\n` +
-    `• Ativação Imediata via PIX Automático!`
+    `• Ativação Imediata via Pix Automático!`
   );
 }
 
@@ -628,7 +628,7 @@ type ConversationSession = {
 const conversationSessions = new Map<string, ConversationSession>();
 
 /**
- * Cria pedido para o plano escolhido e formata a resposta com PIX Copia e Cola (Mercado Pago) ou Chave Manual
+ * Cria pedido para o plano escolhido e formata a resposta com Pix Copia e Cola (Mercado Pago) ou Chave Manual
  */
 async function handlePlanOrderCreation({
   userId,
@@ -679,7 +679,7 @@ async function handlePlanOrderCreation({
   let mpPixResult: any = null;
 
   if (mpToken) {
-    console.log(`[Bot Plan] ⚡ Gerando PIX Mercado Pago para ${cleanPhone} (R$ ${amount.toFixed(2)})...`);
+    console.log(`[Bot Plan] ⚡ Gerando Pix Mercado Pago para ${cleanPhone} (R$ ${amount.toFixed(2)})...`);
     mpPixResult = await createMercadoPagoPixPayment({
       token: mpToken,
       amount,
@@ -690,7 +690,7 @@ async function handlePlanOrderCreation({
     });
 
     if (mpPixResult.ok && mpPixResult.qrCode) {
-      console.log(`[Bot Plan] ✅ PIX gerado com sucesso para Pedido #${order.order_number}!`);
+      console.log(`[Bot Plan] ✅ Pix gerado com sucesso para Pedido #${order.order_number}!`);
       order.pix_code = mpPixResult.qrCode;
       order.gateway_payment_id = mpPixResult.paymentId;
       order.payment_method = "mercadopago_pix";
@@ -698,7 +698,7 @@ async function handlePlanOrderCreation({
         pix_code: mpPixResult.qrCode,
         gateway_payment_id: mpPixResult.paymentId,
         payment_method: "mercadopago_pix",
-      }).catch((e) => console.warn("[Bot] falha ao salvar PIX no pedido:", e));
+      }).catch((e) => console.warn("[Bot] falha ao salvar Pix no pedido:", e));
     } else {
       console.warn(`[Bot Plan] ⚠️ Falha na API do Mercado Pago: ${mpPixResult?.error}`);
     }
@@ -707,16 +707,16 @@ async function handlePlanOrderCreation({
   }
 
   if (mpPixResult?.ok && mpPixResult?.qrCode) {
-    // MODO AUTOMÁTICO MERCADO PAGO COM PIX COPIA E COLA & QR CODE FOTO
+    // MODO AUTOMÁTICO MERCADO PAGO COM Pix COPIA E COLA & QR CODE FOTO
     const reply =
       `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
       `📦 *Plano:* ${planName}\n` +
       `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-      `⚡ *Forma de Pagamento:* PIX Automático\n\n` +
+      `⚡ *Forma de Pagamento:* Pix Automático\n\n` +
       `👇 *COMO PAGAR:*\n` +
-      `1️⃣ Toque no botão *📋 Copiar Código PIX* abaixo.\n` +
+      `1️⃣ Toque no botão *📋 Copiar Código Pix* abaixo.\n` +
       `2️⃣ Abra o app do seu banco (Nubank, Inter, Caixa, Itaú, etc.).\n` +
-      `3️⃣ Vá na opção *PIX* > *PIX Copia e Cola* e pague.\n\n` +
+      `3️⃣ Vá na opção *Pix* > *Pix Copia e Cola* e pague.\n\n` +
       `✅ *Liberação 100% Automática!*\n` +
       `Assim que o banco confirmar, seus dados de acesso (usuário, senha e M3U) serão enviados aqui na conversa! 🚀`;
 
@@ -727,18 +727,18 @@ async function handlePlanOrderCreation({
         ? {
             type: "image",
             base64: mpPixResult.qrCodeBase64,
-            caption: `📱 *QR CODE PIX — PEDIDO #${order.order_number}*\n💰 Valor: R$ ${amount.toFixed(2).replace(".", ",")}\nAponte a câmera do aplicativo do seu banco para pagar!`,
+            caption: `📱 *QR CODE Pix — PEDIDO #${order.order_number}*\n💰 Valor: R$ ${amount.toFixed(2).replace(".", ",")}\nAponte a câmera do aplicativo do seu banco para pagar!`,
           }
         : undefined,
       interactive: {
         type: "buttons",
-        title: "💳 Pagamento PIX",
+        title: "💳 Pagamento Pix",
         description: reply,
         footer: `Pedido #${order.order_number} • Pagamento Seguro`,
         buttons: [
           {
             id: "btn_copy_pix",
-            displayText: "📋 Copiar Código PIX",
+            displayText: "📋 Copiar Código Pix",
             type: "copy",
             copyCode: mpPixResult.qrCode,
           },
@@ -748,33 +748,33 @@ async function handlePlanOrderCreation({
   }
 
   // MODO MANUAL (Sem Mercado Pago cadastrado ou falha de token)
-  const effectivePixKey = config.pixKey || wsRow?.pix_key || readLocalPaymentSettings(userId)?.pix_key || "Consulte nossa chave PIX com nosso suporte";
+  const effectivePixKey = config.pixKey || wsRow?.pix_key || readLocalPaymentSettings(userId)?.pix_key || "Consulte nossa chave Pix com nosso suporte";
   const effectivePixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
 
   const reply =
     `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
     `📦 *Plano:* ${planName}\n` +
     `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-    `💳 *Forma de Pagamento:* Transferência PIX\n\n` +
-    `🔑 *Chave PIX:* \`${effectivePixKey}\`\n` +
+    `💳 *Forma de Pagamento:* Transferência Pix\n\n` +
+    `🔑 *Chave Pix:* \`${effectivePixKey}\`\n` +
     `👤 *Titular:* ${effectivePixHolder}\n\n` +
     `📌 *Como Ativar Seu Acesso:*\n` +
-    `1️⃣ Toque no botão *📋 Copiar Chave PIX* abaixo.\n` +
+    `1️⃣ Toque no botão *📋 Copiar Chave Pix* abaixo.\n` +
     `2️⃣ Faça a transferência no valor de *R$ ${amount.toFixed(2).replace(".", ",")}*.\n` +
-    `3️⃣ *Envie o comprovante do PIX aqui nesta conversa* para liberação imediata! 🚀`;
+    `3️⃣ *Envie o comprovante do Pix aqui nesta conversa* para liberação imediata! 🚀`;
 
   return {
     reply,
     action: "order_created_manual",
     interactive: {
       type: "buttons",
-      title: "💳 Chave PIX (Manual)",
+      title: "💳 Chave Pix (Manual)",
       description: reply,
       footer: `Pedido #${order.order_number} • Titular: ${effectivePixHolder}`,
       buttons: [
         {
           id: "btn_copy_pix",
-          displayText: "📋 Copiar Chave PIX",
+          displayText: "📋 Copiar Chave Pix",
           type: "copy",
           copyCode: effectivePixKey,
         },
@@ -784,7 +784,7 @@ async function handlePlanOrderCreation({
 }
 
 /**
- * Cria pedido de RENOVAÇÃO e formata a resposta com PIX Copia e Cola (Mercado Pago) ou Chave Manual
+ * Cria pedido de RENOVAÇÃO e formata a resposta com Pix Copia e Cola (Mercado Pago) ou Chave Manual
  */
 async function handleRenewOrderCreation({
   userId,
@@ -830,7 +830,7 @@ async function handleRenewOrderCreation({
   let mpPixResult: any = null;
 
   if (mpToken) {
-    console.log(`[Bot Renew] ⚡ Gerando PIX Mercado Pago para renovação de ${targetUsername} (R$ ${amount.toFixed(2)})...`);
+    console.log(`[Bot Renew] ⚡ Gerando Pix Mercado Pago para renovação de ${targetUsername} (R$ ${amount.toFixed(2)})...`);
     mpPixResult = await createMercadoPagoPixPayment({
       token: mpToken,
       amount,
@@ -841,7 +841,7 @@ async function handleRenewOrderCreation({
     });
 
     if (mpPixResult.ok && mpPixResult.qrCode) {
-      console.log(`[Bot Renew] ✅ PIX gerado com sucesso para Renovação #${order.order_number}!`);
+      console.log(`[Bot Renew] ✅ Pix gerado com sucesso para Renovação #${order.order_number}!`);
       order.pix_code = mpPixResult.qrCode;
       order.gateway_payment_id = mpPixResult.paymentId;
       order.payment_method = "mercadopago_pix";
@@ -849,7 +849,7 @@ async function handleRenewOrderCreation({
         pix_code: mpPixResult.qrCode,
         gateway_payment_id: mpPixResult.paymentId,
         payment_method: "mercadopago_pix",
-      }).catch((e) => console.warn("[Bot] falha ao salvar PIX no pedido:", e));
+      }).catch((e) => console.warn("[Bot] falha ao salvar Pix no pedido:", e));
     } else {
       console.warn(`[Bot Renew] ⚠️ Falha na API do Mercado Pago: ${mpPixResult?.error}`);
     }
@@ -858,17 +858,17 @@ async function handleRenewOrderCreation({
   }
 
   if (mpPixResult?.ok && mpPixResult?.qrCode) {
-    // MODO AUTOMÁTICO MERCADO PAGO COM PIX COPIA E COLA & QR CODE FOTO
+    // MODO AUTOMÁTICO MERCADO PAGO COM Pix COPIA E COLA & QR CODE FOTO
     const reply =
-      `💳 *DADOS PARA PAGAMENTO PIX (RENOVAÇÃO)* 📺\n\n` +
+      `💳 *DADOS PARA PAGAMENTO Pix (RENOVAÇÃO)* 📺\n\n` +
       `✅ *Usuário a Renovar:* *${targetUsername}*\n` +
       (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
       `📺 *Servidor:* ${serverName}\n` +
       `💰 *Valor da Mensalidade:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-      `⚡ *Forma de Pagamento:* PIX Automático\n\n` +
+      `⚡ *Forma de Pagamento:* Pix Automático\n\n` +
       `👇 *COMO PAGAR:*\n` +
-      `1️⃣ Toque no botão *📋 Copiar Código PIX* abaixo.\n` +
-      `2️⃣ Abra o app do seu banco, vá em *PIX* > *PIX Copia e Cola* e pague.\n\n` +
+      `1️⃣ Toque no botão *📋 Copiar Código Pix* abaixo.\n` +
+      `2️⃣ Abra o app do seu banco, vá em *Pix* > *Pix Copia e Cola* e pague.\n\n` +
       `✅ *Renovação 100% Automática!*\n` +
       `Assim que o banco confirmar, seu acesso será reativado imediatamente! 🚀`;
 
@@ -879,18 +879,18 @@ async function handleRenewOrderCreation({
         ? {
             type: "image",
             base64: mpPixResult.qrCodeBase64,
-            caption: `📱 *QR CODE PIX — RENOVAÇÃO IPTV*\n👤 Usuário: ${targetUsername}\n💰 Valor: R$ ${amount.toFixed(2).replace(".", ",")}`,
+            caption: `📱 *QR CODE Pix — RENOVAÇÃO IPTV*\n👤 Usuário: ${targetUsername}\n💰 Valor: R$ ${amount.toFixed(2).replace(".", ",")}`,
           }
         : undefined,
       interactive: {
         type: "buttons",
-        title: "💳 Renovação PIX",
+        title: "💳 Renovação Pix",
         description: reply,
         footer: `Pedido #${order.order_number} • Pagamento Seguro`,
         buttons: [
           {
             id: "btn_copy_pix",
-            displayText: "📋 Copiar Código PIX",
+            displayText: "📋 Copiar Código Pix",
             type: "copy",
             copyCode: mpPixResult.qrCode,
           },
@@ -900,35 +900,35 @@ async function handleRenewOrderCreation({
   }
 
   // MODO MANUAL (Sem Mercado Pago cadastrado ou falha no token)
-  const effectivePixKey = config.pixKey || wsRow?.pix_key || readLocalPaymentSettings(userId)?.pix_key || "Consulte nossa chave PIX com nosso suporte";
+  const effectivePixKey = config.pixKey || wsRow?.pix_key || readLocalPaymentSettings(userId)?.pix_key || "Consulte nossa chave Pix com nosso suporte";
   const effectivePixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
 
   const reply =
-    `💳 *DADOS PARA PAGAMENTO PIX (RENOVAÇÃO)* 📺\n\n` +
+    `💳 *DADOS PARA PAGAMENTO Pix (RENOVAÇÃO)* 📺\n\n` +
     `✅ *Usuário a Renovar:* *${targetUsername}*\n` +
     (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
     `📺 *Servidor:* ${serverName}\n` +
     `💰 *Valor da Mensalidade:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-    `💳 *Forma de Pagamento:* Transferência PIX\n\n` +
-    `🔑 *Chave PIX:* \`${effectivePixKey}\`\n` +
+    `💳 *Forma de Pagamento:* Transferência Pix\n\n` +
+    `🔑 *Chave Pix:* \`${effectivePixKey}\`\n` +
     `👤 *Titular:* ${effectivePixHolder}\n\n` +
     `📌 *Como Confirmar Sua Renovação:*\n` +
-    `1️⃣ Toque no botão *📋 Copiar Chave PIX* abaixo.\n` +
-    `2️⃣ Faça o PIX no valor de *R$ ${amount.toFixed(2).replace(".", ",")}*.\n` +
-    `3️⃣ *Envie o comprovante do PIX aqui nesta conversa* para renovação imediata! 🚀`;
+    `1️⃣ Toque no botão *📋 Copiar Chave Pix* abaixo.\n` +
+    `2️⃣ Faça o Pix no valor de *R$ ${amount.toFixed(2).replace(".", ",")}*.\n` +
+    `3️⃣ *Envie o comprovante do Pix aqui nesta conversa* para renovação imediata! 🚀`;
 
   return {
     reply,
     action: "renew_pix_manual_sent",
     interactive: {
       type: "buttons",
-      title: "💳 Chave PIX (Renovação)",
+      title: "💳 Chave Pix (Renovação)",
       description: reply,
       footer: `Pedido #${order.order_number} • Titular: ${effectivePixHolder}`,
       buttons: [
         {
           id: "btn_copy_pix",
-          displayText: "📋 Copiar Chave PIX",
+          displayText: "📋 Copiar Chave Pix",
           type: "copy",
           copyCode: effectivePixKey,
         },
@@ -959,7 +959,7 @@ function buildMainMenu(config: BotConfigData, serverName: string): BotProcessRes
     `👋 *Olá! Seja muito bem-vindo(a) à ${config.businessName || "Central IPTV"}!* 🍿\n\n` +
     `Como podemos te ajudar? Digite apenas o *número* da opção:\n\n` +
     `1️⃣ *TESTE GRÁTIS* — Teste imediato de ${config.testDurationHours} horas\n` +
-    `2️⃣ *RENOVAÇÃO* — Renove seu acesso com PIX Automático\n` +
+    `2️⃣ *RENOVAÇÃO* — Renove seu acesso com Pix Automático\n` +
     `3️⃣ *PLANOS & PREÇOS* — Conheça nossos planos e valores\n` +
     `4️⃣ *BAIXAR APLICATIVOS* — Links oficiais Android, iOS, PC e TV\n` +
     `5️⃣ *MEUS DADOS* — Receber login, senha e lista M3U\n` +
@@ -987,7 +987,7 @@ function buildMainMenu(config: BotConfigData, serverName: string): BotProcessRes
             {
               rowId: "2",
               title: "2️⃣ Renovar Assinatura",
-              description: "Pagar via PIX com ativação imediata",
+              description: "Pagar via Pix com ativação imediata",
             },
             {
               rowId: "3",
@@ -1061,7 +1061,7 @@ export async function processBotMessage(
 
   const serverName = config.serverName || wsRow?.sigma_server_name?.trim() || config.businessName || "Meu Servidor";
   const streamingDns = config.streamingDns || wsRow?.sigma_streaming_dns?.trim() || "";
-  const pixKey = config.pixKey || wsRow?.pix_key || readLocalPaymentSettings(userId)?.pix_key || "Consulte nossa chave PIX";
+  const pixKey = config.pixKey || wsRow?.pix_key || readLocalPaymentSettings(userId)?.pix_key || "Consulte nossa chave Pix";
   const pixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
 
   // =========================================================================
@@ -1208,14 +1208,14 @@ export async function processBotMessage(
     }
 
     const pixCodeNotice = order.pix_code
-      ? `\n\n👇 *PIX Copia e Cola:*\n\`${order.pix_code}\``
+      ? `\n\n👇 *Pix Copia e Cola:*\n\`${order.pix_code}\``
       : "";
 
     const orderButtons: any[] = [];
     if (order.pix_code) {
       orderButtons.push({
         id: "btn_copy_pix",
-        displayText: "📋 Copiar Código PIX",
+        displayText: "📋 Copiar Código Pix",
         type: "copy",
         copyCode: order.pix_code,
       });
@@ -1233,13 +1233,13 @@ export async function processBotMessage(
         `📦 *Plano:* ${order.plan_name}\n` +
         `💰 *Valor:* R$ ${Number(order.amount).toFixed(2).replace(".", ",")}\n` +
         (order.payment_method === "mercadopago_pix"
-          ? `⚡ O Mercado Pago confirmará automaticamente assim que o PIX for concluído.${pixCodeNotice}\n\n_Toque no botão abaixo para copiar a chave PIX ou verificar o pagamento._`
-          : `💳 *Chave PIX:* \`${pixKey}\`\n👤 *Titular:* ${pixHolder}\n\nPor favor, envie o comprovante do PIX aqui para liberação pelo administrador!`),
+          ? `⚡ O Mercado Pago confirmará automaticamente assim que o Pix for concluído.${pixCodeNotice}\n\n_Toque no botão abaixo para copiar a chave Pix ou verificar o pagamento._`
+          : `💳 *Chave Pix:* \`${pixKey}\`\n👤 *Titular:* ${pixHolder}\n\nPor favor, envie o comprovante do Pix aqui para liberação pelo administrador!`),
       action: "order_status_checked",
       interactive: {
         type: "buttons",
         title: `Pedido #${order.order_number}`,
-        description: `Aguardando confirmação do PIX (R$ ${Number(order.amount).toFixed(2).replace(".", ",")}):`,
+        description: `Aguardando confirmação do Pix (R$ ${Number(order.amount).toFixed(2).replace(".", ",")}):`,
         footer: `${serverName} • Liberação Automática`,
         buttons: orderButtons,
       },
@@ -1615,7 +1615,7 @@ export async function processBotMessage(
           type: "buttons",
           title: "💳 Confirmar Renovação",
           description: `Renovar assinatura de ${c.name} (${c.iptv_username || c.name}) por ${fee}?`,
-          footer: `${serverName} • PIX Automático`,
+          footer: `${serverName} • Pix Automático`,
           buttons: [
             { id: "SIM", displayText: "✅ Sim, Renovar Agora", type: "reply" },
             { id: "0", displayText: "❌ Menu Principal", type: "reply" },
@@ -1699,7 +1699,7 @@ export async function processBotMessage(
     });
 
     const pixKey = config.pixKey || wsRow?.pix_key || "";
-    const pixBlock = pixKey ? `\n\n🔑 *Chave PIX:* \`${pixKey}\`` : "";
+    const pixBlock = pixKey ? `\n\n🔑 *Chave Pix:* \`${pixKey}\`` : "";
 
     const p1 = `R$ ${Number(config.planMonthlyPrice || 35).toFixed(2).replace(".", ",")}`;
     const p2 = `R$ ${Number(config.planQuarterlyPrice || 90).toFixed(2).replace(".", ",")}`;
@@ -1721,7 +1721,7 @@ export async function processBotMessage(
       interactive: {
         type: "list",
         title: "🍿 Nossos Planos IPTV",
-        description: "Selecione o plano desejado para gerar seu PIX Automático:",
+        description: "Selecione o plano desejado para gerar seu Pix Automático:",
         buttonText: "📋 Ver Planos e Assinar",
         footerText: `${serverName} • Liberação Imediata`,
         sections: [
@@ -2164,7 +2164,7 @@ export async function pollAndProcessWhatsAppMessages(userId?: string): Promise<{
           } catch {}
         }
 
-        // Envia mensagens adicionais (ex: código PIX copia e cola)
+        // Envia mensagens adicionais (ex: código Pix copia e cola)
         if (Array.isArray(botResult.extraMessages)) {
           for (const extra of botResult.extraMessages) {
             if (extra && extra.trim()) {
