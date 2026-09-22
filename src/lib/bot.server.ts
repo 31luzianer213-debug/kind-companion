@@ -63,6 +63,10 @@ export type BotConfigData = {
   appWebPlayerLink?: string;
   appSmartTvText?: string;
   appsCustomText?: string;
+  // IA de vendas
+  aiEnabled?: boolean;
+  aiAgentName?: string;
+  aiInstructions?: string;
 };
 
 export const DEFAULT_BOT_CONFIG: BotConfigData = {
