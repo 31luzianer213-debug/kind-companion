@@ -1,3 +1,6 @@
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { IndicatorsPanel } from "@/components/panels/IndicatorsPanel";
+import { ActivitiesPanel } from "@/components/panels/ActivitiesPanel";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -182,7 +185,7 @@ function EmptyState({ title, description }: { title: string; description: string
   );
 }
 
-function Painel() {
+function PainelOverview() {
   useSigmaAutoSync();
   const queryClient = useQueryClient();
   const billing = useServerFn(runAutoBilling);
@@ -815,6 +818,22 @@ function Painel() {
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function Painel() {
+  const [tab, setTab] = useState("visao");
+  return (
+    <div className="space-y-4">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="visao">Visão geral</TabsTrigger>
+          <TabsTrigger value="indicadores">Indicadores</TabsTrigger>
+          <TabsTrigger value="historico">Histórico</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {tab === "visao" ? <PainelOverview /> : tab === "indicadores" ? <IndicatorsPanel /> : <ActivitiesPanel />}
     </div>
   );
 }

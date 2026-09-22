@@ -1,3 +1,4 @@
+import { ClientOperationsPanel } from "@/components/panels/ClientOperationsPanel";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -264,7 +265,7 @@ function getRelativeDueInfo(dueDateStr: string | null) {
   };
 }
 
-function Clientes() {
+function ClientsRegistry() {
   const queryClient = useQueryClient();
   const send = useServerFn(sendWhatsAppMessage);
   const sendAccess = useServerFn(sendAccessDetails);
@@ -2441,6 +2442,21 @@ function Clientes() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function Clientes() {
+  const [tab, setTab] = useState("cadastro");
+  return (
+    <div className="space-y-4">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="cadastro">Cadastro</TabsTrigger>
+          <TabsTrigger value="operacao">Ações em massa</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {tab === "cadastro" ? <ClientsRegistry /> : <ClientOperationsPanel />}
     </div>
   );
 }
