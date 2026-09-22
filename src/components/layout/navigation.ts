@@ -18,18 +18,13 @@ import {
 
 export type AppRoute =
   | "/painel"
-  | "/indicadores"
   | "/pedidos"
   | "/clientes"
-  | "/clientes-operacao"
   | "/cobrancas"
-  | "/atividades"
   | "/cobranca-automatica"
   | "/sigma"
-  | "/sigma-sincronizacao"
   | "/bot"
   | "/whatsapp"
-  | "/whatsapp-diagnostico"
   | "/pagamentos"
   | "/mensagens"
   | "/assinatura"
@@ -55,19 +50,19 @@ export interface NavigationGroup {
 
 export const navigationGroups: NavigationGroup[] = [
   {
-    title: "Principal",
+    title: "Operação",
     items: [
       { to: "/painel", label: "Painel", shortLabel: "Início", icon: LayoutDashboard, mobilePrimary: true },
       { to: "/clientes", label: "Clientes", shortLabel: "Clientes", icon: Users, badgeKey: "clients", mobilePrimary: true },
       { to: "/pedidos", label: "Pedidos", shortLabel: "Pedidos", icon: ShoppingBag, badgeKey: "orders", mobilePrimary: true },
-      { to: "/cobrancas", label: "Cobranças", shortLabel: "Cobrar", icon: Receipt, badgeKey: "invoices", mobilePrimary: true },
+      { to: "/cobrancas", label: "Cobranças a receber", shortLabel: "Cobrar", icon: Receipt, badgeKey: "invoices", mobilePrimary: true },
     ],
   },
   {
     title: "Automação",
     items: [
       { to: "/bot", label: "Robô WhatsApp", shortLabel: "Robô", icon: Bot },
-      { to: "/cobranca-automatica", label: "Cobrança automática", shortLabel: "Automação", icon: Timer },
+      { to: "/cobranca-automatica", label: "Régua de cobrança", shortLabel: "Régua", icon: Timer },
       { to: "/mensagens", label: "Modelos de mensagem", shortLabel: "Mensagens", icon: MessageSquareText },
     ],
   },

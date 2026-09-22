@@ -501,7 +501,7 @@ function PainelOverview() {
           { label: "Clientes ativos", value: activeClients.length, tone: "text-emerald-600 dark:text-emerald-400", to: "/clientes" },
           { label: "Vencendo em 7 dias", value: clientHealth.due7, tone: "text-amber-600 dark:text-amber-400", to: "/clientes" },
           { label: "Vencidos", value: clientHealth.expired, tone: "text-rose-600 dark:text-rose-400", to: "/cobrancas" },
-          { label: "Inativos / bloqueados", value: clientHealth.inactive, tone: "text-muted-foreground", to: "/clientes-operacao" },
+          { label: "Inativos / bloqueados", value: clientHealth.inactive, tone: "text-muted-foreground", to: "/clientes" },
         ].map((item) => (
           <Link
             key={item.label}
