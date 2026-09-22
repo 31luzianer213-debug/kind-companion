@@ -363,7 +363,7 @@ export async function approveAndReleaseOrderServer(
   let whatsappSent = false;
   let whatsappWarning = "";
   try {
-    const sendResult: any = await sendViaBaileys(order.customer_phone, accessMessage);
+    const sendResult: any = await sendViaBaileys(order.customer_phone, accessMessage, { userId });
     whatsappSent = sendResult === undefined ? true : Boolean(sendResult?.ok ?? true);
     if (!whatsappSent) whatsappWarning = sendResult?.error || "WhatsApp não conectado";
   } catch (sendErr) {
