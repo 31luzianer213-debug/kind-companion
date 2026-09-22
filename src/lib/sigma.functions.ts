@@ -1139,3 +1139,41 @@ export const createSigmaQuickTest = createServerFn({ method: "POST" })
       };
     }
   });
+
+/**
+ * Lê os aplicativos publicados dentro do painel Sigma do revendedor.
+ * Não inventa nada: se o painel não expuser essa área, devolve lista vazia.
+ */
+export const importSigmaPanelApps = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId, claims } = context;
+    const config = await loadConfig(supabase, userId, claims);
+
+    if (!config.url || !hasSigmaAccess(config)) {
+      return { ok: false as const, error: "Conecte o painel Sigma antes de buscar os aplicativos." };
+    }
+
+    try {
+      const { fetchSigmaPanelApps } = await import("./sigma.server");
+      const { apps } = await fetchSigmaPanelApps(config);
+
+      const pick = (platform: string) => apps.find((a) => a.platform === platform)?.url ?? "";
+
+      return {
+        ok: true as const,
+        apps,
+        suggestion: {
+          appAndroidApk: pick("android"),
+          appIosLink: pick("ios"),
+          appWindowsLink: pick("windows"),
+          appWebPlayerLink: pick("web"),
+        },
+      };
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: error instanceof Error ? error.message : "Não consegui ler os aplicativos do painel.",
+      };
+    }
+  });
