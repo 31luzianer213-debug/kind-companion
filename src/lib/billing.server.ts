@@ -47,8 +47,25 @@ export async function sendViaBaileys(
     buttons?: any[];
     sections?: any[];
     pixCode?: string;
+    userId?: string | null;
   },
 ) {
+  // Quando a Evolution API está configurada, ela é o canal oficial de envio.
+  const tenant = await import("./evolution-tenant.server");
+  if (tenant.isTenantEvolutionEnabled()) {
+    let instance = "";
+    if (options?.userId) {
+      instance = tenant.tenantInstanceName(options.userId);
+    } else {
+      const { resolveInstance } = await import("./evolution-api.server");
+      instance = await resolveInstance();
+    }
+    if (!instance) throw new Error("WhatsApp não conectado. Leia o QR Code na página do WhatsApp.");
+    const sent = await tenant.tenantSendText(instance, normalizeNumber(phone), text, true);
+    if (!sent.ok) throw new Error(sent.error || "Falha no envio pela Evolution API");
+    return { ok: true };
+  }
+
   const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
