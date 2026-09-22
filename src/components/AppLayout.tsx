@@ -186,11 +186,6 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
         </div>
       </header>
 
-      <div className="pointer-events-none fixed right-6 top-4 z-40 hidden lg:block">
-        <div className="pointer-events-auto">
-          <GlobalSearch />
-        </div>
-      </div>
 
       {drawerOpen && (
         <div className="fixed inset-0 z-50 lg:hidden" role="presentation">
