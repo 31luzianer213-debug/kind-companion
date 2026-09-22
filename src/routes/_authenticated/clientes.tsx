@@ -1876,6 +1876,24 @@ function ClientsRegistry() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
+                {salePlans.length > 0 && (
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-xs font-semibold">Plano de venda (opcional)</Label>
+                    <Select onValueChange={aplicarPlano}>
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder="Escolher um plano preenche valor e vencimento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {salePlans.map((plan) => (
+                          <SelectItem key={plan.id} value={plan.id}>
+                            {plan.name} — {formatBRL(Number(plan.price || 0))} • {plan.months} mês(es) • {plan.screens} tela(s)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Valor da Mensalidade (R$) *</Label>
                   <Input
