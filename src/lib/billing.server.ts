@@ -323,6 +323,10 @@ export async function runBillingForUser(
     .eq("status", "pending")
     .lt("due_date", todayIso);
 
+  if (!sendReminders) {
+    return { created, sent, failed, errors };
+  }
+
   const { data: invoices } = await supabase
     .from("invoices")
     .select("*, clients(*, iptv_lists(name, server_url, username, password))")
