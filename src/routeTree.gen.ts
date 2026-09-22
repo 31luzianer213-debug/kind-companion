@@ -32,6 +32,7 @@ import { Route as ApiPublicHooksCobrancaDiariaRouteImport } from './routes/api/p
 import { Route as ApiPublicHooksMercadopagoRouteImport } from './routes/api/public/hooks/mercadopago'
 import { Route as ApiPublicHooksSaasMercadopagoRouteImport } from './routes/api/public/hooks/saas-mercadopago'
 import { Route as ApiPublicHooksSigmaSyncRouteImport } from './routes/api/public/hooks/sigma-sync'
+import { Route as ApiPublicHooksTelegramRouteImport } from './routes/api/public/hooks/telegram'
 import { Route as ApiPublicHooksWhatsappBotRouteImport } from './routes/api/public/hooks/whatsapp-bot'
 import { Route as ApiPublicHooksWhatsappPollRouteImport } from './routes/api/public/hooks/whatsapp-poll'
 
@@ -154,6 +155,11 @@ const ApiPublicHooksSigmaSyncRoute = ApiPublicHooksSigmaSyncRouteImport.update({
   path: '/api/public/hooks/sigma-sync',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksTelegramRoute = ApiPublicHooksTelegramRouteImport.update({
+  id: '/api/public/hooks/telegram',
+  path: '/api/public/hooks/telegram',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksWhatsappBotRoute =
   ApiPublicHooksWhatsappBotRouteImport.update({
     id: '/api/public/hooks/whatsapp-bot',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/saas-mercadopago': typeof ApiPublicHooksSaasMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
+  '/api/public/hooks/telegram': typeof ApiPublicHooksTelegramRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
   '/api/public/hooks/whatsapp-poll': typeof ApiPublicHooksWhatsappPollRoute
 }
@@ -216,6 +223,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/saas-mercadopago': typeof ApiPublicHooksSaasMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
+  '/api/public/hooks/telegram': typeof ApiPublicHooksTelegramRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
   '/api/public/hooks/whatsapp-poll': typeof ApiPublicHooksWhatsappPollRoute
 }
@@ -244,6 +252,7 @@ export interface FileRoutesById {
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/saas-mercadopago': typeof ApiPublicHooksSaasMercadopagoRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
+  '/api/public/hooks/telegram': typeof ApiPublicHooksTelegramRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
   '/api/public/hooks/whatsapp-poll': typeof ApiPublicHooksWhatsappPollRoute
 }
@@ -272,6 +281,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/mercadopago'
     | '/api/public/hooks/saas-mercadopago'
     | '/api/public/hooks/sigma-sync'
+    | '/api/public/hooks/telegram'
     | '/api/public/hooks/whatsapp-bot'
     | '/api/public/hooks/whatsapp-poll'
   fileRoutesByTo: FileRoutesByTo
@@ -298,6 +308,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/mercadopago'
     | '/api/public/hooks/saas-mercadopago'
     | '/api/public/hooks/sigma-sync'
+    | '/api/public/hooks/telegram'
     | '/api/public/hooks/whatsapp-bot'
     | '/api/public/hooks/whatsapp-poll'
   id:
@@ -325,6 +336,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/mercadopago'
     | '/api/public/hooks/saas-mercadopago'
     | '/api/public/hooks/sigma-sync'
+    | '/api/public/hooks/telegram'
     | '/api/public/hooks/whatsapp-bot'
     | '/api/public/hooks/whatsapp-poll'
   fileRoutesById: FileRoutesById
@@ -340,6 +352,7 @@ export interface RootRouteChildren {
   ApiPublicHooksMercadopagoRoute: typeof ApiPublicHooksMercadopagoRoute
   ApiPublicHooksSaasMercadopagoRoute: typeof ApiPublicHooksSaasMercadopagoRoute
   ApiPublicHooksSigmaSyncRoute: typeof ApiPublicHooksSigmaSyncRoute
+  ApiPublicHooksTelegramRoute: typeof ApiPublicHooksTelegramRoute
   ApiPublicHooksWhatsappBotRoute: typeof ApiPublicHooksWhatsappBotRoute
   ApiPublicHooksWhatsappPollRoute: typeof ApiPublicHooksWhatsappPollRoute
 }
@@ -507,6 +520,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSigmaSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/telegram': {
+      id: '/api/public/hooks/telegram'
+      path: '/api/public/hooks/telegram'
+      fullPath: '/api/public/hooks/telegram'
+      preLoaderRoute: typeof ApiPublicHooksTelegramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/whatsapp-bot': {
       id: '/api/public/hooks/whatsapp-bot'
       path: '/api/public/hooks/whatsapp-bot'
@@ -570,6 +590,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksMercadopagoRoute: ApiPublicHooksMercadopagoRoute,
   ApiPublicHooksSaasMercadopagoRoute: ApiPublicHooksSaasMercadopagoRoute,
   ApiPublicHooksSigmaSyncRoute: ApiPublicHooksSigmaSyncRoute,
+  ApiPublicHooksTelegramRoute: ApiPublicHooksTelegramRoute,
   ApiPublicHooksWhatsappBotRoute: ApiPublicHooksWhatsappBotRoute,
   ApiPublicHooksWhatsappPollRoute: ApiPublicHooksWhatsappPollRoute,
 }
