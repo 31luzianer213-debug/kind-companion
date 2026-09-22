@@ -1594,60 +1594,52 @@ export async function processBotMessage(
       timestamp: Date.now(),
     });
 
-    const pixKey = config.pixKey || wsRow?.pix_key || "";
-    const pixBlock = pixKey ? `\n\n🔑 *Chave Pix:* \`${pixKey}\`` : "";
-
     const p1 = `R$ ${Number(config.planMonthlyPrice || 35).toFixed(2).replace(".", ",")}`;
     const p2 = `R$ ${Number(config.planQuarterlyPrice || 90).toFixed(2).replace(".", ",")}`;
     const p3 = `R$ ${Number(config.planSemiannualPrice || 160).toFixed(2).replace(".", ",")}`;
     const p4 = `R$ ${Number(config.planAnnualPrice || 290).toFixed(2).replace(".", ",")}`;
 
     const reply =
-      `${config.plansText}${pixBlock}\n\n` +
-      `👇 *Para assinar agora, responda apenas com o número do plano:*\n\n` +
-      `👉 Digite *1* para *Plano Mensal (${p1})*\n` +
-      `👉 Digite *2* para *Plano Trimestral (${p2})*\n` +
-      `👉 Digite *3* para *Plano Semestral (${p3})*\n` +
-      `👉 Digite *4* para *Plano Anual (${p4})*\n\n` +
-      `_Ou digite *0* para voltar ao menu principal._`;
+      `${config.plansText}\n\n` +
+      `Me diz qual deles você prefere que eu já gero o Pix pra você 🙂`;
 
     return {
       reply,
       action: "plans_shown",
       interactive: {
         type: "list",
-        title: "🍿 Nossos Planos IPTV",
-        description: "Selecione o plano desejado para gerar seu Pix Automático:",
-        buttonText: "📋 Ver Planos e Assinar",
-        footerText: `${serverName} • Liberação Imediata`,
+        title: "Nossos planos",
+        description: "Escolhe o que combina mais com você que eu já gero o Pix.",
+        buttonText: "Ver planos",
+        footerText: serverName,
         sections: [
           {
-            title: "Planos Disponíveis",
+            title: "Planos",
             rows: [
               {
                 rowId: "plano_1m",
-                title: `1️⃣ Plano Mensal (${p1})`,
-                description: "Acesso por 30 dias • 1 Tela • Liberação na hora",
+                title: `1 mês — ${p1}`,
+                description: "Acesso por 30 dias, liberado na hora",
               },
               {
                 rowId: "plano_3m",
-                title: `2️⃣ Plano Trimestral (${p2})`,
-                description: "Acesso por 90 dias • Economize mais",
+                title: `3 meses — ${p2}`,
+                description: "Acesso por 90 dias",
               },
               {
                 rowId: "plano_6m",
-                title: `3️⃣ Plano Semestral (${p3})`,
-                description: "Acesso por 180 dias • Mais Vendido 🔥",
+                title: `6 meses — ${p3}`,
+                description: "Acesso por 180 dias, o mais pedido",
               },
               {
                 rowId: "plano_12m",
-                title: `4️⃣ Plano Anual (${p4})`,
-                description: "Acesso por 365 dias • Super Desconto ⭐",
+                title: `12 meses — ${p4}`,
+                description: "Acesso por 365 dias, sai bem mais barato",
               },
               {
                 rowId: "0",
-                title: "⬅️ Voltar ao Menu Principal",
-                description: "Retornar ao início do atendimento",
+                title: "Depois eu vejo",
+                description: "Voltar pro começo da conversa",
               },
             ],
           },
