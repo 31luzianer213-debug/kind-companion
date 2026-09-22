@@ -314,15 +314,15 @@ function BotPage() {
   function handleRestoreDefaultAppLinks() {
     setForm((prev) => ({
       ...prev,
-      appAndroidApk: "https://bit.ly/app-xciptv-oficial",
-      appAndroidDownloaderCode: "389471",
-      appIosLink: "https://apps.apple.com/app/smarters-player-lite/id1628995509",
-      appWindowsLink: "https://www.iptvsmarters.com/download?download=windows",
-      appWebPlayerLink: "http://webtv.iptvsmarters.com",
-      appSmartTvText: "• Smart TV Samsung / LG: Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.",
+      appAndroidApk: "",
+      appAndroidDownloaderCode: "",
+      appIosLink: "",
+      appWindowsLink: "",
+      appWebPlayerLink: "",
+      appSmartTvText: "",
       appsCustomText: "",
     }));
-    toast.success("Links recomendados dos aplicativos restaurados com sucesso! 📲");
+    toast.success("Campos de aplicativos limpos. Preencha com os seus.");
   }
 
   function handleResetChat() {
