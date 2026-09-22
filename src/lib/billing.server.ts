@@ -269,6 +269,7 @@ export async function sendListViaBaileys(
     footerText?: string;
     sections: ListSection[];
     fallbackText?: string;
+    userId?: string | null;
   },
 ) {
   try {
