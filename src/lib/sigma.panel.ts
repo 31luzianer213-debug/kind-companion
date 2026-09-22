@@ -1517,7 +1517,10 @@ export async function createSigmaCustomer(
       exp_date: dueDate ?? "",
       status: "active",
       notes: input.notes ?? "",
-      ...(input.packageId ? { package_id: input.packageId } : {}),
+      note: input.notes ?? "",
+      whatsapp: phone ?? "",
+      ...(packageId ? { package_id: packageId, packages: [packageId], plan_id: packageId } : {}),
+      ...(serverId ? { server_id: serverId, servers: [serverId] } : {}),
     },
     {
       user: username,
@@ -1527,6 +1530,8 @@ export async function createSigmaCustomer(
       connections: screens,
       expires_at: dueDate ?? "",
       is_active: 1,
+      ...(packageId ? { package_id: packageId } : {}),
+      ...(serverId ? { server_id: serverId } : {}),
     },
   ];
 
