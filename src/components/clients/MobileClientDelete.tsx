@@ -139,7 +139,7 @@ export function MobileClientDelete() {
             ) : (
               <div className="space-y-2">
                 {filtered.map((client: any) => (
-                  <div key={client.id} className="flex items-center gap-3 rounded-xl border border-border/60 bg-card p-3">
+                  <div key={client.id} className="flex items-center gap-3 rounded-md border border-border/60 bg-card p-3">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold text-foreground">{client.name}</p>
                       <p className="truncate text-xs text-muted-foreground">
@@ -177,7 +177,7 @@ export function MobileClientDelete() {
           </AlertDialogHeader>
 
           {target?.sigma_customer_id && (
-            <label className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-3">
+            <label className="flex items-start gap-3 rounded-md border border-destructive/20 bg-destructive/5 p-3">
               <Checkbox
                 checked={deleteFromSigma}
                 onCheckedChange={(checked) => setDeleteFromSigma(Boolean(checked))}

@@ -82,7 +82,7 @@ function StepCard({
   return (
     <div
       className={cn(
-        "flex flex-col justify-between rounded-xl border p-4 transition-colors",
+        "flex flex-col justify-between rounded-md border p-4 transition-colors",
         tone === "ok" ? "border-emerald-500/30 bg-emerald-500/5" : "border-border bg-card hover:border-primary/40",
       )}
     >
@@ -134,7 +134,7 @@ function MetricCard({
   valueClass?: string;
 }) {
   return (
-    <Card className="surface-card overflow-hidden rounded-xl border-border/70 transition-colors hover:border-border">
+    <Card className="surface-card overflow-hidden rounded-md border-border/70 transition-colors hover:border-border">
       <CardContent className="space-y-3 p-4">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
@@ -178,7 +178,7 @@ function SectionTitle({
 
 function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-border/60 p-6 text-center">
+    <div className="rounded-md border border-dashed border-border/60 p-6 text-center">
       <p className="text-xs font-semibold text-foreground">{title}</p>
       <p className="mt-0.5 text-[11px] text-muted-foreground">{description}</p>
     </div>
@@ -427,7 +427,7 @@ function PainelOverview() {
       </header>
 
       {!isWaOk && (
-        <section className="flex flex-col gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <section className="flex flex-col gap-3 rounded-md border border-rose-500/30 bg-rose-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex gap-3">
             <AlertTriangle className="mt-0.5 size-5 shrink-0 text-rose-500" />
             <div>
@@ -444,7 +444,7 @@ function PainelOverview() {
       )}
 
       {showOnboarding && completedSteps < 3 && (
-        <section className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card p-4 shadow-sm sm:p-5">
+        <section className="relative overflow-hidden rounded-md border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card p-4 shadow-sm sm:p-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2.5">
               <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm">
@@ -523,7 +523,7 @@ function PainelOverview() {
           <Link
             key={item.label}
             to={item.to as never}
-            className="rounded-xl border border-border/60 bg-card/70 px-4 py-3 transition-colors hover:border-border"
+            className="rounded-md border border-border/60 bg-card/70 px-4 py-3 transition-colors hover:border-border"
           >
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{item.label}</p>
             <p className={cn("mt-1 text-xl font-bold tabular-nums", item.tone)}>{item.value}</p>
@@ -579,7 +579,7 @@ function PainelOverview() {
 
       <SectionTitle icon={ShoppingBag} title="Operação do dia" description="Pedidos do robô e vencimentos próximos" />
 
-      <Card className="surface-card overflow-hidden rounded-xl border-border/70 shadow-sm">
+      <Card className="surface-card overflow-hidden rounded-md border-border/70 shadow-sm">
         <CardHeader className="flex flex-col gap-3 border-b border-border/60 px-4 pb-3.5 pt-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div className="min-w-0">
             <CardTitle className="flex flex-wrap items-center gap-2 text-base font-bold tracking-tight">
@@ -612,7 +612,7 @@ function PainelOverview() {
                 return (
                   <div
                     key={order.id}
-                    className="flex flex-col justify-between rounded-xl border border-border/70 bg-card p-3.5 transition-colors hover:border-border"
+                    className="flex flex-col justify-between rounded-md border border-border/70 bg-card p-3.5 transition-colors hover:border-border"
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between gap-2">
@@ -667,7 +667,7 @@ function PainelOverview() {
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="surface-card overflow-hidden rounded-xl border-border/70 lg:col-span-2">
+        <Card className="surface-card overflow-hidden rounded-md border-border/70 lg:col-span-2">
           <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 px-4 pb-2 pt-4 sm:px-5">
             <div className="min-w-0">
               <CardTitle className="flex items-center gap-2 text-sm font-bold">
@@ -689,7 +689,7 @@ function PainelOverview() {
           </CardContent>
         </Card>
 
-        <Card className="surface-card flex flex-col overflow-hidden rounded-xl border-border/70">
+        <Card className="surface-card flex flex-col overflow-hidden rounded-md border-border/70">
           <CardHeader className="px-4 pb-2 pt-4 sm:px-5">
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="flex items-center gap-2 text-sm font-bold">
@@ -703,7 +703,7 @@ function PainelOverview() {
           </CardHeader>
           <CardContent className="flex-1 space-y-2.5 px-4 pt-2 sm:px-5">
             {upcomingClients.length === 0 ? (
-              <div className="flex h-full min-h-[160px] flex-col items-center justify-center rounded-xl border border-dashed border-border/60 p-4 text-center">
+              <div className="flex h-full min-h-[160px] flex-col items-center justify-center rounded-md border border-dashed border-border/60 p-4 text-center">
                 <span className="mb-2 grid size-8 place-items-center rounded-md bg-muted text-muted-foreground">
                   <Check className="size-4" />
                 </span>
@@ -716,7 +716,7 @@ function PainelOverview() {
                 return (
                   <div
                     key={client.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 p-2.5 transition-colors hover:bg-muted/40"
+                    className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/20 p-2.5 transition-colors hover:bg-muted/40"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -759,7 +759,7 @@ function PainelOverview() {
       <SectionTitle icon={MessageSquare} title="Acompanhamento" description="Faturas em aberto e mensagens enviadas" />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="surface-card overflow-hidden rounded-xl border-border/70">
+        <Card className="surface-card overflow-hidden rounded-md border-border/70">
           <CardHeader className="flex flex-row items-center justify-between gap-3 px-4 pb-2 pt-4 sm:px-5">
             <div className="min-w-0">
               <CardTitle className="flex items-center gap-2 text-sm font-bold">
@@ -778,7 +778,7 @@ function PainelOverview() {
               pendingInvoices.slice(0, 5).map((invoice) => (
                 <div
                   key={invoice.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-muted/20 p-2.5 transition-colors hover:bg-muted/30"
+                  className="flex items-center justify-between gap-3 rounded-md border border-border/50 bg-muted/20 p-2.5 transition-colors hover:bg-muted/30"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold text-foreground">
@@ -797,7 +797,7 @@ function PainelOverview() {
           </CardContent>
         </Card>
 
-        <Card className="surface-card overflow-hidden rounded-xl border-border/70">
+        <Card className="surface-card overflow-hidden rounded-md border-border/70">
           <CardHeader className="flex flex-row items-center justify-between gap-3 px-4 pb-2 pt-4 sm:px-5">
             <div className="min-w-0">
               <CardTitle className="flex items-center gap-2 text-sm font-bold">
@@ -814,7 +814,7 @@ function PainelOverview() {
               <EmptyState title="Nenhum disparo registrado" description="O histórico aparece aqui após os envios do robô." />
             ) : (
               logs.slice(0, 5).map((log) => (
-                <div key={log.id} className="flex items-start justify-between gap-3 rounded-xl border border-border/50 bg-muted/20 p-2.5">
+                <div key={log.id} className="flex items-start justify-between gap-3 rounded-md border border-border/50 bg-muted/20 p-2.5">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="truncate text-xs font-semibold text-foreground">

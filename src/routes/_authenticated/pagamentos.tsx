@@ -239,7 +239,7 @@ function PagamentosPage() {
             {/* Opção 1: Chave Pix Direta (Manual) */}
             <div
               onClick={() => setForm({ ...form, payment_provider: "pix" })}
-              className={`cursor-pointer rounded-xl p-4 border transition-all relative ${
+              className={`cursor-pointer rounded-md p-4 border transition-all relative ${
                 activeProvider === "pix"
                   ? "border-primary/50 bg-primary/10 shadow-sm ring-1 ring-primary/30 text-foreground"
                   : "border-border/60 bg-card hover:bg-card/80 text-foreground"
@@ -266,7 +266,7 @@ function PagamentosPage() {
             {/* Opção 2: Mercado Pago (Automático) */}
             <div
               onClick={() => setForm({ ...form, payment_provider: "mercadopago" })}
-              className={`cursor-pointer rounded-xl p-4 border transition-all relative ${
+              className={`cursor-pointer rounded-md p-4 border transition-all relative ${
                 activeProvider === "mercadopago"
                   ? "border-primary/50 bg-primary/10 shadow-sm ring-1 ring-primary/30 text-foreground"
                   : "border-border/60 bg-card hover:bg-card/80 text-foreground"
@@ -293,7 +293,7 @@ function PagamentosPage() {
             {/* Opção 3: Asaas */}
             <div
               onClick={() => setForm({ ...form, payment_provider: "asaas" })}
-              className={`cursor-pointer rounded-xl p-4 border transition-all relative ${
+              className={`cursor-pointer rounded-md p-4 border transition-all relative ${
                 activeProvider === "asaas"
                   ? "border-primary/50 bg-primary/10 shadow-sm ring-1 ring-primary/30 text-foreground"
                   : "border-border/60 bg-card hover:bg-card/80 text-foreground"
@@ -350,7 +350,7 @@ function PagamentosPage() {
                     value={form.pix_key_type || "aleatoria"}
                     onValueChange={(val) => setForm({ ...form, pix_key_type: val })}
                   >
-                    <SelectTrigger className="rounded-xl">
+                    <SelectTrigger className="rounded-md">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -371,7 +371,7 @@ function PagamentosPage() {
                       placeholder="Ex: 123e4567-e89b-12d3-a456-426614174000 ou 11999999999"
                       value={form.pix_key}
                       onChange={(e) => setForm({ ...form, pix_key: e.target.value })}
-                      className="rounded-xl font-mono text-sm pr-10"
+                      className="rounded-md font-mono text-sm pr-10"
                       required={activeProvider === "pix"}
                     />
                     {form.pix_key ? (
@@ -396,7 +396,7 @@ function PagamentosPage() {
                     placeholder="Ex: João da Silva ou Minha Revenda IPTV"
                     value={form.pix_holder}
                     onChange={(e) => setForm({ ...form, pix_holder: e.target.value })}
-                    className="rounded-xl text-sm"
+                    className="rounded-md text-sm"
                   />
                   <p className="text-[11px] text-muted-foreground">
                     Aparece na mensagem para o cliente saber o nome do recebedor antes de transferir.
@@ -410,7 +410,7 @@ function PagamentosPage() {
                     placeholder="https://nubank.com.br/cobrar/... ou link do seu banco"
                     value={form.payment_link}
                     onChange={(e) => setForm({ ...form, payment_link: e.target.value })}
-                    className="rounded-xl text-sm font-mono"
+                    className="rounded-md text-sm font-mono"
                   />
                   <p className="text-[11px] text-muted-foreground">
                     Caso queira enviar um link direto do seu banco além da chave Pix.
@@ -420,7 +420,7 @@ function PagamentosPage() {
 
               {/* Preview em Tempo Real */}
               {form.pix_key ? (
-                <div className="mt-3 p-3.5 rounded-xl bg-muted/30 border border-border/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+                <div className="mt-3 p-3.5 rounded-md bg-muted/30 border border-border/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
                   <div className="space-y-0.5">
                     <span className="font-semibold text-foreground flex items-center gap-1.5">
                       <QrCode className="size-3.5 text-emerald-500" />
@@ -494,7 +494,7 @@ function PagamentosPage() {
                       setForm({ ...form, mercadopago_token: e.target.value });
                       setMpStatus(null);
                     }}
-                    className="rounded-xl font-mono text-sm pr-20"
+                    className="rounded-md font-mono text-sm pr-20"
                     required={activeProvider === "mercadopago" && !(data as any)?.has_mercadopago_token}
                   />
                   <div className="absolute right-1 flex items-center gap-1">
@@ -545,7 +545,7 @@ function PagamentosPage() {
               </div>
 
               {/* Passo a Passo: URL do Webhook */}
-              <div className="rounded-xl bg-muted/30 border border-border/60 p-4 space-y-3">
+              <div className="rounded-md bg-muted/30 border border-border/60 p-4 space-y-3">
                 <div className="flex items-center gap-2 text-foreground font-semibold text-xs">
                   <Sparkles className="size-4 text-primary" />
                   Como ativar a renovação automática no Sigma quando o cliente pagar:
@@ -558,7 +558,7 @@ function PagamentosPage() {
                   <Input
                     readOnly
                     value={mpWebhookUrl}
-                    className="font-mono text-xs rounded-xl"
+                    className="font-mono text-xs rounded-md"
                   />
                   <Button
                     type="button"
@@ -616,7 +616,7 @@ function PagamentosPage() {
                         setForm({ ...form, asaas_token: e.target.value });
                         setAsaasStatus(null);
                       }}
-                      className="rounded-xl font-mono text-sm pr-10"
+                      className="rounded-md font-mono text-sm pr-10"
                       required={activeProvider === "asaas" && !(data as any)?.has_asaas_token}
                     />
                     <Button
@@ -640,7 +640,7 @@ function PagamentosPage() {
                       setAsaasStatus(null);
                     }}
                   >
-                    <SelectTrigger className="rounded-xl">
+                    <SelectTrigger className="rounded-md">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

@@ -213,7 +213,7 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
                 <p className="text-xs font-extrabold text-foreground">Menu</p>
                 <p className="text-[10px] text-muted-foreground">Acesso rápido às áreas do app</p>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setDrawerOpen(false)} aria-label="Fechar menu" className="size-10 rounded-xl">
+              <Button variant="ghost" size="icon" onClick={() => setDrawerOpen(false)} aria-label="Fechar menu" className="size-10 rounded-md">
                 <X className="size-5" />
               </Button>
             </div>

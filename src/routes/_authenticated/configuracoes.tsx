@@ -122,7 +122,7 @@ function SalePlansCard() {
               placeholder="Ex: Plano 1 tela mensal"
               value={draft.name}
               onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-              className="rounded-xl text-sm"
+              className="rounded-md text-sm"
             />
           </div>
           <div className="space-y-1.5">
@@ -132,7 +132,7 @@ function SalePlansCard() {
               min="1"
               value={draft.screens}
               onChange={(event) => setDraft({ ...draft, screens: Number(event.target.value) })}
-              className="w-full rounded-xl text-sm sm:w-20"
+              className="w-full rounded-md text-sm sm:w-20"
             />
           </div>
           <div className="space-y-1.5">
@@ -142,7 +142,7 @@ function SalePlansCard() {
               min="1"
               value={draft.months}
               onChange={(event) => setDraft({ ...draft, months: Number(event.target.value) })}
-              className="w-full rounded-xl text-sm sm:w-20"
+              className="w-full rounded-md text-sm sm:w-20"
             />
           </div>
           <div className="space-y-1.5">
@@ -153,7 +153,7 @@ function SalePlansCard() {
               step="0.01"
               value={draft.price}
               onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) })}
-              className="w-full rounded-xl text-sm sm:w-28"
+              className="w-full rounded-md text-sm sm:w-28"
             />
           </div>
           <Button type="button" onClick={() => createPlan.mutate()} disabled={createPlan.isPending} className="gap-1.5">
@@ -163,15 +163,15 @@ function SalePlansCard() {
         </div>
 
         {isLoading ? (
-          <div className="h-16 animate-pulse rounded-xl bg-muted/60" />
+          <div className="h-16 animate-pulse rounded-md bg-muted/60" />
         ) : plans.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border/60 p-4 text-center text-xs text-muted-foreground">
+          <p className="rounded-md border border-dashed border-border/60 p-4 text-center text-xs text-muted-foreground">
             Nenhum plano cadastrado ainda.
           </p>
         ) : (
           <div className="space-y-2">
             {plans.map((plan) => (
-              <div key={plan.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 p-3">
+              <div key={plan.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
                 <div>
                   <p className="text-sm font-bold">{plan.name}</p>
                   <p className="text-xs text-muted-foreground">
@@ -296,7 +296,7 @@ function ConfiguracoesPage() {
               placeholder="Ex: IPTV Turbo Brasil"
               value={businessName}
               onChange={(event) => setBusinessName(event.target.value)}
-              className="rounded-xl text-sm"
+              className="rounded-md text-sm"
             />
           </div>
         </CardContent>
@@ -312,7 +312,7 @@ function ConfiguracoesPage() {
           <CardDescription>Os horários, etapas e textos de cobrança agora ficam em uma tela só.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button asChild variant="outline" className="rounded-xl">
+          <Button asChild variant="outline" className="rounded-md">
             <Link to="/cobranca-automatica">Abrir cobrança automática</Link>
           </Button>
         </CardContent>
@@ -326,7 +326,7 @@ function ConfiguracoesPage() {
           <CardDescription>Baixe uma cópia dos seus clientes e cobranças sempre que quiser.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="outline" onClick={handleExportFullBackup} disabled={exportingBackup} className="gap-1.5 rounded-xl">
+          <Button variant="outline" onClick={handleExportFullBackup} disabled={exportingBackup} className="gap-1.5 rounded-md">
             {exportingBackup ? <Loader2 className="size-4 animate-spin" /> : <Database className="size-4" />}
             Baixar backup
           </Button>

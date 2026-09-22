@@ -106,7 +106,7 @@ export function ClientOperationsPanel() {
       </Card>
 
       {selected.size > 0 ? (
-        <div className="sticky top-16 z-20 flex flex-col gap-2 rounded-xl border border-primary/25 bg-background/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center">
+        <div className="sticky top-16 z-20 flex flex-col gap-2 rounded-md border border-primary/25 bg-background/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center">
           <Badge className="w-fit">{selected.size} selecionado(s)</Badge>
           <div className="flex flex-wrap gap-2 sm:ml-auto">
             <Button size="sm" variant="outline" onClick={() => bulkRemind.mutate()} disabled={bulkRemind.isPending}><MessageCircle /> Cobrar selecionados</Button>
@@ -118,7 +118,7 @@ export function ClientOperationsPanel() {
       ) : null}
 
       {query.isLoading ? (
-        <div className="space-y-3">{[0,1,2,3,4].map((i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-muted/60" />)}</div>
+        <div className="space-y-3">{[0,1,2,3,4].map((i) => <div key={i} className="h-20 animate-pulse rounded-md bg-muted/60" />)}</div>
       ) : filtered.length === 0 ? (
         <Card><CardContent className="p-10 text-center"><Users className="mx-auto mb-3 size-8 text-muted-foreground" /><p className="font-semibold">Nenhum cliente encontrado</p><p className="mt-1 text-sm text-muted-foreground">Altere os filtros ou a busca para ver outros clientes.</p></CardContent></Card>
       ) : (

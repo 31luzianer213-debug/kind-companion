@@ -219,7 +219,7 @@ function LandingPage() {
             </div>
 
             {/* Conversa demonstrativa */}
-            <div className="rounded-3xl border border-border bg-card p-4 shadow-sm shadow-primary/5 sm:p-6">
+            <div className="rounded-lg border border-border bg-card p-4 shadow-sm shadow-primary/5 sm:p-6">
               <div className="mb-4 flex items-center gap-3 border-b border-border pb-3">
                 <div className="flex size-10 items-center justify-center rounded-full bg-primary/12 text-primary">
                   <Bot className="size-5" />
@@ -235,8 +235,8 @@ function LandingPage() {
                     <p
                       className={
                         m.from === "robo"
-                          ? "max-w-[85%] rounded-2xl rounded-tl-sm bg-muted px-3.5 py-2 text-sm text-foreground"
-                          : "max-w-[85%] rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2 text-sm text-primary-foreground"
+                          ? "max-w-[85%] rounded-lg rounded-tl-sm bg-muted px-3.5 py-2 text-sm text-foreground"
+                          : "max-w-[85%] rounded-lg rounded-tr-sm bg-primary px-3.5 py-2 text-sm text-primary-foreground"
                       }
                     >
                       {m.text}
@@ -244,7 +244,7 @@ function LandingPage() {
                   </div>
                 ))}
               </div>
-              <div className="mt-4 flex items-center gap-2 rounded-2xl border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              <div className="mt-4 flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
                 <CalendarClock className="size-4 text-primary" />
                 Renovação aplicada no painel Sigma automaticamente
               </div>
@@ -265,8 +265,8 @@ function LandingPage() {
             </div>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {pillars.map((f) => (
-                <article key={f.title} className="rounded-2xl border border-border bg-card p-5 transition-shadow hover:shadow-lg hover:shadow-primary/5">
-                  <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <article key={f.title} className="rounded-lg border border-border bg-card p-5 transition-shadow hover:shadow-lg hover:shadow-primary/5">
+                  <div className="mb-3 flex size-10 items-center justify-center rounded-md bg-primary/10 text-primary">
                     <f.icon className="size-5" />
                   </div>
                   <h3 className="font-display text-base font-semibold">{f.title}</h3>
@@ -284,7 +284,7 @@ function LandingPage() {
             <p className="mt-3 max-w-xl text-muted-foreground">Quatro passos e sua operação passa a rodar sem você.</p>
             <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {steps.map((s, i) => (
-                <li key={s.title} className="relative rounded-2xl border border-border bg-card p-5">
+                <li key={s.title} className="relative rounded-lg border border-border bg-card p-5">
                   <span className="font-display text-sm font-semibold text-primary">0{i + 1}</span>
                   <s.icon className="mt-3 size-5 text-primary" />
                   <h3 className="mt-3 font-display text-base font-semibold">{s.title}</h3>
@@ -300,7 +300,7 @@ function LandingPage() {
           <div className="mx-auto w-full max-w-3xl px-4 text-center sm:px-6">
             <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Um preço, tudo liberado</h2>
             <p className="mt-3 text-muted-foreground">Sem limite de clientes e sem fidelidade.</p>
-            <div className="mt-10 rounded-3xl border border-primary/30 bg-card p-6 text-left shadow-sm shadow-primary/10 sm:p-8">
+            <div className="mt-10 rounded-lg border border-primary/30 bg-card p-6 text-left shadow-sm shadow-primary/10 sm:p-8">
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <p className="font-display text-lg font-semibold">{plan.name}</p>

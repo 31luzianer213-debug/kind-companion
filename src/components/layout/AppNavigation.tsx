@@ -148,7 +148,7 @@ export function MobileDrawer(props: AppNavigationProps) {
 
 export function MobileBottomNavigation(props: Pick<AppNavigationProps, "pathname" | "counts" | "isWhatsAppConnected"> & { onOpenMenu: () => void }) {
   return (
-    <nav className="mobile-bottom-nav fixed inset-x-2 bottom-2 z-30 grid grid-cols-[repeat(5,minmax(0,1fr))] rounded-xl border border-border bg-background/96 px-1.5 pb-[max(.45rem,env(safe-area-inset-bottom))] pt-1.5 shadow-sm backdrop-blur-xl lg:hidden" aria-label="Atalhos principais">
+    <nav className="mobile-bottom-nav fixed inset-x-2 bottom-2 z-30 grid grid-cols-[repeat(5,minmax(0,1fr))] rounded-md border border-border bg-background/96 px-1.5 pb-[max(.45rem,env(safe-area-inset-bottom))] pt-1.5 shadow-sm backdrop-blur-xl lg:hidden" aria-label="Atalhos principais">
       {primaryMobileNavigation.map((item) => {
         const active = isActive(props.pathname, item.to);
         const Icon = item.icon;
@@ -165,7 +165,7 @@ export function MobileBottomNavigation(props: Pick<AppNavigationProps, "pathname
         );
       })}
       <Button type="button" variant="ghost" onClick={props.onOpenMenu} className="relative flex min-h-[54px] min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 text-[9px] font-extrabold text-muted-foreground transition-all active:scale-[.96] active:bg-accent" aria-label="Abrir todas as opções">
-        <span className="grid size-8 place-items-center rounded-xl bg-muted/65"><Menu className="size-[18px] shrink-0" /></span>
+        <span className="grid size-8 place-items-center rounded-md bg-muted/65"><Menu className="size-[18px] shrink-0" /></span>
         <span>Mais</span>
       </Button>
     </nav>
@@ -176,7 +176,7 @@ function AccountFooter(props: AppNavigationProps & { compactMobile?: boolean }) 
   if (props.compactMobile) {
     return (
       <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-t border-border/50 pt-3">
-        <div className="min-w-0 rounded-xl bg-card/55 px-3 py-2">
+        <div className="min-w-0 rounded-md bg-card/55 px-3 py-2">
           <p className="truncate text-[11px] font-bold">{props.email?.split("@")[0] ?? "Minha conta"}</p>
           <p className={cn("mt-0.5 flex items-center gap-1.5 text-[9px]", props.isWhatsAppConnected ? "text-emerald-500" : "text-muted-foreground")}>
             <span className={cn("size-1.5 rounded-full", props.isWhatsAppConnected ? "bg-emerald-500" : "bg-zinc-500")} />
@@ -184,7 +184,7 @@ function AccountFooter(props: AppNavigationProps & { compactMobile?: boolean }) 
           </p>
         </div>
         <ThemeToggle />
-        <Button variant="ghost" size="icon" onClick={props.onSignOut} aria-label="Sair" className="size-10 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><LogOut className="size-4" /></Button>
+        <Button variant="ghost" size="icon" onClick={props.onSignOut} aria-label="Sair" className="size-10 rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><LogOut className="size-4" /></Button>
       </div>
     );
   }
@@ -192,13 +192,13 @@ function AccountFooter(props: AppNavigationProps & { compactMobile?: boolean }) 
   return (
     <div className="space-y-3 border-t border-border/50 pt-4">
       <Link to="/whatsapp" onClick={props.onNavigate} className={cn(
-        "flex items-center justify-between rounded-xl border px-3 py-2.5 text-xs font-bold",
+        "flex items-center justify-between rounded-md border px-3 py-2.5 text-xs font-bold",
         props.isWhatsAppConnected ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-500" : "border-border/70 bg-card/60 text-muted-foreground",
       )}>
         <span className="flex items-center gap-2"><span className={cn("size-2 rounded-full", props.isWhatsAppConnected ? "bg-emerald-500" : "bg-zinc-500")} />{props.isWhatsAppConnected ? "WhatsApp online" : "WhatsApp desconectado"}</span>
         <ChevronRight className="size-3.5 opacity-50" />
       </Link>
-      <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-card/65 p-2.5">
+      <div className="flex items-center gap-2 rounded-md border border-border/60 bg-card/65 p-2.5">
         <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary text-xs font-black text-primary-foreground">{(props.email?.[0] ?? "U").toUpperCase()}</div>
         <div className="min-w-0 flex-1"><p className="truncate text-xs font-bold">{props.email?.split("@")[0] ?? "Minha conta"}</p><p className="truncate text-[10px] text-muted-foreground">{props.email ?? "Carregando…"}</p></div>
       </div>

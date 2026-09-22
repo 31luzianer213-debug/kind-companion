@@ -246,11 +246,11 @@ function WhatsAppConnection() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-5 pb-10 animate-in fade-in duration-300">
-      <section className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/15 via-card to-card p-5 shadow-sm sm:p-7">
+      <section className="relative overflow-hidden rounded-lg border border-emerald-500/20 bg-gradient-to-br from-emerald-500/15 via-card to-card p-5 shadow-sm sm:p-7">
         <div className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full bg-emerald-500/10 blur-3xl" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
               <MessageCircle className="size-6" />
             </div>
             <div className="min-w-0">
@@ -270,7 +270,7 @@ function WhatsAppConnection() {
             variant="outline"
             onClick={() => qc.invalidateQueries({ queryKey: ["baileys"] })}
             disabled={baileysQuery.isFetching}
-            className="w-full gap-2 rounded-xl sm:w-auto"
+            className="w-full gap-2 rounded-md sm:w-auto"
           >
             <RefreshCw className={`size-4 ${baileysQuery.isFetching ? "animate-spin" : ""}`} />
             Atualizar agora
@@ -279,9 +279,9 @@ function WhatsAppConnection() {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <Card className="rounded-2xl border-border/70 shadow-sm">
+        <Card className="rounded-lg border-border/70 shadow-sm">
           <CardContent className="flex items-center gap-3 p-4">
-            <div className={`flex size-10 items-center justify-center rounded-xl ${isConnected ? "bg-emerald-500/15 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
+            <div className={`flex size-10 items-center justify-center rounded-md ${isConnected ? "bg-emerald-500/15 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
               <Wifi className="size-5" />
             </div>
             <div className="min-w-0">
@@ -290,9 +290,9 @@ function WhatsAppConnection() {
             </div>
           </CardContent>
         </Card>
-        <Card className="rounded-2xl border-border/70 shadow-sm">
+        <Card className="rounded-lg border-border/70 shadow-sm">
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div className="flex size-10 items-center justify-center rounded-md bg-primary/10 text-primary">
               <Server className="size-5" />
             </div>
             <div className="min-w-0">
@@ -301,9 +301,9 @@ function WhatsAppConnection() {
             </div>
           </CardContent>
         </Card>
-        <Card className="rounded-2xl border-border/70 shadow-sm">
+        <Card className="rounded-lg border-border/70 shadow-sm">
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-sky-500/10 text-sky-500">
+            <div className="flex size-10 items-center justify-center rounded-md bg-sky-500/10 text-sky-500">
               <Smartphone className="size-5" />
             </div>
             <div className="min-w-0">
@@ -315,10 +315,10 @@ function WhatsAppConnection() {
       </section>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(300px,.6fr)]">
-        <Card className="overflow-hidden rounded-3xl border-border/70 shadow-sm">
+        <Card className="overflow-hidden rounded-lg border-border/70 shadow-sm">
           <CardHeader className="border-b bg-muted/20 p-5 sm:p-6">
             <div className="flex items-start gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-500">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-emerald-500/15 text-emerald-500">
                 <QrCode className="size-5" />
               </div>
               <div>
@@ -330,7 +330,7 @@ function WhatsAppConnection() {
           <CardContent className="p-4 sm:p-6">
             {isConnected ? (
               <div className="space-y-5">
-                <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5">
+                <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-5">
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="mt-0.5 size-6 shrink-0 text-emerald-500" />
                     <div>
@@ -342,7 +342,7 @@ function WhatsAppConnection() {
                   </div>
                 </div>
                 {state?.lastError && (
-                  <div className="flex gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
+                  <div className="flex gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
                     <AlertTriangle className="size-5 shrink-0 text-amber-500" />
                     <div className="min-w-0">
                       <p className="font-bold">Último aviso da conexão</p>
@@ -351,13 +351,13 @@ function WhatsAppConnection() {
                   </div>
                 )}
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <Button variant="outline" onClick={() => handleStartQr(true)} disabled={loadingAction} className="h-11 justify-start gap-2 rounded-xl">
+                  <Button variant="outline" onClick={() => handleStartQr(true)} disabled={loadingAction} className="h-11 justify-start gap-2 rounded-md">
                     <RefreshCw className="size-4" /> Gerar nova conexão
                   </Button>
-                  <Button variant="outline" onClick={handleResetSession} disabled={loadingAction} className="h-11 justify-start gap-2 rounded-xl">
+                  <Button variant="outline" onClick={handleResetSession} disabled={loadingAction} className="h-11 justify-start gap-2 rounded-md">
                     <ShieldCheck className="size-4" /> Reparar sessão
                   </Button>
-                  <Button variant="destructive" onClick={handleLogout} disabled={loadingAction} className="h-11 justify-start gap-2 rounded-xl sm:col-span-2">
+                  <Button variant="destructive" onClick={handleLogout} disabled={loadingAction} className="h-11 justify-start gap-2 rounded-md sm:col-span-2">
                     <LogOut className="size-4" /> Desconectar este WhatsApp
                   </Button>
                 </div>
@@ -365,12 +365,12 @@ function WhatsAppConnection() {
             ) : (
               <div className="space-y-5">
                 <div className="space-y-4">
-                  <div className="rounded-2xl border bg-muted/20 p-4 text-sm text-muted-foreground">
+                  <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
                     No celular, abra <strong className="text-foreground">WhatsApp → Aparelhos conectados → Conectar aparelho</strong>.
                   </div>
                   {activeQr ? (
-                    <div className="flex flex-col items-center gap-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-4 sm:p-6">
-                      <div className="w-full max-w-[280px] rounded-2xl bg-white p-3 shadow-lg">
+                    <div className="flex flex-col items-center gap-4 rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-4 sm:p-6">
+                      <div className="w-full max-w-[280px] rounded-lg bg-white p-3 shadow-lg">
                         <img src={activeQr} alt="QR Code para conectar o WhatsApp" className="aspect-square w-full object-contain" />
                       </div>
                       <div className="text-center">
@@ -379,12 +379,12 @@ function WhatsAppConnection() {
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">O código atualiza automaticamente. Leia apenas o mais recente.</p>
                       </div>
-                      <Button variant="outline" onClick={() => handleStartQr(true)} disabled={loadingAction} className="w-full gap-2 rounded-xl sm:w-auto">
+                      <Button variant="outline" onClick={() => handleStartQr(true)} disabled={loadingAction} className="w-full gap-2 rounded-md sm:w-auto">
                         <RefreshCw className="size-4" /> Gerar outro QR
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex min-h-64 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed bg-muted/10 p-6 text-center">
+                    <div className="flex min-h-64 flex-col items-center justify-center gap-4 rounded-lg border border-dashed bg-muted/10 p-6 text-center">
                       {loadingAction || isRequestingQr || status === "connecting" ? (
                         <>
                           <Loader2 className="size-10 animate-spin text-emerald-500" />
@@ -402,7 +402,7 @@ function WhatsAppConnection() {
                           </div>
                         </>
                       )}
-                      <Button onClick={() => handleStartQr(true)} disabled={loadingAction} className="w-full gap-2 rounded-xl sm:w-auto">
+                      <Button onClick={() => handleStartQr(true)} disabled={loadingAction} className="w-full gap-2 rounded-md sm:w-auto">
                         {loadingAction ? <Loader2 className="size-4 animate-spin" /> : <QrCode className="size-4" />}
                         Gerar QR Code
                       </Button>
@@ -415,7 +415,7 @@ function WhatsAppConnection() {
         </Card>
 
         <div className="space-y-5">
-          <Card className="rounded-3xl border-border/70 shadow-sm">
+          <Card className="rounded-lg border-border/70 shadow-sm">
             <CardHeader className="p-5 pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Activity className="size-4 text-emerald-500" /> Saúde do robô
@@ -427,7 +427,7 @@ function WhatsAppConnection() {
                 { label: "Atualização", value: baileysQuery.isFetching ? "Verificando" : "Automática", ok: true },
                 { label: "Canal", value: "Webhook oficial", ok: true },
               ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between gap-3 rounded-xl border bg-muted/20 px-3 py-2.5 text-sm">
+                <div key={item.label} className="flex items-center justify-between gap-3 rounded-md border bg-muted/20 px-3 py-2.5 text-sm">
                   <span className="text-muted-foreground">{item.label}</span>
                   <span className="flex items-center gap-1.5 font-bold">
                     <span className={`size-2 rounded-full ${item.ok ? "bg-emerald-500" : "bg-red-500"}`} />
@@ -438,7 +438,7 @@ function WhatsAppConnection() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl border-border/70 shadow-sm">
+          <Card className="rounded-lg border-border/70 shadow-sm">
             <CardHeader className="p-5 pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Bot className="size-4 text-primary" /> Antes de testar
@@ -452,7 +452,7 @@ function WhatsAppConnection() {
         </div>
       </div>
 
-      <Card className="rounded-3xl border-border/70 shadow-sm">
+      <Card className="rounded-lg border-border/70 shadow-sm">
         <CardHeader className="p-5 sm:p-6">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Send className="size-5 text-primary" /> Testar envio
@@ -466,19 +466,19 @@ function WhatsAppConnection() {
               placeholder="55 + DDD + número"
               value={testNumber}
               onChange={(event) => setTestNumber(event.target.value)}
-              className="h-11 rounded-xl font-mono"
+              className="h-11 rounded-md font-mono"
             />
             <Textarea
               id="baileys-test-message"
               value={testText}
               onChange={(event) => setTestText(event.target.value)}
               rows={3}
-              className="min-h-24 resize-none rounded-xl"
+              className="min-h-24 resize-none rounded-md"
               placeholder="Digite a mensagem de teste"
             />
           </div>
           <div className="flex justify-end">
-            <Button id="test-send-text-btn" onClick={handleSendTest} disabled={sendingTest || !isConnected} className="h-11 w-full gap-2 rounded-xl sm:w-auto sm:min-w-44">
+            <Button id="test-send-text-btn" onClick={handleSendTest} disabled={sendingTest || !isConnected} className="h-11 w-full gap-2 rounded-md sm:w-auto sm:min-w-44">
               {sendingTest ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               Enviar mensagem
             </Button>
@@ -491,7 +491,7 @@ function WhatsAppConnection() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border-border/70 shadow-sm">
+      <Card className="rounded-lg border-border/70 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between gap-3 p-5 sm:p-6">
           <div>
             <CardTitle className="text-lg">Atividade recente</CardTitle>
@@ -501,7 +501,7 @@ function WhatsAppConnection() {
         </CardHeader>
         <CardContent className="px-5 pb-5 sm:px-6 sm:pb-6">
           {!logsData?.length ? (
-            <div className="flex min-h-32 flex-col items-center justify-center rounded-2xl border border-dashed bg-muted/10 p-6 text-center">
+            <div className="flex min-h-32 flex-col items-center justify-center rounded-lg border border-dashed bg-muted/10 p-6 text-center">
               <Clock className="mb-2 size-8 text-muted-foreground/50" />
               <p className="text-sm font-bold">Nenhuma mensagem recente</p>
               <p className="mt-1 text-xs text-muted-foreground">Os próximos envios aparecerão aqui.</p>
@@ -509,9 +509,9 @@ function WhatsAppConnection() {
           ) : (
             <div className="space-y-2">
               {logsData.map((log: any) => (
-                <div key={log.id} className="grid gap-3 rounded-2xl border bg-muted/10 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <div key={log.id} className="grid gap-3 rounded-lg border bg-muted/10 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                   <div className="flex min-w-0 items-start gap-3">
-                    <div className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl ${log.status === "sent" ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
+                    <div className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md ${log.status === "sent" ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
                       {log.status === "sent" ? <CheckCircle2 className="size-4" /> : <Clock className="size-4" />}
                     </div>
                     <div className="min-w-0">

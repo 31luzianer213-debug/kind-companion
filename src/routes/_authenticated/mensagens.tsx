@@ -256,7 +256,7 @@ function MensagensPage() {
                       rows={6}
                       value={form.message_template}
                       onChange={(e) => setForm({ ...form, message_template: e.target.value })}
-                      className="rounded-xl text-sm leading-relaxed"
+                      className="rounded-md text-sm leading-relaxed"
                     />
                   )}
 
@@ -265,7 +265,7 @@ function MensagensPage() {
                       rows={6}
                       value={form.overdue_template}
                       onChange={(e) => setForm({ ...form, overdue_template: e.target.value })}
-                      className="rounded-xl text-sm leading-relaxed"
+                      className="rounded-md text-sm leading-relaxed"
                     />
                   )}
 
@@ -274,7 +274,7 @@ function MensagensPage() {
                       rows={8}
                       value={form.welcome_template}
                       onChange={(e) => setForm({ ...form, welcome_template: e.target.value })}
-                      className="rounded-xl text-sm leading-relaxed"
+                      className="rounded-md text-sm leading-relaxed"
                     />
                   )}
 

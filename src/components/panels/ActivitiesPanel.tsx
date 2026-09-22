@@ -43,10 +43,10 @@ export function ActivitiesPanel() {
         <CardContent>
           {query.isLoading ? (
             <div className="space-y-3">
-              {[0, 1, 2, 3].map((item) => <div key={item} className="h-16 animate-pulse rounded-xl bg-muted/60" />)}
+              {[0, 1, 2, 3].map((item) => <div key={item} className="h-16 animate-pulse rounded-md bg-muted/60" />)}
             </div>
           ) : query.isError ? (
-            <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-5 text-center">
+            <div className="rounded-md border border-destructive/25 bg-destructive/5 p-5 text-center">
               <AlertTriangle className="mx-auto mb-2 size-5 text-destructive" />
               <p className="text-sm font-semibold">Não foi possível carregar as atividades.</p>
               <Button className="mt-3" size="sm" variant="outline" onClick={() => query.refetch()}>
@@ -54,7 +54,7 @@ export function ActivitiesPanel() {
               </Button>
             </div>
           ) : activities.length === 0 ? (
-            <div className="rounded-xl border border-dashed p-8 text-center">
+            <div className="rounded-md border border-dashed p-8 text-center">
               <CheckCircle2 className="mx-auto mb-3 size-7 text-muted-foreground" />
               <p className="font-semibold">Nenhuma atividade registrada ainda</p>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -65,7 +65,7 @@ export function ActivitiesPanel() {
             <div className="divide-y divide-border/60">
               {activities.map((item: any) => (
                 <div key={item.id} className="flex gap-3 py-4 first:pt-0 last:pb-0">
-                  <div className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <div className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
                     <Activity className="size-4" />
                   </div>
                   <div className="min-w-0 flex-1">

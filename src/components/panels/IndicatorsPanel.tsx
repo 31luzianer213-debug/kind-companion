@@ -40,7 +40,7 @@ export function IndicatorsPanel() {
 
       {query.isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          {[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-32 animate-pulse rounded-xl bg-muted/60" />)}
+          {[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-32 animate-pulse rounded-md bg-muted/60" />)}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -65,7 +65,7 @@ export function IndicatorsPanel() {
         </CardHeader>
         <CardContent>
           {attention.length === 0 ? (
-            <div className="rounded-xl border border-dashed p-7 text-center">
+            <div className="rounded-md border border-dashed p-7 text-center">
               <p className="font-semibold">Nada urgente por aqui</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 Clientes que vencem em breve ou estão sem telefone aparecerão aqui.

@@ -178,7 +178,7 @@ function Cobrancas() {
 
       <Card className="surface-card border-emerald-500/20 bg-emerald-500/5">
         <CardContent className="flex gap-3 p-4">
-          <div className="mt-0.5 rounded-xl bg-emerald-500/10 p-2 text-emerald-500"><ShieldCheck className="size-5" /></div>
+          <div className="mt-0.5 rounded-md bg-emerald-500/10 p-2 text-emerald-500"><ShieldCheck className="size-5" /></div>
           <div>
             <h3 className="text-sm font-semibold">Operação automática</h3>
             <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">

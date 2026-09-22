@@ -177,7 +177,7 @@ function AutomaticBillingPage() {
           <CardDescription>Uma vez por dia o sistema confere os vencimentos e envia as mensagens ativadas abaixo.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/10 p-3.5">
+          <div className="flex items-center justify-between gap-3 rounded-md border border-primary/30 bg-primary/10 p-3.5">
             <div>
               <p className="text-sm font-bold">Cobrar meus clientes automaticamente</p>
               <p className="text-xs text-muted-foreground">Desligue apenas se quiser cobrar manualmente.</p>
@@ -188,7 +188,7 @@ function AutomaticBillingPage() {
               onCheckedChange={(checked) => toggleSetting.mutate({ auto_send_enabled: checked })}
             />
           </div>
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 p-3.5">
+          <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/20 p-3.5">
             <div>
               <p className="text-sm font-bold">Avisar quem está em teste grátis</p>
               <p className="text-xs text-muted-foreground">Envia um convite para assinar pouco antes do teste expirar.</p>
@@ -208,7 +208,7 @@ function AutomaticBillingPage() {
 
       {query.isLoading ? (
         <div className="grid gap-4 lg:grid-cols-2">
-          {[0, 1, 2, 3].map((item) => <div key={item} className="h-52 animate-pulse rounded-xl bg-muted/60" />)}
+          {[0, 1, 2, 3].map((item) => <div key={item} className="h-52 animate-pulse rounded-md bg-muted/60" />)}
         </div>
       ) : rules.length === 0 ? (
         <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">Não foi possível carregar as etapas agora.</CardContent></Card>
