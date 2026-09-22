@@ -905,62 +905,26 @@ function normalizeBotInput(value: string): string {
 }
 
 function buildMainMenu(config: BotConfigData, serverName: string): BotProcessResult {
-  const greeting =
-    `👋 *Olá! Seja muito bem-vindo(a) à ${config.businessName || "Central IPTV"}!* 🍿\n\n` +
-    `Como podemos te ajudar? Digite apenas o *número* da opção:\n\n` +
-    `1️⃣ *TESTE GRÁTIS* — Teste imediato de ${config.testDurationHours} horas\n` +
-    `2️⃣ *RENOVAÇÃO* — Renove seu acesso com Pix Automático\n` +
-    `3️⃣ *PLANOS & PREÇOS* — Conheça nossos planos e valores\n` +
-    `4️⃣ *BAIXAR APLICATIVOS* — Links oficiais Android, iOS, PC e TV\n` +
-    `5️⃣ *MEUS DADOS* — Receber login, senha e lista M3U\n` +
-    `6️⃣ *SUPORTE* — Falar com atendente humano\n\n` +
-    `_👇 Toque no botão abaixo para abrir as opções ou envie o número desejado:_`;
+  const business = config.businessName || "Central IPTV";
+  const custom = (config.menuGreeting || "").trim();
+  const greeting = custom
+    ? custom.replace(/\{empresa\}/g, business).replace(/\{servidor\}/g, serverName)
+    : `Oi! Tudo bem? 😊 Aqui é da ${business}.\n\n` +
+      `Me diz o que você precisa que eu já resolvo por aqui: pode ser um teste grátis de ${config.testDurationHours} horas, renovar seu acesso, ver os valores dos planos, pegar os aplicativos ou receber de novo seu usuário e senha.\n\n` +
+      `Pode escrever do seu jeito que eu entendo.`;
 
   return {
     reply: greeting,
     action: "menu_shown",
     interactive: {
-      type: "list",
-      title: config.businessName || "Menu IPTV",
+      type: "buttons",
+      title: business,
       description: greeting,
-      buttonText: "📋 Abrir Menu de Opções",
-      footerText: `${serverName} • Auto-Atendimento 24h`,
-      sections: [
-        {
-          title: "Auto-Atendimento Rápido",
-          rows: [
-            {
-              rowId: "1",
-              title: "1️⃣ Gerar Teste Grátis",
-              description: `Acesso liberado na hora por ${config.testDurationHours} horas`,
-            },
-            {
-              rowId: "2",
-              title: "2️⃣ Renovar Assinatura",
-              description: "Pagar via Pix com ativação imediata",
-            },
-            {
-              rowId: "3",
-              title: "3️⃣ Planos e Preços",
-              description: "Ver opções Mensal, Trimestral, Semestral e Anual",
-            },
-            {
-              rowId: "4",
-              title: "4️⃣ Baixar Aplicativos",
-              description: "Links de download para TV Box, Celular, iOS e PC 📲",
-            },
-            {
-              rowId: "5",
-              title: "5️⃣ Reenviar Meus Acessos",
-              description: "Receber login, senha e lista M3U",
-            },
-            {
-              rowId: "6",
-              title: "6️⃣ Atendimento Humano",
-              description: "Tirar dúvidas com nossa equipe de suporte",
-            },
-          ],
-        },
+      footer: serverName,
+      buttons: [
+        { id: "1", displayText: "Quero testar", type: "reply" },
+        { id: "3", displayText: "Ver valores", type: "reply" },
+        { id: "2", displayText: "Quero renovar", type: "reply" },
       ],
     },
   };
