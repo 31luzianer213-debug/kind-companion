@@ -31,6 +31,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { AdminOverviewCard } from "@/components/admin/AdminOverviewCard";
+import { AdminConnectionsCard } from "@/components/admin/AdminConnectionsCard";
 import {
   createAdminReseller,
   deleteAdminReseller,
