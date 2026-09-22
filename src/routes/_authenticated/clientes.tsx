@@ -303,6 +303,35 @@ function ClientsRegistry() {
   const [form, setForm] = useState<ClientForm>(empty);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Planos de venda cadastrados em Configurações — preenchem valor e vencimento de uma vez
+  const { data: salePlansData } = useQuery({
+    queryKey: ["sale-plans-options"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("sale_plans")
+        .select("id, name, price, months, screens, active")
+        .eq("active", true)
+        .order("price");
+      return Array.isArray(data) ? data : [];
+    },
+    staleTime: 60_000,
+  });
+  const salePlans = Array.isArray(salePlansData) ? salePlansData : [];
+
+  function aplicarPlano(planId: string) {
+    const plan = salePlans.find((item) => item.id === planId);
+    if (!plan) return;
+    const due = new Date();
+    due.setMonth(due.getMonth() + Number(plan.months || 1));
+    setForm((prev) => ({
+      ...prev,
+      monthly_fee: Number(plan.price || 0).toFixed(2),
+      next_due_date: due.toISOString().slice(0, 10),
+      due_day: String(due.getDate()),
+    }));
+    toast.success(`Plano "${plan.name}" aplicado ao cadastro.`);
+  }
+
   // Detecção de abertura automática ao vir do Painel Geral (?novo=1)
   useEffect(() => {
     if (typeof window !== "undefined") {
