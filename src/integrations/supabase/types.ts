@@ -728,6 +728,45 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_settings: {
+        Row: {
+          bot_token: string | null
+          bot_username: string | null
+          connected: boolean
+          connected_at: string | null
+          created_at: string
+          enabled: boolean
+          last_error: string | null
+          updated_at: string
+          user_id: string
+          webhook_secret: string | null
+        }
+        Insert: {
+          bot_token?: string | null
+          bot_username?: string | null
+          connected?: boolean
+          connected_at?: string | null
+          created_at?: string
+          enabled?: boolean
+          last_error?: string | null
+          updated_at?: string
+          user_id: string
+          webhook_secret?: string | null
+        }
+        Update: {
+          bot_token?: string | null
+          bot_username?: string | null
+          connected?: boolean
+          connected_at?: string | null
+          created_at?: string
+          enabled?: boolean
+          last_error?: string | null
+          updated_at?: string
+          user_id?: string
+          webhook_secret?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_processed_messages: {
         Row: {
           message_id: string
