@@ -331,7 +331,7 @@ function BotPage() {
   async function handleImportPanelApps() {
     setImportingApps(true);
     try {
-      const res: any = await importPanelApps({ data: {} });
+      const res: any = await importPanelApps(undefined as any);
       if (!res?.ok) {
         toast.error(res?.error || "Não consegui buscar os aplicativos no painel.");
         return;
