@@ -728,6 +728,36 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_chats: {
+        Row: {
+          chat_id: string
+          created_at: string
+          display_name: string | null
+          id: string
+          last_message_at: string | null
+          phone: string | null
+          user_id: string
+        }
+        Insert: {
+          chat_id: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_message_at?: string | null
+          phone?: string | null
+          user_id: string
+        }
+        Update: {
+          chat_id?: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_message_at?: string | null
+          phone?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       telegram_settings: {
         Row: {
           bot_token: string | null
