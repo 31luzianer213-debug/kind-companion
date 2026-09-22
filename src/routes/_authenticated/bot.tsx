@@ -768,7 +768,7 @@ function BotPage() {
                     onClick={handleRestoreDefaultAppLinks}
                     className="rounded-md text-xs gap-1.5 self-start sm:self-auto"
                   >
-                    <Sparkles className="size-3 text-sky-400" /> Restaurar Links Recomendados
+                    <Sparkles className="size-3 text-sky-400" /> Limpar campos
                   </Button>
                 </div>
               </CardHeader>
