@@ -33,6 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { AdminOverviewCard } from "@/components/admin/AdminOverviewCard";
 import { AdminConnectionsCard } from "@/components/admin/AdminConnectionsCard";
+import { AdminPlansCard } from "@/components/admin/AdminPlansCard";
 import {
   createAdminReseller,
   deleteAdminReseller,
@@ -142,7 +143,7 @@ function AdminPage() {
         </TabsContent>
 
         <TabsContent value="plano" className="space-y-5">
-          <PlanEditorCard />
+          <AdminPlansCard />
         </TabsContent>
 
         <TabsContent value="recebimento" className="space-y-5">
