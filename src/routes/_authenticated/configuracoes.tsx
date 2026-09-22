@@ -163,7 +163,7 @@ function ConfiguracoesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/60 pb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Settings className="size-6 text-primary" /> Ajustes Gerais & Automação
+            <Settings className="size-6 text-primary" /> Configurações
           </h1>
           <p className="text-sm text-muted-foreground">
             Defina o nome da sua revenda, horários e regras de envio do robô de cobrança automática.
@@ -256,7 +256,7 @@ function ConfiguracoesPage() {
                 Robô WhatsApp
               </p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Auto-atendimento, testes grátis e PIX no chat
+                Auto-atendimento, testes grátis e Pix no chat
               </p>
             </div>
             <div className="flex items-center justify-end text-xs font-semibold text-primary mt-3">
@@ -274,7 +274,7 @@ function ConfiguracoesPage() {
                 <CreditCard className="size-4" />
               </div>
               <Badge variant={hasPix ? "success" : "secondary"} className="text-[10px]">
-                {hasPix ? "PIX Ativo" : "Configurar"}
+                {hasPix ? "Pix ativo" : "Configurar"}
               </Badge>
             </div>
             <div>
@@ -282,7 +282,7 @@ function ConfiguracoesPage() {
                 Pagamentos
               </p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Chave PIX, Mercado Pago e Asaas
+                Chave Pix, Mercado Pago e Asaas
               </p>
             </div>
             <div className="flex items-center justify-end text-xs font-semibold text-primary mt-3">
