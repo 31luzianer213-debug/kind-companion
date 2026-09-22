@@ -1023,6 +1023,7 @@ export async function processBotMessage(
     text: string;
     pushName?: string;
   },
+  opts?: { skipAi?: boolean },
 ): Promise<BotProcessResult> {
   const config = await loadBotConfig(supabase, userId);
 
@@ -1034,12 +1035,17 @@ export async function processBotMessage(
   const cleanPhone = params.phone.replace(/\D/g, "");
   const text = normalizeBotInput(params.text ?? "");
 
+  const aiOn = config.aiEnabled !== false && !opts?.skipAi;
+  const isGreeting = ["oi", "olá", "ola", "opa", "ei", "eae", "e ai", "bom dia", "boa tarde", "boa noite", "start"].includes(text);
+  const wantsMenu = ["menu", "início", "inicio", "0", "voltar ao menu", "voltar menu", "menu inicial", "menu principal"].includes(text);
+
   // Saudações e pedido explícito de menu não precisam de uma segunda consulta
   // ao banco: loadBotConfig já trouxe nome, servidor e duração do teste.
-  if (["oi", "olá", "ola", "menu", "início", "inicio", "start", "0", "voltar ao menu", "voltar menu", "menu inicial", "menu principal"].includes(text)) {
+  if (wantsMenu || (isGreeting && !aiOn)) {
     const quickServerName = config.serverName || config.businessName || "Meu Servidor";
     return buildMainMenu(config, quickServerName);
   }
+
 
   // Carrega dados do servidor IPTV
   let wsRow: any = null;
