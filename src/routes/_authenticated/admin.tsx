@@ -15,6 +15,7 @@ import {
   KeyRound,
   Loader2,
   Lock,
+  MessageCircle,
   Search,
   ShieldCheck,
   Sparkles,
@@ -107,10 +108,16 @@ function AdminPage() {
         </Badge>
       </div>
 
-      <Tabs defaultValue="assinaturas" className="space-y-5">
+      <Tabs defaultValue="visao" className="space-y-5">
         <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsTrigger value="visao" className="gap-1.5 text-xs sm:text-sm">
+            <Sparkles className="size-4" /> Visão geral
+          </TabsTrigger>
           <TabsTrigger value="assinaturas" className="gap-1.5 text-xs sm:text-sm">
             <Users className="size-4" /> Assinaturas
+          </TabsTrigger>
+          <TabsTrigger value="conexoes" className="gap-1.5 text-xs sm:text-sm">
+            <MessageCircle className="size-4" /> Conexões
           </TabsTrigger>
           <TabsTrigger value="plano" className="gap-1.5 text-xs sm:text-sm">
             <Crown className="size-4" /> Plano
@@ -120,8 +127,16 @@ function AdminPage() {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="visao" className="space-y-5">
+          <AdminOverviewCard />
+        </TabsContent>
+
         <TabsContent value="assinaturas" className="space-y-5">
           <SubscriptionsCard />
+        </TabsContent>
+
+        <TabsContent value="conexoes" className="space-y-5">
+          <AdminConnectionsCard />
         </TabsContent>
 
         <TabsContent value="plano" className="space-y-5">
