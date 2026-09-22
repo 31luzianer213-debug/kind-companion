@@ -43,6 +43,7 @@ import {
   Laptop,
   Monitor,
 } from "lucide-react";
+import { TelegramPanel } from "@/components/panels/TelegramPanel";
 
 export const Route = createFileRoute("/_authenticated/bot")({
   head: () => ({
@@ -485,6 +486,8 @@ function BotPage() {
           ))}
         </CardContent>
       </Card>
+
+      <TelegramPanel />
 
       {/* Grid Principal */}
       <div className="grid gap-6 lg:grid-cols-12">
