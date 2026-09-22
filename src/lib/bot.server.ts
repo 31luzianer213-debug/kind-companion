@@ -827,17 +827,9 @@ async function handleRenewOrderCreation({
   if (mpPixResult?.ok && mpPixResult?.qrCode) {
     // MODO AUTOMÁTICO MERCADO PAGO COM Pix COPIA E COLA & QR CODE FOTO
     const reply =
-      `💳 *DADOS PARA PAGAMENTO Pix (RENOVAÇÃO)* 📺\n\n` +
-      `✅ *Usuário a Renovar:* *${targetUsername}*\n` +
-      (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
-      `📺 *Servidor:* ${serverName}\n` +
-      `💰 *Valor da Mensalidade:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-      `⚡ *Forma de Pagamento:* Pix Automático\n\n` +
-      `👇 *COMO PAGAR:*\n` +
-      `1️⃣ Toque no botão *📋 Copiar Código Pix* abaixo.\n` +
-      `2️⃣ Abra o app do seu banco, vá em *Pix* > *Pix Copia e Cola* e pague.\n\n` +
-      `✅ *Renovação 100% Automática!*\n` +
-      `Assim que o banco confirmar, seu acesso será reativado imediatamente! 🚀`;
+      `Beleza${clientMatch?.name ? `, ${String(clientMatch.name).split(" ")[0]}` : ""}! Vou renovar o usuário ${targetUsername}, fica R$ ${amount.toFixed(2).replace(".", ",")}.\n\n` +
+      `Te mandei o código do Pix aqui embaixo, é só copiar e pagar no app do seu banco em Pix Copia e Cola.\n\n` +
+      `Quando o pagamento cair seu acesso volta na hora, não precisa me avisar 🙂`;
 
     return {
       reply,
@@ -846,7 +838,7 @@ async function handleRenewOrderCreation({
         ? {
             type: "image",
             base64: mpPixResult.qrCodeBase64,
-            caption: `📱 *QR CODE Pix — RENOVAÇÃO IPTV*\n👤 Usuário: ${targetUsername}\n💰 Valor: R$ ${amount.toFixed(2).replace(".", ",")}`,
+            caption: `Se preferir pagar pelo QR Code, é esse aqui. Usuário ${targetUsername} • R$ ${amount.toFixed(2).replace(".", ",")}`,
           }
         : undefined,
       interactive: {
@@ -871,18 +863,9 @@ async function handleRenewOrderCreation({
   const effectivePixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
 
   const reply =
-    `💳 *DADOS PARA PAGAMENTO Pix (RENOVAÇÃO)* 📺\n\n` +
-    `✅ *Usuário a Renovar:* *${targetUsername}*\n` +
-    (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
-    `📺 *Servidor:* ${serverName}\n` +
-    `💰 *Valor da Mensalidade:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-    `💳 *Forma de Pagamento:* Transferência Pix\n\n` +
-    `🔑 *Chave Pix:* \`${effectivePixKey}\`\n` +
-    `👤 *Titular:* ${effectivePixHolder}\n\n` +
-    `📌 *Como Confirmar Sua Renovação:*\n` +
-    `1️⃣ Toque no botão *📋 Copiar Chave Pix* abaixo.\n` +
-    `2️⃣ Faça o Pix no valor de *R$ ${amount.toFixed(2).replace(".", ",")}*.\n` +
-    `3️⃣ *Envie o comprovante do Pix aqui nesta conversa* para renovação imediata! 🚀`;
+    `Beleza${clientMatch?.name ? `, ${String(clientMatch.name).split(" ")[0]}` : ""}! Vou renovar o usuário ${targetUsername}, fica R$ ${amount.toFixed(2).replace(".", ",")}.\n\n` +
+    `Minha chave Pix é ${effectivePixKey} (em nome de ${effectivePixHolder}).\n\n` +
+    `Assim que pagar, me manda o comprovante aqui que eu renovo na hora 🙂`;
 
   return {
     reply,
