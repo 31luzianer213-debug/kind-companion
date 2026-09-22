@@ -486,6 +486,8 @@ function BotPage() {
         </CardContent>
       </Card>
 
+      <TelegramPanel />
+
       {/* Grid Principal */}
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Coluna Esquerda: Configurações do Robô (7 colunas) */}
