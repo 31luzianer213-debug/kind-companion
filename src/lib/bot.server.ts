@@ -1502,26 +1502,22 @@ export async function processBotMessage(
       });
 
       const reply =
-        `💳 *RENOVAÇÃO DE ASSINATURA* 📺\n\n` +
-        `Localizamos a seguinte conta vinculada ao seu WhatsApp:\n` +
-        `👤 *Cliente:* ${c.name}\n` +
-        `🔑 *Usuário:* *${c.iptv_username || c.name}*\n` +
-        (c.next_due_date ? `📅 *Vencimento:* ${c.next_due_date}\n` : "") +
-        `💰 *Valor:* ${fee}\n\n` +
-        `👉 Digite *SIM* para renovar este usuário acima.\n` +
-        `👉 Ou *digite o outro usuário* que você deseja renovar: 👇`;
+        `Achei sua conta aqui: usuário ${c.iptv_username || c.name}` +
+        (c.next_due_date ? `, com vencimento em ${c.next_due_date}` : "") +
+        `. A renovação fica ${fee}.\n\n` +
+        `Posso seguir com essa? Responde "sim" que eu já gero o Pix. Se for outro usuário, é só me dizer qual.`;
 
       return {
         reply,
         action: "renew_confirm_prompted",
         interactive: {
           type: "buttons",
-          title: "💳 Confirmar Renovação",
-          description: `Renovar assinatura de ${c.name} (${c.iptv_username || c.name}) por ${fee}?`,
-          footer: `${serverName} • Pix Automático`,
+          title: "Renovar",
+          description: `Renovar ${c.iptv_username || c.name} por ${fee}?`,
+          footer: serverName,
           buttons: [
-            { id: "SIM", displayText: "✅ Sim, Renovar Agora", type: "reply" },
-            { id: "0", displayText: "❌ Menu Principal", type: "reply" },
+            { id: "SIM", displayText: "Sim, pode renovar", type: "reply" },
+            { id: "0", displayText: "Agora não", type: "reply" },
           ],
         },
       };
