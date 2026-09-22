@@ -553,9 +553,9 @@ export async function createTrialForBot(
       await supabase.from("message_logs").insert({
         user_id: userId,
         phone: cleanPhone,
-        message: `Falha ao criar teste grátis no painel "${panel.serverName}": ${detail}`,
+        body: `Falha ao criar teste grátis no painel "${panel.serverName}".`,
         status: "failed",
-        message_type: "trial_error",
+        error: detail.slice(0, 500),
       });
     } catch {}
     return {
