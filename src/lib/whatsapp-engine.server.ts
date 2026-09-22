@@ -40,7 +40,7 @@ export async function resolveTargetUserId(
   instanceName?: string | null,
 ): Promise<string> {
   const explicit = String(explicitUserId ?? "").trim();
-  if (/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(explicit)) return explicit;
+  const explicitValid = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(explicit) ? explicit : null;
 
   const { data: settings, error } = await supabaseAdmin
     .from("whatsapp_settings")
@@ -60,11 +60,19 @@ export async function resolveTargetUserId(
     const { findUserIdByInstance } = await import("./whatsapp-presence.server");
     const discovered = await findUserIdByInstance(instanceName);
     if (discovered) return discovered;
+
+    // Só aceita o identificador enviado na URL quando ele bate com a instância.
+    if (explicitValid && instanceNameFor(explicitValid) === instanceName) return explicitValid;
+
+    throw new Error(
+      `A instância "${instanceName}" não pertence a nenhuma conta cadastrada. Reconecte o WhatsApp pelo painel.`,
+    );
   }
 
   // Sem instância identificada, só é seguro atender quando existe uma única conta.
   // Nunca roteia a conversa de um revendedor para outro.
   if (rows.length === 1 && rows[0]?.user_id) return rows[0].user_id;
+  if (explicitValid && rows.some((row: any) => row.user_id === explicitValid)) return explicitValid;
 
   throw new Error(
     "Não foi possível identificar a conta dona desta instância do WhatsApp. Reconecte o WhatsApp pelo painel para registrar o webhook com o identificador correto.",
