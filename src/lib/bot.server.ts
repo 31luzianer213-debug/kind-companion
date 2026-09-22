@@ -331,6 +331,9 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
       appWebPlayerLink: metaBot?.appWebPlayerLink ?? DEFAULT_BOT_CONFIG.appWebPlayerLink,
       appSmartTvText: metaBot?.appSmartTvText ?? DEFAULT_BOT_CONFIG.appSmartTvText,
       appsCustomText: metaBot?.appsCustomText ?? DEFAULT_BOT_CONFIG.appsCustomText,
+      aiEnabled: metaBot?.aiEnabled ?? DEFAULT_BOT_CONFIG.aiEnabled,
+      aiAgentName: metaBot?.aiAgentName?.trim() || DEFAULT_BOT_CONFIG.aiAgentName,
+      aiInstructions: metaBot?.aiInstructions ?? DEFAULT_BOT_CONFIG.aiInstructions,
     };
 
     botConfigCache.set(uid, config);
