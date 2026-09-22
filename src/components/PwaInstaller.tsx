@@ -83,9 +83,9 @@ export function PwaInstaller() {
 
   return (
     <div className="fixed inset-x-2 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[60] sm:inset-x-3 md:bottom-5 md:left-auto md:right-5 md:w-[min(390px,calc(100vw-2.5rem))]">
-      <div className="rounded-2xl border border-border/70 bg-background/95 p-3.5 shadow-md backdrop-blur-xl">
+      <div className="rounded-lg border border-border/70 bg-background/95 p-3.5 shadow-md backdrop-blur-xl">
         <div className="flex items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
             <Smartphone className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
@@ -107,7 +107,7 @@ export function PwaInstaller() {
             </div>
 
             {showIosHelp ? (
-              <div className="mt-3 rounded-xl border border-border/60 bg-muted/35 p-3 text-xs text-muted-foreground">
+              <div className="mt-3 rounded-md border border-border/60 bg-muted/35 p-3 text-xs text-muted-foreground">
                 <p className="font-semibold text-foreground">No iPhone:</p>
                 <p className="mt-1 flex items-center gap-1.5">
                   <Share2 className="size-3.5" /> Toque em Compartilhar e depois em <strong>Adicionar à Tela de Início</strong>.
@@ -116,11 +116,11 @@ export function PwaInstaller() {
             ) : null}
 
             <div className="mt-3 grid grid-cols-1 gap-2 min-[390px]:grid-cols-[minmax(0,1fr)_auto]">
-              <Button size="sm" onClick={install} className="h-9 flex-1 gap-1.5 rounded-xl font-semibold">
+              <Button size="sm" onClick={install} className="h-9 flex-1 gap-1.5 rounded-md font-semibold">
                 {isIos && !installPrompt ? <Share2 className="size-4" /> : <Download className="size-4" />}
                 {isIos && !installPrompt ? "Como instalar" : "Instalar app"}
               </Button>
-              <Button size="sm" variant="outline" onClick={dismiss} className="h-9 rounded-xl px-3">
+              <Button size="sm" variant="outline" onClick={dismiss} className="h-9 rounded-md px-3">
                 Agora não
               </Button>
             </div>

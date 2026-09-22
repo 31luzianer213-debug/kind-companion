@@ -351,7 +351,7 @@ function PedidosPage() {
               Aguardando Pix (Pendentes)
             </CardTitle>
             <div className="relative">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/25">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/25">
                 <Clock className="h-5 w-5" />
               </div>
               {pendingOrders.length > 0 && (
@@ -377,7 +377,7 @@ function PedidosPage() {
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Acessos Liberados
             </CardTitle>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/25">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/25">
               <CheckCircle2 className="h-5 w-5" />
             </div>
           </CardHeader>
@@ -396,7 +396,7 @@ function PedidosPage() {
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Faturamento Aprovado
             </CardTitle>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 border border-teal-500/25">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-teal-500/10 text-teal-600 border border-teal-500/25">
               <DollarSign className="h-5 w-5" />
             </div>
           </CardHeader>
@@ -415,7 +415,7 @@ function PedidosPage() {
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Total de Pedidos
             </CardTitle>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500 border border-purple-500/25">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-purple-500/10 text-purple-500 border border-purple-500/25">
               <ShoppingBag className="h-5 w-5" />
             </div>
           </CardHeader>
@@ -433,7 +433,7 @@ function PedidosPage() {
       {/* Controles de Filtros e Busca */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Abas de Filtro */}
-        <div className="flex items-center gap-1.5 rounded-xl border border-border bg-card p-1 shadow-sm overflow-x-auto">
+        <div className="flex items-center gap-1.5 rounded-md border border-border bg-card p-1 shadow-sm overflow-x-auto">
           <button
             onClick={() => setActiveTab("pending")}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap ${
@@ -835,7 +835,7 @@ function PedidosPage() {
 
           {selectedOrder && (
             <div className="space-y-3 py-2 text-sm">
-              <div className="rounded-xl border border-border/80 bg-muted/30 p-3.5 space-y-2">
+              <div className="rounded-md border border-border/80 bg-muted/30 p-3.5 space-y-2">
                 <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-3">
                   <span className="text-muted-foreground">Pedido:</span>
                   <span className="font-bold">#{selectedOrder.order_number}</span>
@@ -873,7 +873,7 @@ function PedidosPage() {
                 )}
               </div>
 
-              <div className="rounded-xl border border-white/20 bg-white/5 p-3 text-xs space-y-1.5 text-zinc-300">
+              <div className="rounded-md border border-white/20 bg-white/5 p-3 text-xs space-y-1.5 text-zinc-300">
                 <div className="flex items-center gap-1.5 font-bold text-white">
                   <CheckCircle2 className="h-4 w-4" />
                   Ao clicar em Aprovar Agora:
@@ -934,7 +934,7 @@ function PedidosPage() {
 
           {releasedCredentials && (
             <div className="space-y-3 py-2 text-sm">
-              <div className="rounded-xl border border-white/20 bg-white/5 p-3.5 space-y-2 font-mono">
+              <div className="rounded-md border border-white/20 bg-white/5 p-3.5 space-y-2 font-mono">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">Usuário:</span>
                   <div className="flex items-center gap-2">

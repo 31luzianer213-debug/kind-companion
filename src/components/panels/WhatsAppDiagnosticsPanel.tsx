@@ -52,7 +52,7 @@ export function WhatsAppDiagnosticsPanel() {
 
       {query.isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[0, 1, 2, 3].map((item) => <div key={item} className="h-32 animate-pulse rounded-xl bg-muted/60" />)}
+          {[0, 1, 2, 3].map((item) => <div key={item} className="h-32 animate-pulse rounded-md bg-muted/60" />)}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -80,11 +80,11 @@ export function WhatsAppDiagnosticsPanel() {
         <CardContent className="space-y-3 text-sm">
           <p><span className="text-muted-foreground">Horário:</span> {formatCheckedAt(data?.checkedAt)}</p>
           {data?.lastError ? (
-            <div className="flex gap-2 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-amber-600 dark:text-amber-400">
+            <div className="flex gap-2 rounded-md border border-amber-500/25 bg-amber-500/5 p-3 text-amber-600 dark:text-amber-400">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" /><span>{data.lastError}</span>
             </div>
           ) : connected ? (
-            <div className="flex gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3 text-emerald-600 dark:text-emerald-400">
+            <div className="flex gap-2 rounded-md border border-emerald-500/25 bg-emerald-500/5 p-3 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="mt-0.5 size-4 shrink-0" /><span>A instância exclusiva desta conta está respondendo.</span>
             </div>
           ) : null}

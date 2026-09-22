@@ -55,7 +55,7 @@ function TrialServerSelector() {
       <CardContent className="p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
-            <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
+            <div className="rounded-md bg-primary/10 p-2.5 text-primary">
               <Bot className="size-5" />
             </div>
             <div>
@@ -73,7 +73,7 @@ function TrialServerSelector() {
 
           <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto lg:min-w-[430px]">
             <Select value={selectedId} onValueChange={setSelected} disabled={isLoading || saving || servers.length === 0}>
-              <SelectTrigger className="w-full rounded-xl sm:flex-1">
+              <SelectTrigger className="w-full rounded-md sm:flex-1">
                 <SelectValue placeholder={isLoading ? "Carregando servidores..." : "Escolha o servidor Sigma"} />
               </SelectTrigger>
               <SelectContent>
@@ -84,7 +84,7 @@ function TrialServerSelector() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={save} disabled={saving || isLoading || !selectedId} className="rounded-xl gap-2 whitespace-nowrap">
+            <Button onClick={save} disabled={saving || isLoading || !selectedId} className="rounded-md gap-2 whitespace-nowrap">
               {saving ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
               Usar nos testes
             </Button>
@@ -118,7 +118,7 @@ function BillingAutomationNotice() {
   return (
     <Card className="surface-card border-emerald-500/25 bg-emerald-500/5 mb-6">
       <CardContent className="p-4 flex items-start gap-3">
-        <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-500">
+        <div className="rounded-md bg-emerald-500/10 p-2.5 text-emerald-500">
           <ShieldCheck className="size-5" />
         </div>
         <div>

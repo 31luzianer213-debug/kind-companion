@@ -42,7 +42,7 @@ export function AuthField({
           id={id}
           aria-invalid={invalid || undefined}
           className={cn(
-            "h-12 rounded-xl border-border/80 bg-background/70 pl-10 text-[16px] shadow-sm transition-all placeholder:text-muted-foreground/55 focus-visible:border-primary/55 focus-visible:ring-4 focus-visible:ring-primary/10 sm:text-sm",
+            "h-12 rounded-md border-border/80 bg-background/70 pl-10 text-[16px] shadow-sm transition-all placeholder:text-muted-foreground/55 focus-visible:border-primary/55 focus-visible:ring-4 focus-visible:ring-primary/10 sm:text-sm",
             revealable && "pr-12",
             invalid && "border-destructive/60 focus-visible:border-destructive focus-visible:ring-destructive/10",
             className,

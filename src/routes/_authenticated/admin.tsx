@@ -80,7 +80,7 @@ function AdminPage() {
   if (!data?.ok) {
     return (
       <div className="mx-auto max-w-lg py-16 text-center" data-testid="admin-denied">
-        <div className="mx-auto mb-4 grid size-14 place-items-center rounded-2xl bg-rose-500/10 text-rose-500">
+        <div className="mx-auto mb-4 grid size-14 place-items-center rounded-lg bg-rose-500/10 text-rose-500">
           <Lock className="size-7" />
         </div>
         <h1 className="text-xl font-bold text-foreground">Área restrita</h1>
@@ -246,7 +246,7 @@ function MercadoPagoCard({ hasTokenInitial }: { hasTokenInitial: boolean }) {
                 setToken(e.target.value);
                 setStatus(null);
               }}
-              className="rounded-xl pr-10 font-mono text-sm"
+              className="rounded-md pr-10 font-mono text-sm"
               data-testid="admin-token-input"
             />
             <Button
@@ -327,7 +327,7 @@ function WebhookCard() {
       </CardHeader>
       <CardContent className="pt-2">
         <div className="flex items-center gap-2">
-          <Input readOnly value={webhookUrl} className="h-9 rounded-xl font-mono text-xs" data-testid="admin-webhook-url" />
+          <Input readOnly value={webhookUrl} className="h-9 rounded-md font-mono text-xs" data-testid="admin-webhook-url" />
           <Button
             type="button"
             variant="outline"
@@ -663,11 +663,11 @@ function SubscriptionsCard() {
               <Loader2 className="size-5 animate-spin text-primary" />
             </div>
           ) : filtered.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
+            <p className="rounded-md border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
               {rows.length === 0 ? "Nenhuma assinatura encontrada ainda." : "Nenhum resultado para essa busca."}
             </p>
           ) : (
-            <div className="divide-y divide-border/60 rounded-xl border border-border/60">
+            <div className="divide-y divide-border/60 rounded-md border border-border/60">
               {filtered.map((row) => {
                 const until = row.current_period_end || row.trial_ends_at;
                 const isActive = row.status === "active";

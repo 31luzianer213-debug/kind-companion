@@ -255,7 +255,7 @@ function AuthPage() {
 
       <section className="relative flex min-h-[100dvh] flex-1 flex-col overflow-hidden">
         <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-8">
-          <Button asChild variant="ghost" size="sm" className="gap-2 rounded-xl text-muted-foreground">
+          <Button asChild variant="ghost" size="sm" className="gap-2 rounded-md text-muted-foreground">
             <Link to="/"><ArrowLeft className="size-4" /> Voltar</Link>
           </Button>
           <ThemeToggle />
@@ -282,7 +282,7 @@ function AuthPage() {
                 </div>
                 <AuthField id="reset-password" label="Nova senha" icon={<Lock className="size-4" />} type={showPassword ? "text" : "password"} required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo de 6 caracteres" autoComplete="new-password" revealable revealed={showPassword} onReveal={() => setShowPassword((value) => !value)} />
                 <AuthField id="reset-password-confirmation" label="Confirme a nova senha" icon={<Lock className="size-4" />} type={showPassword ? "text" : "password"} required minLength={6} value={newPasswordConfirmation} onChange={(e) => setNewPasswordConfirmation(e.target.value)} placeholder="Repita a senha" autoComplete="new-password" invalid={newPasswordConfirmation.length > 0 && newPassword !== newPasswordConfirmation} />
-                <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl text-sm font-bold" data-testid="reset-password-submit">
+                <Button type="submit" disabled={loading} className="h-12 w-full rounded-md text-sm font-bold" data-testid="reset-password-submit">
                   {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
                   {loading ? "Salvando…" : "Salvar nova senha"}
                 </Button>
@@ -325,7 +325,7 @@ function AuthPage() {
                     onReveal={() => setShowPassword((value) => !value)}
                     hint={<button type="button" onClick={openRecovery} className="text-xs font-bold text-primary hover:underline">Esqueci minha senha</button>}
                   />
-                  <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl text-sm font-bold shadow-lg shadow-primary/15">
+                  <Button type="submit" disabled={loading} className="h-12 w-full rounded-md text-sm font-bold shadow-lg shadow-primary/15">
                     {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
                     {loading ? "Entrando…" : "Entrar no painel"}
                   </Button>
@@ -374,7 +374,7 @@ function AuthPage() {
                     onReveal={() => setShowConfirmation((value) => !value)}
                     hint={matches ? <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-500"><Check className="size-3" /> Confere</span> : mismatch ? <span className="flex items-center gap-1 text-[11px] font-bold text-destructive"><X className="size-3" /> Diferente</span> : null}
                   />
-                  <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl text-sm font-bold shadow-lg shadow-primary/15">
+                  <Button type="submit" disabled={loading} className="h-12 w-full rounded-md text-sm font-bold shadow-lg shadow-primary/15">
                     {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
                     {loading ? "Criando conta…" : "Criar minha conta"}
                   </Button>
@@ -384,7 +384,7 @@ function AuthPage() {
 
             <div className="my-5 flex items-center gap-3"><span className="h-px flex-1 bg-border" /><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">ou</span><span className="h-px flex-1 bg-border" /></div>
 
-            <Button type="button" variant="outline" onClick={signInWithGoogle} disabled={googleLoading} className="h-12 w-full gap-3 rounded-xl bg-background/55 font-bold">
+            <Button type="button" variant="outline" onClick={signInWithGoogle} disabled={googleLoading} className="h-12 w-full gap-3 rounded-md bg-background/55 font-bold">
               {googleLoading ? <Loader2 className="size-4 animate-spin" /> : <GoogleIcon />}
               {googleLoading ? "Conectando…" : "Continuar com Google"}
             </Button>
@@ -399,9 +399,9 @@ function AuthPage() {
       </section>
 
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
-        <DialogContent className="w-[calc(100%_-_2rem)] rounded-2xl sm:max-w-md">
+        <DialogContent className="w-[calc(100%_-_2rem)] rounded-lg sm:max-w-md">
           <DialogHeader className="text-center sm:text-center">
-            <span className="mx-auto mb-2 grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary"><KeyRound className="size-5" /></span>
+            <span className="mx-auto mb-2 grid size-12 place-items-center rounded-lg bg-primary/10 text-primary"><KeyRound className="size-5" /></span>
             <DialogTitle>Recuperar senha</DialogTitle>
             <DialogDescription>Enviaremos um link seguro para o e-mail da sua conta.</DialogDescription>
           </DialogHeader>
@@ -415,7 +415,7 @@ function AuthPage() {
           ) : (
             <form onSubmit={recoverPassword} className="space-y-4 pt-2">
               <AuthField id="forgot-email" label="E-mail da conta" icon={<Mail className="size-4" />} type="email" required value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="voce@email.com" autoComplete="email" />
-              <Button type="submit" disabled={forgotLoading} className="h-12 w-full gap-2 rounded-xl font-bold">
+              <Button type="submit" disabled={forgotLoading} className="h-12 w-full gap-2 rounded-md font-bold">
                 {forgotLoading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
                 {forgotLoading ? "Enviando…" : "Enviar link de recuperação"}
               </Button>

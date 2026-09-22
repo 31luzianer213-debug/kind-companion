@@ -381,7 +381,7 @@ function BotPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3 bg-muted/40 p-2.5 rounded-xl border border-border/60">
+          <div className="flex items-center gap-3 bg-muted/40 p-2.5 rounded-md border border-border/60">
             <span className="text-xs font-semibold text-foreground">Status do Robô:</span>
             <div className="flex items-center gap-2">
               <Switch
@@ -399,7 +399,7 @@ function BotPage() {
             type="button"
             onClick={() => handleSave()}
             disabled={saving}
-            className="rounded-xl gap-2 font-semibold px-6 shadow-sm"
+            className="rounded-md gap-2 font-semibold px-6 shadow-sm"
           >
             <Sparkles className="size-4" />
             {saving ? "Salvando..." : "Salvar Alterações"}
@@ -418,7 +418,7 @@ function BotPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/40 p-3">
+          <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/40 p-3">
             <div>
               <Label htmlFor="ai-toggle" className="text-sm font-semibold cursor-pointer">
                 Conversa por inteligência artificial
@@ -475,7 +475,7 @@ function BotPage() {
             ["5", "Reenviar acesso", "Entrega usuário, senha e lista M3U"],
             ["6", "Atendimento", "Encaminha para uma pessoa"],
           ].map(([number, title, description]) => (
-            <div key={number} className="rounded-xl border border-border/60 bg-muted/20 p-3">
+            <div key={number} className="rounded-md border border-border/60 bg-muted/20 p-3">
               <div className="flex items-center gap-2">
                 <span className="grid size-7 place-items-center rounded-lg bg-primary/15 text-xs font-black text-primary">{number}</span>
                 <strong className="text-xs text-foreground">{title}</strong>
@@ -508,7 +508,7 @@ function BotPage() {
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
                 {isMpActive ? (
-                  <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-start gap-2.5 text-xs text-foreground">
+                  <div className="p-3.5 rounded-md bg-emerald-500/10 border border-emerald-500/25 flex items-start gap-2.5 text-xs text-foreground">
                     <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-semibold text-emerald-400">Pix automático ativado</p>
@@ -518,7 +518,7 @@ function BotPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-2.5 text-xs text-foreground">
+                  <div className="p-3.5 rounded-md bg-amber-500/10 border border-amber-500/25 flex items-start gap-2.5 text-xs text-foreground">
                     <AlertCircle className="size-4 text-amber-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-semibold text-amber-400">Modo manual</p>
@@ -529,7 +529,7 @@ function BotPage() {
                   </div>
                 )}
 
-                <Button asChild type="button" variant="outline" size="sm" className="rounded-xl text-xs">
+                <Button asChild type="button" variant="outline" size="sm" className="rounded-md text-xs">
                   <Link to="/pagamentos">Abrir Recebimentos (Pix)</Link>
                 </Button>
               </CardContent>
@@ -548,7 +548,7 @@ function BotPage() {
                     variant="outline"
                     size="sm"
                     onClick={handleRegeneratePlansText}
-                    className="rounded-xl text-xs gap-1.5"
+                    className="rounded-md text-xs gap-1.5"
                   >
                     <Sparkles className="size-3 text-primary" /> Atualizar Texto com esses Preços
                   </Button>
@@ -560,7 +560,7 @@ function BotPage() {
               <CardContent className="pt-4 space-y-4">
                 <div className="grid gap-3 sm:grid-cols-3">
                   {/* Renovação Mensal */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-primary/5 border border-primary/20 sm:col-span-3">
+                  <div className="space-y-1.5 p-3 rounded-md bg-primary/5 border border-primary/20 sm:col-span-3">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                         <RefreshCw className="size-3.5 text-primary" /> Valor da Renovação Mensal (Opção 2)
@@ -577,13 +577,13 @@ function BotPage() {
                         min="1"
                         value={form.renewalPrice}
                         onChange={(e) => setForm({ ...form, renewalPrice: Number(e.target.value) || 0 })}
-                        className="rounded-xl text-sm font-mono pl-9 font-bold"
+                        className="rounded-md text-sm font-mono pl-9 font-bold"
                       />
                     </div>
                   </div>
 
                   {/* 1 Mês */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
+                  <div className="space-y-1.5 p-3 rounded-md bg-muted/20 border border-border/50">
                     <Label className="text-xs font-semibold">1 Mês (Mensal)</Label>
                     <div className="relative flex items-center">
                       <span className="absolute left-3 text-xs font-bold text-muted-foreground">R$</span>
@@ -593,13 +593,13 @@ function BotPage() {
                         min="1"
                         value={form.planMonthlyPrice}
                         onChange={(e) => setForm({ ...form, planMonthlyPrice: Number(e.target.value) || 0 })}
-                        className="rounded-xl text-xs font-mono pl-8"
+                        className="rounded-md text-xs font-mono pl-8"
                       />
                     </div>
                   </div>
 
                   {/* 3 Meses */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
+                  <div className="space-y-1.5 p-3 rounded-md bg-muted/20 border border-border/50">
                     <Label className="text-xs font-semibold">3 Meses (Trimestral)</Label>
                     <div className="relative flex items-center">
                       <span className="absolute left-3 text-xs font-bold text-muted-foreground">R$</span>
@@ -609,13 +609,13 @@ function BotPage() {
                         min="1"
                         value={form.planQuarterlyPrice}
                         onChange={(e) => setForm({ ...form, planQuarterlyPrice: Number(e.target.value) || 0 })}
-                        className="rounded-xl text-xs font-mono pl-8"
+                        className="rounded-md text-xs font-mono pl-8"
                       />
                     </div>
                   </div>
 
                   {/* 6 Meses */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
+                  <div className="space-y-1.5 p-3 rounded-md bg-muted/20 border border-border/50">
                     <Label className="text-xs font-semibold">6 Meses (Semestral)</Label>
                     <div className="relative flex items-center">
                       <span className="absolute left-3 text-xs font-bold text-muted-foreground">R$</span>
@@ -625,13 +625,13 @@ function BotPage() {
                         min="1"
                         value={form.planSemiannualPrice}
                         onChange={(e) => setForm({ ...form, planSemiannualPrice: Number(e.target.value) || 0 })}
-                        className="rounded-xl text-xs font-mono pl-8"
+                        className="rounded-md text-xs font-mono pl-8"
                       />
                     </div>
                   </div>
 
                   {/* 12 Meses (Anual) */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50 sm:col-span-3">
+                  <div className="space-y-1.5 p-3 rounded-md bg-muted/20 border border-border/50 sm:col-span-3">
                     <Label className="text-xs font-semibold">12 Meses (Anual - Melhor Custo-Benefício)</Label>
                     <div className="relative flex items-center">
                       <span className="absolute left-3 text-xs font-bold text-muted-foreground">R$</span>
@@ -641,7 +641,7 @@ function BotPage() {
                         min="1"
                         value={form.planAnnualPrice}
                         onChange={(e) => setForm({ ...form, planAnnualPrice: Number(e.target.value) || 0 })}
-                        className="rounded-xl text-xs font-mono pl-8"
+                        className="rounded-md text-xs font-mono pl-8"
                       />
                     </div>
                   </div>
@@ -670,7 +670,7 @@ function BotPage() {
                       placeholder="Ex: Minha Revenda ou Servidor Premium"
                       value={form.serverName}
                       onChange={(e) => setForm({ ...form, serverName: e.target.value })}
-                      className="rounded-xl text-sm"
+                      className="rounded-md text-sm"
                     />
                   </div>
 
@@ -683,12 +683,12 @@ function BotPage() {
                       placeholder="Ex: http://alpha-stream.net"
                       value={form.streamingDns}
                       onChange={(e) => setForm({ ...form, streamingDns: e.target.value })}
-                      className="rounded-xl text-sm font-mono"
+                      className="rounded-md text-sm font-mono"
                     />
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50">
+                <div className="flex items-center justify-between p-3 rounded-md bg-muted/30 border border-border/50">
                   <div className="space-y-0.5">
                     <p className="text-xs font-semibold text-foreground">Permitir Geração de Teste Grátis (Opção 1)</p>
                     <p className="text-[11px] text-muted-foreground">
@@ -712,7 +712,7 @@ function BotPage() {
                       max={24}
                       value={form.testDurationHours}
                       onChange={(e) => setForm({ ...form, testDurationHours: Number(e.target.value) || 4 })}
-                      className="rounded-xl text-sm font-mono"
+                      className="rounded-md text-sm font-mono"
                     />
                   </div>
 
@@ -726,7 +726,7 @@ function BotPage() {
                       max={90}
                       value={form.blockRepeatDays}
                       onChange={(e) => setForm({ ...form, blockRepeatDays: Number(e.target.value) || 7 })}
-                      className="rounded-xl text-sm font-mono"
+                      className="rounded-md text-sm font-mono"
                     />
                   </div>
                 </div>
@@ -740,7 +740,7 @@ function BotPage() {
                     value={form.testPackageName}
                     onChange={(e) => setForm({ ...form, testPackageName: e.target.value })}
                     placeholder="Ex: Teste grátis 4 horas"
-                    className="rounded-xl text-sm"
+                    className="rounded-md text-sm"
                   />
                 </div>
               </CardContent>
@@ -763,7 +763,7 @@ function BotPage() {
                     variant="outline"
                     size="sm"
                     onClick={handleRestoreDefaultAppLinks}
-                    className="rounded-xl text-xs gap-1.5 self-start sm:self-auto"
+                    className="rounded-md text-xs gap-1.5 self-start sm:self-auto"
                   >
                     <Sparkles className="size-3 text-sky-400" /> Restaurar Links Recomendados
                   </Button>
@@ -772,7 +772,7 @@ function BotPage() {
               <CardContent className="pt-4 space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   {/* Código Downloader */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
+                  <div className="space-y-1.5 p-3 rounded-md bg-muted/20 border border-border/50">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
                         <Tv className="size-3.5 text-sky-400" /> Código no App Downloader
@@ -786,7 +786,7 @@ function BotPage() {
                       placeholder="Ex: 389471"
                       value={form.appAndroidDownloaderCode}
                       onChange={(e) => setForm({ ...form, appAndroidDownloaderCode: e.target.value })}
-                      className="rounded-xl font-mono text-sm"
+                      className="rounded-md font-mono text-sm"
                     />
                     <p className="text-[11px] text-muted-foreground">
                       Código numérico de 5 ou 6 dígitos para digitar diretamente no aplicativo Downloader da TV.
@@ -794,7 +794,7 @@ function BotPage() {
                   </div>
 
                   {/* APK Android Direto */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
+                  <div className="space-y-1.5 p-3 rounded-md bg-muted/20 border border-border/50">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
                         <Smartphone className="size-3.5 text-emerald-400" /> Link APK Android (Celular & TV)
@@ -808,7 +808,7 @@ function BotPage() {
                       placeholder="Ex: https://bit.ly/seu-app-iptv"
                       value={form.appAndroidApk}
                       onChange={(e) => setForm({ ...form, appAndroidApk: e.target.value })}
-                      className="rounded-xl font-mono text-xs"
+                      className="rounded-md font-mono text-xs"
                     />
                     <p className="text-[11px] text-muted-foreground">
                       Link direto encurtado para download do arquivo instalador (.apk).
@@ -818,7 +818,7 @@ function BotPage() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   {/* iPhone / iOS */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
+                  <div className="space-y-1.5 p-3 rounded-md bg-muted/20 border border-border/50">
                     <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
                       <Smartphone className="size-3.5 text-primary" /> Link App Store (iPhone / iPad / Apple TV)
                     </Label>
@@ -827,12 +827,12 @@ function BotPage() {
                       placeholder="Ex: https://apps.apple.com/app/..."
                       value={form.appIosLink}
                       onChange={(e) => setForm({ ...form, appIosLink: e.target.value })}
-                      className="rounded-xl font-mono text-xs"
+                      className="rounded-md font-mono text-xs"
                     />
                   </div>
 
                   {/* Windows / PC */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
+                  <div className="space-y-1.5 p-3 rounded-md bg-muted/20 border border-border/50">
                     <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
                       <Laptop className="size-3.5 text-primary" /> Aplicativo Computador / Windows (.exe)
                     </Label>
@@ -841,13 +841,13 @@ function BotPage() {
                       placeholder="Ex: https://www.iptvsmarters.com/download?download=windows"
                       value={form.appWindowsLink}
                       onChange={(e) => setForm({ ...form, appWindowsLink: e.target.value })}
-                      className="rounded-xl font-mono text-xs"
+                      className="rounded-md font-mono text-xs"
                     />
                   </div>
                 </div>
 
                 {/* Web Player */}
-                <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
+                <div className="space-y-1.5 p-3 rounded-md bg-muted/20 border border-border/50">
                   <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
                     <Monitor className="size-3.5 text-primary" /> Web Player (Assistir direto no Navegador sem instalar)
                   </Label>
@@ -856,7 +856,7 @@ function BotPage() {
                     placeholder="Ex: http://webtv.iptvsmarters.com"
                     value={form.appWebPlayerLink}
                     onChange={(e) => setForm({ ...form, appWebPlayerLink: e.target.value })}
-                    className="rounded-xl font-mono text-xs"
+                    className="rounded-md font-mono text-xs"
                   />
                 </div>
 
@@ -869,7 +869,7 @@ function BotPage() {
                     rows={2}
                     value={form.appSmartTvText}
                     onChange={(e) => setForm({ ...form, appSmartTvText: e.target.value })}
-                    className="rounded-xl font-mono text-xs leading-relaxed resize-none"
+                    className="rounded-md font-mono text-xs leading-relaxed resize-none"
                     placeholder="Orientações de quais apps baixar na loja da Smart TV..."
                   />
                 </div>
@@ -886,7 +886,7 @@ function BotPage() {
                     rows={3}
                     value={form.appsCustomText}
                     onChange={(e) => setForm({ ...form, appsCustomText: e.target.value })}
-                    className="rounded-xl font-mono text-xs leading-relaxed resize-none"
+                    className="rounded-md font-mono text-xs leading-relaxed resize-none"
                     placeholder="Deixe em branco para o sistema gerar automaticamente a mensagem estruturada acima."
                   />
                 </div>
@@ -911,7 +911,7 @@ function BotPage() {
                     value={form.businessName}
                     onChange={(e) => setForm({ ...form, businessName: e.target.value })}
                     placeholder="Ex: Minha Revenda IPTV"
-                    className="rounded-xl text-sm"
+                    className="rounded-md text-sm"
                   />
                 </div>
 
@@ -924,7 +924,7 @@ function BotPage() {
                     rows={6}
                     value={form.menuGreeting}
                     onChange={(e) => setForm({ ...form, menuGreeting: e.target.value })}
-                    className="rounded-xl font-mono text-xs leading-relaxed resize-none"
+                    className="rounded-md font-mono text-xs leading-relaxed resize-none"
                     placeholder="Cole aqui o texto do menu principal..."
                   />
                 </div>
@@ -935,7 +935,7 @@ function BotPage() {
                     rows={5}
                     value={form.plansText}
                     onChange={(e) => setForm({ ...form, plansText: e.target.value })}
-                    className="rounded-xl font-mono text-xs leading-relaxed resize-none"
+                    className="rounded-md font-mono text-xs leading-relaxed resize-none"
                   />
                 </div>
 
@@ -945,7 +945,7 @@ function BotPage() {
                     rows={3}
                     value={form.supportMessage}
                     onChange={(e) => setForm({ ...form, supportMessage: e.target.value })}
-                    className="rounded-xl font-mono text-xs leading-relaxed resize-none"
+                    className="rounded-md font-mono text-xs leading-relaxed resize-none"
                   />
                 </div>
               </CardContent>
@@ -956,7 +956,7 @@ function BotPage() {
               <Button
                 type="submit"
                 disabled={saving}
-                className="rounded-xl gap-2 font-bold px-7 py-6 text-sm bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                className="rounded-md gap-2 font-bold px-7 py-6 text-sm bg-primary text-primary-foreground shadow-lg shadow-primary/25"
               >
                 <Sparkles className="size-4" />
                 {saving ? "Salvando..." : "Salvar Configurações do Robô"}
@@ -983,7 +983,7 @@ function BotPage() {
           </div>
 
           {/* Smartphone Mockup */}
-          <div className="rounded-xl border-2 border-border/80 bg-background/95 p-3 shadow-lg overflow-hidden flex flex-col h-[760px]">
+          <div className="rounded-md border-2 border-border/80 bg-background/95 p-3 shadow-lg overflow-hidden flex flex-col h-[760px]">
             {/* Header do WhatsApp */}
             <div className="bg-card text-foreground p-3 rounded-lg flex items-center gap-3 border border-border/60 shadow-sm shrink-0">
               <div className="size-9 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-sm shadow-inner">
@@ -1033,7 +1033,7 @@ function BotPage() {
             </div>
 
             {/* Atalhos Rápidos */}
-            <div className="p-2 border-t border-border/60 bg-muted/20 rounded-xl space-y-1.5 shrink-0">
+            <div className="p-2 border-t border-border/60 bg-muted/20 rounded-md space-y-1.5 shrink-0">
               <p className="text-[10px] text-muted-foreground font-semibold px-1">Testar Opções com 1 Clique:</p>
               <div className="flex flex-wrap gap-1.5">
                 <Button
@@ -1125,7 +1125,7 @@ function BotPage() {
                   onChange={(e) => setSimText(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSendSim()}
                   placeholder="Digite uma mensagem ou número (1 a 6)..."
-                  className="h-8 text-xs rounded-xl"
+                  className="h-8 text-xs rounded-md"
                   disabled={simLoading}
                 />
                 <Button
@@ -1133,7 +1133,7 @@ function BotPage() {
                   size="sm"
                   onClick={() => handleSendSim()}
                   disabled={simLoading || !simText.trim()}
-                  className="h-8 w-8 p-0 rounded-xl shrink-0"
+                  className="h-8 w-8 p-0 rounded-md shrink-0"
                 >
                   <Send className="size-3.5" />
                 </Button>

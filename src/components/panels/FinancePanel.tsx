@@ -77,7 +77,7 @@ export function FinancePanel() {
   const lostRevenue = inactive.reduce((sum, client) => sum + Number(client.monthly_fee || 0), 0);
 
   if (isLoading) {
-    return <div className="h-64 animate-pulse rounded-xl bg-muted/60" />;
+    return <div className="h-64 animate-pulse rounded-md bg-muted/60" />;
   }
 
   return (
@@ -146,12 +146,12 @@ export function FinancePanel() {
         </CardHeader>
         <CardContent className="space-y-2">
           {inactive.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border/60 p-4 text-center text-xs text-muted-foreground">
+            <p className="rounded-md border border-dashed border-border/60 p-4 text-center text-xs text-muted-foreground">
               Ninguém nessa situação. Sua base está em dia.
             </p>
           ) : (
             inactive.slice(0, 15).map((client) => (
-              <div key={client.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/60 bg-muted/20 p-3">
+              <div key={client.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 p-3">
                 <div>
                   <p className="text-sm font-semibold">{client.name}</p>
                   <p className="text-xs text-muted-foreground">

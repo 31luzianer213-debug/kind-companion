@@ -313,7 +313,7 @@ function SigmaServersSettings() {
       ) : servers.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex min-h-64 flex-col items-center justify-center p-8 text-center">
-            <span className="mb-4 grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary"><Server className="size-7" /></span>
+            <span className="mb-4 grid size-14 place-items-center rounded-lg bg-primary/10 text-primary"><Server className="size-7" /></span>
             <h2 className="text-lg font-bold">Conecte seu Sigma</h2>
             <p className="mt-2 max-w-md text-sm text-muted-foreground">
               Informe os dados do painel e clique em Salvar e sincronizar. O sistema testa a conexão antes e faz o restante sozinho.
@@ -328,7 +328,7 @@ function SigmaServersSettings() {
               <CardHeader className="border-b border-border/50 pb-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className={`grid size-11 shrink-0 place-items-center rounded-xl ${server.enabled ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
+                    <span className={`grid size-11 shrink-0 place-items-center rounded-md ${server.enabled ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
                       {server.enabled ? <Wifi className="size-5" /> : <WifiOff className="size-5" />}
                     </span>
                     <div className="min-w-0">
@@ -341,13 +341,13 @@ function SigmaServersSettings() {
               </CardHeader>
 
               <CardContent className="space-y-4 p-4">
-                <div className="rounded-xl bg-muted/45 p-3 text-xs">
+                <div className="rounded-md bg-muted/45 p-3 text-xs">
                   <p className="text-muted-foreground">Última sincronização</p>
                   <p className="mt-1 font-bold">{server.last_sync_at ? new Date(server.last_sync_at).toLocaleString("pt-BR") : "Ainda não sincronizado"}</p>
                 </div>
 
                 {server.last_sync_error && (
-                  <p className="rounded-xl bg-destructive/10 p-3 text-xs text-destructive">{server.last_sync_error}</p>
+                  <p className="rounded-md bg-destructive/10 p-3 text-xs text-destructive">{server.last_sync_error}</p>
                 )}
 
                 <div className="flex gap-2">
@@ -376,7 +376,7 @@ function SigmaServersSettings() {
           <form onSubmit={saveAndSync} className="space-y-5">
             <div className="relative">
               {saving && (
-                <div className="absolute inset-0 z-10 flex min-h-[250px] flex-col items-center justify-center rounded-xl border border-primary/20 bg-background/95 px-6 text-center backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="absolute inset-0 z-10 flex min-h-[250px] flex-col items-center justify-center rounded-md border border-primary/20 bg-background/95 px-6 text-center backdrop-blur-sm animate-in fade-in duration-200">
                   <div className="relative mb-4 grid size-16 place-items-center rounded-full bg-primary/10">
                     <span className="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping" />
                     <Loader2 className="size-8 animate-spin text-primary" />
@@ -451,7 +451,7 @@ function SigmaServersSettings() {
                   type="button"
                   disabled={disabled || removing}
                   onClick={() => setRemoveAction(option.value)}
-                  className={`w-full rounded-xl border p-3 text-left transition ${
+                  className={`w-full rounded-md border p-3 text-left transition ${
                     removeAction === option.value ? "border-primary bg-primary/5" : "border-border/60 hover:bg-muted/40"
                   } ${disabled ? "cursor-not-allowed opacity-45" : ""}`}
                 >
@@ -478,7 +478,7 @@ function SigmaServersSettings() {
           )}
 
           {removeAction === "move" && servers.length > 1 && (
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 p-3">
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-border/60 p-3">
               <input
                 type="checkbox"
                 checked={recreateOnTarget}
@@ -515,7 +515,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-border/60 p-3">
+    <div className="flex items-center justify-between rounded-md border border-border/60 p-3">
       <Label className="text-xs font-semibold">{label}</Label>
       <Switch checked={checked} onCheckedChange={onChange} />
     </div>
