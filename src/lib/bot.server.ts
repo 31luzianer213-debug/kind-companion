@@ -1941,6 +1941,11 @@ export async function processBotMessage(
     };
   }
 
+  if (aiOn) {
+    const aiResult = await runSalesAi();
+    if (aiResult) return aiResult;
+  }
+
   return buildMainMenu(config, serverName);
 
 }
