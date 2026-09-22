@@ -1457,12 +1457,38 @@ export async function createSigmaCustomer(
   config: SigmaConfig,
   input: CreateSigmaCustomerInput,
 ): Promise<{ id: string; username: string; password: string; raw?: any }> {
-  const username = input.username.trim();
+  // O Sigma exige usuário com no mínimo 9 caracteres
+  let username = input.username.trim();
+  while (username.length < 9) {
+    username += Math.floor(Math.random() * 10).toString();
+  }
   const password = (input.password ?? "").trim() || Math.random().toString(36).slice(-8);
   const name = input.name.trim();
   const phone = input.phone ? input.phone.replace(/\D/g, "") : null;
   const screens = input.screens && input.screens > 0 ? input.screens : 1;
   const dueDate = input.dueDate ? parseDate(input.dueDate) : null;
+
+  // Alguns painéis exigem servidor e pacote; descobre os IDs disponíveis
+  let serverId: string | number | null = null;
+  let packageId: string | number | null = input.packageId ?? null;
+  for (const [endpoint, target] of [
+    ["/api/servers", "server"],
+    ["/api/packages", "package"],
+    ["/api/plans", "package"],
+  ] as const) {
+    if (target === "server" && serverId) continue;
+    if (target === "package" && packageId) continue;
+    try {
+      const res = await authorizedRequest(config, endpoint, { method: "GET" }, 8000);
+      if (!res.ok || !res.payload) continue;
+      const rows = extractRows(res.payload);
+      const first = rows.find((r: any) => r && (r.id ?? r.uuid));
+      if (!first) continue;
+      const id = first.id ?? first.uuid;
+      if (target === "server") serverId = id;
+      else packageId = id;
+    } catch {}
+  }
 
   const candidateEndpoints = [
     "/api/customers",
@@ -1491,7 +1517,10 @@ export async function createSigmaCustomer(
       exp_date: dueDate ?? "",
       status: "active",
       notes: input.notes ?? "",
-      ...(input.packageId ? { package_id: input.packageId } : {}),
+      note: input.notes ?? "",
+      whatsapp: phone ?? "",
+      ...(packageId ? { package_id: packageId, packages: [packageId], plan_id: packageId } : {}),
+      ...(serverId ? { server_id: serverId, servers: [serverId] } : {}),
     },
     {
       user: username,
@@ -1501,6 +1530,8 @@ export async function createSigmaCustomer(
       connections: screens,
       expires_at: dueDate ?? "",
       is_active: 1,
+      ...(packageId ? { package_id: packageId } : {}),
+      ...(serverId ? { server_id: serverId } : {}),
     },
   ];
 
@@ -1540,16 +1571,25 @@ export async function createSigmaCustomer(
         };
       }
 
+      // Guarda a lista completa de erros de validação para facilitar o diagnóstico
+      let details = "";
+      const errs = result.payload?.errors;
+      if (errs && typeof errs === "object") {
+        details = Object.entries(errs)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(", ") : String(msgs)}`)
+          .join(" | ");
+      }
       const errorMsg =
+        details ||
         result.payload?.message ||
         result.payload?.error ||
         result.payload?.msg ||
-        result.text?.slice(0, 80);
+        result.text?.slice(0, 120);
       attempts.push(`${endpoint} (${result.status}): ${errorMsg || "falha"}`);
     }
   }
 
-  const sample = attempts.slice(0, 3).join(" • ");
+  const sample = attempts.slice(0, 4).join(" • ");
   throw new Error(`Falha ao criar cliente no painel Sigma. Respostas: ${sample}`);
 }
 
