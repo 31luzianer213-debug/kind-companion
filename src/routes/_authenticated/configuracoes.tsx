@@ -187,9 +187,20 @@ function SalePlansCard() {
                     onCheckedChange={(checked) => togglePlan.mutate({ id: plan.id, active: checked })}
                     aria-label={`Ativar plano ${plan.name}`}
                   />
-                  <Button variant="ghost" size="icon" onClick={() => removePlan.mutate(plan.id)} aria-label={`Remover plano ${plan.name}`}>
-                    <Trash2 className="size-4 text-rose-500" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={removePlan.isPending}
+                    onClick={() => {
+                      if (confirm(`Remover o plano "${plan.name}"? Essa ação não pode ser desfeita.`)) {
+                        removePlan.mutate(plan.id);
+                      }
+                    }}
+                    aria-label={`Remover plano ${plan.name}`}
+                  >
+                    <Trash2 className="size-4 text-destructive" />
                   </Button>
+
                 </div>
               </div>
             ))}
