@@ -227,7 +227,10 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
       </aside>
 
       <main className="relative min-w-0 flex-1 overflow-x-hidden">
-        <div className="mobile-app-content relative mx-auto min-h-full w-full max-w-[var(--ui-page-max)] px-3 pb-28 pt-3 sm:px-5 sm:pt-5 md:px-6 md:pb-12 md:pt-6 lg:px-8 lg:pt-7 xl:px-10">
+        <div
+          key={pathname}
+          className="page-enter mobile-app-content relative mx-auto min-h-full w-full max-w-[var(--ui-page-max)] px-3 pb-28 pt-3 sm:px-5 sm:pt-5 md:px-6 md:pb-12 md:pt-6 lg:px-8 lg:pt-7 xl:px-10"
+        >
           {children}
         </div>
       </main>
