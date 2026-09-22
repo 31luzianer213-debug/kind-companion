@@ -61,8 +61,8 @@ export const navigationGroups: NavigationGroup[] = [
   {
     title: "Automação",
     items: [
-      { to: "/bot", label: "Robô WhatsApp", shortLabel: "Robô", icon: Bot },
-      { to: "/cobranca-automatica", label: "Régua de cobrança", shortLabel: "Régua", icon: Timer },
+      { to: "/bot", label: "Atendimento automático", shortLabel: "Robô", icon: Bot },
+      { to: "/cobranca-automatica", label: "Cobrança automática", shortLabel: "Cobrança", icon: Timer },
       { to: "/mensagens", label: "Modelos de mensagem", shortLabel: "Mensagens", icon: MessageSquareText },
     ],
   },
@@ -70,8 +70,8 @@ export const navigationGroups: NavigationGroup[] = [
     title: "Conexões",
     items: [
       { to: "/sigma", label: "Painel Sigma", shortLabel: "Sigma", icon: Server, badgeKey: "sigma" },
-      { to: "/whatsapp", label: "WhatsApp", shortLabel: "WhatsApp", icon: MessageCircle, badgeKey: "whatsapp" },
-      { to: "/pagamentos", label: "Recebimentos (Pix)", shortLabel: "Pix", icon: CreditCard },
+      { to: "/whatsapp", label: "Conexão do WhatsApp", shortLabel: "WhatsApp", icon: MessageCircle, badgeKey: "whatsapp" },
+      { to: "/pagamentos", label: "Recebimentos", shortLabel: "Receber", icon: CreditCard },
     ],
   },
   {
