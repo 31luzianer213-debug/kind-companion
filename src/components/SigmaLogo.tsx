@@ -29,19 +29,19 @@ export function SigmaLogo({ className, size = "md", showGlow = true }: SigmaLogo
         viewBox="0 0 48 48"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={cn("h-full w-full", showGlow && "drop-shadow-[0_8px_16px_rgba(22,163,74,0.24)]")}
+        className={cn("h-full w-full", showGlow && "drop-shadow-[0_8px_16px_rgba(49,66,190,0.26)]")}
         role="img"
         aria-label="Logo Sigma Control"
       >
         <defs>
           <linearGradient id={backgroundId} x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#12301F" />
-            <stop offset="1" stopColor="#07160F" />
+            <stop stopColor="#1A2148" />
+            <stop offset="1" stopColor="#0C1026" />
           </linearGradient>
           <linearGradient id={accentId} x1="12" y1="10" x2="38" y2="39" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#86EFAC" />
-            <stop offset="0.52" stopColor="#22C55E" />
-            <stop offset="1" stopColor="#15803D" />
+            <stop stopColor="#A5B4FC" />
+            <stop offset="0.52" stopColor="#4F5FE8" />
+            <stop offset="1" stopColor="#2F3BA8" />
           </linearGradient>
           <filter id={glowId} x="-35%" y="-35%" width="170%" height="170%">
             <feGaussianBlur stdDeviation="1.2" result="blur" />
