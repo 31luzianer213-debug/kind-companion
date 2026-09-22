@@ -145,7 +145,7 @@ export async function sendMediaViaBaileys(
 }
 
 export async function sendMediaViaEvolution(
-  _settings: WhatsAppSettings & { user_id?: string },
+  settings: WhatsAppSettings & { user_id?: string },
   phone: string,
   mediaOptions: {
     base64: string;
@@ -153,9 +153,12 @@ export async function sendMediaViaEvolution(
     mimetype?: string;
     fileName?: string;
   },
-  _userId?: string,
+  userId?: string,
 ) {
-  return await sendMediaViaBaileys(phone, mediaOptions);
+  return await sendMediaViaBaileys(phone, {
+    ...mediaOptions,
+    userId: userId || settings?.user_id || null,
+  });
 }
 
 export interface ButtonItem {
