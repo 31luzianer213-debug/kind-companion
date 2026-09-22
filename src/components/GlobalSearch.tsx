@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { navigationGroups, type AppRoute } from "@/components/layout/navigation";
 
 const extraPages: { to: AppRoute; label: string }[] = [
-  { to: "/cobranca-automatica", label: "Regras automáticas" },
+  { to: "/cobranca-automatica", label: "Régua de cobrança" },
   { to: "/mensagens", label: "Mensagens enviadas" },
   { to: "/pagamentos", label: "Pagamentos" },
 ];

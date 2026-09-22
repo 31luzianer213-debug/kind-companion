@@ -26,7 +26,7 @@ const mobilePageTitles: Record<string, string> = {
   "/whatsapp": "WhatsApp",
   "/bot": "Robô WhatsApp",
   "/configuracoes": "Configurações",
-  "/cobranca-automatica": "Automação",
+  "/cobranca-automatica": "Régua de cobrança",
   "/mensagens": "Mensagens",
   "/pagamentos": "Recebimentos",
   "/assinatura": "Assinatura",
