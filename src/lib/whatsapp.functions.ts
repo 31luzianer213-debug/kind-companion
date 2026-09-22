@@ -16,7 +16,8 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
 
     try {
-      const res = await sendWhatsapp(data.phone, data.body);
+      const { instanceNameFor } = await import("./evolution.server");
+      const res = await sendWhatsapp(data.phone, data.body, instanceNameFor(userId));
       if (!res.ok) {
         throw new Error(res.error || "Falha ao enviar");
       }
@@ -240,7 +241,7 @@ export const sendAccessDetails = createServerFn({ method: "POST" })
     );
 
     try {
-      await sendViaBaileys(client.phone, body);
+      await sendViaBaileys(client.phone, body, { userId });
       await supabase.from("message_logs").insert({
         user_id: userId,
         client_id: client.id,

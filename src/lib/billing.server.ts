@@ -47,8 +47,25 @@ export async function sendViaBaileys(
     buttons?: any[];
     sections?: any[];
     pixCode?: string;
+    userId?: string | null;
   },
 ) {
+  // Quando a Evolution API está configurada, ela é o canal oficial de envio.
+  const tenant = await import("./evolution-tenant.server");
+  if (tenant.isTenantEvolutionEnabled()) {
+    let instance = "";
+    if (options?.userId) {
+      instance = tenant.tenantInstanceName(options.userId);
+    } else {
+      const { resolveInstance } = await import("./evolution-api.server");
+      instance = await resolveInstance();
+    }
+    if (!instance) throw new Error("WhatsApp não conectado. Leia o QR Code na página do WhatsApp.");
+    const sent = await tenant.tenantSendText(instance, normalizeNumber(phone), text, true);
+    if (!sent.ok) throw new Error(sent.error || "Falha no envio pela Evolution API");
+    return { ok: true };
+  }
+
   const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -70,12 +87,12 @@ export async function sendViaBaileys(
 }
 
 export async function sendViaEvolution(
-  _settings: WhatsAppSettings & { user_id?: string },
+  settings: WhatsAppSettings & { user_id?: string },
   phone: string,
   text: string,
-  _userId?: string,
+  userId?: string,
 ) {
-  return await sendViaBaileys(phone, text);
+  return await sendViaBaileys(phone, text, { userId: userId || settings?.user_id || null });
 }
 
 export async function sendMediaViaBaileys(
@@ -85,8 +102,26 @@ export async function sendMediaViaBaileys(
     caption?: string;
     mimetype?: string;
     fileName?: string;
+    userId?: string | null;
   },
 ) {
+  const tenant = await import("./evolution-tenant.server");
+  if (tenant.isTenantEvolutionEnabled() && mediaOptions.userId) {
+    const sent = await tenant.tenantSendMedia(
+      tenant.tenantInstanceName(mediaOptions.userId),
+      normalizeNumber(phone),
+      {
+        base64: mediaOptions.base64,
+        caption: mediaOptions.caption,
+        mimetype: mediaOptions.mimetype || "image/png",
+        fileName: mediaOptions.fileName || "qrcode-pix.png",
+      },
+      true,
+    );
+    if (!sent.ok) throw new Error(sent.error || "Falha no envio de mídia pela Evolution API");
+    return { ok: true };
+  }
+
   const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -110,7 +145,7 @@ export async function sendMediaViaBaileys(
 }
 
 export async function sendMediaViaEvolution(
-  _settings: WhatsAppSettings & { user_id?: string },
+  settings: WhatsAppSettings & { user_id?: string },
   phone: string,
   mediaOptions: {
     base64: string;
@@ -118,9 +153,12 @@ export async function sendMediaViaEvolution(
     mimetype?: string;
     fileName?: string;
   },
-  _userId?: string,
+  userId?: string,
 ) {
-  return await sendMediaViaBaileys(phone, mediaOptions);
+  return await sendMediaViaBaileys(phone, {
+    ...mediaOptions,
+    userId: userId || settings?.user_id || null,
+  });
 }
 
 export interface ButtonItem {
@@ -140,6 +178,7 @@ export async function sendButtonsViaBaileys(
     buttons: ButtonItem[];
     footer?: string;
     fallbackText?: string;
+    userId?: string | null;
   },
 ) {
   const formattedButtons = options.buttons.map((b) => {
@@ -189,11 +228,13 @@ export async function sendButtonsViaBaileys(
   } catch {}
 
   // Fallback para texto simples
-  return await sendViaBaileys(phone, options.fallbackText || options.description);
+  return await sendViaBaileys(phone, options.fallbackText || options.description, {
+    userId: options.userId || null,
+  });
 }
 
 export async function sendButtonsViaEvolution(
-  _settings: WhatsAppSettings & { user_id?: string },
+  settings: WhatsAppSettings & { user_id?: string },
   phone: string,
   options: {
     title?: string;
@@ -202,9 +243,12 @@ export async function sendButtonsViaEvolution(
     footer?: string;
     fallbackText?: string;
   },
-  _userId?: string,
+  userId?: string,
 ) {
-  return await sendButtonsViaBaileys(phone, options);
+  return await sendButtonsViaBaileys(phone, {
+    ...options,
+    userId: userId || settings?.user_id || null,
+  });
 }
 
 export interface ListSection {
@@ -225,6 +269,7 @@ export async function sendListViaBaileys(
     footerText?: string;
     sections: ListSection[];
     fallbackText?: string;
+    userId?: string | null;
   },
 ) {
   try {
@@ -249,11 +294,13 @@ export async function sendListViaBaileys(
     }
   } catch {}
 
-  return await sendViaBaileys(phone, options.fallbackText || options.description);
+  return await sendViaBaileys(phone, options.fallbackText || options.description, {
+    userId: options.userId || null,
+  });
 }
 
 export async function sendListViaEvolution(
-  _settings: WhatsAppSettings & { user_id?: string },
+  settings: WhatsAppSettings & { user_id?: string },
   phone: string,
   options: {
     title: string;
@@ -263,9 +310,12 @@ export async function sendListViaEvolution(
     sections: ListSection[];
     fallbackText?: string;
   },
-  _userId?: string,
+  userId?: string,
 ) {
-  return await sendListViaBaileys(phone, options);
+  return await sendListViaBaileys(phone, {
+    ...options,
+    userId: userId || settings?.user_id || null,
+  });
 }
 
 function iso(date: Date) {
