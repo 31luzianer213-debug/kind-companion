@@ -22,11 +22,7 @@ export const Route = createFileRoute("/_authenticated/assinatura")({
   component: AssinaturaPage,
 });
 
-const PERIODS = [
-  { months: 1, label: "Mensal", note: "" },
-  { months: 6, label: "Semestral", note: "10% off" },
-  { months: 12, label: "Anual", note: "20% off" },
-];
+const PERIODS = [{ months: 1, label: "Mensal", note: "" }];
 
 function priceFor(plan: SaasPlan, months: number) {
   const discount = months >= 12 ? 0.8 : months >= 6 ? 0.9 : 1;
