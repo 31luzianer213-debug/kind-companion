@@ -74,6 +74,7 @@ export function ClientOperationsPanel() {
       queryClient.invalidateQueries({ queryKey: ["operational-clients"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
     },
+    onError: (error: any) => toast.error(error?.message || "Não foi possível concluir a ação em massa."),
   });
 
   const bulkRemind = useMutation({
@@ -84,7 +85,9 @@ export function ClientOperationsPanel() {
       if (result.skipped) toast.info(`${result.skipped} cliente(s) sem telefone foram ignorados.`);
       setSelected(new Set());
     },
+    onError: (error: any) => toast.error(error?.message || "Não foi possível enviar as cobranças."),
   });
+
 
   return (
     <div className="space-y-5">

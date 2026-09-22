@@ -796,7 +796,7 @@ function PedidosPage() {
                             }
                           }}
                           disabled={deleteMutation.isPending}
-                          className="gap-1 text-xs text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+                          className="gap-1 text-xs text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                           title="Excluir este pedido definitivamente do sistema"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
