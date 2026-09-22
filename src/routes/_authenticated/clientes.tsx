@@ -1251,7 +1251,7 @@ function ClientsRegistry() {
                   size="sm"
                   onClick={() => {
                     const appsBlock = formatAppsLinksBlock(botConfig, testCredentials.serverName || sigmaServerName || "IPTV");
-                    const text = `📺 *SEU TESTE GRÁTIS DE IPTV (${testCredentials.hours}h)*\n\n👤 *Usuário:* ${testCredentials.username}\n🔑 *Senha:* ${testCredentials.password}\n🌐 *Servidor:* ${testCredentials.serverUrl || sigmaServerUrl}\n\n🔗 *Lista M3U:*\n${testCredentials.m3uUrl}\n\n━━━━━━━━━━━━━━━━━━━\n${appsBlock}\n\nAproveite sua programação! 🍿`;
+                    const text = `📺 *SEU TESTE GRÁTIS DE IPTV (${testCredentials.hours}h)*\n\n👤 *Usuário:* ${testCredentials.username}\n🔑 *Senha:* ${testCredentials.password}\n🌐 *Servidor:* ${testCredentials.serverUrl || sigmaServerUrl}\n\n🔗 *Lista M3U:*\n${testCredentials.m3uUrl}\n\n${appsBlock ? `━━━━━━━━━━━━━━━━━━━\n${appsBlock}\n\n` : ""}Aproveite sua programação! 🍿`;
                     navigator.clipboard.writeText(text);
                     toast.success("Dados do teste e links dos apps copiados!");
                   }}
