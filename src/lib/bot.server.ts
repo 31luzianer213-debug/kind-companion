@@ -141,22 +141,36 @@ export function generateDefaultPlansText(params: {
   );
 }
 
-export function generateAppsMessage(config: BotConfigData, serverName: string): string {
-  if (config.appsCustomText && config.appsCustomText.trim().length > 10) {
+/**
+ * Monta o texto de aplicativos APENAS com o que o revendedor configurou.
+ * Sem nada configurado, devolve string vazia (o bot não inventa apps).
+ */
+export function generateAppsMessage(config: BotConfigData, _serverName?: string): string {
+  if (config.appsCustomText && config.appsCustomText.trim().length > 5) {
     return config.appsCustomText.trim();
   }
 
-  const code = config.appAndroidDownloaderCode || DEFAULT_BOT_CONFIG.appAndroidDownloaderCode;
-  const smartTv = config.appSmartTvText || DEFAULT_BOT_CONFIG.appSmartTvText;
+  const lines: string[] = [];
+  const code = (config.appAndroidDownloaderCode || "").trim();
+  const apk = (config.appAndroidApk || "").trim();
+  const ios = (config.appIosLink || "").trim();
+  const win = (config.appWindowsLink || "").trim();
+  const web = (config.appWebPlayerLink || "").trim();
+  const smartTv = (config.appSmartTvText || "").trim();
+
+  if (code) lines.push(`Na TV Box, Android TV ou Fire Stick: abra o app Downloader e digite o código ${code}.`);
+  if (apk) lines.push(`No celular ou tablet Android: ${apk}`);
+  if (ios) lines.push(`No iPhone, iPad ou Apple TV: ${ios}`);
+  if (win) lines.push(`No computador com Windows: ${win}`);
+  if (web) lines.push(`Direto pelo navegador: ${web}`);
+  if (smartTv) lines.push(smartTv);
+
+  if (lines.length === 0) return "";
 
   return (
     `Sobre os aplicativos, vai depender do aparelho que você usa:\n\n` +
-    `Na TV Box, Android TV ou Fire Stick: abre o app Downloader e digita o código ${code}.\n` +
-    `No celular ou tablet Android: é só instalar o APK que eu te mando.\n` +
-    `No iPhone, iPad ou Apple TV: uso o app indicado pra iOS, te passo o link.\n` +
-    `No computador com Windows: tem a versão pra PC também.\n` +
-    `${smartTv}\n\n` +
-    `Depois de instalar, abre o app e coloca seu usuário, senha e o endereço do servidor. Se travar em algum passo me fala que eu te ajudo.`
+    lines.join("\n") +
+    `\n\nDepois de instalar, abra o app e coloque seu usuário, senha e o endereço do servidor. Se travar em algum passo me fala que eu te ajudo.`
   );
 }
 
