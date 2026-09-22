@@ -1797,10 +1797,10 @@ export async function processBotMessage(
       (client.next_due_date ? `Vence em: ${client.next_due_date}\n` : "") +
       `\nSua lista:\n${m3uUrl}\n\n` +
       `Guia de programação:\n${epgUrl}\n\n` +
-      `${appsBlock}\n\n` +
+      (appsBlock ? `${appsBlock}\n\n` : "") +
       `Qualquer coisa me chama 🙂`;
 
-    const apkUrl = config.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
+    const apkUrl = (config.appAndroidApk || "").trim();
 
     return {
       reply,
@@ -1808,17 +1808,21 @@ export async function processBotMessage(
       interactive: {
         type: "buttons",
         title: "Seus dados",
-        description: "Se precisar do aplicativo ou quiser renovar, é só tocar aqui.",
+        description: "Se quiser renovar, é só tocar aqui.",
         footer: serverName,
         buttons: [
-          {
-            id: "btn_download_apk",
-            displayText: "Baixar aplicativo",
-            type: "url",
-            url: apkUrl,
-          },
-          { id: "2", displayText: "Quero renovar", type: "reply" },
-          { id: "0", displayText: "Voltar", type: "reply" },
+          ...(apkUrl
+            ? [
+                {
+                  id: "btn_download_apk",
+                  displayText: "Baixar aplicativo",
+                  type: "url" as const,
+                  url: apkUrl,
+                },
+              ]
+            : []),
+          { id: "2", displayText: "Quero renovar", type: "reply" as const },
+          { id: "0", displayText: "Voltar", type: "reply" as const },
         ],
       },
     };
