@@ -25,47 +25,56 @@ async function runPoll(request: Request) {
     return Response.json({ ok: false, error: "Não autorizado" }, { status: 401 });
   }
 
-  
-  const { evoFetchRecentMessages, isEvolutionEnabled, evolutionEnv } = await import(
-    "@/lib/evolution-api.server"
+  const { isTenantEvolutionEnabled, tenantListInstances, tenantFetchRecentMessages } = await import(
+    "@/lib/evolution-tenant.server"
   );
   const { processIncomingWhatsAppEvent } = await import("@/lib/whatsapp-engine.server");
 
-  if (!isEvolutionEnabled()) {
+  if (!isTenantEvolutionEnabled()) {
     return Response.json({ ok: false, error: "Evolution API não configurada" }, { status: 400 });
   }
 
-  const records = await evoFetchRecentMessages(30);
+  const instances = (await tenantListInstances().catch(() => []))
+    .filter((item) => item.state === "open" && item.instance)
+    .map((item) => item.instance);
+
   const cutoff = Math.floor(Date.now() / 1000) - 15 * 60;
-  const instance = evolutionEnv()?.instance ?? null;
-
-  const pending = records.filter((record: any) => {
-    if (record?.key?.fromMe) return false;
-    const jid = String(record?.key?.remoteJid || "");
-    if (!jid || jid.includes("@g.us") || jid.includes("broadcast")) return false;
-    const ts = Number(record?.messageTimestamp || 0);
-    return ts >= cutoff;
-  });
-
   const results: any[] = [];
+  let checked = 0;
 
-  for (const record of pending.reverse()) {
-    const messageId = String(record?.key?.id || "");
-    if (!messageId) continue;
+  for (const instance of instances) {
+    const records = await tenantFetchRecentMessages(instance, 30);
+    const pending = records.filter((record: any) => {
+      if (record?.key?.fromMe) return false;
+      const jid = String(record?.key?.remoteJid || "");
+      if (!jid || jid.includes("@g.us") || jid.includes("broadcast")) return false;
+      const ts = Number(record?.messageTimestamp || 0);
+      return ts >= cutoff;
+    });
+    checked += pending.length;
 
-    try {
-      const result = await processIncomingWhatsAppEvent(
-        { event: "messages.upsert", instance: record?.instance || instance, data: record },
-        null,
-      );
-      if (result.handled) results.push({ messageId, ...result });
-    } catch (error: any) {
-      results.push({ messageId, handled: false, error: error?.message || "falha" });
+    for (const record of pending.reverse()) {
+      const messageId = String(record?.key?.id || "");
+      if (!messageId) continue;
+      try {
+        const result = await processIncomingWhatsAppEvent(
+          { event: "messages.upsert", instance, data: record },
+          null,
+        );
+        if (result.handled) results.push({ instance, messageId, ...result });
+      } catch (error: any) {
+        results.push({ instance, messageId, handled: false, error: error?.message || "falha" });
+      }
     }
   }
 
-
-  return Response.json({ ok: true, checked: pending.length, processed: results.length, results });
+  return Response.json({
+    ok: true,
+    instances: instances.length,
+    checked,
+    processed: results.length,
+    results,
+  });
 }
 
 export const Route = createFileRoute("/api/public/hooks/whatsapp-poll")({

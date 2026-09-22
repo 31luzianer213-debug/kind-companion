@@ -364,27 +364,58 @@ export const getAdminOverview = createServerFn({ method: "GET" })
       return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
     }
     const since = new Date(Date.now() - 86_400_000).toISOString();
-    const [{ data: subs }, { data: clients }, { data: logs }, { data: conns }, { data: plan }] = await Promise.all([
-      (supabaseAdmin as any).from("saas_subscriptions").select("user_id, status, current_period_end"),
-      (supabaseAdmin as any).from("clients").select("id"),
-      (supabaseAdmin as any).from("message_logs").select("status, created_at").gte("created_at", since),
-      (supabaseAdmin as any).from("whatsapp_settings").select("user_id, connection_status"),
-      (supabaseAdmin as any).from("saas_plans").select("price_monthly").eq("active", true).order("sort_order").limit(1).maybeSingle(),
+    const [{ data: subs }, { data: clients }, { data: logs }, { data: conns }, { data: plan }, users] =
+      await Promise.all([
+        (supabaseAdmin as any)
+          .from("saas_subscriptions")
+          .select("user_id, status, trial_ends_at, current_period_end"),
+        (supabaseAdmin as any).from("clients").select("id"),
+        (supabaseAdmin as any).from("message_logs").select("status, created_at").gte("created_at", since),
+        (supabaseAdmin as any).from("whatsapp_settings").select("user_id, connection_status"),
+        (supabaseAdmin as any)
+          .from("saas_plans")
+          .select("price_monthly")
+          .eq("active", true)
+          .order("sort_order")
+          .limit(1)
+          .maybeSingle(),
+        (supabaseAdmin as any).auth.admin.listUsers({ page: 1, perPage: 1000 }),
+      ]);
+
+    // A base de revendedores são as contas existentes, mesmo sem assinatura criada.
+    const subsByUser = new Map<string, any>();
+    for (const s of subs ?? []) subsByUser.set(s.user_id, s);
+    const accountIds = new Set<string>([
+      ...(users?.data?.users ?? []).map((u: any) => u.id),
+      ...subsByUser.keys(),
     ]);
 
-    const rows = subs ?? [];
-    const active = rows.filter((s: any) => s.status === "active").length;
-    const trialing = rows.filter((s: any) => s.status === "trialing").length;
-    const expired = rows.filter((s: any) => s.status !== "active" && s.status !== "trialing").length;
+    const now = Date.now();
+    const isFuture = (value: any) => Boolean(value) && new Date(value).getTime() > now;
+
+    let active = 0;
+    let trialing = 0;
+    let expired = 0;
+    for (const id of accountIds) {
+      const sub = subsByUser.get(id);
+      if (sub?.status === "active" && isFuture(sub.current_period_end)) active += 1;
+      else if (sub?.status === "trialing" && (isFuture(sub.trial_ends_at) || isFuture(sub.current_period_end)))
+        trialing += 1;
+      else expired += 1;
+    }
+
     const messages = logs ?? [];
+    const connectedIds = new Set(
+      (conns ?? []).filter((c: any) => c.connection_status === "open").map((c: any) => c.user_id),
+    );
 
     const overview: AdminOverview = {
-      resellers: rows.length,
+      resellers: accountIds.size,
       active,
       trialing,
       expired,
       clients: (clients ?? []).length,
-      connected: (conns ?? []).filter((c: any) => c.connection_status === "open").length,
+      connected: connectedIds.size,
       messages24h: messages.length,
       failed24h: messages.filter((m: any) => m.status === "failed").length,
       monthlyRevenue: active * (Number(plan?.price_monthly) || 0),

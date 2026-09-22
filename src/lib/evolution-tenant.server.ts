@@ -258,3 +258,24 @@ export async function tenantListInstances(): Promise<
     };
   });
 }
+
+/** Lê as mensagens recentes de uma instância específica (rede de segurança do webhook). */
+export async function tenantFetchRecentMessages(instance: string, limit = 30): Promise<any[]> {
+  const res = await request(
+    `/chat/findMessages/${encodeURIComponent(instance)}`,
+    { method: "POST", body: JSON.stringify({ limit }) },
+    15000,
+  );
+  if (!res.ok) return [];
+  const data: any = res.data;
+  const records = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.messages?.records)
+      ? data.messages.records
+      : Array.isArray(data?.records)
+        ? data.records
+        : Array.isArray(data?.messages)
+          ? data.messages
+          : [];
+  return Array.isArray(records) ? records : [];
+}
