@@ -228,11 +228,13 @@ export async function sendButtonsViaBaileys(
   } catch {}
 
   // Fallback para texto simples
-  return await sendViaBaileys(phone, options.fallbackText || options.description);
+  return await sendViaBaileys(phone, options.fallbackText || options.description, {
+    userId: options.userId || null,
+  });
 }
 
 export async function sendButtonsViaEvolution(
-  _settings: WhatsAppSettings & { user_id?: string },
+  settings: WhatsAppSettings & { user_id?: string },
   phone: string,
   options: {
     title?: string;
@@ -241,9 +243,12 @@ export async function sendButtonsViaEvolution(
     footer?: string;
     fallbackText?: string;
   },
-  _userId?: string,
+  userId?: string,
 ) {
-  return await sendButtonsViaBaileys(phone, options);
+  return await sendButtonsViaBaileys(phone, {
+    ...options,
+    userId: userId || settings?.user_id || null,
+  });
 }
 
 export interface ListSection {
