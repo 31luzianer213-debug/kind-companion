@@ -290,12 +290,9 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
 
     // O robô de atendimento é independente da cobrança automática:
     // só fica desligado se o painel desligar explicitamente.
-    const enabled =
-      metaBot?.enabled !== undefined
-        ? Boolean(metaBot.enabled)
-        : wsRow?.auto_send_enabled !== undefined
-          ? Boolean(wsRow.auto_send_enabled)
-          : DEFAULT_BOT_CONFIG.enabled;
+    // Só o interruptor do próprio robô desliga o atendimento. A cobrança
+    // automática (auto_send_enabled) é outro recurso e não pode derrubá-lo.
+    const enabled = metaBot?.enabled !== undefined ? Boolean(metaBot.enabled) : DEFAULT_BOT_CONFIG.enabled;
 
 
     const config: BotConfigData = {
