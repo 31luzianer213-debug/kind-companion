@@ -36,8 +36,23 @@ export const Route = createFileRoute("/_authenticated/cobrancas")({
       { name: "description", content: "Acompanhe cobranças, pagamentos e renovações processadas automaticamente." },
     ],
   }),
-  component: Cobrancas,
+  component: CobrancasPage,
 });
+
+function CobrancasPage() {
+  const [tab, setTab] = useState("cobrancas");
+  return (
+    <div className="space-y-4">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="cobrancas">Cobranças</TabsTrigger>
+          <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {tab === "cobrancas" ? <Cobrancas /> : <FinancePanel />}
+    </div>
+  );
+}
 
 type InvoiceRow = Tables<"invoices"> & { clients: { name: string; phone: string } | null };
 
