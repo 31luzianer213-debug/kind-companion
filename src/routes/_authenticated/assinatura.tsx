@@ -100,7 +100,7 @@ function AssinaturaPage() {
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className={cn("rounded-md text-xs font-semibold", stateInfo.tone)} data-testid="subscription-state">{stateInfo.label}</Badge>
-              {sub?.plan && <span className="flex items-center gap-1.5 text-sm font-bold text-foreground"><Crown className="size-4 text-primary" /> Plano {sub.plan.name}</span>}
+              {sub?.plan && <span className="flex items-center gap-1.5 text-sm font-bold text-foreground"><Crown className="size-4 text-primary" /> {sub.plan.name}</span>}
             </div>
             <p className="text-sm text-muted-foreground">
               {state === "trialing" && `Seu teste grátis termina em ${sub?.daysLeft ?? 0} dia(s) (${sub?.trialEndsAt ? formatDate(sub.trialEndsAt) : "—"}). Assine para não perder o acesso.`}

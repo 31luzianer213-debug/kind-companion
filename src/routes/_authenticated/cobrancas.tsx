@@ -25,7 +25,6 @@ import {
   MessageCircle,
   RefreshCw,
   Search,
-  ShieldCheck,
   Wallet,
   X,
 } from "lucide-react";
@@ -176,17 +175,6 @@ function Cobrancas() {
         </div>
       </div>
 
-      <Card className="surface-card border-emerald-500/20 bg-emerald-500/5">
-        <CardContent className="flex gap-3 p-4">
-          <div className="mt-0.5 rounded-md bg-emerald-500/10 p-2 text-emerald-500"><ShieldCheck className="size-5" /></div>
-          <div>
-            <h3 className="text-sm font-semibold">Operação automática</h3>
-            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-              Esta tela é somente para acompanhamento. Cobranças, confirmação de pagamento e renovação seguem o fluxo automático configurado no sistema.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid gap-3 sm:grid-cols-4">
         <Card className="surface-card"><CardContent className="flex items-center justify-between p-4"><div><p className="text-xs uppercase tracking-wider text-muted-foreground">A receber</p><p className="mt-1 text-2xl font-black">{formatBRL(metrics.totalOpen)}</p><p className="text-[11px] text-muted-foreground">{metrics.openCount} faturas</p></div><Clock className="size-6 text-amber-500" /></CardContent></Card>

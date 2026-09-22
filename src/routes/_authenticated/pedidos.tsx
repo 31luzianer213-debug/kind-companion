@@ -302,8 +302,8 @@ function PedidosPage() {
   return (
     <div className="space-y-6 pb-12">
       {/* Header Principal */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
               Pedidos & Liberação de Acesso
@@ -320,7 +320,7 @@ function PedidosPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
