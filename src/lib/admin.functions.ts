@@ -466,3 +466,117 @@ export const adminManageConnection = createServerFn({ method: "POST" })
       return { ok: false as const, error: error instanceof Error ? error.message : "Falha ao atualizar a conexão." };
     }
   });
+
+export type AdminPlanFull = AdminPlan & {
+  active: boolean;
+  highlighted: boolean;
+  sort_order: number;
+};
+
+/** Lista todos os planos vendidos (ativos e desativados). */
+export const listAdminPlans = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await assertAdmin(context.claims))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema.", plans: [] as AdminPlanFull[] };
+    }
+    const { data, error } = await (supabaseAdmin as any).from("saas_plans").select("*").order("sort_order");
+    if (error) return { ok: false as const, error: error.message, plans: [] as AdminPlanFull[] };
+    const plans: AdminPlanFull[] = (data ?? []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description ?? "",
+      price_monthly: Number(p.price_monthly) || 0,
+      max_clients: p.max_clients === null || p.max_clients === undefined ? null : Number(p.max_clients),
+      features: Array.isArray(p.features) ? p.features.map(String) : [],
+      active: Boolean(p.active),
+      highlighted: Boolean(p.highlighted),
+      sort_order: Number(p.sort_order) || 0,
+    }));
+    return { ok: true as const, plans };
+  });
+
+/** Cria ou atualiza um plano vendido aos revendedores. */
+export const upsertAdminPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: AdminPlanFull) => input)
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await assertAdmin(context.claims))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
+    }
+    const name = data.name?.trim();
+    if (!name) return { ok: false as const, error: "Informe o nome do plano." };
+    const price = Number(data.price_monthly);
+    if (!Number.isFinite(price) || price <= 0) return { ok: false as const, error: "Informe um valor mensal válido." };
+
+    const id =
+      (data.id?.trim() ||
+        name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "_")
+          .replace(/^_|_$/g, "")) || `plano_${Date.now()}`;
+
+    const payload = {
+      id,
+      name,
+      description: data.description?.trim() ?? "",
+      price_monthly: price,
+      max_clients: data.max_clients === null ? null : Number(data.max_clients) || null,
+      features: (data.features ?? []).map((f) => String(f).trim()).filter(Boolean),
+      active: Boolean(data.active),
+      highlighted: Boolean(data.highlighted),
+      sort_order: Number(data.sort_order) || 1,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await (supabaseAdmin as any).from("saas_plans").upsert(payload, { onConflict: "id" });
+    if (error) return { ok: false as const, error: error.message };
+
+    if (payload.highlighted) {
+      await (supabaseAdmin as any).from("saas_plans").update({ highlighted: false }).neq("id", id);
+    }
+    return { ok: true as const, id };
+  });
+
+/** Ativa ou desativa um plano sem excluí-lo. */
+export const toggleAdminPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string; active: boolean }) => input)
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await assertAdmin(context.claims))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
+    }
+    const { error } = await (supabaseAdmin as any)
+      .from("saas_plans")
+      .update({ active: data.active, updated_at: new Date().toISOString() })
+      .eq("id", data.id);
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
+  });
+
+/** Exclui um plano que não está mais à venda. */
+export const deleteAdminPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await assertAdmin(context.claims))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
+    }
+    const { count } = await (supabaseAdmin as any)
+      .from("saas_plans")
+      .select("id", { count: "exact", head: true })
+      .eq("active", true);
+    const { data: plan } = await (supabaseAdmin as any).from("saas_plans").select("active").eq("id", data.id).maybeSingle();
+    if (plan?.active && (count ?? 0) <= 1) {
+      return { ok: false as const, error: "Mantenha pelo menos um plano à venda antes de excluir este." };
+    }
+    const { error } = await (supabaseAdmin as any).from("saas_plans").delete().eq("id", data.id);
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
+  });
