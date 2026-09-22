@@ -37,11 +37,9 @@ import { AdminPlansCard } from "@/components/admin/AdminPlansCard";
 import {
   createAdminReseller,
   deleteAdminReseller,
-  getAdminPlan,
   getAdminSettings,
   listAdminSubscriptions,
   resetAdminResellerPassword,
-  saveAdminPlan,
   saveAdminSettings,
   startAdminTrial,
   testMercadoPagoToken,
@@ -350,110 +348,6 @@ function WebhookCard() {
           <Info className="size-3.5 text-primary" />
           O webhook só funciona com o app publicado online (HTTPS).
         </p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function PlanEditorCard() {
-  const queryClient = useQueryClient();
-  const getPlanFn = useServerFn(getAdminPlan);
-  const savePlanFn = useServerFn(saveAdminPlan);
-  const [form, setForm] = useState<{ id: string; name: string; description: string; price: string; maxClients: string; features: string } | null>(null);
-
-  const { data } = useQuery({ queryKey: ["admin-plan"], queryFn: () => getPlanFn({}), retry: false });
-
-  useEffect(() => {
-    if (data?.ok && !form) {
-      setForm({
-        id: data.plan.id,
-        name: data.plan.name,
-        description: data.plan.description,
-        price: String(data.plan.price_monthly),
-        maxClients: data.plan.max_clients === null ? "" : String(data.plan.max_clients),
-        features: data.plan.features.join("\n"),
-      });
-    }
-  }, [data, form]);
-
-  const save = useMutation({
-    mutationFn: async () => {
-      if (!form) throw new Error("Plano não carregado.");
-      const res = await savePlanFn({
-        data: {
-          id: form.id,
-          name: form.name,
-          description: form.description,
-          price_monthly: Number(form.price.replace(",", ".")),
-          max_clients: form.maxClients.trim() ? Number(form.maxClients) : null,
-          features: form.features.split("\n").map((f) => f.trim()).filter(Boolean),
-        },
-      });
-      if (!res.ok) throw new Error(res.error || "Falha ao salvar o plano.");
-    },
-    onSuccess: () => {
-      toast.success("Plano atualizado! O novo valor já aparece no site e na tela de Assinatura.");
-      queryClient.invalidateQueries({ queryKey: ["admin-plan"] });
-      queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  if (!form) {
-    return (
-      <div className="grid min-h-[20vh] place-items-center">
-        <Loader2 className="size-5 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  return (
-    <Card className="surface-card border-border/70" data-testid="admin-plan-card">
-      <CardHeader className="border-b border-border/50 pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Crown className="size-5 text-primary" /> Plano de assinatura
-        </CardTitle>
-        <CardDescription>Nome, valor mensal e o que está incluso para seus revendedores.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4 pt-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Nome do plano</Label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} data-testid="admin-plan-name" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Valor mensal (R$)</Label>
-            <Input
-              inputMode="decimal"
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value })}
-              data-testid="admin-plan-price"
-            />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label className="text-xs font-semibold">Descrição</Label>
-            <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Limite de clientes (vazio = ilimitado)</Label>
-            <Input
-              inputMode="numeric"
-              value={form.maxClients}
-              onChange={(e) => setForm({ ...form, maxClients: e.target.value })}
-              placeholder="ilimitado"
-            />
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold">Benefícios (um por linha)</Label>
-          <Textarea rows={6} value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} />
-        </div>
-        <div className="flex justify-end border-t border-border/50 pt-3">
-          <Button onClick={() => save.mutate()} disabled={save.isPending} className="gap-1.5 px-6 font-semibold" data-testid="admin-plan-save">
-            {save.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
-            Salvar plano
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );
