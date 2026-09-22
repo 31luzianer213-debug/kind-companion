@@ -690,16 +690,9 @@ async function handlePlanOrderCreation({
   if (mpPixResult?.ok && mpPixResult?.qrCode) {
     // MODO AUTOMÁTICO MERCADO PAGO COM Pix COPIA E COLA & QR CODE FOTO
     const reply =
-      `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
-      `📦 *Plano:* ${planName}\n` +
-      `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-      `⚡ *Forma de Pagamento:* Pix Automático\n\n` +
-      `👇 *COMO PAGAR:*\n` +
-      `1️⃣ Toque no botão *📋 Copiar Código Pix* abaixo.\n` +
-      `2️⃣ Abra o app do seu banco (Nubank, Inter, Caixa, Itaú, etc.).\n` +
-      `3️⃣ Vá na opção *Pix* > *Pix Copia e Cola* e pague.\n\n` +
-      `✅ *Liberação 100% Automática!*\n` +
-      `Assim que o banco confirmar, seus dados de acesso (usuário, senha e M3U) serão enviados aqui na conversa! 🚀`;
+      `Perfeito! Anotei aqui o ${planName}, fica R$ ${amount.toFixed(2).replace(".", ",")}.\n\n` +
+      `Te mandei o código do Pix logo abaixo. É só copiar, abrir o app do seu banco, ir em Pix Copia e Cola e pagar.\n\n` +
+      `Assim que o pagamento cair eu já libero seu acesso e mando usuário, senha e a lista aqui mesmo 🙂`;
 
     return {
       reply,
@@ -708,7 +701,7 @@ async function handlePlanOrderCreation({
         ? {
             type: "image",
             base64: mpPixResult.qrCodeBase64,
-            caption: `📱 *QR CODE Pix — PEDIDO #${order.order_number}*\n💰 Valor: R$ ${amount.toFixed(2).replace(".", ",")}\nAponte a câmera do aplicativo do seu banco para pagar!`,
+            caption: `Se preferir, é só apontar a câmera do banco nesse QR Code. Valor: R$ ${amount.toFixed(2).replace(".", ",")}`,
           }
         : undefined,
       interactive: {
@@ -733,16 +726,9 @@ async function handlePlanOrderCreation({
   const effectivePixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
 
   const reply =
-    `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
-    `📦 *Plano:* ${planName}\n` +
-    `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-    `💳 *Forma de Pagamento:* Transferência Pix\n\n` +
-    `🔑 *Chave Pix:* \`${effectivePixKey}\`\n` +
-    `👤 *Titular:* ${effectivePixHolder}\n\n` +
-    `📌 *Como Ativar Seu Acesso:*\n` +
-    `1️⃣ Toque no botão *📋 Copiar Chave Pix* abaixo.\n` +
-    `2️⃣ Faça a transferência no valor de *R$ ${amount.toFixed(2).replace(".", ",")}*.\n` +
-    `3️⃣ *Envie o comprovante do Pix aqui nesta conversa* para liberação imediata! 🚀`;
+    `Show! Anotei o ${planName}, dá R$ ${amount.toFixed(2).replace(".", ",")}.\n\n` +
+    `Minha chave Pix é ${effectivePixKey} (em nome de ${effectivePixHolder}).\n\n` +
+    `Depois que fizer o Pix, me manda o comprovante aqui que eu libero seu acesso na hora 🙂`;
 
   return {
     reply,
