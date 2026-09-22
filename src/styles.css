@@ -406,3 +406,43 @@
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+/* ---- Refinamentos profissionais de superfície e movimento ---- */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.995); }
+  to { opacity: 1; transform: none; }
+}
+
+@utility page-enter {
+  animation: page-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@utility rise-in {
+  animation: rise-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@layer base {
+  a, button, [role="tab"], [role="button"], input, select, textarea {
+    transition:
+      color 180ms cubic-bezier(0.4, 0, 0.2, 1),
+      background-color 180ms cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 180ms cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 180ms cubic-bezier(0.4, 0, 0.2, 1),
+      transform 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  button:not(:disabled):active,
+  [role="button"]:not([aria-disabled="true"]):active {
+    transform: translateY(0.5px) scale(0.988);
+  }
+
+  h1, h2, h3 {
+    font-family: "Space Grotesk", "DM Sans", system-ui, sans-serif;
+    letter-spacing: -0.015em;
+  }
+}
