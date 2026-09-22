@@ -55,6 +55,11 @@ export async function resolveTargetUserId(
       (row: any) => row.instance_name === instanceName || instanceNameFor(row.user_id) === instanceName,
     );
     if (exact?.user_id) return exact.user_id;
+
+    // A conexão pode existir na Evolution antes de a conta ter registro salvo.
+    const { findUserIdByInstance } = await import("./whatsapp-presence.server");
+    const discovered = await findUserIdByInstance(instanceName);
+    if (discovered) return discovered;
   }
 
   // Sem instância identificada, só é seguro atender quando existe uma única conta.
