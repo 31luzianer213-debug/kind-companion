@@ -9,100 +9,203 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatBRL } from "@/lib/format";
 import {
   Settings,
-  Clock,
-  Sparkles,
-  Server,
-  MessageCircle,
-  CreditCard,
+  Building,
   CheckCircle2,
   Loader2,
-  ChevronRight,
-  ShieldCheck,
-  Zap,
-  Building,
-  Bot,
-  Download,
   Database,
-  FileJson,
+  Package,
+  Plus,
+  Trash2,
+  BellRing,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   head: () => ({
     meta: [
-      { title: "Ajustes & Automação — Sigma Control" },
-      { name: "description", content: "Configurações gerais do sistema, régua de automação de cobranças e visão integrada de módulos." },
+      { title: "Configurações — Sigma Control" },
+      { name: "description", content: "Nome da revenda, planos de venda e backup dos seus dados." },
+      { property: "og:title", content: "Configurações — Sigma Control" },
+      { property: "og:description", content: "Nome da revenda, planos de venda e backup dos seus dados." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ConfiguracoesPage,
 });
 
-type AutomationSettings = {
-  business_name: string;
-  reminder_days_before: number;
-  send_on_due_day: boolean;
-  overdue_reminder: boolean;
-  auto_send_enabled: boolean;
+type SalePlan = {
+  id: string;
+  name: string;
+  screens: number;
+  months: number;
+  price: number;
+  active: boolean;
 };
 
-const defaults: AutomationSettings = {
-  business_name: "",
-  reminder_days_before: 3,
-  send_on_due_day: true,
-  overdue_reminder: true,
-  auto_send_enabled: true,
-};
+const emptyPlan = { name: "", screens: 1, months: 1, price: 0 };
+
+function SalePlansCard() {
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState(emptyPlan);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["sale-plans"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("sale_plans")
+        .select("*")
+        .order("price", { ascending: true });
+      if (error) throw error;
+      return (Array.isArray(data) ? data : []) as SalePlan[];
+    },
+  });
+
+  const plans = Array.isArray(data) ? data : [];
+
+  const createPlan = useMutation({
+    mutationFn: async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await (supabase as any).from("sale_plans").insert({
+        user_id: auth.user!.id,
+        name: draft.name.trim() || `${draft.screens} tela(s) — ${draft.months} mês(es)`,
+        screens: Number(draft.screens) || 1,
+        months: Number(draft.months) || 1,
+        price: Number(draft.price) || 0,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Plano criado.");
+      setDraft(emptyPlan);
+      queryClient.invalidateQueries({ queryKey: ["sale-plans"] });
+    },
+    onError: (error: Error) => toast.error(`Não foi possível criar: ${error.message}`),
+  });
+
+  const togglePlan = useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
+      const { error } = await (supabase as any).from("sale_plans").update({ active }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sale-plans"] }),
+  });
+
+  const removePlan = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any).from("sale_plans").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Plano removido.");
+      queryClient.invalidateQueries({ queryKey: ["sale-plans"] });
+    },
+  });
+
+  return (
+    <Card className="surface-card border-border/60">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Package className="size-4 text-primary" /> Planos que você vende
+        </CardTitle>
+        <CardDescription>
+          Cadastre seus combos (telas e duração) para não digitar valor e vencimento em cada cliente.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-[2fr_auto_auto_auto_auto] sm:items-end">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Nome</Label>
+            <Input
+              placeholder="Ex: Plano 1 tela mensal"
+              value={draft.name}
+              onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+              className="rounded-xl text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Telas</Label>
+            <Input
+              type="number"
+              min="1"
+              value={draft.screens}
+              onChange={(event) => setDraft({ ...draft, screens: Number(event.target.value) })}
+              className="w-full rounded-xl text-sm sm:w-20"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Meses</Label>
+            <Input
+              type="number"
+              min="1"
+              value={draft.months}
+              onChange={(event) => setDraft({ ...draft, months: Number(event.target.value) })}
+              className="w-full rounded-xl text-sm sm:w-20"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Preço (R$)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={draft.price}
+              onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) })}
+              className="w-full rounded-xl text-sm sm:w-28"
+            />
+          </div>
+          <Button type="button" onClick={() => createPlan.mutate()} disabled={createPlan.isPending} className="gap-1.5">
+            {createPlan.isPending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+            Adicionar
+          </Button>
+        </div>
+
+        {isLoading ? (
+          <div className="h-16 animate-pulse rounded-xl bg-muted/60" />
+        ) : plans.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-border/60 p-4 text-center text-xs text-muted-foreground">
+            Nenhum plano cadastrado ainda.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {plans.map((plan) => (
+              <div key={plan.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 p-3">
+                <div>
+                  <p className="text-sm font-bold">{plan.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {plan.screens} tela{plan.screens === 1 ? "" : "s"} • {plan.months} mês{plan.months === 1 ? "" : "es"} • {formatBRL(Number(plan.price || 0))}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={plan.active ? "success" : "secondary"} className="text-[10px]">
+                    {plan.active ? "À venda" : "Pausado"}
+                  </Badge>
+                  <Switch
+                    checked={plan.active}
+                    onCheckedChange={(checked) => togglePlan.mutate({ id: plan.id, active: checked })}
+                    aria-label={`Ativar plano ${plan.name}`}
+                  />
+                  <Button variant="ghost" size="icon" onClick={() => removePlan.mutate(plan.id)} aria-label={`Remover plano ${plan.name}`}>
+                    <Trash2 className="size-4 text-rose-500" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function ConfiguracoesPage() {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<AutomationSettings>(defaults);
+  const [businessName, setBusinessName] = useState("");
   const [exportingBackup, setExportingBackup] = useState(false);
 
-  async function handleExportFullBackup() {
-    setExportingBackup(true);
-    try {
-      // 1. Clientes
-      const { data: clients } = await supabase.from("clients").select("*");
-      // 2. Configurações WhatsApp
-      const { data: wsSettings } = await supabase.from("whatsapp_settings").select("*");
-      // 3. User metadata
-      const { data: authUser } = await supabase.auth.getUser();
-
-      const backupData = {
-        version: "2.0",
-        timestamp: new Date().toISOString(),
-        exported_by: authUser?.user?.email || "admin",
-        system: "Sigma Control",
-        data: {
-          clients: clients || [],
-          whatsapp_settings: wsSettings || [],
-          bot_settings: authUser?.user?.user_metadata?.bot_settings || null,
-          sigma_settings: authUser?.user?.user_metadata?.sigma_settings || null,
-        },
-      };
-
-      const jsonStr = JSON.stringify(backupData, null, 2);
-      const blob = new Blob([jsonStr], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `backup_completo_iptv_${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success("Backup completo (JSON) exportado com sucesso! 🛡️");
-    } catch (err) {
-      console.error(err);
-      toast.error("Erro ao gerar backup dos dados.");
-    } finally {
-      setExportingBackup(false);
-    }
-  }
-
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ["whatsapp-settings"],
     queryFn: async () => {
       const { data } = await supabase.from("whatsapp_settings").select("*").maybeSingle();
@@ -111,378 +214,124 @@ function ConfiguracoesPage() {
   });
 
   useEffect(() => {
-    if (data) {
-      setForm({
-        business_name: data.business_name ?? defaults.business_name,
-        reminder_days_before: data.reminder_days_before ?? defaults.reminder_days_before,
-        send_on_due_day: data.send_on_due_day ?? defaults.send_on_due_day,
-        overdue_reminder: data.overdue_reminder ?? defaults.overdue_reminder,
-        auto_send_enabled: data.auto_send_enabled ?? defaults.auto_send_enabled,
-      });
-    }
+    if (data) setBusinessName(data.business_name ?? "");
   }, [data]);
 
   const save = useMutation({
-    mutationFn: async (values: AutomationSettings) => {
+    mutationFn: async () => {
       const { data: auth } = await supabase.auth.getUser();
-      const payload = {
-        user_id: auth.user!.id,
-        business_name: values.business_name.trim(),
-        reminder_days_before: Number(values.reminder_days_before || 3),
-        send_on_due_day: values.send_on_due_day,
-        overdue_reminder: values.overdue_reminder,
-        auto_send_enabled: values.auto_send_enabled,
-      };
-
       const { error } = await supabase
         .from("whatsapp_settings")
-        .upsert(payload as any, { onConflict: "user_id" });
-
+        .upsert({ user_id: auth.user!.id, business_name: businessName.trim() } as any, { onConflict: "user_id" });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Ajustes e regras de automação salvos com sucesso!");
+      toast.success("Configurações salvas.");
       queryClient.invalidateQueries({ queryKey: ["whatsapp-settings"] });
     },
-    onError: (err: Error) => {
-      toast.error(`Falha ao salvar: ${err.message}`);
-    },
+    onError: (err: Error) => toast.error(`Falha ao salvar: ${err.message}`),
   });
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    save.mutate(form);
+  async function handleExportFullBackup() {
+    setExportingBackup(true);
+    try {
+      const { data: clients } = await supabase.from("clients").select("*");
+      const { data: invoices } = await supabase.from("invoices").select("*");
+      const { data: authUser } = await supabase.auth.getUser();
+
+      const backupData = {
+        version: "2.1",
+        timestamp: new Date().toISOString(),
+        exported_by: authUser?.user?.email || "",
+        system: "Sigma Control",
+        data: { clients: clients || [], invoices: invoices || [] },
+      };
+
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `backup_clientes_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Backup exportado com sucesso.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao gerar backup dos dados.");
+    } finally {
+      setExportingBackup(false);
+    }
   }
 
-  const hasSigma = Boolean(data?.sigma_url);
-  const hasPix = Boolean(data?.pix_key);
-
   return (
-    <div className="space-y-6 max-w-5xl animate-in fade-in duration-300">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/60 pb-5">
+    <div className="max-w-5xl space-y-6 animate-in fade-in duration-300">
+      <div className="flex flex-col gap-4 border-b border-border/60 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
             <Settings className="size-6 text-primary" /> Configurações
           </h1>
           <p className="text-sm text-muted-foreground">
-            Defina o nome da sua revenda, horários e regras de envio do robô de cobrança automática.
+            Nome da sua revenda, planos que você vende e backup dos seus dados.
           </p>
         </div>
-
-        <Button
-          type="button"
-          onClick={() => save.mutate(form)}
-          disabled={save.isPending}
-          className="gap-1.5 font-semibold bg-primary text-primary-foreground shadow-sm"
-        >
+        <Button onClick={() => save.mutate()} disabled={save.isPending} className="gap-1.5 font-semibold">
           {save.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
-          Salvar Ajustes
+          Salvar
         </Button>
       </div>
 
-      {/* Central de Módulos (Atalhos rápidos para as sessões dedicadas) */}
-      <div>
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-          Módulos Integrados do Sistema
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <Link
-            to="/sigma"
-            className="group flex flex-col justify-between p-4 rounded-lg border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-md bg-primary/10 text-primary border border-primary/20">
-                <Server className="size-4" />
-              </div>
-              <Badge variant={hasSigma ? "success" : "secondary"} className="text-[10px]">
-                {hasSigma ? "Configurado" : "Pendente"}
-              </Badge>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                Painel Sigma
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Servidores, credenciais e renovação automática
-              </p>
-            </div>
-            <div className="flex items-center justify-end text-xs font-semibold text-primary mt-3">
-              <span>Gerenciar</span>
-              <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
-            </div>
-          </Link>
+      <Card className="surface-card border-border/60">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Building className="size-4 text-primary" /> Identificação do negócio
+          </CardTitle>
+          <CardDescription>Nome que aparece nas mensagens e faturas enviadas aos seus clientes.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="max-w-md space-y-1.5">
+            <Label className="text-xs font-semibold">Nome da sua revenda</Label>
+            <Input
+              placeholder="Ex: IPTV Turbo Brasil"
+              value={businessName}
+              onChange={(event) => setBusinessName(event.target.value)}
+              className="rounded-xl text-sm"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-          <Link
-            to="/whatsapp"
-            className="group flex flex-col justify-between p-4 rounded-lg border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                <MessageCircle className="size-4" />
-              </div>
-              <Badge variant="success" className="text-[10px]">
-                Conexão
-              </Badge>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                WhatsApp
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                QR Code, conexão e disparo de teste
-              </p>
-            </div>
-            <div className="flex items-center justify-end text-xs font-semibold text-primary mt-3">
-              <span>Gerenciar</span>
-              <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
-            </div>
-          </Link>
+      <SalePlansCard />
 
-          <Link
-            to="/bot"
-            className="group flex flex-col justify-between p-4 rounded-lg border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                <Bot className="size-4" />
-              </div>
-              <Badge variant="outline" className="border-purple-500/30 text-purple-400 bg-purple-500/10 text-[10px]">
-                24h Ativo
-              </Badge>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                Robô WhatsApp
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Auto-atendimento, testes grátis e Pix no chat
-              </p>
-            </div>
-            <div className="flex items-center justify-end text-xs font-semibold text-primary mt-3">
-              <span>Gerenciar</span>
-              <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
-            </div>
-          </Link>
+      <Card className="surface-card border-border/60">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <BellRing className="size-4 text-primary" /> Cobrança dos clientes
+          </CardTitle>
+          <CardDescription>Os horários, etapas e textos de cobrança agora ficam em uma tela só.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline" className="rounded-xl">
+            <Link to="/cobranca-automatica">Abrir cobrança automática</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
-          <Link
-            to="/pagamentos"
-            className="group flex flex-col justify-between p-4 rounded-lg border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                <CreditCard className="size-4" />
-              </div>
-              <Badge variant={hasPix ? "success" : "secondary"} className="text-[10px]">
-                {hasPix ? "Pix ativo" : "Configurar"}
-              </Badge>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                Pagamentos
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Chave Pix, Mercado Pago e Asaas
-              </p>
-            </div>
-            <div className="flex items-center justify-end text-xs font-semibold text-primary mt-3">
-              <span>Gerenciar</span>
-              <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
-            </div>
-          </Link>
-
-          <Link
-            to="/mensagens"
-            className="group flex flex-col justify-between p-4 rounded-lg border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                <Sparkles className="size-4" />
-              </div>
-              <Badge variant="outline" className="text-[10px]">
-                Modelos
-              </Badge>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                Mensagens
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Modelos de cobrança e aviso de vencimento
-              </p>
-            </div>
-            <div className="flex items-center justify-end text-xs font-semibold text-primary mt-3">
-              <span>Gerenciar</span>
-              <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
-            </div>
-          </Link>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Seção: Identificação da Revenda */}
-        <Card className="surface-card border-border/60">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Building className="size-4 text-primary" /> Identificação do Negócio
-            </CardTitle>
-            <CardDescription>
-              Nome que aparecerá no cabeçalho das mensagens e faturas para seus clientes.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5 max-w-md">
-              <Label className="text-xs font-semibold">Nome da Sua Revenda / Empresa</Label>
-              <Input
-                type="text"
-                placeholder="Ex: IPTV Turbo Brasil ou CinePlay 4K"
-                value={form.business_name}
-                onChange={(e) => setForm({ ...form, business_name: e.target.value })}
-                className="rounded-xl text-sm"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Seção: Envio automático de cobrança */}
-        <Card className="surface-card border-border/60">
-          <CardHeader>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Clock className="size-4 text-primary" /> Envio automático de cobrança
-                </CardTitle>
-                <CardDescription>
-                  Escolha quando o robô avisa seus clientes. Os textos das mensagens ficam em Régua de cobrança.
-                </CardDescription>
-              </div>
-              <Button asChild type="button" variant="outline" size="sm" className="self-start rounded-xl text-xs">
-                <Link to="/cobranca-automatica">Editar textos</Link>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Chave Mestre de Envio Automático */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl border border-primary/30 bg-primary/10">
-              <div className="space-y-0.5">
-                <p className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                  <Zap className="size-4 text-primary" />
-                  Envio Automático do Robô Ativado
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Quando ativo, o sistema verifica diariamente as faturas e dispara os lembretes automaticamente.
-                </p>
-              </div>
-              <Switch
-                checked={form.auto_send_enabled}
-                onCheckedChange={(checked) => setForm({ ...form, auto_send_enabled: checked })}
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3 pt-2">
-              {/* Lembrete Prévio */}
-              <div className="space-y-2 p-3.5 rounded-xl border border-border/60 bg-muted/20">
-                <Label className="text-xs font-semibold">Dias Antes do Vencimento</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  max="15"
-                  value={form.reminder_days_before}
-                  onChange={(e) => setForm({ ...form, reminder_days_before: Number(e.target.value) })}
-                  className="rounded-xl font-mono text-sm"
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Enviar lembrete preventivo X dias antes da data de corte.
-                </p>
-              </div>
-
-              {/* No Dia do Vencimento */}
-              <div className="flex flex-col justify-between p-3.5 rounded-xl border border-border/60 bg-muted/20">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-foreground">Aviso no Dia do Vencimento</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Dispara lembrete na manhã do dia do vencimento.
-                  </p>
-                </div>
-                <div className="pt-2 flex justify-end">
-                  <Switch
-                    checked={form.send_on_due_day}
-                    onCheckedChange={(checked) => setForm({ ...form, send_on_due_day: checked })}
-                  />
-                </div>
-              </div>
-
-              {/* Lembrete Pós-Vencimento (Atraso) */}
-              <div className="flex flex-col justify-between p-3.5 rounded-xl border border-border/60 bg-muted/20">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-foreground">Cobrança de Atraso</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Alerta o cliente se a fatura vencer sem confirmação de pagamento.
-                  </p>
-                </div>
-                <div className="pt-2 flex justify-end">
-                  <Switch
-                    checked={form.overdue_reminder}
-                    onCheckedChange={(checked) => setForm({ ...form, overdue_reminder: checked })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-3 border-t border-border/50">
-              <Button
-                type="submit"
-                disabled={save.isPending}
-                className="gap-1.5 font-semibold bg-primary text-primary-foreground shadow-md px-6"
-              >
-                {save.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
-                Salvar Ajustes & Automação
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Seção: Backup & Segurança Geral */}
-        <Card className="surface-card border-border/60">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Database className="size-4 text-emerald-400" /> Backup Completo & Segurança dos Dados
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Gere um instantâneo JSON contendo seus clientes, credenciais IPTV, regras do robô e configurações.
-                </CardDescription>
-              </div>
-              <Badge variant="outline" className="text-emerald-400 border-emerald-400/30 text-xs self-start sm:self-auto">
-                Seus dados, sempre com você
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-3.5 rounded-xl border border-border/60 bg-muted/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="space-y-0.5">
-                <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <FileJson className="size-3.5 text-primary" /> Arquivo de Backup Estruturado (.json)
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  Compatível com restauração rápida ou importação em qualquer banco de dados relacional.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleExportFullBackup}
-                disabled={exportingBackup}
-                className="gap-2 text-xs font-semibold rounded-xl border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 shrink-0"
-              >
-                {exportingBackup ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
-                {exportingBackup ? "Exportando..." : "Exportar Backup Completo"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </form>
+      <Card className="surface-card border-border/60">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Database className="size-4 text-primary" /> Backup dos dados
+          </CardTitle>
+          <CardDescription>Baixe uma cópia dos seus clientes e cobranças sempre que quiser.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={handleExportFullBackup} disabled={exportingBackup} className="gap-1.5 rounded-xl">
+            {exportingBackup ? <Loader2 className="size-4 animate-spin" /> : <Database className="size-4" />}
+            Baixar backup
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
