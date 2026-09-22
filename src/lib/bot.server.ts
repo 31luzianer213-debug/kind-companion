@@ -80,30 +80,25 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
   testPackageName: "Teste grátis",
   blockRepeatDays: 7,
   menuGreeting:
-    "👋 Olá! Seja muito bem-vindo(a) à *{empresa}*! 🍿\n" +
-    "Eu sou o assistente virtual do *{servidor}* e estou aqui para te atender 24h por dia.\n\n" +
-    "Como posso te ajudar hoje? Digite o *número* da opção desejada:\n\n" +
-    "1️⃣ *Gerar Teste Grátis* (Acesso Imediato)\n" +
-    "2️⃣ *Renovar Minha Assinatura* (Pix Automático)\n" +
-    "3️⃣ *Comprar Novo Acesso / Planos*\n" +
-    "4️⃣ *Baixar Aplicativos* (Celular, TV Box, PC, iOS) 📲\n" +
-    "5️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n" +
-    "6️⃣ *Falar com Atendente Humano*\n\n" +
-    "_Responda com 1, 2, 3, 4, 5 ou 6._",
+    "Oi! Tudo bem? 😊 Aqui é da {empresa}.\n\n" +
+    "Me diz o que você precisa que eu já resolvo por aqui:\n\n" +
+    "• teste grátis\n" +
+    "• renovar\n" +
+    "• planos e valores\n" +
+    "• aplicativos\n" +
+    "• meus dados de acesso\n" +
+    "• falar comigo sobre outra coisa\n\n" +
+    "Pode escrever do seu jeito que eu entendo.",
   plansText:
-    "🛒 *PLANOS E ASSINATURAS DISPONÍVEIS* 🍿\n\n" +
-    "📺 *1 Mês (1 Tela):* R$ 35,00\n" +
-    "📺 *3 Meses (Trimestral):* R$ 90,00 (Mais econômico!)\n" +
-    "📺 *6 Meses (Semestral):* R$ 160,00\n" +
-    "📺 *12 Meses (Anual):* R$ 290,00 (Melhor custo-benefício!)\n\n" +
-    "⭐ *Todos os planos incluem:*\n" +
-    "• Mais de 80.000 conteúdos (Canais 4K/FHD, Filmes e Séries atualizados)\n" +
-    "• Guia de Canais completo (EPG)\n" +
-    "• Funciona em TV Box, Smart TV, Celular, Computador e Tablet.",
+    "Claro! Deixa eu te passar os valores:\n\n" +
+    "• 1 mês — R$ 35,00\n" +
+    "• 3 meses — R$ 90,00\n" +
+    "• 6 meses — R$ 160,00 (o pessoal costuma pegar esse)\n" +
+    "• 12 meses — R$ 290,00 (sai bem mais em conta)\n\n" +
+    "Em todos vem canais em 4K e Full HD, filmes e séries sempre atualizados, guia de programação e funciona na TV Box, Smart TV, celular, computador e tablet.",
   supportMessage:
-    "👨‍💼 *ATENDIMENTO HUMANO*\n\n" +
-    "Sua solicitação foi recebida! Um de nossos atendentes irá te responder diretamente aqui em instantes.\n" +
-    "Por favor, deixe sua dúvida ou mensagem abaixo para agilizar seu atendimento. 👇",
+    "Beleza, já te chamo aqui na conversa 🙂\n\n" +
+    "Me conta com suas palavras o que aconteceu que eu te respondo assim que ver a mensagem.",
   planMonthlyPrice: 35.0,
   planQuarterlyPrice: 90.0,
   planSemiannualPrice: 160.0,
@@ -137,16 +132,12 @@ export function generateDefaultPlansText(params: {
   const srv = params.serverName || "Meu Servidor";
 
   return (
-    `🛒 *PLANOS E ASSINATURAS ${srv.toUpperCase()}* 🍿\n\n` +
-    `📺 *1 Mês (Mensal):* R$ ${m}\n` +
-    `📺 *3 Meses (Trimestral):* R$ ${q} (Econômico!)\n` +
-    `📺 *6 Meses (Semestral):* R$ ${s} (Mais Vendido! 🔥)\n` +
-    `📺 *12 Meses (Anual):* R$ ${a} (Super Desconto ⭐)\n\n` +
-    `⭐ *Todos os planos incluem:*\n` +
-    `• Mais de 80.000 conteúdos (Canais 4K/FHD, Filmes e Séries atualizados)\n` +
-    `• Guia de Canais completo (EPG)\n` +
-    `• Compatível com TV Box, Smart TV, Celular, Computador e Tablet\n` +
-    `• Ativação Imediata via Pix Automático!`
+    `Claro! Os valores aqui do ${srv} são esses:\n\n` +
+    `• 1 mês — R$ ${m}\n` +
+    `• 3 meses — R$ ${q}\n` +
+    `• 6 meses — R$ ${s} (o mais pedido)\n` +
+    `• 12 meses — R$ ${a} (sai bem mais barato)\n\n` +
+    `Em todos vem canais em 4K e Full HD, filmes e séries atualizados, guia de programação e funciona na TV Box, Smart TV, celular, computador e tablet. O acesso é liberado assim que o Pix cai.`
   );
 }
 
@@ -159,24 +150,13 @@ export function generateAppsMessage(config: BotConfigData, serverName: string): 
   const smartTv = config.appSmartTvText || DEFAULT_BOT_CONFIG.appSmartTvText;
 
   return (
-    `📲 *APLICATIVOS OFICIAIS — ${serverName.toUpperCase()}* 🍿\n\n` +
-    `Escolha o aplicativo compatível com seu aparelho e siga as instruções de instalação:\n\n` +
-    `🤖 *TV BOX / ANDROID TV / FIRESTICK:*\n` +
-    `• No aplicativo *Downloader* da TV, digite o código rápido: *${code}*\n` +
-    `• Instale o APK Android disponibilizado no painel.\n\n` +
-    `📱 *CELULAR & TABLET ANDROID:*\n` +
-    `• Baixe o APK Android pelo link configurado no painel.\n\n` +
-    `🍏 *IPHONE / IPAD / APPLE TV (iOS):*\n` +
-    `• Use o aplicativo indicado para iPhone/iPad conforme o link configurado.\n\n` +
-    `💻 *COMPUTADOR & NOTEBOOK (WINDOWS):*\n` +
-    `• Baixe o aplicativo para Windows pelo link configurado no painel.\n\n` +
-    `📺 *SMART TV (SAMSUNG / LG / ROKU):*\n` +
+    `Sobre os aplicativos, vai depender do aparelho que você usa:\n\n` +
+    `Na TV Box, Android TV ou Fire Stick: abre o app Downloader e digita o código ${code}.\n` +
+    `No celular ou tablet Android: é só instalar o APK que eu te mando.\n` +
+    `No iPhone, iPad ou Apple TV: uso o app indicado pra iOS, te passo o link.\n` +
+    `No computador com Windows: tem a versão pra PC também.\n` +
     `${smartTv}\n\n` +
-    `━━━━━━━━━━━━━━━━━━━\n` +
-    `🔑 *Como Conectar:*\n` +
-    `Após instalar, abra o app e entre com seus dados (Usuário, Senha e URL/DNS do servidor).\n\n` +
-    `_Precisa dos seus dados de acesso? Digite *5*._\n` +
-    `_Dúvidas na instalação? Digite *6* para falar com o suporte._`
+    `Depois de instalar, abre o app e coloca seu usuário, senha e o endereço do servidor. Se travar em algum passo me fala que eu te ajudo.`
   );
 }
 
@@ -484,11 +464,8 @@ export async function createTrialForBot(
       return {
         ok: false,
         error:
-          `⚠️ *Aviso de Teste Grátis*\n\n` +
-          `Identificamos que este número de WhatsApp já gerou um teste recente.\n\n` +
-          `Para continuar assistindo com todos os canais liberados, escolha:\n` +
-          `• Digite *2* para Renovar sua assinatura\n` +
-          `• Digite *3* para Comprar um Plano`,
+          `Poxa, esse número já pegou um teste faz pouco tempo 😅\n\n` +
+          `Mas posso te passar os valores ou já deixar seu acesso ativo, é só me falar o que prefere.`,
       };
     }
   }
@@ -710,16 +687,9 @@ async function handlePlanOrderCreation({
   if (mpPixResult?.ok && mpPixResult?.qrCode) {
     // MODO AUTOMÁTICO MERCADO PAGO COM Pix COPIA E COLA & QR CODE FOTO
     const reply =
-      `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
-      `📦 *Plano:* ${planName}\n` +
-      `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-      `⚡ *Forma de Pagamento:* Pix Automático\n\n` +
-      `👇 *COMO PAGAR:*\n` +
-      `1️⃣ Toque no botão *📋 Copiar Código Pix* abaixo.\n` +
-      `2️⃣ Abra o app do seu banco (Nubank, Inter, Caixa, Itaú, etc.).\n` +
-      `3️⃣ Vá na opção *Pix* > *Pix Copia e Cola* e pague.\n\n` +
-      `✅ *Liberação 100% Automática!*\n` +
-      `Assim que o banco confirmar, seus dados de acesso (usuário, senha e M3U) serão enviados aqui na conversa! 🚀`;
+      `Perfeito! Anotei aqui o ${planName}, fica R$ ${amount.toFixed(2).replace(".", ",")}.\n\n` +
+      `Te mandei o código do Pix logo abaixo. É só copiar, abrir o app do seu banco, ir em Pix Copia e Cola e pagar.\n\n` +
+      `Assim que o pagamento cair eu já libero seu acesso e mando usuário, senha e a lista aqui mesmo 🙂`;
 
     return {
       reply,
@@ -728,7 +698,7 @@ async function handlePlanOrderCreation({
         ? {
             type: "image",
             base64: mpPixResult.qrCodeBase64,
-            caption: `📱 *QR CODE Pix — PEDIDO #${order.order_number}*\n💰 Valor: R$ ${amount.toFixed(2).replace(".", ",")}\nAponte a câmera do aplicativo do seu banco para pagar!`,
+            caption: `Se preferir, é só apontar a câmera do banco nesse QR Code. Valor: R$ ${amount.toFixed(2).replace(".", ",")}`,
           }
         : undefined,
       interactive: {
@@ -753,16 +723,9 @@ async function handlePlanOrderCreation({
   const effectivePixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
 
   const reply =
-    `🎉 *PEDIDO #${order.order_number} GERADO COM SUCESSO!* 🍿\n\n` +
-    `📦 *Plano:* ${planName}\n` +
-    `💰 *Valor:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-    `💳 *Forma de Pagamento:* Transferência Pix\n\n` +
-    `🔑 *Chave Pix:* \`${effectivePixKey}\`\n` +
-    `👤 *Titular:* ${effectivePixHolder}\n\n` +
-    `📌 *Como Ativar Seu Acesso:*\n` +
-    `1️⃣ Toque no botão *📋 Copiar Chave Pix* abaixo.\n` +
-    `2️⃣ Faça a transferência no valor de *R$ ${amount.toFixed(2).replace(".", ",")}*.\n` +
-    `3️⃣ *Envie o comprovante do Pix aqui nesta conversa* para liberação imediata! 🚀`;
+    `Show! Anotei o ${planName}, dá R$ ${amount.toFixed(2).replace(".", ",")}.\n\n` +
+    `Minha chave Pix é ${effectivePixKey} (em nome de ${effectivePixHolder}).\n\n` +
+    `Depois que fizer o Pix, me manda o comprovante aqui que eu libero seu acesso na hora 🙂`;
 
   return {
     reply,
@@ -861,17 +824,9 @@ async function handleRenewOrderCreation({
   if (mpPixResult?.ok && mpPixResult?.qrCode) {
     // MODO AUTOMÁTICO MERCADO PAGO COM Pix COPIA E COLA & QR CODE FOTO
     const reply =
-      `💳 *DADOS PARA PAGAMENTO Pix (RENOVAÇÃO)* 📺\n\n` +
-      `✅ *Usuário a Renovar:* *${targetUsername}*\n` +
-      (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
-      `📺 *Servidor:* ${serverName}\n` +
-      `💰 *Valor da Mensalidade:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-      `⚡ *Forma de Pagamento:* Pix Automático\n\n` +
-      `👇 *COMO PAGAR:*\n` +
-      `1️⃣ Toque no botão *📋 Copiar Código Pix* abaixo.\n` +
-      `2️⃣ Abra o app do seu banco, vá em *Pix* > *Pix Copia e Cola* e pague.\n\n` +
-      `✅ *Renovação 100% Automática!*\n` +
-      `Assim que o banco confirmar, seu acesso será reativado imediatamente! 🚀`;
+      `Beleza${clientMatch?.name ? `, ${String(clientMatch.name).split(" ")[0]}` : ""}! Vou renovar o usuário ${targetUsername}, fica R$ ${amount.toFixed(2).replace(".", ",")}.\n\n` +
+      `Te mandei o código do Pix aqui embaixo, é só copiar e pagar no app do seu banco em Pix Copia e Cola.\n\n` +
+      `Quando o pagamento cair seu acesso volta na hora, não precisa me avisar 🙂`;
 
     return {
       reply,
@@ -880,7 +835,7 @@ async function handleRenewOrderCreation({
         ? {
             type: "image",
             base64: mpPixResult.qrCodeBase64,
-            caption: `📱 *QR CODE Pix — RENOVAÇÃO IPTV*\n👤 Usuário: ${targetUsername}\n💰 Valor: R$ ${amount.toFixed(2).replace(".", ",")}`,
+            caption: `Se preferir pagar pelo QR Code, é esse aqui. Usuário ${targetUsername} • R$ ${amount.toFixed(2).replace(".", ",")}`,
           }
         : undefined,
       interactive: {
@@ -905,18 +860,9 @@ async function handleRenewOrderCreation({
   const effectivePixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
 
   const reply =
-    `💳 *DADOS PARA PAGAMENTO Pix (RENOVAÇÃO)* 📺\n\n` +
-    `✅ *Usuário a Renovar:* *${targetUsername}*\n` +
-    (clientMatch?.name ? `👤 *Cliente:* ${clientMatch.name}\n` : "") +
-    `📺 *Servidor:* ${serverName}\n` +
-    `💰 *Valor da Mensalidade:* *R$ ${amount.toFixed(2).replace(".", ",")}*\n` +
-    `💳 *Forma de Pagamento:* Transferência Pix\n\n` +
-    `🔑 *Chave Pix:* \`${effectivePixKey}\`\n` +
-    `👤 *Titular:* ${effectivePixHolder}\n\n` +
-    `📌 *Como Confirmar Sua Renovação:*\n` +
-    `1️⃣ Toque no botão *📋 Copiar Chave Pix* abaixo.\n` +
-    `2️⃣ Faça o Pix no valor de *R$ ${amount.toFixed(2).replace(".", ",")}*.\n` +
-    `3️⃣ *Envie o comprovante do Pix aqui nesta conversa* para renovação imediata! 🚀`;
+    `Beleza${clientMatch?.name ? `, ${String(clientMatch.name).split(" ")[0]}` : ""}! Vou renovar o usuário ${targetUsername}, fica R$ ${amount.toFixed(2).replace(".", ",")}.\n\n` +
+    `Minha chave Pix é ${effectivePixKey} (em nome de ${effectivePixHolder}).\n\n` +
+    `Assim que pagar, me manda o comprovante aqui que eu renovo na hora 🙂`;
 
   return {
     reply,
@@ -956,62 +902,26 @@ function normalizeBotInput(value: string): string {
 }
 
 function buildMainMenu(config: BotConfigData, serverName: string): BotProcessResult {
-  const greeting =
-    `👋 *Olá! Seja muito bem-vindo(a) à ${config.businessName || "Central IPTV"}!* 🍿\n\n` +
-    `Como podemos te ajudar? Digite apenas o *número* da opção:\n\n` +
-    `1️⃣ *TESTE GRÁTIS* — Teste imediato de ${config.testDurationHours} horas\n` +
-    `2️⃣ *RENOVAÇÃO* — Renove seu acesso com Pix Automático\n` +
-    `3️⃣ *PLANOS & PREÇOS* — Conheça nossos planos e valores\n` +
-    `4️⃣ *BAIXAR APLICATIVOS* — Links oficiais Android, iOS, PC e TV\n` +
-    `5️⃣ *MEUS DADOS* — Receber login, senha e lista M3U\n` +
-    `6️⃣ *SUPORTE* — Falar com atendente humano\n\n` +
-    `_👇 Toque no botão abaixo para abrir as opções ou envie o número desejado:_`;
+  const business = config.businessName || "Central IPTV";
+  const custom = (config.menuGreeting || "").trim();
+  const greeting = custom
+    ? custom.replace(/\{empresa\}/g, business).replace(/\{servidor\}/g, serverName)
+    : `Oi! Tudo bem? 😊 Aqui é da ${business}.\n\n` +
+      `Me diz o que você precisa que eu já resolvo por aqui: pode ser um teste grátis de ${config.testDurationHours} horas, renovar seu acesso, ver os valores dos planos, pegar os aplicativos ou receber de novo seu usuário e senha.\n\n` +
+      `Pode escrever do seu jeito que eu entendo.`;
 
   return {
     reply: greeting,
     action: "menu_shown",
     interactive: {
-      type: "list",
-      title: config.businessName || "Menu IPTV",
+      type: "buttons",
+      title: business,
       description: greeting,
-      buttonText: "📋 Abrir Menu de Opções",
-      footerText: `${serverName} • Auto-Atendimento 24h`,
-      sections: [
-        {
-          title: "Auto-Atendimento Rápido",
-          rows: [
-            {
-              rowId: "1",
-              title: "1️⃣ Gerar Teste Grátis",
-              description: `Acesso liberado na hora por ${config.testDurationHours} horas`,
-            },
-            {
-              rowId: "2",
-              title: "2️⃣ Renovar Assinatura",
-              description: "Pagar via Pix com ativação imediata",
-            },
-            {
-              rowId: "3",
-              title: "3️⃣ Planos e Preços",
-              description: "Ver opções Mensal, Trimestral, Semestral e Anual",
-            },
-            {
-              rowId: "4",
-              title: "4️⃣ Baixar Aplicativos",
-              description: "Links de download para TV Box, Celular, iOS e PC 📲",
-            },
-            {
-              rowId: "5",
-              title: "5️⃣ Reenviar Meus Acessos",
-              description: "Receber login, senha e lista M3U",
-            },
-            {
-              rowId: "6",
-              title: "6️⃣ Atendimento Humano",
-              description: "Tirar dúvidas com nossa equipe de suporte",
-            },
-          ],
-        },
+      footer: serverName,
+      buttons: [
+        { id: "1", displayText: "Quero testar", type: "reply" },
+        { id: "3", displayText: "Ver valores", type: "reply" },
+        { id: "2", displayText: "Quero renovar", type: "reply" },
       ],
     },
   };
@@ -1164,7 +1074,7 @@ export async function processBotMessage(
 
     if (!order) {
       return {
-        reply: "🔍 Não encontrei nenhum pedido pendente para o seu número. Digite *3* para ver nossos planos e assinar!",
+        reply: "Olhei aqui e não achei nenhum pagamento em aberto no seu número. Se quiser, te passo os valores dos planos 🙂",
         action: "order_not_found",
       };
     }
@@ -1172,12 +1082,9 @@ export async function processBotMessage(
     if (order.status === "approved") {
       return {
         reply:
-          `🎉 *PEDIDO #${order.order_number} APROVADO E LIBERADO!* 🍿\n\n` +
-          `📦 *Plano:* ${order.plan_name}\n` +
-          `🔑 *Usuário:* *${order.target_username}*\n` +
-          `📺 *Servidor:* ${serverName}\n\n` +
-          `• Digite *5* para ver seus dados de acesso completos (usuário, senha e M3U)!\n` +
-          `• Digite *4* para baixar os aplicativos de TV Box, Celular e PC! 📲`,
+          `Esse já está pago e liberado 👍\n\n` +
+          `É o ${order.plan_name}, no usuário ${order.target_username}.\n\n` +
+          `Se quiser eu reenvio seus dados de acesso ou o link dos aplicativos, é só pedir.`,
         action: "order_already_approved",
       };
     }
@@ -1195,11 +1102,8 @@ export async function processBotMessage(
             if (approvedRes.ok) {
               return {
                 reply:
-                  `🎉 *PAGAMENTO CONFIRMADO COM SUCESSO!* 🍿\n\n` +
-                  `Identificamos seu pagamento do Pedido *#${order.order_number}* via Mercado Pago!\n` +
-                  `Seu acesso acabou de ser ativado no servidor.\n\n` +
-                  `• Digite *5* para ver seus dados de conexão e lista M3U!\n` +
-                  `• Digite *4* para baixar os aplicativos oficiais! 📲`,
+                  `Seu pagamento caiu aqui, obrigado! 🙌\n\n` +
+                  `Já ativei seu acesso. Quer que eu mande seus dados de conexão ou o link do aplicativo?`,
                 action: "order_auto_approved",
               };
             }
@@ -1209,39 +1113,37 @@ export async function processBotMessage(
     }
 
     const pixCodeNotice = order.pix_code
-      ? `\n\n👇 *Pix Copia e Cola:*\n\`${order.pix_code}\``
+      ? `\n\nSegue o código do Pix:\n${order.pix_code}`
       : "";
 
     const orderButtons: any[] = [];
     if (order.pix_code) {
       orderButtons.push({
         id: "btn_copy_pix",
-        displayText: "📋 Copiar Código Pix",
+        displayText: "Copiar código Pix",
         type: "copy",
         copyCode: order.pix_code,
       });
     } else {
       orderButtons.push({
         id: "0",
-        displayText: "⬅️ Menu Principal",
+        displayText: "Voltar",
         type: "reply",
       });
     }
 
     return {
       reply:
-        `⏳ *PEDIDO #${order.order_number} AGUARDANDO PAGAMENTO* ⏳\n\n` +
-        `📦 *Plano:* ${order.plan_name}\n` +
-        `💰 *Valor:* R$ ${Number(order.amount).toFixed(2).replace(".", ",")}\n` +
+        `Ainda não caiu o pagamento do seu ${order.plan_name} (R$ ${Number(order.amount).toFixed(2).replace(".", ",")}).\n` +
         (order.payment_method === "mercadopago_pix"
-          ? `⚡ O Mercado Pago confirmará automaticamente assim que o Pix for concluído.${pixCodeNotice}\n\n_Toque no botão abaixo para copiar a chave Pix ou verificar o pagamento._`
-          : `💳 *Chave Pix:* \`${pixKey}\`\n👤 *Titular:* ${pixHolder}\n\nPor favor, envie o comprovante do Pix aqui para liberação pelo administrador!`),
+          ? `Assim que o Pix for concluído eu libero automaticamente, não precisa avisar.${pixCodeNotice}`
+          : `Minha chave Pix é ${pixKey} (em nome de ${pixHolder}). Depois me manda o comprovante aqui que eu libero 🙂`),
       action: "order_status_checked",
       interactive: {
         type: "buttons",
-        title: `Pedido #${order.order_number}`,
-        description: `Aguardando confirmação do Pix (R$ ${Number(order.amount).toFixed(2).replace(".", ",")}):`,
-        footer: `${serverName} • Liberação Automática`,
+        title: `Pagamento em aberto`,
+        description: `Esperando o Pix de R$ ${Number(order.amount).toFixed(2).replace(".", ",")} cair.`,
+        footer: serverName,
         buttons: orderButtons,
       },
     };
@@ -1479,48 +1381,45 @@ export async function processBotMessage(
 
     if (!trialRes.ok) {
       return {
-        reply: trialRes.error || "Não foi possível gerar seu teste agora. Tente novamente em alguns instantes.",
+        reply: trialRes.error || "Deu um probleminha aqui pra gerar seu teste agora. Tenta de novo daqui a pouco que eu resolvo 🙏",
         action: "trial_failed",
       };
     }
 
     const appsBlock = generateAppsMessage(config, trialRes.serverName || "IPTV");
+    const firstName = (params.pushName || "").split(" ")[0];
     const reply =
-      `🎉 *SEU TESTE GRÁTIS ESTÁ LIBERADO!* 🍿\n\n` +
-      `👤 *Cliente:* ${params.pushName || "Cliente"}\n` +
-      `📺 *Servidor:* ${trialRes.serverName}\n` +
-      `🌐 *URL / DNS:* ${trialRes.streamingDns}\n` +
-      `🔑 *Usuário:* ${trialRes.username}\n` +
-      `🔒 *Senha:* ${trialRes.password}\n` +
-      `🖥️ *Telas:* 1 Tela\n` +
-      `⏳ *Validade:* ${config.testDurationHours} Horas\n\n` +
-      `🔗 *Lista M3U Plus Completa:*\n${trialRes.m3uUrl}\n\n` +
-      `📺 *Guia de Canais (EPG):*\n${trialRes.epgUrl}\n\n` +
-      `━━━━━━━━━━━━━━━━━━━\n` +
+      `Prontinho${firstName ? `, ${firstName}` : ""}! Liberei seu teste por ${config.testDurationHours} horas 🙂\n\n` +
+      `Servidor: ${trialRes.serverName}\n` +
+      `Endereço: ${trialRes.streamingDns}\n` +
+      `Usuário: ${trialRes.username}\n` +
+      `Senha: ${trialRes.password}\n\n` +
+      `Sua lista:\n${trialRes.m3uUrl}\n\n` +
+      `Guia de programação:\n${trialRes.epgUrl}\n\n` +
       `${appsBlock}\n\n` +
-      `Bom divertimento! Qualquer dúvida, digite *6* para falar conosco. 🍿`;
+      `Bom teste! Se travar alguma coisa é só me chamar aqui.`;
 
     const apkUrl = config.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
 
     return {
       reply:
         reply +
-        `\n\n_Gostou e quer assinar? Toque no botão de planos abaixo para garantir seu acesso definitivo!_ 🚀`,
+        `\n\nSe gostar, me avisa que eu te passo os valores pra deixar fixo.`,
       action: "trial_created",
       interactive: {
         type: "buttons",
-        title: "🎉 Teste Liberado!",
-        description: "Seu teste gratuito foi ativado com sucesso! Baixe o app oficial ou veja nossos planos:",
-        footer: `${serverName} • Suporte 24h`,
+        title: "Teste liberado",
+        description: "Seu teste já está ativo. Se precisar do aplicativo ou dos valores, é só tocar abaixo.",
+        footer: serverName,
         buttons: [
           {
             id: "btn_download_apk",
-            displayText: "📲 Baixar App Oficial (APK)",
+            displayText: "Baixar aplicativo",
             type: "url",
             url: apkUrl,
           },
-          { id: "3", displayText: "🛒 Ver Nossos Planos", type: "reply" },
-          { id: "0", displayText: "⬅️ Menu Principal", type: "reply" },
+          { id: "3", displayText: "Ver valores", type: "reply" },
+          { id: "0", displayText: "Voltar", type: "reply" },
         ],
       },
     };
@@ -1600,26 +1499,22 @@ export async function processBotMessage(
       });
 
       const reply =
-        `💳 *RENOVAÇÃO DE ASSINATURA* 📺\n\n` +
-        `Localizamos a seguinte conta vinculada ao seu WhatsApp:\n` +
-        `👤 *Cliente:* ${c.name}\n` +
-        `🔑 *Usuário:* *${c.iptv_username || c.name}*\n` +
-        (c.next_due_date ? `📅 *Vencimento:* ${c.next_due_date}\n` : "") +
-        `💰 *Valor:* ${fee}\n\n` +
-        `👉 Digite *SIM* para renovar este usuário acima.\n` +
-        `👉 Ou *digite o outro usuário* que você deseja renovar: 👇`;
+        `Achei sua conta aqui: usuário ${c.iptv_username || c.name}` +
+        (c.next_due_date ? `, com vencimento em ${c.next_due_date}` : "") +
+        `. A renovação fica ${fee}.\n\n` +
+        `Posso seguir com essa? Responde "sim" que eu já gero o Pix. Se for outro usuário, é só me dizer qual.`;
 
       return {
         reply,
         action: "renew_confirm_prompted",
         interactive: {
           type: "buttons",
-          title: "💳 Confirmar Renovação",
-          description: `Renovar assinatura de ${c.name} (${c.iptv_username || c.name}) por ${fee}?`,
-          footer: `${serverName} • Pix Automático`,
+          title: "Renovar",
+          description: `Renovar ${c.iptv_username || c.name} por ${fee}?`,
+          footer: serverName,
           buttons: [
-            { id: "SIM", displayText: "✅ Sim, Renovar Agora", type: "reply" },
-            { id: "0", displayText: "❌ Menu Principal", type: "reply" },
+            { id: "SIM", displayText: "Sim, pode renovar", type: "reply" },
+            { id: "0", displayText: "Agora não", type: "reply" },
           ],
         },
       };
@@ -1634,24 +1529,23 @@ export async function processBotMessage(
 
       let listText = "";
       matchingClients.slice(0, 5).forEach((c) => {
-        listText += `• Usuário: *${c.iptv_username || c.name}* (Vencimento: ${c.next_due_date || "N/A"})\n`;
+        listText += `• ${c.iptv_username || c.name}${c.next_due_date ? ` (vence em ${c.next_due_date})` : ""}\n`;
       });
 
       const reply =
-        `💳 *RENOVAÇÃO DE ASSINATURA* 📺\n\n` +
-        `Encontramos mais de uma assinatura vinculada ao seu WhatsApp:\n\n` +
+        `Vi que tem mais de um acesso no seu número:\n\n` +
         listText +
-        `\n👉 Por favor, *digite o Usuário* que você deseja renovar: 👇`;
+        `\nMe diz qual deles você quer renovar 🙂`;
 
       return {
         reply,
         action: "renew_multiple_prompted",
         interactive: {
           type: "list",
-          title: "Escolha a Assinatura",
-          description: "Encontramos mais de uma conta vinculada ao seu WhatsApp. Escolha qual deseja renovar:",
-          buttonText: "Selecionar Conta",
-          footerText: `${serverName} • Renovação 24h`,
+          title: "Qual deles?",
+          description: "Tem mais de um acesso no seu número. Me diz qual você quer renovar.",
+          buttonText: "Escolher",
+          footerText: serverName,
           sections: [
             {
               title: "Suas Assinaturas",
@@ -1673,9 +1567,7 @@ export async function processBotMessage(
     });
 
     const reply =
-      `💳 *RENOVAÇÃO DE ASSINATURA* 📺\n\n` +
-      `Por favor, **digite o seu Usuário** (login do seu aplicativo IPTV) que você deseja renovar: 👇\n\n` +
-      `_Exemplo: digite apenas o nome do seu usuário._`;
+      `Claro! Só me diz qual é o seu usuário (aquele login que você usa no aplicativo) que eu já vejo a renovação pra você.`;
 
     return { reply, action: "renew_user_prompted" };
   }
@@ -1699,60 +1591,52 @@ export async function processBotMessage(
       timestamp: Date.now(),
     });
 
-    const pixKey = config.pixKey || wsRow?.pix_key || "";
-    const pixBlock = pixKey ? `\n\n🔑 *Chave Pix:* \`${pixKey}\`` : "";
-
     const p1 = `R$ ${Number(config.planMonthlyPrice || 35).toFixed(2).replace(".", ",")}`;
     const p2 = `R$ ${Number(config.planQuarterlyPrice || 90).toFixed(2).replace(".", ",")}`;
     const p3 = `R$ ${Number(config.planSemiannualPrice || 160).toFixed(2).replace(".", ",")}`;
     const p4 = `R$ ${Number(config.planAnnualPrice || 290).toFixed(2).replace(".", ",")}`;
 
     const reply =
-      `${config.plansText}${pixBlock}\n\n` +
-      `👇 *Para assinar agora, responda apenas com o número do plano:*\n\n` +
-      `👉 Digite *1* para *Plano Mensal (${p1})*\n` +
-      `👉 Digite *2* para *Plano Trimestral (${p2})*\n` +
-      `👉 Digite *3* para *Plano Semestral (${p3})*\n` +
-      `👉 Digite *4* para *Plano Anual (${p4})*\n\n` +
-      `_Ou digite *0* para voltar ao menu principal._`;
+      `${config.plansText}\n\n` +
+      `Me diz qual deles você prefere que eu já gero o Pix pra você 🙂`;
 
     return {
       reply,
       action: "plans_shown",
       interactive: {
         type: "list",
-        title: "🍿 Nossos Planos IPTV",
-        description: "Selecione o plano desejado para gerar seu Pix Automático:",
-        buttonText: "📋 Ver Planos e Assinar",
-        footerText: `${serverName} • Liberação Imediata`,
+        title: "Nossos planos",
+        description: "Escolhe o que combina mais com você que eu já gero o Pix.",
+        buttonText: "Ver planos",
+        footerText: serverName,
         sections: [
           {
-            title: "Planos Disponíveis",
+            title: "Planos",
             rows: [
               {
                 rowId: "plano_1m",
-                title: `1️⃣ Plano Mensal (${p1})`,
-                description: "Acesso por 30 dias • 1 Tela • Liberação na hora",
+                title: `1 mês — ${p1}`,
+                description: "Acesso por 30 dias, liberado na hora",
               },
               {
                 rowId: "plano_3m",
-                title: `2️⃣ Plano Trimestral (${p2})`,
-                description: "Acesso por 90 dias • Economize mais",
+                title: `3 meses — ${p2}`,
+                description: "Acesso por 90 dias",
               },
               {
                 rowId: "plano_6m",
-                title: `3️⃣ Plano Semestral (${p3})`,
-                description: "Acesso por 180 dias • Mais Vendido 🔥",
+                title: `6 meses — ${p3}`,
+                description: "Acesso por 180 dias, o mais pedido",
               },
               {
                 rowId: "plano_12m",
-                title: `4️⃣ Plano Anual (${p4})`,
-                description: "Acesso por 365 dias • Super Desconto ⭐",
+                title: `12 meses — ${p4}`,
+                description: "Acesso por 365 dias, sai bem mais barato",
               },
               {
                 rowId: "0",
-                title: "⬅️ Voltar ao Menu Principal",
-                description: "Retornar ao início do atendimento",
+                title: "Depois eu vejo",
+                description: "Voltar pro começo da conversa",
               },
             ],
           },
@@ -1849,21 +1733,18 @@ export async function processBotMessage(
     if (!client) {
       return {
         reply:
-          `🔍 Não encontrei uma assinatura ativa com o número *${cleanPhone}*.\n\n` +
-          `• Digite *1* para gerar um Teste Grátis agora mesmo!\n` +
-          `• Digite *3* para assinar um novo plano.\n` +
-          `• Digite *4* para baixar nossos aplicativos.\n` +
-          `• Digite *6* se você contratou com outro número para falar com o suporte.`,
+          `Procurei aqui e não achei nenhum acesso ativo nesse número.\n\n` +
+          `Se você contratou por outro número, me fala que eu procuro. Ou, se preferir, posso liberar um teste grátis pra você agora 🙂`,
         action: "credentials_not_found",
         interactive: {
           type: "buttons",
-          title: "🔍 Assinatura Não Encontrada",
-          description: "Não localizamos uma conta ativa com este número de WhatsApp. O que deseja fazer?",
-          footer: `${serverName} • Suporte 24h`,
+          title: "Não achei por aqui",
+          description: "Não encontrei um acesso ativo nesse número. O que você prefere?",
+          footer: serverName,
           buttons: [
-            { id: "1", displayText: "1️⃣ Gerar Teste Grátis", type: "reply" },
-            { id: "3", displayText: "3️⃣ Ver Nossos Planos", type: "reply" },
-            { id: "6", displayText: "👨‍💼 Falar com Atendente", type: "reply" },
+            { id: "1", displayText: "Quero um teste", type: "reply" },
+            { id: "3", displayText: "Ver valores", type: "reply" },
+            { id: "6", displayText: "Falar com você", type: "reply" },
           ],
         },
       };
@@ -1877,19 +1758,17 @@ export async function processBotMessage(
 
     const appsBlock = generateAppsMessage(config, serverName);
     const reply =
-      `📡 *SEUS DADOS DE ACESSO IPTV* 📡\n\n` +
-      `👤 *Cliente:* ${client.name}\n` +
-      `📺 *Servidor:* ${serverName}\n` +
-      `🌐 *URL / DNS:* ${cleanDns}\n` +
-      `🔑 *Usuário:* ${u}\n` +
-      `🔒 *Senha:* ${p}\n` +
-      `🖥️ *Telas:* ${client.screens ?? 1}\n` +
-      (client.next_due_date ? `📅 *Vencimento:* ${client.next_due_date}\n\n` : "\n") +
-      `🔗 *Lista M3U Plus Completa:*\n${m3uUrl}\n\n` +
-      `📺 *Guia de Canais (EPG):*\n${epgUrl}\n\n` +
-      `━━━━━━━━━━━━━━━━━━━\n` +
+      `Claro! Seguem seus dados${client.name ? `, ${String(client.name).split(" ")[0]}` : ""}:\n\n` +
+      `Servidor: ${serverName}\n` +
+      `Endereço: ${cleanDns}\n` +
+      `Usuário: ${u}\n` +
+      `Senha: ${p}\n` +
+      `Telas: ${client.screens ?? 1}\n` +
+      (client.next_due_date ? `Vence em: ${client.next_due_date}\n` : "") +
+      `\nSua lista:\n${m3uUrl}\n\n` +
+      `Guia de programação:\n${epgUrl}\n\n` +
       `${appsBlock}\n\n` +
-      `Bom divertimento! 🍿`;
+      `Qualquer coisa me chama 🙂`;
 
     const apkUrl = config.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
 
@@ -1898,18 +1777,18 @@ export async function processBotMessage(
       action: "credentials_resent",
       interactive: {
         type: "buttons",
-        title: "📡 Seus Dados de Acesso",
-        description: "Toque abaixo para baixar o aplicativo ou renovar sua assinatura:",
-        footer: `${serverName} • Bom divertimento!`,
+        title: "Seus dados",
+        description: "Se precisar do aplicativo ou quiser renovar, é só tocar aqui.",
+        footer: serverName,
         buttons: [
           {
             id: "btn_download_apk",
-            displayText: "📲 Baixar Aplicativo (APK)",
+            displayText: "Baixar aplicativo",
             type: "url",
             url: apkUrl,
           },
-          { id: "2", displayText: "💳 Renovar Assinatura", type: "reply" },
-          { id: "0", displayText: "⬅️ Menu Principal", type: "reply" },
+          { id: "2", displayText: "Quero renovar", type: "reply" },
+          { id: "0", displayText: "Voltar", type: "reply" },
         ],
       },
     };
@@ -1931,13 +1810,13 @@ export async function processBotMessage(
       action: "human_support",
       interactive: {
         type: "buttons",
-        title: "👨‍💼 Atendimento Humano",
-        description: "Um atendente irá te responder em breve. Enquanto isso, escolha uma opção rápida:",
-        footer: `${serverName} • Suporte 24h`,
+        title: "Já te respondo",
+        description: "Me conta o que aconteceu que eu respondo assim que ver. Se quiser adiantar algo:",
+        footer: serverName,
         buttons: [
-          { id: "1", displayText: "1️⃣ Gerar Teste Grátis", type: "reply" },
-          { id: "3", displayText: "3️⃣ Ver Nossos Planos", type: "reply" },
-          { id: "0", displayText: "⬅️ Menu Principal", type: "reply" },
+          { id: "1", displayText: "Quero um teste", type: "reply" },
+          { id: "3", displayText: "Ver valores", type: "reply" },
+          { id: "0", displayText: "Voltar", type: "reply" },
         ],
       },
     };
