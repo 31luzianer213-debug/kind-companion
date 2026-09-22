@@ -294,11 +294,13 @@ export async function sendListViaBaileys(
     }
   } catch {}
 
-  return await sendViaBaileys(phone, options.fallbackText || options.description);
+  return await sendViaBaileys(phone, options.fallbackText || options.description, {
+    userId: options.userId || null,
+  });
 }
 
 export async function sendListViaEvolution(
-  _settings: WhatsAppSettings & { user_id?: string },
+  settings: WhatsAppSettings & { user_id?: string },
   phone: string,
   options: {
     title: string;
@@ -308,9 +310,12 @@ export async function sendListViaEvolution(
     sections: ListSection[];
     fallbackText?: string;
   },
-  _userId?: string,
+  userId?: string,
 ) {
-  return await sendListViaBaileys(phone, options);
+  return await sendListViaBaileys(phone, {
+    ...options,
+    userId: userId || settings?.user_id || null,
+  });
 }
 
 function iso(date: Date) {
