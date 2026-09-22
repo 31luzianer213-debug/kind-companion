@@ -464,11 +464,8 @@ export async function createTrialForBot(
       return {
         ok: false,
         error:
-          `⚠️ *Aviso de Teste Grátis*\n\n` +
-          `Identificamos que este número de WhatsApp já gerou um teste recente.\n\n` +
-          `Para continuar assistindo com todos os canais liberados, escolha:\n` +
-          `• Digite *2* para Renovar sua assinatura\n` +
-          `• Digite *3* para Comprar um Plano`,
+          `Poxa, esse número já pegou um teste faz pouco tempo 😅\n\n` +
+          `Mas posso te passar os valores ou já deixar seu acesso ativo, é só me falar o que prefere.`,
       };
     }
   }
@@ -1736,21 +1733,18 @@ export async function processBotMessage(
     if (!client) {
       return {
         reply:
-          `🔍 Não encontrei uma assinatura ativa com o número *${cleanPhone}*.\n\n` +
-          `• Digite *1* para gerar um Teste Grátis agora mesmo!\n` +
-          `• Digite *3* para assinar um novo plano.\n` +
-          `• Digite *4* para baixar nossos aplicativos.\n` +
-          `• Digite *6* se você contratou com outro número para falar com o suporte.`,
+          `Procurei aqui e não achei nenhum acesso ativo nesse número.\n\n` +
+          `Se você contratou por outro número, me fala que eu procuro. Ou, se preferir, posso liberar um teste grátis pra você agora 🙂`,
         action: "credentials_not_found",
         interactive: {
           type: "buttons",
-          title: "🔍 Assinatura Não Encontrada",
-          description: "Não localizamos uma conta ativa com este número de WhatsApp. O que deseja fazer?",
-          footer: `${serverName} • Suporte 24h`,
+          title: "Não achei por aqui",
+          description: "Não encontrei um acesso ativo nesse número. O que você prefere?",
+          footer: serverName,
           buttons: [
-            { id: "1", displayText: "1️⃣ Gerar Teste Grátis", type: "reply" },
-            { id: "3", displayText: "3️⃣ Ver Nossos Planos", type: "reply" },
-            { id: "6", displayText: "👨‍💼 Falar com Atendente", type: "reply" },
+            { id: "1", displayText: "Quero um teste", type: "reply" },
+            { id: "3", displayText: "Ver valores", type: "reply" },
+            { id: "6", displayText: "Falar com você", type: "reply" },
           ],
         },
       };
@@ -1764,19 +1758,17 @@ export async function processBotMessage(
 
     const appsBlock = generateAppsMessage(config, serverName);
     const reply =
-      `📡 *SEUS DADOS DE ACESSO IPTV* 📡\n\n` +
-      `👤 *Cliente:* ${client.name}\n` +
-      `📺 *Servidor:* ${serverName}\n` +
-      `🌐 *URL / DNS:* ${cleanDns}\n` +
-      `🔑 *Usuário:* ${u}\n` +
-      `🔒 *Senha:* ${p}\n` +
-      `🖥️ *Telas:* ${client.screens ?? 1}\n` +
-      (client.next_due_date ? `📅 *Vencimento:* ${client.next_due_date}\n\n` : "\n") +
-      `🔗 *Lista M3U Plus Completa:*\n${m3uUrl}\n\n` +
-      `📺 *Guia de Canais (EPG):*\n${epgUrl}\n\n` +
-      `━━━━━━━━━━━━━━━━━━━\n` +
+      `Claro! Seguem seus dados${client.name ? `, ${String(client.name).split(" ")[0]}` : ""}:\n\n` +
+      `Servidor: ${serverName}\n` +
+      `Endereço: ${cleanDns}\n` +
+      `Usuário: ${u}\n` +
+      `Senha: ${p}\n` +
+      `Telas: ${client.screens ?? 1}\n` +
+      (client.next_due_date ? `Vence em: ${client.next_due_date}\n` : "") +
+      `\nSua lista:\n${m3uUrl}\n\n` +
+      `Guia de programação:\n${epgUrl}\n\n` +
       `${appsBlock}\n\n` +
-      `Bom divertimento! 🍿`;
+      `Qualquer coisa me chama 🙂`;
 
     const apkUrl = config.appAndroidApk || "https://bit.ly/app-xciptv-oficial";
 
@@ -1785,18 +1777,18 @@ export async function processBotMessage(
       action: "credentials_resent",
       interactive: {
         type: "buttons",
-        title: "📡 Seus Dados de Acesso",
-        description: "Toque abaixo para baixar o aplicativo ou renovar sua assinatura:",
-        footer: `${serverName} • Bom divertimento!`,
+        title: "Seus dados",
+        description: "Se precisar do aplicativo ou quiser renovar, é só tocar aqui.",
+        footer: serverName,
         buttons: [
           {
             id: "btn_download_apk",
-            displayText: "📲 Baixar Aplicativo (APK)",
+            displayText: "Baixar aplicativo",
             type: "url",
             url: apkUrl,
           },
-          { id: "2", displayText: "💳 Renovar Assinatura", type: "reply" },
-          { id: "0", displayText: "⬅️ Menu Principal", type: "reply" },
+          { id: "2", displayText: "Quero renovar", type: "reply" },
+          { id: "0", displayText: "Voltar", type: "reply" },
         ],
       },
     };
@@ -1818,13 +1810,13 @@ export async function processBotMessage(
       action: "human_support",
       interactive: {
         type: "buttons",
-        title: "👨‍💼 Atendimento Humano",
-        description: "Um atendente irá te responder em breve. Enquanto isso, escolha uma opção rápida:",
-        footer: `${serverName} • Suporte 24h`,
+        title: "Já te respondo",
+        description: "Me conta o que aconteceu que eu respondo assim que ver. Se quiser adiantar algo:",
+        footer: serverName,
         buttons: [
-          { id: "1", displayText: "1️⃣ Gerar Teste Grátis", type: "reply" },
-          { id: "3", displayText: "3️⃣ Ver Nossos Planos", type: "reply" },
-          { id: "0", displayText: "⬅️ Menu Principal", type: "reply" },
+          { id: "1", displayText: "Quero um teste", type: "reply" },
+          { id: "3", displayText: "Ver valores", type: "reply" },
+          { id: "0", displayText: "Voltar", type: "reply" },
         ],
       },
     };
