@@ -212,6 +212,9 @@ function BotPage() {
         appWebPlayerLink: c.appWebPlayerLink || "http://webtv.iptvsmarters.com",
         appSmartTvText: c.appSmartTvText || "• Smart TV Samsung / LG: Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.",
         appsCustomText: c.appsCustomText || "",
+        aiEnabled: c.aiEnabled ?? true,
+        aiAgentName: c.aiAgentName || "Ana",
+        aiInstructions: c.aiInstructions || "",
       });
     }
   }, [botData]);
