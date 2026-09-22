@@ -25,7 +25,6 @@ import {
   MessageCircle,
   RefreshCw,
   Search,
-  ShieldCheck,
   Wallet,
   X,
 } from "lucide-react";
