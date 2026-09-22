@@ -178,6 +178,7 @@ export async function sendButtonsViaBaileys(
     buttons: ButtonItem[];
     footer?: string;
     fallbackText?: string;
+    userId?: string | null;
   },
 ) {
   const formattedButtons = options.buttons.map((b) => {
