@@ -102,7 +102,9 @@ function SalePlansCard() {
       toast.success("Plano removido.");
       queryClient.invalidateQueries({ queryKey: ["sale-plans"] });
     },
+    onError: (error: any) => toast.error(error?.message || "Não foi possível remover o plano."),
   });
+
 
   return (
     <Card className="surface-card border-border/60">
