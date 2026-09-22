@@ -65,8 +65,8 @@ export function SigmaLogo({ className, size = "md", showGlow = true }: SigmaLogo
           filter={`url(#${glowId})`}
         />
         <path d="M27.2 19.7L34.7 24L27.2 28.3V19.7Z" fill="#F8FAFC" />
-        <circle cx="37.8" cy="10.3" r="2.1" fill="#4ADE80" />
-        <circle cx="37.8" cy="10.3" r="3.8" stroke="#4ADE80" strokeOpacity="0.25" />
+        <circle cx="37.8" cy="10.3" r="2.1" fill="#38BDF8" />
+        <circle cx="37.8" cy="10.3" r="3.8" stroke="#38BDF8" strokeOpacity="0.25" />
       </svg>
     </div>
   );
