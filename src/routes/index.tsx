@@ -219,7 +219,7 @@ function LandingPage() {
             </div>
 
             {/* Conversa demonstrativa */}
-            <div className="rounded-3xl border border-border bg-card p-4 shadow-xl shadow-primary/5 sm:p-6">
+            <div className="rounded-3xl border border-border bg-card p-4 shadow-sm shadow-primary/5 sm:p-6">
               <div className="mb-4 flex items-center gap-3 border-b border-border pb-3">
                 <div className="flex size-10 items-center justify-center rounded-full bg-primary/12 text-primary">
                   <Bot className="size-5" />
@@ -300,7 +300,7 @@ function LandingPage() {
           <div className="mx-auto w-full max-w-3xl px-4 text-center sm:px-6">
             <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Um preço, tudo liberado</h2>
             <p className="mt-3 text-muted-foreground">Sem limite de clientes e sem fidelidade.</p>
-            <div className="mt-10 rounded-3xl border border-primary/30 bg-card p-6 text-left shadow-xl shadow-primary/10 sm:p-8">
+            <div className="mt-10 rounded-3xl border border-primary/30 bg-card p-6 text-left shadow-sm shadow-primary/10 sm:p-8">
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <p className="font-display text-lg font-semibold">{plan.name}</p>

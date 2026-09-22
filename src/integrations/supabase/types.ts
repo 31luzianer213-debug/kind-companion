@@ -752,8 +752,13 @@ export type Database = {
           asaas_webhook_token: string | null
           auto_send_enabled: boolean
           business_name: string | null
+          connected_number: string | null
+          connection_status: string
           created_at: string
           instance_name: string | null
+          last_connected_at: string | null
+          last_connection_error: string | null
+          last_disconnected_at: string | null
           mercadopago_token: string | null
           message_template: string
           overdue_reminder: boolean
@@ -786,8 +791,13 @@ export type Database = {
           asaas_webhook_token?: string | null
           auto_send_enabled?: boolean
           business_name?: string | null
+          connected_number?: string | null
+          connection_status?: string
           created_at?: string
           instance_name?: string | null
+          last_connected_at?: string | null
+          last_connection_error?: string | null
+          last_disconnected_at?: string | null
           mercadopago_token?: string | null
           message_template?: string
           overdue_reminder?: boolean
@@ -820,8 +830,13 @@ export type Database = {
           asaas_webhook_token?: string | null
           auto_send_enabled?: boolean
           business_name?: string | null
+          connected_number?: string | null
+          connection_status?: string
           created_at?: string
           instance_name?: string | null
+          last_connected_at?: string | null
+          last_connection_error?: string | null
+          last_disconnected_at?: string | null
           mercadopago_token?: string | null
           message_template?: string
           overdue_reminder?: boolean

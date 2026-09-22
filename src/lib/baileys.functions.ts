@@ -78,6 +78,8 @@ export const getBaileysStatus = createServerFn({ method: "POST" })
           console.warn("[WhatsApp] Falha ao garantir webhook do robô:", error);
         });
       }
+      const { persistConnectionState } = await import("./whatsapp-presence.server");
+      await persistConnectionState(context.userId, { status: st.state, number: st.number });
       const connectionCode = st.state === "connecting" ? await tenantCurrentConnectionCode(context.userId) : null;
       return {
         ok: true as const,
@@ -164,6 +166,8 @@ export const connectBaileys = createServerFn({ method: "POST" })
       const { botWebhookUrl } = await import("./whatsapp-connection.server");
       const res = await tenantConnect(context.userId, botWebhookUrl(data?.origin, context.userId));
       webhookEnsuredAt.set(context.userId, Date.now());
+      const { persistConnectionState } = await import("./whatsapp-presence.server");
+      await persistConnectionState(context.userId, { status: res.state });
       return {
         ok: true as const,
         state: {
@@ -211,7 +215,10 @@ export const disconnectBaileys = createServerFn({ method: "POST" })
 
     if (isTenantEvolutionEnabled()) {
       webhookEnsuredAt.delete(context.userId);
-      return await tenantLogout(context.userId);
+      const result = await tenantLogout(context.userId);
+      const { persistConnectionState } = await import("./whatsapp-presence.server");
+      await persistConnectionState(context.userId, { status: "close", number: null });
+      return result;
     }
 
     try {

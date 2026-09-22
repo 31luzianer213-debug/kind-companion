@@ -83,7 +83,7 @@ export function PwaInstaller() {
 
   return (
     <div className="fixed inset-x-2 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[60] sm:inset-x-3 md:bottom-5 md:left-auto md:right-5 md:w-[min(390px,calc(100vw-2.5rem))]">
-      <div className="rounded-2xl border border-border/70 bg-background/95 p-3.5 shadow-2xl backdrop-blur-xl">
+      <div className="rounded-2xl border border-border/70 bg-background/95 p-3.5 shadow-md backdrop-blur-xl">
         <div className="flex items-start gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Smartphone className="size-5" />

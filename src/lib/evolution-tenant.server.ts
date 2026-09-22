@@ -242,3 +242,19 @@ export async function tenantSendMedia(
   }
   return { ok: true as const, data: res.data };
 }
+
+/** Lista todas as instâncias existentes na Evolution (uso administrativo). */
+export async function tenantListInstances(): Promise<
+  Array<{ instance: string; state: TenantEvoState; number: string | null }>
+> {
+  const items = await listInstances();
+  return items.map((item) => {
+    const rawNumber = item?.ownerJid || item?.owner || item?.number || item?.instance?.owner || "";
+    const state = (item?.connectionStatus || item?.status || item?.instance?.status || "close") as TenantEvoState;
+    return {
+      instance: instanceNameOf(item),
+      state,
+      number: rawNumber ? String(rawNumber).split("@")[0] || null : null,
+    };
+  });
+}
