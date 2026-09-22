@@ -1064,6 +1064,81 @@ export async function processBotMessage(
   const pixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
 
   // =========================================================================
+  // IA DE VENDAS: entende o que o cliente quer e dispara a ação certa
+  // =========================================================================
+  const runSalesAi = async (): Promise<BotProcessResult | null> => {
+    let clientSummary = "ainda não é cliente cadastrado";
+    try {
+      const { data } = await supabase
+        .from("clients")
+        .select("name,iptv_username,next_due_date,monthly_fee")
+        .eq("user_id", userId)
+        .in("phone", phoneVariants(cleanPhone))
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        clientSummary =
+          `já é cliente — nome ${data.name}, usuário ${data.iptv_username || "não informado"}, ` +
+          `vencimento ${data.next_due_date || "não informado"}, mensalidade R$ ${data.monthly_fee ?? config.renewalPrice}`;
+      }
+    } catch {}
+
+    const decision = await decideWithSalesAi({
+      config,
+      serverName,
+      phone: cleanPhone,
+      text: params.text,
+      customerName: params.pushName,
+      clientSummary,
+    });
+    if (!decision) return null;
+
+    const routes: Record<string, string> = {
+      trial: "1",
+      renew: "2",
+      plans: "3",
+      apps: "4",
+      credentials: "5",
+      support: "6",
+      order_status: "status",
+      buy_1m: "plano 1m",
+      buy_3m: "plano 3m",
+      buy_6m: "plano 6m",
+      buy_12m: "plano 12m",
+    };
+
+    const route = routes[decision.intent];
+    if (!route) {
+      return { reply: decision.reply, action: "ai_sales_reply" };
+    }
+
+    const forwarded =
+      decision.intent === "renew" && decision.username ? `renovar ${decision.username}` : route;
+
+    const result = await processBotMessage(
+      supabase,
+      userId,
+      { phone: params.phone, text: forwarded, pushName: params.pushName },
+      { skipAi: true },
+    );
+
+    if (!result.reply) return { reply: decision.reply, action: "ai_sales_reply" };
+    return {
+      ...result,
+      reply: `${decision.reply}\n\n${result.reply}`.trim(),
+      action: `ai_${result.action}`,
+    };
+  };
+
+  if (aiOn && isGreeting) {
+    const aiResult = await runSalesAi();
+    if (aiResult) return aiResult;
+    return buildMainMenu(config, serverName);
+  }
+
+
+  // =========================================================================
   // CONSULTA DE STATUS DE PEDIDO ("verificar", "status", "paguei", etc.)
   // =========================================================================
   if (
