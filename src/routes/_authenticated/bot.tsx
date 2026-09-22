@@ -99,8 +99,10 @@ function BotPage() {
   const saveSettings = useServerFn(saveBotSettings);
   const simulate = useServerFn(simulateBotMessage);
   const getStatus = useServerFn(getWhatsAppStatus);
+  const importPanelApps = useServerFn(importSigmaPanelApps);
 
   const [saving, setSaving] = useState(false);
+  const [importingApps, setImportingApps] = useState(false);
   const [showMpToken, setShowMpToken] = useState(false);
 
   // Form State
