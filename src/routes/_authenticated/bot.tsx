@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
+import { importSigmaPanelApps } from "@/lib/sigma.functions";
 import {
   getBotSettings,
   saveBotSettings,
@@ -99,8 +100,10 @@ function BotPage() {
   const saveSettings = useServerFn(saveBotSettings);
   const simulate = useServerFn(simulateBotMessage);
   const getStatus = useServerFn(getWhatsAppStatus);
+  const importPanelApps = useServerFn(importSigmaPanelApps);
 
   const [saving, setSaving] = useState(false);
+  const [importingApps, setImportingApps] = useState(false);
   const [showMpToken, setShowMpToken] = useState(false);
 
   // Form State
@@ -323,6 +326,35 @@ function BotPage() {
       appsCustomText: "",
     }));
     toast.success("Campos de aplicativos limpos. Preencha com os seus.");
+  }
+
+  async function handleImportPanelApps() {
+    setImportingApps(true);
+    try {
+      const res: any = await importPanelApps(undefined as any);
+      if (!res?.ok) {
+        toast.error(res?.error || "Não consegui buscar os aplicativos no painel.");
+        return;
+      }
+      const s = res.suggestion ?? {};
+      const found = Object.values(s).filter((v) => typeof v === "string" && v).length;
+      if (found === 0) {
+        toast.info("Seu painel não disponibiliza aplicativos para download. Cadastre os seus aqui embaixo.");
+        return;
+      }
+      setForm((prev) => ({
+        ...prev,
+        appAndroidApk: s.appAndroidApk || prev.appAndroidApk,
+        appIosLink: s.appIosLink || prev.appIosLink,
+        appWindowsLink: s.appWindowsLink || prev.appWindowsLink,
+        appWebPlayerLink: s.appWebPlayerLink || prev.appWebPlayerLink,
+      }));
+      toast.success(`${found} aplicativo(s) trazido(s) do painel. Confira e salve.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao falar com o painel.");
+    } finally {
+      setImportingApps(false);
+    }
   }
 
   function handleResetChat() {
@@ -761,15 +793,28 @@ function BotPage() {
                       Preencha só os aplicativos que você usa. O robô envia apenas o que estiver aqui — nada vem preenchido por padrão.
                     </CardDescription>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRestoreDefaultAppLinks}
-                    className="rounded-md text-xs gap-1.5 self-start sm:self-auto"
-                  >
-                    <Sparkles className="size-3 text-sky-400" /> Limpar campos
-                  </Button>
+                  <div className="flex flex-wrap gap-2 self-start sm:self-auto">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={importingApps}
+                      onClick={handleImportPanelApps}
+                      className="rounded-md text-xs gap-1.5"
+                    >
+                      <Download className="size-3" />
+                      {importingApps ? "Buscando..." : "Buscar no painel Sigma"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRestoreDefaultAppLinks}
+                      className="rounded-md text-xs gap-1.5"
+                    >
+                      <Sparkles className="size-3 text-sky-400" /> Limpar campos
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-4 space-y-4">

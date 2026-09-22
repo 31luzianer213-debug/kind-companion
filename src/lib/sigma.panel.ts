@@ -1917,3 +1917,103 @@ export async function updateSigmaCustomer(
   console.warn("Aviso ao atualizar no Sigma:", attempts.slice(0, 3).join(" • "));
 }
 
+
+/* ------------------------------------------------------------------ *
+ * Aplicativos publicados dentro do painel Sigma
+ * ------------------------------------------------------------------ */
+
+export type SigmaPanelApp = {
+  name: string;
+  url: string;
+  platform: "android" | "ios" | "windows" | "web" | "tv" | "other";
+};
+
+function guessPlatform(name: string, url: string): SigmaPanelApp["platform"] {
+  const s = `${name} ${url}`.toLowerCase();
+  if (s.includes("apps.apple") || s.includes("ios") || s.includes("iphone") || s.includes("ipad") || s.includes("apple"))
+    return "ios";
+  if (s.includes(".apk") || s.includes("android") || s.includes("play.google")) return "android";
+  if (s.includes(".exe") || s.includes("windows") || s.includes("pc") || s.includes("desktop")) return "windows";
+  if (s.includes("web") || s.includes("player") || s.includes("navegador") || s.includes("browser")) return "web";
+  if (s.includes("tv") || s.includes("smart") || s.includes("roku") || s.includes("samsung") || s.includes("lg"))
+    return "tv";
+  return "other";
+}
+
+function collectApps(payload: any, out: SigmaPanelApp[]) {
+  const seen = new Set(out.map((a) => a.url));
+
+  const visit = (node: any, depth: number) => {
+    if (!node || depth > 4) return;
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item, depth + 1);
+      return;
+    }
+    if (typeof node !== "object") return;
+
+    const url =
+      node.url ??
+      node.link ??
+      node.download_url ??
+      node.download ??
+      node.file ??
+      node.file_url ??
+      node.apk ??
+      node.apk_url ??
+      null;
+    const name = node.name ?? node.title ?? node.app_name ?? node.label ?? node.description ?? null;
+
+    if (typeof url === "string" && /^https?:\/\//i.test(url.trim()) && !seen.has(url.trim())) {
+      const clean = url.trim();
+      seen.add(clean);
+      const appName = typeof name === "string" && name.trim() ? name.trim() : clean;
+      out.push({ name: appName, url: clean, platform: guessPlatform(appName, clean) });
+    }
+
+    for (const value of Object.values(node)) {
+      if (value && typeof value === "object") visit(value, depth + 1);
+    }
+  };
+
+  visit(payload, 0);
+}
+
+/**
+ * Tenta ler a lista de aplicativos/downloads publicada dentro do painel Sigma.
+ * Se o painel não expuser essa área, devolve lista vazia (sem inventar nada).
+ */
+export async function fetchSigmaPanelApps(config: SigmaConfig): Promise<{
+  apps: SigmaPanelApp[];
+  endpointsTried: string[];
+}> {
+  const endpoints = [
+    "/api/apps",
+    "/api/applications",
+    "/api/downloads",
+    "/api/download",
+    "/api/app",
+    "/api/softwares",
+    "/api/software",
+    "/api/tutorials",
+    "/api/reseller/apps",
+    "/api/reseller/downloads",
+    "/api/panel/apps",
+    "/api/settings/apps",
+  ];
+
+  const apps: SigmaPanelApp[] = [];
+  const tried: string[] = [];
+
+  for (const endpoint of endpoints) {
+    tried.push(endpoint);
+    try {
+      const res = await authorizedRequest(config, endpoint, { method: "GET" }, 4000);
+      if (!res.ok || !res.payload) continue;
+      collectApps(res.payload, apps);
+    } catch {
+      // segue tentando o próximo
+    }
+  }
+
+  return { apps, endpointsTried: tried };
+}
