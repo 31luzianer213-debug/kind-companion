@@ -1532,24 +1532,23 @@ export async function processBotMessage(
 
       let listText = "";
       matchingClients.slice(0, 5).forEach((c) => {
-        listText += `• Usuário: *${c.iptv_username || c.name}* (Vencimento: ${c.next_due_date || "N/A"})\n`;
+        listText += `• ${c.iptv_username || c.name}${c.next_due_date ? ` (vence em ${c.next_due_date})` : ""}\n`;
       });
 
       const reply =
-        `💳 *RENOVAÇÃO DE ASSINATURA* 📺\n\n` +
-        `Encontramos mais de uma assinatura vinculada ao seu WhatsApp:\n\n` +
+        `Vi que tem mais de um acesso no seu número:\n\n` +
         listText +
-        `\n👉 Por favor, *digite o Usuário* que você deseja renovar: 👇`;
+        `\nMe diz qual deles você quer renovar 🙂`;
 
       return {
         reply,
         action: "renew_multiple_prompted",
         interactive: {
           type: "list",
-          title: "Escolha a Assinatura",
-          description: "Encontramos mais de uma conta vinculada ao seu WhatsApp. Escolha qual deseja renovar:",
-          buttonText: "Selecionar Conta",
-          footerText: `${serverName} • Renovação 24h`,
+          title: "Qual deles?",
+          description: "Tem mais de um acesso no seu número. Me diz qual você quer renovar.",
+          buttonText: "Escolher",
+          footerText: serverName,
           sections: [
             {
               title: "Suas Assinaturas",
@@ -1571,9 +1570,7 @@ export async function processBotMessage(
     });
 
     const reply =
-      `💳 *RENOVAÇÃO DE ASSINATURA* 📺\n\n` +
-      `Por favor, **digite o seu Usuário** (login do seu aplicativo IPTV) que você deseja renovar: 👇\n\n` +
-      `_Exemplo: digite apenas o nome do seu usuário._`;
+      `Claro! Só me diz qual é o seu usuário (aquele login que você usa no aplicativo) que eu já vejo a renovação pra você.`;
 
     return { reply, action: "renew_user_prompted" };
   }
