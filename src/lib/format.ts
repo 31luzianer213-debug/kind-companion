@@ -157,31 +157,26 @@ export function formatAppsLinksBlock(config?: AppLinksData | null, serverName = 
     return config.appsCustomText.trim();
   }
 
-  const apk = config?.appAndroidApk?.trim() || "https://bit.ly/app-xciptv-oficial";
-  const code = config?.appAndroidDownloaderCode?.trim() || "389471";
-  const ios = config?.appIosLink?.trim() || "https://apps.apple.com/app/smarters-player-lite/id1628995509";
-  const win = config?.appWindowsLink?.trim() || "https://www.iptvsmarters.com/download?download=windows";
-  const web = config?.appWebPlayerLink?.trim() || "http://webtv.iptvsmarters.com";
-  const smartTv = config?.appSmartTvText?.trim() || "• Smart TV Samsung / LG: Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.";
+  const apk = config?.appAndroidApk?.trim() || "";
+  const code = config?.appAndroidDownloaderCode?.trim() || "";
+  const ios = config?.appIosLink?.trim() || "";
+  const win = config?.appWindowsLink?.trim() || "";
+  const web = config?.appWebPlayerLink?.trim() || "";
+  const smartTv = config?.appSmartTvText?.trim() || "";
 
   const srv = serverName && !serverName.startsWith("http") ? serverName.toUpperCase() : "IPTV";
 
-  return (
-    `📲 *APLICATIVOS OFICIAIS — ${srv}* 🍿\n\n` +
-    `🤖 *TV Box / Android TV / FireStick:*\n` +
-    `• Abra o app *Downloader* na TV e digite o código: *${code}*\n` +
-    `• Ou baixe o APK direto: ${apk}\n\n` +
-    `📱 *Celular & Tablet Android:*\n` +
-    `• Baixar APK Direto: ${apk}\n\n` +
-    `🍏 *iPhone / iPad / Apple TV (iOS):*\n` +
-    `• Baixar na App Store (Smarters Player Lite):\n${ios}\n\n` +
-    `💻 *Computador & Notebook (Windows):*\n` +
-    `• Baixar IPTV Smarters Pro (.exe):\n${win}\n\n` +
-    `🌐 *Assistir no Navegador (Web Player):*\n` +
-    `• Acesso direto sem instalar nada: ${web}\n\n` +
-    `📺 *Smart TV (Samsung, LG e Roku):*\n` +
-    `${smartTv}`
-  );
+  const blocks: string[] = [];
+  if (code) blocks.push(`🤖 *TV Box / Android TV / FireStick:*\n• Abra o app *Downloader* e digite o código: *${code}*`);
+  if (apk) blocks.push(`📱 *Celular & Tablet Android:*\n• ${apk}`);
+  if (ios) blocks.push(`🍏 *iPhone / iPad / Apple TV:*\n• ${ios}`);
+  if (win) blocks.push(`💻 *Computador Windows:*\n• ${win}`);
+  if (web) blocks.push(`🌐 *Navegador:*\n• ${web}`);
+  if (smartTv) blocks.push(`📺 *Smart TV:*\n${smartTv}`);
+
+  if (blocks.length === 0) return "";
+
+  return `📲 *APLICATIVOS — ${srv}*\n\n` + blocks.join("\n\n");
 }
 
 /**
