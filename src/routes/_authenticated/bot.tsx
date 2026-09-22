@@ -328,6 +328,35 @@ function BotPage() {
     toast.success("Campos de aplicativos limpos. Preencha com os seus.");
   }
 
+  async function handleImportPanelApps() {
+    setImportingApps(true);
+    try {
+      const res: any = await importPanelApps({ data: {} });
+      if (!res?.ok) {
+        toast.error(res?.error || "Não consegui buscar os aplicativos no painel.");
+        return;
+      }
+      const s = res.suggestion ?? {};
+      const found = Object.values(s).filter((v) => typeof v === "string" && v).length;
+      if (found === 0) {
+        toast.info("Seu painel não disponibiliza aplicativos para download. Cadastre os seus aqui embaixo.");
+        return;
+      }
+      setForm((prev) => ({
+        ...prev,
+        appAndroidApk: s.appAndroidApk || prev.appAndroidApk,
+        appIosLink: s.appIosLink || prev.appIosLink,
+        appWindowsLink: s.appWindowsLink || prev.appWindowsLink,
+        appWebPlayerLink: s.appWebPlayerLink || prev.appWebPlayerLink,
+      }));
+      toast.success(`${found} aplicativo(s) trazido(s) do painel. Confira e salve.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao falar com o painel.");
+    } finally {
+      setImportingApps(false);
+    }
+  }
+
   function handleResetChat() {
     setMessages([
       {
