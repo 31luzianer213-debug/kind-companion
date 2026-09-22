@@ -4,6 +4,7 @@ import { createOrderServer, listOrdersServer, approveAndReleaseOrderServer, upda
 import { createMercadoPagoPixPayment } from "./mercadopago.server";
 import type { ButtonItem, ListSection } from "./billing.server";
 import { phoneVariants, samePhone } from "./phone";
+import { decideWithSalesAi } from "./bot-ai.server";
 
 export type BotInteractivePayload =
   | {
@@ -63,6 +64,10 @@ export type BotConfigData = {
   appWebPlayerLink?: string;
   appSmartTvText?: string;
   appsCustomText?: string;
+  // IA de vendas
+  aiEnabled?: boolean;
+  aiAgentName?: string;
+  aiInstructions?: string;
 };
 
 export const DEFAULT_BOT_CONFIG: BotConfigData = {
@@ -113,6 +118,9 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
   appWebPlayerLink: "http://webtv.iptvsmarters.com",
   appSmartTvText: "• Smart TV Samsung / LG: Baixe o app IBO Player, SmartOne IPTV ou Bob Player na loja da sua TV e nos envie o Mac / Device ID.",
   appsCustomText: "",
+  aiEnabled: true,
+  aiAgentName: "Ana",
+  aiInstructions: "",
 };
 
 export function generateDefaultPlansText(params: {
@@ -324,6 +332,9 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
       appWebPlayerLink: metaBot?.appWebPlayerLink ?? DEFAULT_BOT_CONFIG.appWebPlayerLink,
       appSmartTvText: metaBot?.appSmartTvText ?? DEFAULT_BOT_CONFIG.appSmartTvText,
       appsCustomText: metaBot?.appsCustomText ?? DEFAULT_BOT_CONFIG.appsCustomText,
+      aiEnabled: metaBot?.aiEnabled ?? DEFAULT_BOT_CONFIG.aiEnabled,
+      aiAgentName: metaBot?.aiAgentName?.trim() || DEFAULT_BOT_CONFIG.aiAgentName,
+      aiInstructions: metaBot?.aiInstructions ?? DEFAULT_BOT_CONFIG.aiInstructions,
     };
 
     botConfigCache.set(uid, config);
@@ -1013,6 +1024,7 @@ export async function processBotMessage(
     text: string;
     pushName?: string;
   },
+  opts?: { skipAi?: boolean },
 ): Promise<BotProcessResult> {
   const config = await loadBotConfig(supabase, userId);
 
@@ -1024,12 +1036,17 @@ export async function processBotMessage(
   const cleanPhone = params.phone.replace(/\D/g, "");
   const text = normalizeBotInput(params.text ?? "");
 
+  const aiOn = config.aiEnabled !== false && !opts?.skipAi;
+  const isGreeting = ["oi", "olá", "ola", "opa", "ei", "eae", "e ai", "bom dia", "boa tarde", "boa noite", "start"].includes(text);
+  const wantsMenu = ["menu", "início", "inicio", "0", "voltar ao menu", "voltar menu", "menu inicial", "menu principal"].includes(text);
+
   // Saudações e pedido explícito de menu não precisam de uma segunda consulta
   // ao banco: loadBotConfig já trouxe nome, servidor e duração do teste.
-  if (["oi", "olá", "ola", "menu", "início", "inicio", "start", "0", "voltar ao menu", "voltar menu", "menu inicial", "menu principal"].includes(text)) {
+  if (wantsMenu || (isGreeting && !aiOn)) {
     const quickServerName = config.serverName || config.businessName || "Meu Servidor";
     return buildMainMenu(config, quickServerName);
   }
+
 
   // Carrega dados do servidor IPTV
   let wsRow: any = null;
@@ -1046,6 +1063,81 @@ export async function processBotMessage(
   const streamingDns = config.streamingDns || wsRow?.sigma_streaming_dns?.trim() || "";
   const pixKey = config.pixKey || wsRow?.pix_key || readLocalPaymentSettings(userId)?.pix_key || "Consulte nossa chave PIX";
   const pixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
+
+  // =========================================================================
+  // IA DE VENDAS: entende o que o cliente quer e dispara a ação certa
+  // =========================================================================
+  const runSalesAi = async (): Promise<BotProcessResult | null> => {
+    let clientSummary = "ainda não é cliente cadastrado";
+    try {
+      const { data } = await supabase
+        .from("clients")
+        .select("name,iptv_username,next_due_date,monthly_fee")
+        .eq("user_id", userId)
+        .in("phone", phoneVariants(cleanPhone))
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        clientSummary =
+          `já é cliente — nome ${data.name}, usuário ${data.iptv_username || "não informado"}, ` +
+          `vencimento ${data.next_due_date || "não informado"}, mensalidade R$ ${data.monthly_fee ?? config.renewalPrice}`;
+      }
+    } catch {}
+
+    const decision = await decideWithSalesAi({
+      config,
+      serverName,
+      phone: cleanPhone,
+      text: params.text,
+      customerName: params.pushName,
+      clientSummary,
+    });
+    if (!decision) return null;
+
+    const routes: Record<string, string> = {
+      trial: "1",
+      renew: "2",
+      plans: "3",
+      apps: "4",
+      credentials: "5",
+      support: "6",
+      order_status: "status",
+      buy_1m: "plano 1m",
+      buy_3m: "plano 3m",
+      buy_6m: "plano 6m",
+      buy_12m: "plano 12m",
+    };
+
+    const route = routes[decision.intent];
+    if (!route) {
+      return { reply: decision.reply, action: "ai_sales_reply" };
+    }
+
+    const forwarded =
+      decision.intent === "renew" && decision.username ? `renovar ${decision.username}` : route;
+
+    const result = await processBotMessage(
+      supabase,
+      userId,
+      { phone: params.phone, text: forwarded, pushName: params.pushName },
+      { skipAi: true },
+    );
+
+    if (!result.reply) return { reply: decision.reply, action: "ai_sales_reply" };
+    return {
+      ...result,
+      reply: `${decision.reply}\n\n${result.reply}`.trim(),
+      action: `ai_${result.action}`,
+    };
+  };
+
+  if (aiOn && isGreeting) {
+    const aiResult = await runSalesAi();
+    if (aiResult) return aiResult;
+    return buildMainMenu(config, serverName);
+  }
+
 
   // =========================================================================
   // CONSULTA DE STATUS DE PEDIDO ("verificar", "status", "paguei", etc.)
@@ -1848,6 +1940,11 @@ export async function processBotMessage(
         ],
       },
     };
+  }
+
+  if (aiOn) {
+    const aiResult = await runSalesAi();
+    if (aiResult) return aiResult;
   }
 
   return buildMainMenu(config, serverName);
