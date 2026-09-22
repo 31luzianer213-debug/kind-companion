@@ -1471,23 +1471,86 @@ export async function createSigmaCustomer(
   // Alguns painéis exigem servidor e pacote; descobre os IDs disponíveis
   let serverId: string | number | null = null;
   let packageId: string | number | null = input.packageId ?? null;
-  for (const [endpoint, target] of [
-    ["/api/servers", "server"],
-    ["/api/packages", "package"],
-    ["/api/plans", "package"],
-  ] as const) {
-    if (target === "server" && serverId) continue;
-    if (target === "package" && packageId) continue;
+  const discovery: string[] = [];
+
+  const probe = async (endpoint: string, target: "server" | "package") => {
+    if (target === "server" && serverId) return;
+    if (target === "package" && packageId) return;
     try {
       const res = await authorizedRequest(config, endpoint, { method: "GET" }, 8000);
-      if (!res.ok || !res.payload) continue;
+      if (!res.ok) {
+        discovery.push(`${endpoint}:${res.status}`);
+        return;
+      }
       const rows = extractRows(res.payload);
-      const first = rows.find((r: any) => r && (r.id ?? r.uuid));
-      if (!first) continue;
-      const id = first.id ?? first.uuid;
+      const first = rows.find((r: any) => r && (r.id ?? r.uuid ?? r.package_id ?? r.server_id));
+      if (!first) {
+        discovery.push(`${endpoint}:vazio`);
+        return;
+      }
+      const id =
+        target === "server"
+          ? (first.id ?? first.uuid ?? first.server_id)
+          : (first.id ?? first.uuid ?? first.package_id ?? first.plan_id);
+      if (id === undefined || id === null || id === "") {
+        discovery.push(`${endpoint}:sem-id`);
+        return;
+      }
       if (target === "server") serverId = id;
       else packageId = id;
-    } catch {}
+      discovery.push(`${endpoint}:ok`);
+    } catch {
+      discovery.push(`${endpoint}:erro`);
+    }
+  };
+
+  for (const endpoint of ["/api/servers", "/api/server", "/api/dns"]) {
+    await probe(endpoint, "server");
+  }
+  for (const endpoint of [
+    "/api/packages",
+    "/api/package",
+    "/api/plans",
+    "/api/products",
+    "/api/bouquets",
+    "/api/categories",
+  ]) {
+    await probe(endpoint, "package");
+  }
+
+  // Último recurso: copia servidor/pacote de um cliente já existente no painel
+  if (!packageId || !serverId) {
+    for (const endpoint of ["/api/customers?per_page=1", "/api/customers", "/api/users"]) {
+      if (packageId && serverId) break;
+      try {
+        const res = await authorizedRequest(config, endpoint, { method: "GET" }, 8000);
+        if (!res.ok) continue;
+        const rows = extractRows(res.payload);
+        for (const row of rows) {
+          if (!row || typeof row !== "object") continue;
+          const pkg =
+            (row as any).package_id ??
+            (row as any).packageId ??
+            (row as any).plan_id ??
+            ((row as any).package && typeof (row as any).package === "object"
+              ? (row as any).package.id
+              : undefined) ??
+            (Array.isArray((row as any).packages) && (row as any).packages.length
+              ? ((row as any).packages[0]?.id ?? (row as any).packages[0])
+              : undefined);
+          const srv =
+            (row as any).server_id ??
+            (row as any).serverId ??
+            ((row as any).server && typeof (row as any).server === "object"
+              ? (row as any).server.id
+              : undefined);
+          if (!packageId && pkg !== undefined && pkg !== null && pkg !== "") packageId = pkg;
+          if (!serverId && srv !== undefined && srv !== null && srv !== "") serverId = srv;
+          if (packageId && serverId) break;
+        }
+        if (packageId || serverId) discovery.push(`${endpoint}:herdado`);
+      } catch {}
+    }
   }
 
   const candidateEndpoints = [
@@ -1590,7 +1653,8 @@ export async function createSigmaCustomer(
   }
 
   const sample = attempts.slice(0, 4).join(" • ");
-  throw new Error(`Falha ao criar cliente no painel Sigma. Respostas: ${sample}`);
+  const diag = `[pkg=${packageId ?? "-"} srv=${serverId ?? "-"} | ${discovery.join(", ") || "sem descoberta"}]`;
+  throw new Error(`Falha ao criar cliente no painel Sigma. Respostas: ${sample} ${diag}`);
 }
 
 /** Remove (exclui) uma linha/cliente do painel Sigma. */
