@@ -157,13 +157,15 @@ function AssinaturaPage() {
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-foreground">Escolha seu plano</h2>
-            <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1" data-testid="period-selector">
-              {PERIODS.map((p) => (
-                <button key={p.months} type="button" onClick={() => setMonths(p.months)} className={cn("rounded-md px-3 py-1.5 text-xs font-bold transition-colors", months === p.months ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")} data-testid={`period-${p.months}`}>
-                  {p.label}{p.note && <span className="ml-1 text-[10px] text-emerald-500">{p.note}</span>}
-                </button>
-              ))}
-            </div>
+            {PERIODS.length > 1 && (
+              <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1" data-testid="period-selector">
+                {PERIODS.map((p) => (
+                  <button key={p.months} type="button" onClick={() => setMonths(p.months)} className={cn("rounded-md px-3 py-1.5 text-xs font-bold transition-colors", months === p.months ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")} data-testid={`period-${p.months}`}>
+                    {p.label}{p.note && <span className="ml-1 text-[10px] text-emerald-500">{p.note}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {plans.map((plan) => {
