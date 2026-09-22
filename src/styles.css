@@ -160,7 +160,11 @@
 
 @utility app-aurora {
   background-color: var(--color-background);
-  background-image: linear-gradient(to bottom, color-mix(in oklch, var(--primary) 2.5%, transparent), transparent 26rem);
+  background-image:
+    radial-gradient(1100px 520px at 12% -10%, color-mix(in oklch, var(--primary) 8%, transparent), transparent 70%),
+    radial-gradient(900px 420px at 92% 0%, color-mix(in oklch, var(--chart-2) 7%, transparent), transparent 72%),
+    linear-gradient(to bottom, color-mix(in oklch, var(--primary) 3%, transparent), transparent 28rem);
+  background-attachment: fixed;
 }
 
 @utility app-grid {
