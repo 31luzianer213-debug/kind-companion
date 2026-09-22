@@ -1203,32 +1203,46 @@ function ClientsRegistry() {
                 </div>
               </div>
 
-              {/* Seção de Aplicativos Recomendados */}
+              {/* Aplicativos cadastrados pelo revendedor */}
               <div className="space-y-2 p-3 rounded-lg bg-muted/20 border border-border/40 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-foreground flex items-center gap-1.5 text-[11px]">
-                    <Smartphone className="size-3.5 text-primary" /> Aplicativos Recomendados:
+                    <Smartphone className="size-3.5 text-primary" /> Seus aplicativos:
                   </span>
                   <span className="text-[10px] text-muted-foreground">Inclusos na mensagem</span>
                 </div>
-                <div className="grid grid-cols-1 gap-1.5 text-[11px] min-[420px]:grid-cols-2">
-                  <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
-                    <span className="text-muted-foreground">Downloader (TV):</span>
-                    <span className="font-mono font-bold text-amber-400">{botConfig?.appAndroidDownloaderCode || "389471"}</span>
+                {botConfig?.appAndroidDownloaderCode || botConfig?.appAndroidApk || botConfig?.appIosLink || botConfig?.appWindowsLink ? (
+                  <div className="grid grid-cols-1 gap-1.5 text-[11px] min-[420px]:grid-cols-2">
+                    {botConfig?.appAndroidDownloaderCode ? (
+                      <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
+                        <span className="text-muted-foreground">Downloader (TV):</span>
+                        <span className="font-mono font-bold text-foreground">{botConfig.appAndroidDownloaderCode}</span>
+                      </div>
+                    ) : null}
+                    {botConfig?.appAndroidApk ? (
+                      <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
+                        <span className="text-muted-foreground">App Android:</span>
+                        <a href={botConfig.appAndroidApk} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">Link</a>
+                      </div>
+                    ) : null}
+                    {botConfig?.appIosLink ? (
+                      <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
+                        <span className="text-muted-foreground">iPhone / iOS:</span>
+                        <a href={botConfig.appIosLink} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">Link</a>
+                      </div>
+                    ) : null}
+                    {botConfig?.appWindowsLink ? (
+                      <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
+                        <span className="text-muted-foreground">Windows PC:</span>
+                        <a href={botConfig.appWindowsLink} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">Link</a>
+                      </div>
+                    ) : null}
                   </div>
-                  <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
-                    <span className="text-muted-foreground">App Android:</span>
-                    <a href={botConfig?.appAndroidApk || "https://bit.ly/app-xciptv-oficial"} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">APK</a>
-                  </div>
-                  <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
-                    <span className="text-muted-foreground">iPhone / iOS:</span>
-                    <a href={botConfig?.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509"} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">App Store</a>
-                  </div>
-                  <div className="flex items-center justify-between p-1.5 rounded bg-muted/40 border border-border/30">
-                    <span className="text-muted-foreground">Windows PC:</span>
-                    <a href={botConfig?.appWindowsLink || "https://www.iptvsmarters.com/download?download=windows"} target="_blank" rel="noreferrer" className="min-w-0 shrink-0 text-primary hover:underline font-mono">.exe</a>
-                  </div>
-                </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    Nenhum aplicativo cadastrado ainda. Cadastre os seus em Robô → Aplicativos para que sejam enviados aos clientes.
+                  </p>
+                )}
               </div>
 
               <div className="flex gap-2">
