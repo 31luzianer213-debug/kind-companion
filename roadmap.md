@@ -13,3 +13,5 @@
 - [x] Confirmar entrega real do acesso pelo WhatsApp
 - [x] Registrar tentativas de envio no histórico
 - [x] Permitir reenvio de pedidos aprovados
+- [x] Limite de clientes por plano garantido no banco
+- [x] Webhook do WhatsApp com token opcional de autenticação

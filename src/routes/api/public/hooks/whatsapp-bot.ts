@@ -11,12 +11,25 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-bot")({
         });
       },
       POST: async ({ request }) => {
+        // Quando um token de webhook é configurado, só eventos assinados são aceitos.
+        const expectedToken = (process.env["WHATSAPP_WEBHOOK_TOKEN"] || "").trim();
+        if (expectedToken) {
+          const sent =
+            request.headers.get("x-webhook-token") ||
+            new URL(request.url).searchParams.get("token") ||
+            "";
+          if (sent !== expectedToken) {
+            return new Response("Unauthorized", { status: 401 });
+          }
+        }
+
         let payload: any = null;
         try {
           payload = await request.json();
         } catch {
           return new Response("Invalid JSON", { status: 400 });
         }
+
 
         if (!payload) {
           return new Response("Empty body", { status: 400 });
