@@ -392,40 +392,84 @@ function PainelOverview() {
 
   return (
     <div className="animate-in fade-in space-y-6 duration-300">
-      <header className="flex flex-col gap-4 border-b border-border/50 pb-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Visão geral</h1>
-          <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-            Faturamento em tempo real, pedidos do robô e cobranças automáticas no WhatsApp.
-          </p>
+      <section className="dash-hero relative overflow-hidden rounded-2xl border border-border bg-card p-5 sm:p-8">
+        <div aria-hidden className="hero-grid pointer-events-none absolute inset-0 opacity-70" />
+        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full bg-[radial-gradient(closest-side,var(--ring),transparent)] opacity-20 blur-3xl" />
+        <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-end">
+          <div className="min-w-0 space-y-5">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-2.5 py-1">
+                <span className={cn("size-1.5 rounded-full", isWaOk ? "bg-success" : "bg-destructive")} />
+                WhatsApp {isWaOk ? "online" : "offline"}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-2.5 py-1">
+                <span className={cn("size-1.5 rounded-full", isSigmaOk ? "bg-success" : "bg-warning")} />
+                Sigma {isSigmaOk ? "conectado" : "pendente"}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-2.5 py-1">
+                <span className={cn("size-1.5 rounded-full", isPixOk ? "bg-success" : "bg-warning")} />
+                Pix {isPixOk ? "pronto" : "pendente"}
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Recebido neste mês</p>
+              <p className="mt-1 font-display text-5xl font-bold tracking-tight tabular-nums text-foreground sm:text-6xl">
+                {formatBRL(totalPaid)}
+              </p>
+              <div className="mt-4 max-w-md">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>de {formatBRL(totalMonthlyFee)} previstos</span>
+                  <span className="font-semibold tabular-nums text-foreground">
+                    {totalMonthlyFee > 0 ? Math.min(100, Math.round((totalPaid / totalMonthlyFee) * 100)) : 0}%
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-ring transition-[width] duration-700 ease-out"
+                    style={{ width: `${totalMonthlyFee > 0 ? Math.min(100, (totalPaid / totalMonthlyFee) * 100) : 0}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <Button onClick={runBilling} disabled={running} className="gap-2">
+                {running ? <Clock3 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                {running ? "Processando…" : "Rodar cobranças"}
+              </Button>
+              <Button asChild variant="outline" className="gap-2">
+                <Link to="/clientes" search={{ novo: "1" } as never}>
+                  <Plus className="size-4" /> Novo cliente
+                </Link>
+              </Button>
+              <Button variant="ghost" onClick={handleSyncSigma} disabled={syncingSigma} className="gap-2">
+                <RefreshCw className={cn("size-4", syncingSigma && "animate-spin")} /> Sincronizar Sigma
+              </Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border" data-testid="client-health-strip">
+            {[
+              { label: "Ativos", value: activeClients.length, tone: "text-foreground", to: "/clientes" },
+              { label: "Vencem em 7 dias", value: clientHealth.due7, tone: "text-warning", to: "/clientes" },
+              { label: "Vencidos", value: clientHealth.expired, tone: "text-destructive", to: "/cobrancas" },
+              { label: "Em aberto", value: formatBRL(totalPending), tone: "text-foreground", to: "/cobrancas" },
+            ].map((item) => (
+              <Link
+                key={item.label}
+                to={item.to as never}
+                className="group bg-card p-4 transition-colors duration-200 hover:bg-accent/40 sm:p-5"
+              >
+                <p className="text-xs font-medium text-muted-foreground">{item.label}</p>
+                <p className={cn("mt-2 font-display text-2xl font-bold tabular-nums sm:text-3xl", item.tone)}>{item.value}</p>
+              </Link>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSyncSigma}
-            disabled={syncingSigma}
-            className="gap-1.5 rounded-lg text-xs font-medium shadow-sm"
-          >
-            <RefreshCw className={cn("size-3.5 text-primary", syncingSigma && "animate-spin")} />
-            Sincronizar
-          </Button>
-          <Button asChild variant="outline" size="sm" className="gap-1.5 rounded-lg text-xs font-medium shadow-sm">
-            <Link to="/clientes" search={{ novo: "1" } as never}>
-              <Plus className="size-3.5 text-primary" /> Novo cliente
-            </Link>
-          </Button>
-          <Button size="sm" onClick={runBilling} disabled={running} className="gap-1.5 rounded-lg text-xs font-semibold shadow-sm">
-            {running ? <Clock3 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
-            {running ? "Processando…" : "Rodar cobranças"}
-          </Button>
-        </div>
-      </header>
+      </section>
 
       {!isWaOk && (
-        <section className="flex flex-col gap-3 rounded-md border border-rose-500/30 bg-rose-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <section className="flex flex-col gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex gap-3">
-            <AlertTriangle className="mt-0.5 size-5 shrink-0 text-rose-500" />
+            <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" />
             <div>
               <p className="text-sm font-bold text-foreground">Seu WhatsApp está desconectado</p>
               <p className="text-xs text-muted-foreground">
@@ -506,72 +550,6 @@ function PainelOverview() {
           </div>
         </section>
       )}
-
-      <SectionTitle icon={Users} title="Seus clientes" description="Situação da carteira hoje" />
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4" data-testid="client-health-strip">
-        {[
-          { label: "Clientes ativos", value: activeClients.length, tone: "text-emerald-600 dark:text-emerald-400", to: "/clientes" },
-          { label: "Vencendo em 7 dias", value: clientHealth.due7, tone: "text-amber-600 dark:text-amber-400", to: "/clientes" },
-          { label: "Vencidos", value: clientHealth.expired, tone: "text-rose-600 dark:text-rose-400", to: "/cobrancas" },
-          { label: "Inativos / bloqueados", value: clientHealth.inactive, tone: "text-muted-foreground", to: "/clientes" },
-        ].map((item) => (
-          <Link
-            key={item.label}
-            to={item.to as never}
-            className="rounded-md border border-border/60 bg-card/70 px-4 py-3 transition-colors hover:border-border"
-          >
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{item.label}</p>
-            <p className={cn("mt-1 text-xl font-bold tabular-nums", item.tone)}>{item.value}</p>
-          </Link>
-        ))}
-      </div>
-
-      <SectionTitle icon={Wallet} title="Resumo financeiro" description="Receita prevista, recebida e em atraso" />
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          label="Receita prevista"
-          value={formatBRL(totalMonthlyFee)}
-          hint={`${activeClients.length} ativos`}
-          extra={<span className="shrink-0 font-medium text-foreground">Ticket {formatBRL(ticketMedio)}</span>}
-          icon={Wallet}
-          accent="border-teal-500/20 bg-teal-500/10 text-teal-600"
-        />
-        <MetricCard
-          label="Recebido no mês"
-          value={formatBRL(totalPaid)}
-          hint={`${paidInvoices.length} faturas quitadas`}
-          icon={CheckCircle2}
-          accent="border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
-          valueClass="text-emerald-600 dark:text-emerald-400"
-        />
-        <MetricCard
-          label="Em aberto / atraso"
-          value={formatBRL(totalPending)}
-          hint={`${overdueInvoices.length} vencidas`}
-          extra={
-            <span className={cn("shrink-0 text-[11px] font-semibold", overdueInvoices.length ? "text-amber-500" : "text-muted-foreground")}>
-              {overdueInvoices.length ? "Cobrança ativa" : "Tudo em dia"}
-            </span>
-          }
-          icon={AlertTriangle}
-          accent="border-amber-500/20 bg-amber-500/10 text-amber-500"
-        />
-        <MetricCard
-          label="Servidor Sigma"
-          value={serverDisplayName}
-          hint={`${sigmaClients.length} acessos vinculados`}
-          extra={
-            <Link to="/sigma" className="flex shrink-0 items-center gap-0.5 text-[11px] font-semibold text-primary hover:underline">
-              Configurar <ArrowUpRight className="size-3" />
-            </Link>
-          }
-          icon={Server}
-          accent="border-sky-500/20 bg-primary/10 text-primary"
-          valueClass="text-lg"
-        />
-      </div>
 
       <SectionTitle icon={ShoppingBag} title="Operação do dia" description="Pedidos do robô e vencimentos próximos" />
 
