@@ -8,7 +8,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Suspense, lazy, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { runAutoBilling, sendWhatsAppMessage, getWhatsAppStatus } from "@/lib/whatsapp.functions";
+import { sendWhatsAppMessage, getWhatsAppStatus } from "@/lib/whatsapp.functions";
 import { listSigmaServers, syncAllSigmaServers } from "@/lib/sigma-servers.functions";
 import { useSigmaAutoSync } from "@/lib/useSigmaAutoSync";
 import { approveOrder, getOrdersList, type OrderItem } from "@/lib/orders.functions";
@@ -184,7 +184,6 @@ function EmptyState({ title, description }: { title: string; description: string
 function PainelOverview() {
   useSigmaAutoSync();
   const queryClient = useQueryClient();
-  const billing = useServerFn(runAutoBilling);
   const send = useServerFn(sendWhatsAppMessage);
   const syncSigma = useServerFn(syncAllSigmaServers);
   const getSigma = useServerFn(listSigmaServers);
@@ -192,7 +191,6 @@ function PainelOverview() {
   const ordersFn = useServerFn(getOrdersList);
   const getStatus = useServerFn(getWhatsAppStatus);
 
-  const [running, setRunning] = useState(false);
   const [syncingSigma, setSyncingSigma] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(() => {
@@ -322,25 +320,6 @@ function PainelOverview() {
     ],
     [totalPaid, totalPending, totalOverdue],
   );
-
-  async function runBilling() {
-    setRunning(true);
-    try {
-      const result = await billing({});
-      toast.success(
-        `${result.created} fatura(s) gerada(s), ${result.sent} mensagem(ns) enviada(s)${
-          result.failed ? `, ${result.failed} falha(s)` : ""
-        }.`,
-      );
-      const billingErrors = Array.isArray(result.errors) ? result.errors : [];
-      if (billingErrors.length) toast.error(billingErrors[0]);
-      queryClient.invalidateQueries();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao processar cobranças.");
-    } finally {
-      setRunning(false);
-    }
-  }
 
   async function cobrarClienteRapido(client: {
     id: string;
