@@ -1597,7 +1597,7 @@ function ClientsRegistry() {
                                 Enviar dados de acesso
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => enviarLinksApps(client)} className="gap-2">
-                                <Download className="size-4 text-sky-400" />
+                                <Download className="size-4 text-primary" />
                                 Enviar links dos apps
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setConfirmRenewClient(client)} className="gap-2">
@@ -1733,7 +1733,7 @@ function ClientsRegistry() {
                       variant="outline"
                       size="sm"
                       disabled={isBusy}
-                      className="min-h-11 text-xs gap-1 px-2 text-sky-400 hover:bg-sky-500/10"
+                      className="min-h-11 text-xs gap-1 px-2 text-primary hover:bg-primary/10"
                       onClick={() => enviarLinksApps(client)}
                       title="Enviar Links dos Aplicativos via WhatsApp"
                     >

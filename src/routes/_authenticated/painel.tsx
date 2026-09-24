@@ -568,7 +568,7 @@ function PainelOverview() {
             </Link>
           }
           icon={Server}
-          accent="border-sky-500/20 bg-sky-500/10 text-sky-500"
+          accent="border-sky-500/20 bg-primary/10 text-primary"
           valueClass="text-lg"
         />
       </div>
