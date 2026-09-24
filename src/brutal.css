@@ -35,12 +35,12 @@ body::after {
 .bg-card.border, .bg-card[class*="border"], .stat-card, .surface-card {
   transition: transform 180ms var(--ease-snap), box-shadow 180ms var(--ease-snap), border-color 180ms ease !important;
 }
-.bg-card.border:hover, .stat-card:hover, .surface-card:hover {
+.bg-card.border:not(:has(table)):hover, .stat-card:hover, .surface-card:hover {
   border-color: color-mix(in oklab, var(--primary) 70%, var(--border)) !important;
   box-shadow: var(--hard) var(--hard) 0 0 var(--primary) !important;
   transform: translate(-2px, -2px) !important;
 }
-[role="dialog"], [data-radix-popper-content-wrapper] > * {
+[role="dialog"], [role="menu"], [role="listbox"] {
   box-shadow: 6px 6px 0 0 var(--primary) !important;
   border-width: 2px !important;
   border-color: var(--foreground) !important;
