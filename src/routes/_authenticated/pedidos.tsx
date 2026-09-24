@@ -717,7 +717,7 @@ function PedidosPage() {
                               className="gap-2 bg-success hover:bg-success text-background font-extrabold border-0 shadow-md shadow-success/25 transition-all hover:scale-[1.02]"
                               title="Aprovar este pedido e liberar acesso no Sigma e WhatsApp sem esperar o cliente pagar"
                             >
-                              <Zap className="h-4 w-4 fill-white text-white" />
+                              <Zap className="h-4 w-4 fill-background text-background" />
                               ⚡ Liberar Acesso Agora
                             </Button>
 
