@@ -3,7 +3,7 @@ import { IndicatorsPanel } from "@/components/panels/IndicatorsPanel";
 import { ActivitiesPanel } from "@/components/panels/ActivitiesPanel";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { EmptyView } from "@/components/ui/state-view";
+import { EmptyView, ErrorView, LoadingView } from "@/components/ui/state-view";
 import { useServerFn } from "@tanstack/react-start";
 import { Suspense, lazy, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -221,7 +221,7 @@ function PainelOverview() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Falha na aprovação."),
   });
 
-  const { data } = useQuery({
+  const { data, isLoading: dashLoading, isError: dashError, refetch: refetchDash } = useQuery({
     queryKey: ["dashboard-v2"],
     queryFn: async () => {
       const ordersRes = await ordersFn({ data: {} }).catch(() => ({ orders: [] as OrderItem[] }));
@@ -768,7 +768,11 @@ function PainelOverview() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-2 px-4 pb-4 pt-1 sm:px-5">
-            {pendingInvoices.length === 0 ? (
+            {dashError ? (
+              <ErrorView onRetry={() => refetchDash()} />
+            ) : dashLoading ? (
+              <LoadingView rows={3} />
+            ) : pendingInvoices.length === 0 ? (
               <EmptyState title="Nenhuma fatura em aberto" description="Todos os pagamentos estão em dia!" />
             ) : (
               pendingInvoices.slice(0, 5).map((invoice) => (
