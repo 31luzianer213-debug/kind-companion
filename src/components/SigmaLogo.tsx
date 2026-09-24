@@ -35,13 +35,13 @@ export function SigmaLogo({ className, size = "md", showGlow = true }: SigmaLogo
       >
         <defs>
           <linearGradient id={backgroundId} x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#1C201D" />
+            <stop stopColor="#131B2E" />
             <stop offset="1" stopColor="#0A0F1C" />
           </linearGradient>
           <linearGradient id={accentId} x1="12" y1="10" x2="38" y2="39" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#E4FF9A" />
+            <stop stopColor="#A5F3FC" />
             <stop offset="0.52" stopColor="#22D3EE" />
-            <stop offset="1" stopColor="#7FB81F" />
+            <stop offset="1" stopColor="#0891B2" />
           </linearGradient>
           <filter id={glowId} x="-35%" y="-35%" width="170%" height="170%">
             <feGaussianBlur stdDeviation="1.2" result="blur" />
