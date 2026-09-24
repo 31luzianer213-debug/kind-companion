@@ -46,6 +46,7 @@ import {
   saveAdminSettings,
   startAdminTrial,
   testMercadoPagoToken,
+  testMisticPayCreds,
   updateAdminSubscription,
 } from "@/lib/admin.functions";
 
