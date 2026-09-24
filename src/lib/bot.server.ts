@@ -411,20 +411,7 @@ export async function saveBotConfigServer(
   }
 
   // 3. Salva no user_metadata se houver autenticação
-  try {
-    if (supabase?.auth?.updateUser) {
-      await supabase.auth.updateUser({
-        data: {
-          bot_settings: {
-            ...updated,
-            updated_at: new Date().toISOString(),
-          },
-        },
-      });
-    }
-  } catch (err) {
-    console.error("Erro ao salvar bot_settings no metadata:", err);
-  }
+
 
   // 4. Configura AUTOMATICAMENTE o Webhook e parâmetros na VPS da Evolution API
   try {
