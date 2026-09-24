@@ -44,14 +44,31 @@ function AssinaturaPage() {
   const checkFn = useServerFn(checkSubscriptionPayment);
   const [months, setMonths] = useState(1);
   const [cpf, setCpf] = useState("");
+  const [cpfError, setCpfError] = useState(false);
+  const cpfRef = useRef<HTMLInputElement>(null);
   const [payment, setPayment] = useState<{ id: string; pix_code: string | null; pix_qr_base64: string | null; ticket_url: string | null; amount: number; planName: string } | null>(null);
 
   const { data: plansData } = useQuery({ queryKey: ["saas-plans"], queryFn: () => plansFn({}) });
   const { data: sub } = useQuery({ queryKey: ["my-subscription"], queryFn: () => subFn({}) });
   const plans = plansData?.plans ?? [];
 
+  useEffect(() => {
+    try { const saved = localStorage.getItem("assinatura-doc"); if (saved) setCpf(formatDoc(saved)); } catch {}
+  }, []);
+
   const createPix = useMutation({
-    mutationFn: (plan: SaasPlan) => pixFn({ data: { planId: plan.id, months, document: cpf } }).then((res) => ({ res, plan })),
+    mutationFn: async (plan: SaasPlan) => {
+      const digits = cpf.replace(/\D/g, "");
+      if (sub?.saasProvider === "misticpay" && digits.length !== 11 && digits.length !== 14) {
+        setCpfError(true);
+        cpfRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        cpfRef.current?.focus();
+        throw new Error("Preencha seu CPF ou CNPJ no campo acima para gerar o Pix.");
+      }
+      try { if (digits) localStorage.setItem("assinatura-doc", digits); } catch {}
+      const res = await pixFn({ data: { planId: plan.id, months, document: digits } });
+      return { res, plan };
+    },
     onSuccess: ({ res, plan }) => {
       if (!res.ok) return toast.error(res.error);
       setPayment({
@@ -156,14 +173,16 @@ function AssinaturaPage() {
         </Card>
       ) : (
         <>
+          {sub?.saasProvider === "misticpay" && (
+            <div className={cn("rounded-xl border p-4", cpfError ? "border-destructive bg-destructive/10" : "border-primary/40 bg-primary/5")}>
+              <label htmlFor="subscription-cpf" className="block text-sm font-bold text-foreground">Seu CPF ou CNPJ</label>
+              <p className="mt-0.5 text-xs text-muted-foreground">O banco exige esse dado para gerar o Pix. Preencha antes de escolher o plano.</p>
+              <input id="subscription-cpf" ref={cpfRef} value={cpf} onChange={(e) => { setCpf(formatDoc(e.target.value)); setCpfError(false); }} inputMode="numeric" autoComplete="off" placeholder="000.000.000-00" className="mt-2 h-11 w-full max-w-xs rounded-md border border-border bg-background px-3 text-base text-foreground" data-testid="subscription-cpf" />
+              {cpfError && <p className="mt-1.5 text-xs font-semibold text-destructive">Digite um CPF (11 números) ou CNPJ (14 números) para continuar.</p>}
+            </div>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-foreground">Escolha seu plano</h2>
-            {sub?.saasProvider === "misticpay" && (
-              <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                CPF ou CNPJ para o Pix
-                <input value={cpf} onChange={(e) => setCpf(e.target.value)} inputMode="numeric" placeholder="000.000.000-00" className="h-9 w-44 rounded-md border border-border bg-background px-3 text-sm text-foreground" data-testid="subscription-cpf" />
-              </label>
-            )}
             {PERIODS.length > 1 && (
               <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1" data-testid="period-selector">
                 {PERIODS.map((p) => (
