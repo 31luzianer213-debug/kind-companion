@@ -3,6 +3,7 @@ import { IndicatorsPanel } from "@/components/panels/IndicatorsPanel";
 import { ActivitiesPanel } from "@/components/panels/ActivitiesPanel";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { EmptyView, ErrorView, LoadingView } from "@/components/ui/state-view";
 import { useServerFn } from "@tanstack/react-start";
 import { Suspense, lazy, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -177,12 +178,7 @@ function SectionTitle({
 }
 
 function EmptyState({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="rounded-md border border-dashed border-border/60 p-6 text-center">
-      <p className="text-xs font-semibold text-foreground">{title}</p>
-      <p className="mt-0.5 text-[11px] text-muted-foreground">{description}</p>
-    </div>
-  );
+  return <EmptyView title={title} description={description} />;
 }
 
 function PainelOverview() {
@@ -225,7 +221,7 @@ function PainelOverview() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Falha na aprovação."),
   });
 
-  const { data } = useQuery({
+  const { data, isLoading: dashLoading, isError: dashError, refetch: refetchDash } = useQuery({
     queryKey: ["dashboard-v2"],
     queryFn: async () => {
       const ordersRes = await ordersFn({ data: {} }).catch(() => ({ orders: [] as OrderItem[] }));
@@ -772,7 +768,11 @@ function PainelOverview() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-2 px-4 pb-4 pt-1 sm:px-5">
-            {pendingInvoices.length === 0 ? (
+            {dashError ? (
+              <ErrorView onRetry={() => refetchDash()} />
+            ) : dashLoading ? (
+              <LoadingView rows={3} />
+            ) : pendingInvoices.length === 0 ? (
               <EmptyState title="Nenhuma fatura em aberto" description="Todos os pagamentos estão em dia!" />
             ) : (
               pendingInvoices.slice(0, 5).map((invoice) => (
