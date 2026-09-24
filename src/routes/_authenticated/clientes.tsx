@@ -602,6 +602,8 @@ function ClientsRegistry() {
             const updateRes = await updateSigma({ data: updatePayload });
             if (updateRes.ok) {
               toast.info("Acesso atualizado no Painel Sigma!");
+            } else {
+              toast.warning(`Cliente salvo aqui, mas o Painel Sigma não aceitou a atualização: ${updateRes.error}`);
             }
           } catch (err) {
             console.warn("Aviso Sigma ao atualizar:", err);
