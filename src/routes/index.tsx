@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -146,6 +147,16 @@ const faq = [
 ];
 
 function LandingPage() {
+  useEffect(() => {
+    const els = document.querySelectorAll<HTMLElement>("[data-reveal]");
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => e.isIntersecting && (e.target.classList.add("is-visible"), io.unobserve(e.target))),
+      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+
   const { plans } = Route.useLoaderData();
   const plan = plans[0] ?? FALLBACK_PLANS[0];
 
@@ -180,7 +191,11 @@ function LandingPage() {
         <section className="relative overflow-hidden">
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 -top-40 h-80 bg-[radial-gradient(60%_60%_at_50%_50%,var(--primary)_0%,transparent_70%)] opacity-15"
+            className="hero-grid pointer-events-none absolute inset-0"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-32 -top-32 size-[520px] rounded-full bg-[radial-gradient(closest-side,var(--ring),transparent)] opacity-25 blur-3xl"
           />
           <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-20">
             <div className="space-y-6">
@@ -188,8 +203,8 @@ function LandingPage() {
                 <span className="size-1.5 rounded-full bg-primary" />
                 7 dias grátis, sem cartão
               </span>
-              <h1 className="font-display text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
-                Sua revenda IPTV cobrando <span className="text-primary">no automático</span>
+              <h1 className="font-display text-4xl font-bold leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
+                Sua revenda IPTV cobrando <span className="hero-mark">no automático</span>
               </h1>
               <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
                 Clientes organizados, painel Sigma conectado, Pix confirmado sozinho e um robô que atende seu WhatsApp o dia inteiro.
@@ -253,7 +268,7 @@ function LandingPage() {
         </section>
 
         {/* Recursos */}
-        <section id="recursos" className="border-t border-border bg-muted/30 py-16 sm:py-20">
+        <section data-reveal id="recursos" className="border-t border-border bg-muted/30 py-16 sm:py-20">
           <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
             <div className="max-w-2xl">
               <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -278,7 +293,7 @@ function LandingPage() {
         </section>
 
         {/* Como funciona */}
-        <section id="como-funciona" className="py-16 sm:py-20">
+        <section data-reveal id="como-funciona" className="py-16 sm:py-20">
           <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
             <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Do zero ao automático</h2>
             <p className="mt-3 max-w-xl text-muted-foreground">Quatro passos e sua operação passa a rodar sem você.</p>
@@ -296,7 +311,7 @@ function LandingPage() {
         </section>
 
         {/* Preço */}
-        <section id="preco" className="border-t border-border bg-muted/30 py-16 sm:py-20">
+        <section data-reveal id="preco" className="border-t border-border bg-muted/30 py-16 sm:py-20">
           <div className="mx-auto w-full max-w-3xl px-4 text-center sm:px-6">
             <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Um preço, tudo liberado</h2>
             <p className="mt-3 text-muted-foreground">Sem limite de clientes e sem fidelidade.</p>
@@ -329,7 +344,7 @@ function LandingPage() {
         </section>
 
         {/* Dúvidas */}
-        <section id="duvidas" className="py-16 sm:py-20">
+        <section data-reveal id="duvidas" className="py-16 sm:py-20">
           <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
             <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Perguntas frequentes</h2>
             <Accordion type="single" collapsible className="mt-8">

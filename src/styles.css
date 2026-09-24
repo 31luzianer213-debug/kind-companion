@@ -520,3 +520,29 @@ body {
   font-feature-settings: "ss01", "cv11";
 }
 h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.025em; }
+
+/* Motion & profundidade */
+.hero-grid {
+  background-image: linear-gradient(to right, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 60% at 70% 20%, #000 30%, transparent 75%);
+}
+.hero-mark {
+  background-image: linear-gradient(transparent 62%, color-mix(in oklab, var(--ring) 32%, transparent) 62%);
+  padding: 0 0.1em;
+}
+.dark .hero-mark { color: var(--primary); background-image: none; }
+.skeleton-shimmer {
+  background-image: linear-gradient(90deg, transparent, color-mix(in oklab, var(--foreground) 6%, transparent), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+[data-reveal] { opacity: 0; transform: translateY(16px); transition: opacity 600ms ease-out, transform 600ms ease-out; }
+[data-reveal].is-visible { opacity: 1; transform: none; }
+.card-hover:hover, [data-reveal] .rounded-lg.border:hover { transform: translateY(-2px); border-color: color-mix(in oklab, var(--ring) 45%, var(--border)); }
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] { opacity: 1; transform: none; transition: none; }
+  .skeleton-shimmer { animation: none; }
+}
