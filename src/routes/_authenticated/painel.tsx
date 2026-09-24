@@ -392,79 +392,120 @@ function PainelOverview() {
 
   return (
     <div className="animate-in fade-in space-y-6 duration-300">
-      <section className="dash-hero relative overflow-hidden rounded-2xl border border-border bg-card p-5 sm:p-8">
-        <div aria-hidden className="hero-grid pointer-events-none absolute inset-0 opacity-70" />
-        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full bg-[radial-gradient(closest-side,var(--ring),transparent)] opacity-20 blur-3xl" />
-        <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-end">
-          <div className="min-w-0 space-y-5">
-            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-2.5 py-1">
-                <span className={cn("size-1.5 rounded-full", isWaOk ? "bg-success" : "bg-destructive")} />
-                WhatsApp {isWaOk ? "online" : "offline"}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-2.5 py-1">
-                <span className={cn("size-1.5 rounded-full", isSigmaOk ? "bg-success" : "bg-warning")} />
-                Sigma {isSigmaOk ? "conectado" : "pendente"}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-2.5 py-1">
-                <span className={cn("size-1.5 rounded-full", isPixOk ? "bg-success" : "bg-warning")} />
-                Pix {isPixOk ? "pronto" : "pendente"}
-              </span>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Recebido neste mês</p>
-              <p className="mt-1 font-display text-5xl font-bold tracking-tight tabular-nums text-foreground sm:text-6xl">
-                {formatBRL(totalPaid)}
-              </p>
-              <div className="mt-4 max-w-md">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>de {formatBRL(totalMonthlyFee)} previstos</span>
-                  <span className="font-semibold tabular-nums text-foreground">
-                    {totalMonthlyFee > 0 ? Math.min(100, Math.round((totalPaid / totalMonthlyFee) * 100)) : 0}%
-                  </span>
-                </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-ring transition-[width] duration-700 ease-out"
-                    style={{ width: `${totalMonthlyFee > 0 ? Math.min(100, (totalPaid / totalMonthlyFee) * 100) : 0}%` }}
-                  />
-                </div>
+      {(() => {
+        const expected = Math.max(totalMonthlyFee, totalPaid + totalPending);
+        const pct = (v: number) => (expected > 0 ? Math.min(100, (v / expected) * 100) : 0);
+        const paidPct = Math.round(pct(totalPaid));
+        const hour = new Date().getHours();
+        const greet = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+        const monthName = new Date().toLocaleDateString("pt-BR", { month: "long" });
+        const kpis = [
+          { label: "Clientes ativos", value: activeClients.length, hint: `${sigmaClients.length} no Sigma`, icon: Users, tone: "text-foreground", dot: "bg-success", to: "/clientes" },
+          { label: "Vencem em 7 dias", value: clientHealth.due7, hint: upcomingClients.length ? `${upcomingClients.length} nos próximos 3 dias` : "Nada urgente", icon: Calendar, tone: "text-warning", dot: "bg-warning", to: "/clientes" },
+          { label: "Vencidos", value: clientHealth.expired, hint: totalOverdue > 0 ? `${formatBRL(totalOverdue)} atrasado` : "Tudo em dia", icon: AlertTriangle, tone: "text-destructive", dot: "bg-destructive", to: "/cobrancas" },
+          { label: "Ticket médio", value: formatBRL(ticketMedio), hint: pendingOrders.length ? `${pendingOrders.length} pedido(s) aguardando` : serverDisplayName, icon: Wallet, tone: "text-foreground", dot: "bg-ring", to: pendingOrders.length ? "/pedidos" : "/clientes" },
+        ];
+        return (
+          <section className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm text-muted-foreground">{greet} — resumo de <span className="capitalize">{monthName}</span></p>
+                <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Sua operação hoje</h1>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
+                {[
+                  { ok: isWaOk, label: `WhatsApp ${isWaOk ? "online" : "offline"}`, bad: "bg-destructive", to: "/whatsapp" },
+                  { ok: isSigmaOk, label: `Sigma ${isSigmaOk ? "conectado" : "pendente"}`, bad: "bg-warning", to: "/sigma" },
+                  { ok: isPixOk, label: `Pagamentos ${isPixOk ? "prontos" : "pendentes"}`, bad: "bg-warning", to: "/configuracoes" },
+                ].map((s) => (
+                  <Link key={s.label} to={s.to as never} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 transition-colors hover:border-foreground/30 hover:text-foreground">
+                    <span className="relative flex size-2">
+                      {s.ok && <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60" />}
+                      <span className={cn("relative inline-flex size-2 rounded-full", s.ok ? "bg-success" : s.bad)} />
+                    </span>
+                    {s.label}
+                  </Link>
+                ))}
               </div>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <Button onClick={runBilling} disabled={running} className="gap-2">
-                {running ? <Clock3 className="size-4 animate-spin" /> : <Send className="size-4" />}
-                {running ? "Processando…" : "Rodar cobranças"}
-              </Button>
-              <Button asChild variant="outline" className="gap-2">
-                <Link to="/clientes" search={{ novo: "1" } as never}>
-                  <Plus className="size-4" /> Novo cliente
-                </Link>
-              </Button>
-              <Button variant="ghost" onClick={handleSyncSigma} disabled={syncingSigma} className="gap-2">
-                <RefreshCw className={cn("size-4", syncingSigma && "animate-spin")} /> Sincronizar Sigma
-              </Button>
+
+            <div className="grid gap-4 lg:grid-cols-12">
+              <div className="dash-hero relative overflow-hidden rounded-2xl bg-foreground p-6 text-background shadow-xl sm:p-8 lg:col-span-7">
+                <div aria-hidden className="hero-grid pointer-events-none absolute inset-0 opacity-20" />
+                <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 size-72 rounded-full bg-[radial-gradient(closest-side,var(--ring),transparent)] opacity-40 blur-3xl" />
+                <div className="relative flex h-full flex-col gap-6">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="inline-flex items-center gap-2 text-sm font-medium text-background/70">
+                      <TrendingUp className="size-4 text-ring" /> Recebido neste mês
+                    </p>
+                    <span className="rounded-full bg-ring px-2.5 py-1 text-xs font-bold tabular-nums text-foreground">{paidPct}% da meta</span>
+                  </div>
+                  <p className="font-display text-5xl font-bold tracking-tight tabular-nums sm:text-7xl">{formatBRL(totalPaid)}</p>
+                  <div className="space-y-3">
+                    <div className="flex h-3 overflow-hidden rounded-full bg-background/10">
+                      <div className="h-full bg-ring transition-[width] duration-700 ease-out" style={{ width: `${pct(totalPaid)}%` }} />
+                      <div className="h-full bg-warning/80 transition-[width] duration-700 ease-out" style={{ width: `${pct(totalPending - totalOverdue)}%` }} />
+                      <div className="h-full bg-destructive/80 transition-[width] duration-700 ease-out" style={{ width: `${pct(totalOverdue)}%` }} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 text-xs">
+                      {[
+                        { c: "bg-ring", l: "Recebido", v: totalPaid },
+                        { c: "bg-warning", l: "A receber", v: Math.max(0, totalPending - totalOverdue) },
+                        { c: "bg-destructive", l: "Atrasado", v: totalOverdue },
+                      ].map((x) => (
+                        <div key={x.l} className="min-w-0">
+                          <p className="flex items-center gap-1.5 text-background/60"><span className={cn("size-2 rounded-sm", x.c)} />{x.l}</p>
+                          <p className="mt-0.5 truncate font-semibold tabular-nums">{formatBRL(x.v)}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-background/50">Previsto no mês: {formatBRL(expected)}</p>
+                  </div>
+                  <div className="mt-auto flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <Button onClick={runBilling} disabled={running} className="gap-2 bg-ring text-foreground hover:bg-ring/90">
+                      {running ? <Clock3 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                      {running ? "Processando…" : "Rodar cobranças agora"}
+                    </Button>
+                    <Button asChild variant="ghost" className="gap-2 text-background hover:bg-background/10 hover:text-background">
+                      <Link to="/clientes" search={{ novo: "1" } as never}>
+                        <Plus className="size-4" /> Novo cliente
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" onClick={handleSyncSigma} disabled={syncingSigma} className="gap-2 text-background/80 hover:bg-background/10 hover:text-background">
+                      <RefreshCw className={cn("size-4", syncingSigma && "animate-spin")} /> Sincronizar Sigma
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 lg:col-span-5" data-testid="client-health-strip">
+                {kpis.map((k) => (
+                  <Link
+                    key={k.label}
+                    to={k.to as never}
+                    className="group relative flex flex-col justify-between gap-4 rounded-2xl border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-lg sm:p-5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="grid size-9 place-items-center rounded-xl bg-muted text-foreground">
+                        <k.icon className="size-4" />
+                      </span>
+                      <ArrowUpRight className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-muted-foreground">{k.label}</p>
+                      <p className={cn("mt-1 truncate font-display text-2xl font-bold tabular-nums sm:text-3xl", k.tone)}>{k.value}</p>
+                      <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+                        <span className={cn("size-1.5 shrink-0 rounded-full", k.dot)} />
+                        {k.hint}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border" data-testid="client-health-strip">
-            {[
-              { label: "Ativos", value: activeClients.length, tone: "text-foreground", to: "/clientes" },
-              { label: "Vencem em 7 dias", value: clientHealth.due7, tone: "text-warning", to: "/clientes" },
-              { label: "Vencidos", value: clientHealth.expired, tone: "text-destructive", to: "/cobrancas" },
-              { label: "Em aberto", value: formatBRL(totalPending), tone: "text-foreground", to: "/cobrancas" },
-            ].map((item) => (
-              <Link
-                key={item.label}
-                to={item.to as never}
-                className="group bg-card p-4 transition-colors duration-200 hover:bg-accent/40 sm:p-5"
-              >
-                <p className="text-xs font-medium text-muted-foreground">{item.label}</p>
-                <p className={cn("mt-2 font-display text-2xl font-bold tabular-nums sm:text-3xl", item.tone)}>{item.value}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+          </section>
+        );
+      })()}
 
       {!isWaOk && (
         <section className="flex flex-col gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between">
