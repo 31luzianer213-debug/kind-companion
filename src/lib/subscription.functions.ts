@@ -21,7 +21,7 @@ export const getMySubscription = createServerFn({ method: "GET" })
 /** Gera um Pix para assinar/renovar um plano do sistema. */
 export const createSubscriptionPix = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { planId: string; months?: number }) => {
+  .inputValidator((input: { planId: string; months?: number; document?: string }) => {
     if (!input?.planId) throw new Error("Escolha um plano.");
     return input;
   })
@@ -36,6 +36,7 @@ export const createSubscriptionPix = createServerFn({ method: "POST" })
       months: data.months ?? 1,
       email,
       name,
+      document: data.document ?? null,
     });
   });
 

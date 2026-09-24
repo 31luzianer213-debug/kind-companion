@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createMercadoPagoPixPayment } from "./mercadopago.server";
-import { getMercadoPagoToken } from "./system-settings.server";
+import { getMercadoPagoToken, getMisticCreds, getSaasProvider } from "./system-settings.server";
+import { checkMisticTransaction, createMisticPix } from "./misticpay.server";
 import { publicAppUrl } from "./whatsapp-connection.server";
 
 export type SubscriptionState = "active" | "trialing" | "grace" | "blocked";
@@ -25,6 +26,7 @@ export type SubscriptionSummary = {
   daysLeft: number;
   clientsCount: number;
   saasPaymentsEnabled: boolean;
+  saasProvider: "mercadopago" | "misticpay" | null;
 };
 
 const GRACE_DAYS = 3;
@@ -91,7 +93,7 @@ export async function getSubscriptionSummaryServer(userId: string): Promise<Subs
     currentPeriodEnd: subscription?.current_period_end ?? null,
     daysLeft,
     clientsCount: count ?? 0,
-    saasPaymentsEnabled: Boolean(await getMercadoPagoToken()),
+    ...(await (async () => { const p = await getSaasProvider(); return { saasPaymentsEnabled: Boolean(p), saasProvider: p }; })()),
   };
 }
 
@@ -101,10 +103,15 @@ export async function createSubscriptionPixServer(params: {
   months: number;
   email: string | null;
   name: string | null;
+  document?: string | null;
 }) {
-  const token = await getMercadoPagoToken();
-  if (!token) {
-    return { ok: false as const, error: "Pagamentos da assinatura ainda não estão habilitados. O administrador precisa configurar o Access Token do Mercado Pago em Administração." };
+  const provider = await getSaasProvider();
+  if (!provider) {
+    return { ok: false as const, error: "Pagamentos da assinatura ainda não estão habilitados. O administrador precisa configurar a conta de recebimento em Administração." };
+  }
+  const cpf = String(params.document ?? "").replace(/\D/g, "");
+  if (provider === "misticpay" && cpf.length !== 11 && cpf.length !== 14) {
+    return { ok: false as const, error: "Informe seu CPF (ou CNPJ) para gerar o Pix." };
   }
 
   const { data: planRow } = await supabaseAdmin.from("saas_plans").select("*").eq("id", params.planId).eq("active", true).maybeSingle();
@@ -122,6 +129,7 @@ export async function createSubscriptionPixServer(params: {
     .eq("plan_id", plan.id)
     .eq("months", months)
     .eq("status", "pending")
+    .eq("provider", provider)
     .gte("created_at", new Date(Date.now() - 30 * 60_000).toISOString())
     .order("created_at", { ascending: false })
     .limit(1)
@@ -130,24 +138,35 @@ export async function createSubscriptionPixServer(params: {
 
   const { data: payment, error } = await supabaseAdmin
     .from("saas_payments")
-    .insert({ user_id: params.userId, plan_id: plan.id, amount, months, status: "pending", provider: "mercadopago" })
+    .insert({ user_id: params.userId, plan_id: plan.id, amount, months, status: "pending", provider })
     .select("*")
     .single();
   if (error || !payment) return { ok: false as const, error: error?.message || "Não foi possível registrar o pagamento." };
 
-  const pix = await createMercadoPagoPixPayment({
-    token,
-    amount,
-    description: `Sigma Control - Plano ${plan.name} (${months} mes${months > 1 ? "es" : ""})`,
-    orderId: `saas_${payment.id}`,
-    customerName: params.name || params.email || "Revendedor",
-    customerPhone: "",
-    webhookUrl: `${publicAppUrl()}/api/public/hooks/saas-mercadopago`,
-  });
+  const description = `Sigma Control - Plano ${plan.name} (${months} mes${months > 1 ? "es" : ""})`;
+  const pix =
+    provider === "misticpay"
+      ? await createMisticPix((await getMisticCreds())!, {
+          amount,
+          payerName: params.name || params.email || "Revendedor",
+          payerDocument: cpf,
+          transactionId: `saas_${payment.id}`,
+          description,
+          webhookUrl: `${publicAppUrl()}/api/public/hooks/saas-misticpay`,
+        }).then((r) => (r.ok ? { ok: true as const, paymentId: r.paymentId, qrCode: r.qrCode, qrCodeBase64: r.qrCodeBase64, ticketUrl: null } : { ok: false as const, error: r.error }))
+      : await createMercadoPagoPixPayment({
+          token: (await getMercadoPagoToken())!,
+          amount,
+          description,
+          orderId: `saas_${payment.id}`,
+          customerName: params.name || params.email || "Revendedor",
+          customerPhone: "",
+          webhookUrl: `${publicAppUrl()}/api/public/hooks/saas-mercadopago`,
+        });
 
   if (!pix.ok) {
     await supabaseAdmin.from("saas_payments").update({ status: "cancelled" }).eq("id", payment.id);
-    return { ok: false as const, error: pix.error || "Falha ao gerar o Pix." };
+    return { ok: false as const, error: (pix as any).error || "Falha ao gerar o Pix." };
   }
 
   const { data: updated } = await supabaseAdmin
@@ -192,7 +211,23 @@ export async function reconcileSaasPayment(paymentId: string, userId?: string) {
   const { data: payment } = await supabaseAdmin.from("saas_payments").select("*").eq("id", paymentId).maybeSingle();
   if (!payment || (userId && payment.user_id !== userId)) return { ok: false as const, error: "Pagamento não encontrado." };
   if (payment.status === "approved") return { ok: true as const, status: "approved" as const };
-  if (!token || !payment.provider_payment_id) return { ok: true as const, status: payment.status };
+  if (!payment.provider_payment_id) return { ok: true as const, status: payment.status };
+
+  if (payment.provider === "misticpay") {
+    const creds = await getMisticCreds();
+    if (!creds) return { ok: true as const, status: payment.status };
+    const st = await checkMisticTransaction(creds, payment.provider_payment_id);
+    if (st === "COMPLETO") {
+      const result = await activateSubscriptionFromPayment(payment.id);
+      return result.ok ? { ok: true as const, status: "approved" as const } : { ok: false as const, error: result.error };
+    }
+    if (st === "FALHA" || st === "CANCELADO") {
+      await supabaseAdmin.from("saas_payments").update({ status: "cancelled" }).eq("id", payment.id).neq("status", "approved");
+      return { ok: true as const, status: "cancelled" as const };
+    }
+    return { ok: true as const, status: payment.status };
+  }
+  if (!token) return { ok: true as const, status: payment.status };
 
   try {
     const res = await fetch(`https://api.mercadopago.com/v1/payments/${payment.provider_payment_id}`, {
