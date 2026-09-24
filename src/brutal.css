@@ -134,9 +134,8 @@ input:focus-visible, textarea:focus-visible, [role="combobox"]:focus-visible {
   content: ""; position: absolute; inset: -0.05em -0.12em; z-index: -1; background: var(--primary);
   transform: scaleX(0); transform-origin: left; animation: sweep 700ms 500ms var(--ease-snap) forwards;
 }
-.lime-sweep { transition: color 200ms; animation: sweep-text 1ms 820ms forwards; }
+.lime-sweep { color: var(--primary-foreground) !important; }
 @keyframes sweep { to { transform: scaleX(1); } }
-@keyframes sweep-text { to { color: var(--primary-foreground); } }
 
 [data-reveal] { opacity: 0; transform: translateY(28px); transition: opacity 600ms var(--ease-snap), transform 600ms var(--ease-snap); }
 [data-reveal].is-visible, [data-reveal][data-visible="true"] { opacity: 1; transform: none; }

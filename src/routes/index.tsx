@@ -203,7 +203,7 @@ function LandingPage() {
                 <span className="blink size-1.5 bg-primary-foreground" />
                 7 dias grátis — sem cartão
               </span>
-              <h1 className="word-rise font-display text-5xl font-extrabold uppercase leading-[0.9] tracking-tighter sm:text-7xl lg:text-[5.5rem]">
+              <h1 className="word-rise font-display text-5xl font-extrabold uppercase !leading-[0.92] tracking-tighter sm:text-7xl lg:text-[5.5rem]">
                 <span>Sua</span> <span style={{ animationDelay: "80ms" }}>revenda</span>{" "}
                 <span style={{ animationDelay: "160ms" }} className="outline-text">IPTV</span>{" "}
                 <span style={{ animationDelay: "240ms" }}>cobrando</span>{" "}
