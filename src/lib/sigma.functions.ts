@@ -226,23 +226,7 @@ export const saveSigmaSettings = createServerFn({ method: "POST" })
 
     // 5. Salva no user_metadata apenas dados NÃO sensíveis
     // (metadata viaja dentro do token do usuário, então senha/token ficam de fora).
-    try {
-      await supabase.auth.updateUser({
-        data: {
-          sigma_settings: {
-            url,
-            server_name: finalServerName,
-            streaming_dns: finalStreamingDns,
-            username,
-            enabled,
-            auto_renew,
-            updated_at: new Date().toISOString(),
-          },
-        },
-      });
-    } catch (metaErr) {
-      console.error("Falha ao salvar no metadata:", metaErr);
-    }
+
 
     return { ok: true as const };
   });
@@ -430,23 +414,7 @@ export const testSigmaConnection = createServerFn({ method: "POST" })
         }
       } catch {}
 
-      try {
-        await supabase.auth.updateUser({
-          data: {
-            sigma_settings: {
-              ...saved,
-              url,
-              username: username || saved.username,
-              password: password || saved.password,
-              token: activeToken,
-              streaming_dns: detectedDns || saved.streaming_dns,
-              server_name: detectedServerName || saved.server_name,
-              enabled: true,
-              updated_at: new Date().toISOString(),
-            },
-          },
-        });
-      } catch {}
+
 
       return {
         ok: true as const,
@@ -603,17 +571,7 @@ export async function runSigmaSyncForUser(
           .eq("user_id", userId);
       } catch {}
 
-      try {
-        await supabase.auth.updateUser({
-          data: {
-            sigma_settings: {
-              ...saved,
-              ...(updateSettings.sigma_streaming_dns ? { streaming_dns: updateSettings.sigma_streaming_dns } : {}),
-              ...(updateSettings.sigma_server_name ? { server_name: updateSettings.sigma_server_name } : {}),
-            },
-          },
-        });
-      } catch {}
+
     }
 
     const { data: existing } = await supabase

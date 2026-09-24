@@ -95,6 +95,33 @@ export type Database = {
         }
         Relationships: []
       }
+      bot_conversations: {
+        Row: {
+          ai_history: Json
+          created_at: string
+          phone: string
+          session: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_history?: Json
+          created_at?: string
+          phone: string
+          session?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_history?: Json
+          created_at?: string
+          phone?: string
+          session?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bot_settings: {
         Row: {
           config: Json
@@ -843,6 +870,8 @@ export type Database = {
           sigma_enabled: boolean
           sigma_last_sync_at: string | null
           sigma_password: string | null
+          sigma_server_name: string | null
+          sigma_streaming_dns: string | null
           sigma_token: string | null
           sigma_url: string | null
           sigma_username: string | null
@@ -882,6 +911,8 @@ export type Database = {
           sigma_enabled?: boolean
           sigma_last_sync_at?: string | null
           sigma_password?: string | null
+          sigma_server_name?: string | null
+          sigma_streaming_dns?: string | null
           sigma_token?: string | null
           sigma_url?: string | null
           sigma_username?: string | null
@@ -921,6 +952,8 @@ export type Database = {
           sigma_enabled?: boolean
           sigma_last_sync_at?: string | null
           sigma_password?: string | null
+          sigma_server_name?: string | null
+          sigma_streaming_dns?: string | null
           sigma_token?: string | null
           sigma_url?: string | null
           sigma_username?: string | null
