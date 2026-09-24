@@ -82,7 +82,15 @@ export async function tenantEnsureInstance(userId: string, webhookUrl?: string) 
     body: JSON.stringify(body),
   });
   if (!created.ok && created.status !== 409) {
-    throw new Error(created.data?.message || created.data?.error || "Falha ao criar instância do WhatsApp.");
+    if (created.status === 0) {
+      throw new Error("O servidor do WhatsApp está fora do ar no momento. Tente de novo em alguns minutos ou avise o suporte.");
+    }
+    if (created.status === 401 || created.status === 403) {
+      throw new Error("O servidor do WhatsApp recusou o acesso. Avise o suporte.");
+    }
+    const msg = created.data?.response?.message ?? created.data?.message ?? created.data?.error;
+    const text = Array.isArray(msg) ? msg.join(" ") : typeof msg === "string" ? msg : "";
+    throw new Error(text ? `Falha ao criar a conexão do WhatsApp: ${text}` : "Falha ao criar a conexão do WhatsApp. Tente de novo em instantes.");
   }
   return { ok: true as const, created: created.ok, instance };
 }
