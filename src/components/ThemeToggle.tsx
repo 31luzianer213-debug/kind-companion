@@ -12,11 +12,11 @@ function apply(theme: Theme) {
 }
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
-    const stored = localStorage.getItem("tema") as Theme | null;
-    const initial: Theme = stored ?? "light";
+    const stored = localStorage.getItem("tema-v2") as Theme | null;
+    const initial: Theme = stored ?? "dark";
     setTheme(initial);
     apply(initial);
   }, []);
@@ -25,7 +25,7 @@ export function useTheme() {
     const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
     apply(next);
-    localStorage.setItem("tema", next);
+    localStorage.setItem("tema-v2", next);
   }
 
   return { theme, toggle };
