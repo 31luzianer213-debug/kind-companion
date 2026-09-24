@@ -3,6 +3,7 @@ import { IndicatorsPanel } from "@/components/panels/IndicatorsPanel";
 import { ActivitiesPanel } from "@/components/panels/ActivitiesPanel";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { EmptyView } from "@/components/ui/state-view";
 import { useServerFn } from "@tanstack/react-start";
 import { Suspense, lazy, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -177,12 +178,7 @@ function SectionTitle({
 }
 
 function EmptyState({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="rounded-md border border-dashed border-border/60 p-6 text-center">
-      <p className="text-xs font-semibold text-foreground">{title}</p>
-      <p className="mt-0.5 text-[11px] text-muted-foreground">{description}</p>
-    </div>
-  );
+  return <EmptyView title={title} description={description} />;
 }
 
 function PainelOverview() {
