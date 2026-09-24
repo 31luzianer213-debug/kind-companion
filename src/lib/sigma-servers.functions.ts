@@ -371,12 +371,10 @@ async function syncOneServer(supabase: any, userId: string, server: any) {
     const values: Record<string, unknown> = {
       panel_id: server.id,
       sigma_customer_id: customer.id,
-      sigma_username: customer.username,
       sigma_synced_at: now,
-      iptv_username: customer.username,
-      iptv_password: customer.password,
+      ...(customer.username ? { sigma_username: customer.username, iptv_username: customer.username } : {}),
+      ...(customer.password ? { iptv_password: customer.password } : {}),
       status,
-      ...(notes ? { notes } : {}),
       ...(customer.screens != null ? { screens: customer.screens } : {}),
       ...(customer.dueDate ? { next_due_date: customer.dueDate } : {}),
       ...(dueDay ? { due_day: dueDay } : {}),
@@ -391,6 +389,7 @@ async function syncOneServer(supabase: any, userId: string, server: any) {
         name: customer.name?.trim() || customer.username?.trim() || "Cliente Sigma",
         phone: (customer.phone ?? "").replace(/\D/g, ""),
         monthly_fee: 35,
+        ...(notes ? { notes } : {}),
         ...values,
       });
       if (!error) created++;

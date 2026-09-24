@@ -617,11 +617,9 @@ export async function runSigmaSyncForUser(
 
       const base: Record<string, any> = {
         sigma_customer_id: customer.id,
-        sigma_username: customer.username,
         sigma_synced_at: now,
-        iptv_username: customer.username,
-        iptv_password: customer.password,
-        ...(clientNotes ? { notes: clientNotes } : {}),
+        ...(customer.username ? { sigma_username: customer.username, iptv_username: customer.username } : {}),
+        ...(customer.password ? { iptv_password: customer.password } : {}),
         ...(customer.screens != null ? { screens: customer.screens } : {}),
         ...(customer.dueDate ? { next_due_date: customer.dueDate } : {}),
         ...(dueDay ? { due_day: dueDay } : {}),
@@ -645,6 +643,7 @@ export async function runSigmaSyncForUser(
           phone: clientPhone,
           status: localStatus,
           monthly_fee: 35.0,
+          ...(clientNotes ? { notes: clientNotes } : {}),
           ...base,
         });
 
