@@ -978,6 +978,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_logs: { Args: never; Returns: undefined }
       subscription_state: { Args: { p_user: string }; Returns: string }
     }
     Enums: {
