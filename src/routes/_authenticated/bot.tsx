@@ -148,16 +148,7 @@ function BotPage() {
       id: "1",
       sender: "bot",
       text:
-        "👋 Olá! Seja muito bem-vindo(a) à *{empresa}*! 🍿\n" +
-        "Eu sou o assistente virtual do *{servidor}* e estou aqui para te atender 24h por dia.\n\n" +
-        "Como posso te ajudar hoje? Digite o *número* da opção desejada:\n\n" +
-        "1️⃣ *Gerar Teste Grátis* (Acesso Imediato)\n" +
-        "2️⃣ *Renovar Minha Assinatura* (Pix Automático)\n" +
-        "3️⃣ *Comprar Novo Acesso / Planos*\n" +
-        "4️⃣ *Baixar Aplicativos* (Celular, TV Box, PC, iOS) 📲\n" +
-        "5️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n" +
-        "6️⃣ *Falar com Atendente Humano*\n\n" +
-        "_Responda com 1, 2, 3, 4, 5 ou 6._",
+        "Oi! Aqui é do atendimento da *{empresa}*. Posso te ajudar com teste grátis, renovação, planos, aplicativos ou reenviar seus dados de acesso. É só me contar o que você precisa.",
       time: "Agora",
     },
   ]);
@@ -367,16 +358,7 @@ function BotPage() {
             ? form.menuGreeting
                 .replace(/{empresa}/g, form.businessName)
                 .replace(/{servidor}/g, form.serverName)
-            : "👋 Olá! Seja muito bem-vindo(a) à *{empresa}*! 🍿\n" +
-              "Eu sou o assistente virtual do *{servidor}* e estou aqui para te atender 24h por dia.\n\n" +
-              "Como posso te ajudar hoje? Digite o *número* da opção desejada:\n\n" +
-              "1️⃣ *Gerar Teste Grátis* (Acesso Imediato)\n" +
-              "2️⃣ *Renovar Minha Assinatura* (Pix Automático)\n" +
-              "3️⃣ *Comprar Novo Acesso / Planos*\n" +
-              "4️⃣ *Baixar Aplicativos* (Celular, TV Box, PC, iOS) 📲\n" +
-              "5️⃣ *Reenviar Meus Dados de Acesso / Lista M3U*\n" +
-              "6️⃣ *Falar com Atendente Humano*\n\n" +
-              "_Responda com 1, 2, 3, 4, 5 ou 6._",
+            : "Oi! Aqui é do atendimento da *{empresa}*. Posso te ajudar com teste grátis, renovação, planos, aplicativos ou reenviar seus dados de acesso. É só me contar o que você precisa.",
         time: "Agora",
       },
     ]);
@@ -387,55 +369,35 @@ function BotPage() {
   return (
     <div className="space-y-6 max-w-7xl animate-in fade-in duration-300">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/60 pb-5">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <Bot className="size-6 text-primary" /> Robô WhatsApp & Auto-Atendimento
-            </h1>
-            <Badge
-              variant={form.enabled ? "success" : "secondary"}
-              className="text-xs py-0.5 px-2.5 gap-1.5"
-            >
-              <span className={`size-1.5 rounded-full ${form.enabled ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground"}`} />
-              {form.enabled ? "Robô 24h Ativo" : "Robô Pausado"}
+      <div className="flex flex-col gap-4 border-b border-border/60 pb-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={form.enabled ? "success" : "secondary"} className="gap-1.5 px-2.5 py-0.5 text-xs">
+              <span className={`size-1.5 rounded-full ${form.enabled ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
+              {form.enabled ? "Robô ativo 24h" : "Robô pausado"}
             </Badge>
-            <Badge
-              variant={whatsappConnected ? "success" : "destructive"}
-              className="text-xs py-0.5 px-2.5 gap-1.5"
-            >
-              <span className={`size-1.5 rounded-full ${whatsappConnected ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`} />
+            <Badge variant={whatsappConnected ? "success" : "destructive"} className="gap-1.5 px-2.5 py-0.5 text-xs">
+              <span className={`size-1.5 rounded-full ${whatsappConnected ? "bg-success animate-pulse" : "bg-destructive"}`} />
               {whatsappConnected ? "WhatsApp conectado" : "WhatsApp desconectado"}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Personalize os preços dos planos, configure o servidor IPTV e ative o Pix Copia e Cola automático do Mercado Pago para renovação e compras.
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground">
+            <Bot className="size-6 shrink-0 text-primary" /> Atendimento automático
+          </h1>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            Configure como o robô conversa, vende planos, libera testes e renova acessos no WhatsApp e no Telegram.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3 bg-muted/40 p-2.5 rounded-md border border-border/60">
-            <span className="text-xs font-semibold text-foreground">Status do Robô:</span>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={form.enabled}
-                onCheckedChange={handleToggleEnabled}
-                id="bot-toggle"
-              />
-              <Label htmlFor="bot-toggle" className="text-xs cursor-pointer font-medium">
-                {form.enabled ? "Ligado" : "Desligado"}
-              </Label>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            onClick={() => handleSave()}
-            disabled={saving}
-            className="rounded-md gap-2 font-semibold px-6 shadow-sm"
-          >
-            <Sparkles className="size-4" />
-            {saving ? "Salvando..." : "Salvar Alterações"}
+        <div className="flex shrink-0 flex-wrap items-center gap-3">
+          <label htmlFor="bot-toggle" className="flex cursor-pointer items-center gap-3 rounded-md border border-border/60 bg-muted/40 px-3 py-2">
+            <span className="text-xs font-semibold text-foreground">Robô</span>
+            <Switch checked={form.enabled} onCheckedChange={handleToggleEnabled} id="bot-toggle" />
+            <span className="w-16 text-xs font-medium text-muted-foreground">{form.enabled ? "Ligado" : "Desligado"}</span>
+          </label>
+          <Button type="button" onClick={() => handleSave()} disabled={saving} className="gap-2 px-5 font-semibold">
+            <Check className="size-4" />
+            {saving ? "Salvando..." : "Salvar alterações"}
           </Button>
         </div>
       </div>
