@@ -34,7 +34,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { AdminOverviewCard } from "@/components/admin/AdminOverviewCard";
 import { AdminConnectionsCard } from "@/components/admin/AdminConnectionsCard";
 import { AdminPlansCard } from "@/components/admin/AdminPlansCard";
+import { AdminResellerDetails } from "@/components/admin/AdminResellerDetails";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
+  bulkAdminResellers,
   createAdminReseller,
   deleteAdminReseller,
   getAdminSettings,
@@ -361,6 +364,10 @@ function SubscriptionsCard() {
   const deleteFn = useServerFn(deleteAdminReseller);
   const resetFn = useServerFn(resetAdminResellerPassword);
   const trialFn = useServerFn(startAdminTrial);
+  const bulkFn = useServerFn(bulkAdminResellers);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [detailsId, setDetailsId] = useState<string | null>(null);
   const [days, setDays] = useState("30");
   const [term, setTerm] = useState("");
   const [newEmail, setNewEmail] = useState("");
@@ -434,7 +441,34 @@ function SubscriptionsCard() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const busy = update.isPending || remove.isPending || trial.isPending || resetPassword.isPending;
+  const bulk = useMutation({
+    mutationFn: async (action: "delete" | "grant" | "block" | "trial" | "suspend" | "unsuspend") => {
+      const res = await bulkFn({ data: { userIds: [...selected], action, days: Number(days) || 30 } });
+      if (!res.done && res.error) throw new Error(res.error);
+      return res;
+    },
+    onSuccess: (res) => {
+      if (res.failed) toast.warning(`${res.done} feito(s), ${res.failed} com falha.`);
+      else toast.success(`${res.done} conta(s) atualizada(s).`);
+      setSelected(new Set());
+      refresh();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  function runBulk(action: "delete" | "grant" | "block" | "trial" | "suspend" | "unsuspend") {
+    const n = selected.size;
+    const msgs: Record<string, string> = {
+      delete: `Excluir ${n} conta(s)? Todos os clientes, cobranças e configurações delas serão apagados.`,
+      block: `Bloquear a assinatura de ${n} conta(s)?`,
+      suspend: `Suspender o login de ${n} conta(s)? Elas não conseguirão entrar até você liberar.`,
+    };
+    if (msgs[action] && !window.confirm(msgs[action])) return;
+    if (action === "delete" && window.prompt(`Para confirmar, digite EXCLUIR`) !== "EXCLUIR") return;
+    bulk.mutate(action);
+  }
+
+  const busy = bulk.isPending || update.isPending || remove.isPending || trial.isPending || resetPassword.isPending;
   const rows = data?.ok && Array.isArray(data.rows) ? data.rows : [];
 
   const stats = useMemo(() => {
@@ -446,9 +480,16 @@ function SubscriptionsCard() {
 
   const filtered = useMemo(() => {
     const q = term.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => String(r.email || "").toLowerCase().includes(q) || String(r.status || "").toLowerCase().includes(q));
-  }, [rows, term]);
+    const byStatus = rows.filter((r) => {
+      if (statusFilter === "all") return true;
+      if (statusFilter === "trialing") return r.status === "trialing" || r.status === "trial";
+      if (statusFilter === "blocked") return r.status === "blocked" || r.status === "canceled" || r.banned;
+      if (statusFilter === "no_clients") return !r.clients;
+      return r.status === statusFilter;
+    });
+    if (!q) return byStatus;
+    return byStatus.filter((r) => String(r.email || "").toLowerCase().includes(q) || String(r.status || "").toLowerCase().includes(q));
+  }, [rows, term, statusFilter]);
 
   const statusLabel: Record<string, string> = {
     active: "Ativa",
@@ -553,6 +594,45 @@ function SubscriptionsCard() {
             </div>
           </div>
 
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              ["all", "Todas"],
+              ["active", "Ativas"],
+              ["trialing", "Em teste"],
+              ["blocked", "Bloqueadas"],
+              ["no_clients", "Sem clientes"],
+            ].map(([value, label]) => (
+              <Button key={value} size="sm" variant={statusFilter === value ? "default" : "outline"} className="h-7 text-xs" onClick={() => setStatusFilter(value)}>
+                {label}
+              </Button>
+            ))}
+          </div>
+
+          {filtered.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-muted/30 p-2">
+              <label className="flex items-center gap-2 px-1 text-xs font-semibold">
+                <Checkbox
+                  checked={filtered.length > 0 && filtered.every((r) => selected.has(r.user_id))}
+                  onCheckedChange={(v) => setSelected(v ? new Set(filtered.map((r) => r.user_id)) : new Set())}
+                  aria-label="Selecionar todos"
+                />
+                {selected.size ? `${selected.size} selecionada(s)` : "Selecionar todas"}
+              </label>
+              {selected.size > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={() => runBulk("grant")}>Liberar {Number(days) || 30} dias</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={() => runBulk("trial")}>Teste 7 dias</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={() => runBulk("unsuspend")}>Liberar login</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs text-warning" disabled={busy} onClick={() => runBulk("suspend")}>Suspender login</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs text-destructive" disabled={busy} onClick={() => runBulk("block")}>Bloquear assinatura</Button>
+                  <Button size="sm" variant="destructive" className="h-7 gap-1 text-xs" disabled={busy} onClick={() => runBulk("delete")}>
+                    {bulk.isPending ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />} Excluir selecionadas
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
           {isLoading ? (
             <div className="grid min-h-[12vh] place-items-center">
               <Loader2 className="size-5 animate-spin text-primary" />
@@ -569,6 +649,18 @@ function SubscriptionsCard() {
                 const isBlocked = row.status === "blocked" || row.status === "canceled";
                 return (
                   <div key={row.user_id} className="flex flex-wrap items-center justify-between gap-3 p-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                    <Checkbox
+                      className="mt-1"
+                      checked={selected.has(row.user_id)}
+                      onCheckedChange={(v) => {
+                        const next = new Set(selected);
+                        if (v) next.add(row.user_id);
+                        else next.delete(row.user_id);
+                        setSelected(next);
+                      }}
+                      aria-label={`Selecionar ${row.email}`}
+                    />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="truncate text-sm font-semibold text-foreground">{row.email}</p>
@@ -582,9 +674,17 @@ function SubscriptionsCard() {
                       <p className="text-[11px] text-muted-foreground">
                         {row.clients} clientes
                         {until ? ` · até ${new Date(until).toLocaleDateString("pt-BR")}` : ""}
+                        {` · ${row.panels} servidor(es)`}
+                        {` · WhatsApp ${row.whatsapp ? "conectado" : "desconectado"}`}
+                        {row.last_sign_in_at ? ` · último acesso ${new Date(row.last_sign_in_at).toLocaleDateString("pt-BR")}` : " · nunca entrou"}
+                        {row.banned ? " · login suspenso" : ""}
                       </p>
                     </div>
+                    </div>
                     <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="default" className="gap-1.5" onClick={() => setDetailsId(row.user_id)}>
+                        <Eye className="size-3.5" /> Ver dados
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"
@@ -644,6 +744,7 @@ function SubscriptionsCard() {
           )}
         </CardContent>
       </Card>
+      <AdminResellerDetails userId={detailsId} onClose={() => setDetailsId(null)} />
     </div>
   );
 }
