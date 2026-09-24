@@ -58,9 +58,9 @@ export async function fetchConnectionState(instanceName?: string): Promise<{
   state: ConnectionState;
   raw: any;
 }> {
-  const { isEvolutionEnabled, evoState } = await import("./evolution-api.server");
+  const { isEvolutionEnabled, evoState, withInstance } = await import("./evolution-api.server");
   if (isEvolutionEnabled()) {
-    const res = await evoState();
+    const res = await withInstance(instanceName, () => evoState());
     return { state: res.state as ConnectionState, raw: { ...res.raw, number: res.number, provider: "evolution" } };
   }
   try {
@@ -80,9 +80,9 @@ export async function ensureAndConnectInstance(
   mode: "qr" | "pairing" = "qr",
   phone?: string,
 ): Promise<ConnectResult> {
-  const { isEvolutionEnabled, evoConnect } = await import("./evolution-api.server");
+  const { isEvolutionEnabled, evoConnect, withInstance } = await import("./evolution-api.server");
   if (isEvolutionEnabled()) {
-    const res = await evoConnect(botWebhookUrl());
+    const res = await withInstance(instanceName, () => evoConnect(botWebhookUrl()));
     return {
       instance: instanceName || DEFAULT_INSTANCE_NAME,
       created: true,
@@ -120,10 +120,10 @@ export async function ensureAndConnectInstance(
   };
 }
 
-export async function ensureWebhookConfigured(_instanceName: string, webhookUrl?: string) {
-  const { isEvolutionEnabled, evoSetWebhook } = await import("./evolution-api.server");
+export async function ensureWebhookConfigured(instanceName: string, webhookUrl?: string) {
+  const { isEvolutionEnabled, evoSetWebhook, withInstance } = await import("./evolution-api.server");
   if (isEvolutionEnabled()) {
-    return await evoSetWebhook(webhookUrl || botWebhookUrl());
+    return await withInstance(instanceName, () => evoSetWebhook(webhookUrl || botWebhookUrl()));
   }
   return { ok: true };
 }
@@ -157,7 +157,7 @@ export async function sendWhatsAppText(to: string, text: string, instance?: stri
 
   const evo = await import("./evolution-api.server");
   if (evo.isEvolutionEnabled()) {
-    return await evo.evoSendText(normalized, text);
+    return await evo.withInstance(instance, () => evo.evoSendText(normalized, text));
   }
 
   try {
@@ -205,6 +205,7 @@ export async function sendWhatsAppButtons(
 
   const evoMod = await import("./evolution-api.server");
   if (evoMod.isEvolutionEnabled()) {
+    return await evoMod.withInstance(instance, async () => {
     if (options.media?.base64) {
       await evoMod.evoSendMedia(normalized, {
         base64: options.media.base64,
@@ -218,6 +219,7 @@ export async function sendWhatsAppButtons(
       description: options.description,
       footer: options.footer || "",
       buttons: options.buttons,
+    });
     });
   }
 
@@ -294,7 +296,7 @@ export async function sendWhatsAppList(
 
   const evoList = await import("./evolution-api.server");
   if (evoList.isEvolutionEnabled()) {
-    return await evoList.evoSendList(normalized, options);
+    return await evoList.withInstance(instance, () => evoList.evoSendList(normalized, options));
   }
 
   try {
@@ -338,7 +340,7 @@ export async function sendWhatsAppMedia(
 
   const evoMedia = await import("./evolution-api.server");
   if (evoMedia.isEvolutionEnabled()) {
-    return await evoMedia.evoSendMedia(normalized, mediaOptions);
+    return await evoMedia.withInstance(instance, () => evoMedia.evoSendMedia(normalized, mediaOptions));
   }
 
   try {

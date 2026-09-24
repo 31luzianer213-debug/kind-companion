@@ -170,6 +170,15 @@ export async function tenantDeleteInstance(userId: string) {
   return { ok: res.ok || res.status === 404 };
 }
 
+/** Apaga uma conexão pelo nome (uso administrativo para remover sobras). */
+export async function tenantDeleteInstanceByName(instance: string) {
+  const name = String(instance || "").trim();
+  if (!name) return { ok: false };
+  await request(`/instance/logout/${encodeURIComponent(name)}`, { method: "DELETE" }, 10000);
+  const res = await request(`/instance/delete/${encodeURIComponent(name)}`, { method: "DELETE" }, 10000);
+  return { ok: res.ok || res.status === 404 };
+}
+
 function normalizeDestination(raw: string) {
   const value = String(raw || "").trim();
   if (value.endsWith("@s.whatsapp.net")) return value.replace(/@.*$/, "").replace(/\D/g, "");
