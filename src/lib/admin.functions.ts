@@ -441,7 +441,10 @@ export type AdminConnectionRow = {
   number: string | null;
   last_connected_at: string | null;
   last_error: string | null;
+  exists: boolean;
 };
+
+export type AdminExtraInstance = { instance: string; state: string; number: string | null };
 
 /** Mostra a conexão de WhatsApp de cada revendedor, comparando banco e Evolution. */
 export const listAdminConnections = createServerFn({ method: "GET" })
@@ -449,7 +452,7 @@ export const listAdminConnections = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     if (!(await assertAdmin(context.claims))) {
-      return { ok: false as const, error: "Acesso restrito ao administrador do sistema.", rows: [] as AdminConnectionRow[] };
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema.", rows: [] as AdminConnectionRow[], extras: [] as AdminExtraInstance[], total: 0 };
     }
     const { isTenantEvolutionEnabled, tenantInstanceName, tenantListInstances } = await import("./evolution-tenant.server");
 
@@ -479,10 +482,46 @@ export const listAdminConnections = createServerFn({ method: "GET" })
         number: found?.number ?? saved?.connected_number ?? null,
         last_connected_at: saved?.last_connected_at ?? null,
         last_error: saved?.last_connection_error ?? null,
+        exists: Boolean(found),
       };
     });
     rows.sort((a, b) => a.email.localeCompare(b.email));
-    return { ok: true as const, rows };
+    const accountInstances = new Set(rows.map((r) => r.instance).filter(Boolean));
+    const extras: AdminExtraInstance[] = live
+      .filter((i: any) => i.instance && !accountInstances.has(i.instance))
+      .map((i: any) => ({ instance: i.instance, state: i.state, number: i.number }));
+    return { ok: true as const, rows, extras, total: live.length };
+  });
+
+/** Apaga conexões que não pertencem a nenhuma conta (regra: 1 conexão por conta). */
+export const adminDeleteExtraInstances = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { names: string[] }) => ({
+    names: Array.isArray(input?.names) ? input.names.map(String).slice(0, 200) : [],
+  }))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await assertAdmin(context.claims))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema.", deleted: 0 };
+    }
+    const { isTenantEvolutionEnabled, tenantInstanceName, tenantDeleteInstanceByName } = await import("./evolution-tenant.server");
+    if (!isTenantEvolutionEnabled()) {
+      return { ok: false as const, error: "A conexão de WhatsApp ainda não está configurada no servidor.", deleted: 0 };
+    }
+    // Nunca apaga a conexão de uma conta existente por aqui.
+    const users = await (supabaseAdmin as any).auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const protectedNames = new Set(
+      (users?.data?.users ?? []).map((u: any) => {
+        try { return tenantInstanceName(u.id); } catch { return ""; }
+      }),
+    );
+    let deleted = 0;
+    for (const name of data.names) {
+      if (!name || protectedNames.has(name)) continue;
+      const res = await tenantDeleteInstanceByName(name);
+      if (res.ok) deleted++;
+    }
+    return { ok: true as const, deleted };
   });
 
 /** Desconecta ou recria a sessão de WhatsApp de um revendedor. */
