@@ -39,6 +39,12 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -75,6 +81,12 @@
   --chart-3: oklch(0.72 0.15 75);
   --chart-4: oklch(0.6 0.17 350);
   --chart-5: oklch(0.68 0.13 165);
+  --success: oklch(0.6 0.15 155);
+  --success-foreground: #ffffff;
+  --warning: oklch(0.72 0.16 70);
+  --warning-foreground: oklch(0.25 0.05 70);
+  --info: oklch(0.6 0.13 225);
+  --info-foreground: #ffffff;
   --sidebar: oklch(0.995 0.003 265);
   --sidebar-foreground: oklch(0.21 0.03 264);
   --sidebar-primary: oklch(0.52 0.19 264);
@@ -110,6 +122,12 @@
   --chart-3: oklch(0.79 0.14 78);
   --chart-4: oklch(0.7 0.16 350);
   --chart-5: oklch(0.76 0.12 165);
+  --success: oklch(0.72 0.15 155);
+  --success-foreground: oklch(0.18 0.04 155);
+  --warning: oklch(0.8 0.15 75);
+  --warning-foreground: oklch(0.2 0.05 70);
+  --info: oklch(0.74 0.12 225);
+  --info-foreground: oklch(0.18 0.04 225);
   --sidebar: oklch(0.185 0.02 265);
   --sidebar-foreground: oklch(0.96 0.005 265);
   --sidebar-primary: oklch(0.68 0.16 264);
@@ -193,7 +211,7 @@
 }
 
 @utility text-gradient {
-  background-image: linear-gradient(180deg, #ffffff 40%, #a1a1aa 100%);
+  background-image: linear-gradient(180deg, var(--foreground) 40%, var(--muted-foreground) 100%);
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
@@ -215,9 +233,9 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: color-mix(in oklch, var(--primary) 10%, transparent);
+  color: var(--primary);
+  border: 1px solid color-mix(in oklch, var(--primary) 22%, transparent);
   transition: all 200ms ease;
 }
 
@@ -299,33 +317,33 @@
 }
 
 @utility badge-success {
-  background-color: rgba(16, 185, 129, 0.12);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.28);
+  background-color: color-mix(in oklch, var(--success) 12%, transparent);
+  color: color-mix(in oklch, var(--success) 85%, var(--foreground));
+  border: 1px solid color-mix(in oklch, var(--success) 30%, transparent);
 }
 
 @utility badge-warning {
-  background-color: rgba(245, 158, 11, 0.12);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.28);
+  background-color: color-mix(in oklch, var(--warning) 12%, transparent);
+  color: color-mix(in oklch, var(--warning) 85%, var(--foreground));
+  border: 1px solid color-mix(in oklch, var(--warning) 30%, transparent);
 }
 
 @utility badge-danger {
-  background-color: rgba(244, 63, 94, 0.12);
-  color: #f43f5e;
-  border: 1px solid rgba(244, 63, 94, 0.28);
+  background-color: color-mix(in oklch, var(--destructive) 12%, transparent);
+  color: color-mix(in oklch, var(--destructive) 85%, var(--foreground));
+  border: 1px solid color-mix(in oklch, var(--destructive) 30%, transparent);
 }
 
 @utility badge-info {
-  background-color: rgba(20, 184, 166, 0.12);
-  color: #14b8a6;
-  border: 1px solid rgba(20, 184, 166, 0.28);
+  background-color: color-mix(in oklch, var(--info) 12%, transparent);
+  color: color-mix(in oklch, var(--info) 85%, var(--foreground));
+  border: 1px solid color-mix(in oklch, var(--info) 30%, transparent);
 }
 
 @utility badge-purple {
-  background-color: rgba(139, 92, 246, 0.12);
-  color: #a855f7;
-  border: 1px solid rgba(139, 92, 246, 0.28);
+  background-color: color-mix(in oklch, var(--chart-4) 12%, transparent);
+  color: color-mix(in oklch, var(--chart-4) 85%, var(--foreground));
+  border: 1px solid color-mix(in oklch, var(--chart-4) 30%, transparent);
 }
 
 @media (max-width: 639px) {
@@ -447,4 +465,50 @@
     font-family: "Space Grotesk", "DM Sans", system-ui, sans-serif;
     letter-spacing: -0.015em;
   }
+}
+
+/* ---- Sistema de design: escala tipográfica, espaçamento e estados ---- */
+:root {
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px;
+  --text-caption: 0.75rem; --text-body: 0.9375rem;
+  --text-h3: 1.125rem; --text-h2: 1.375rem; --text-h1: clamp(1.625rem, 1.2rem + 1.4vw, 2.125rem);
+}
+
+@layer base {
+  h1 { font-size: var(--text-h1); font-weight: 700; line-height: 1.15; }
+  h2 { font-size: var(--text-h2); font-weight: 650; line-height: 1.25; }
+  h3 { font-size: var(--text-h3); font-weight: 600; line-height: 1.35; }
+  body { font-size: var(--text-body); line-height: 1.6; }
+  small, .text-caption { font-size: var(--text-caption); line-height: 1.45; }
+
+  button:not(:disabled), [role="button"], a[href], [role="tab"], summary, label[for] { cursor: pointer; }
+
+  button:disabled, [aria-disabled="true"], input:disabled, select:disabled, textarea:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  input:hover:not(:disabled):not(:focus), textarea:hover:not(:disabled):not(:focus), select:hover:not(:disabled) {
+    border-color: color-mix(in oklch, var(--primary) 35%, var(--input));
+  }
+
+  input:focus-visible, textarea:focus-visible, select:focus-visible {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 18%, transparent);
+    outline: none;
+  }
+
+  main a:not([class]) {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: color-mix(in oklch, var(--primary) 40%, transparent);
+  }
+  main a:not([class]):hover { text-decoration-color: var(--primary); }
+}
+
+@utility section-stack {
+  display: flex; flex-direction: column; gap: var(--space-6);
+  @media (min-width: 1024px) { gap: var(--space-8); }
 }
