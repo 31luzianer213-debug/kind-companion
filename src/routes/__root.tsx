@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
-  useRouterState,
   Link,
   createRootRouteWithContext,
   useRouter,
@@ -144,17 +143,11 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
-function RouteBar() {
-  const loading = useRouterState({ select: (s) => s.status === "pending" });
-  return loading ? <div className="route-bar" aria-hidden /> : null;
-}
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RouteBar />
       <Outlet />
       <PwaInstaller />
       <Toaster position="top-right" richColors />
