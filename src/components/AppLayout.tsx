@@ -1,11 +1,12 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Menu, X } from "lucide-react";
+import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { DesktopNavigation, MobileBottomNavigation, MobileDrawer } from "@/components/layout/AppNavigation";
 import { MobileClientDelete } from "@/components/clients/MobileClientDelete";
+import { pageDescriptions } from "@/components/layout/navigation";
 import { SigmaLogo } from "@/components/SigmaLogo";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { Button } from "@/components/ui/button";
@@ -24,9 +25,9 @@ const mobilePageTitles: Record<string, string> = {
   "/cobrancas": "Cobranças",
   "/sigma": "Sigma",
   "/whatsapp": "WhatsApp",
-  "/bot": "Robô WhatsApp",
+  "/bot": "Atendimento automático",
   "/configuracoes": "Configurações",
-  "/cobranca-automatica": "Régua de cobrança",
+  "/cobranca-automatica": "Cobrança automática",
   "/mensagens": "Mensagens",
   "/pagamentos": "Recebimentos",
   "/assinatura": "Assinatura",
@@ -173,16 +174,6 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
         </div>
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         <GlobalSearch enableShortcut={false} />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setDrawerOpen(true)}
-          aria-label="Abrir menu principal"
-          aria-expanded={drawerOpen}
-          className="size-10 rounded-lg border border-border bg-card"
-        >
-          <Menu className="size-5" />
-        </Button>
         </div>
       </header>
 
@@ -231,6 +222,9 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
           key={pathname}
           className="page-enter mobile-app-content relative mx-auto min-h-full w-full max-w-[var(--ui-page-max)] px-3 pb-28 pt-3 sm:px-5 sm:pt-5 md:px-6 md:pb-12 md:pt-6 lg:px-8 lg:pt-6 xl:px-10"
         >
+          {pageDescriptions[pathname] ? (
+            <p className="mb-3 text-xs text-muted-foreground sm:mb-4 sm:text-sm">{pageDescriptions[pathname]}</p>
+          ) : null}
           {children}
         </div>
       </main>

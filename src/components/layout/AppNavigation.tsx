@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, LogOut, Menu } from "lucide-react";
+import { ChevronDown, ChevronRight, LogOut, Menu } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SigmaLogo } from "@/components/SigmaLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -74,32 +75,57 @@ export function AppBrand({ compact = false }: { compact?: boolean }) {
   );
 }
 
+function DesktopGroup({ group, index, props }: { group: (typeof navigationGroups)[number]; index: number; props: AppNavigationProps }) {
+  const items = group.items.filter((item) => !item.adminOnly || props.isAdmin);
+  const hasActive = items.some((item) => isActive(props.pathname, item.to));
+  const [open, setOpen] = useState(index === 0 || hasActive);
+  const expanded = open || hasActive;
+  return (
+    <section aria-labelledby={`nav-${index}`}>
+      {index === 0 ? (
+        <p id={`nav-${index}`} className="mb-1.5 px-3 text-[10px] font-extrabold uppercase tracking-[0.16em] text-muted-foreground/70">{group.title}</p>
+      ) : (
+        <button
+          id={`nav-${index}`}
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={expanded}
+          className="mb-1.5 flex w-full items-center justify-between rounded-md px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-muted-foreground/70 hover:text-foreground"
+        >
+          {group.title}
+          <ChevronDown className={cn("size-3.5 transition-transform", expanded ? "rotate-0" : "-rotate-90")} />
+        </button>
+      )}
+      {expanded && (
+        <div className="space-y-1">
+          {items.map((item) => {
+            const active = isActive(props.pathname, item.to);
+            const Icon = item.icon;
+            return (
+              <Link key={item.to} to={item.to} aria-current={active ? "page" : undefined} className={cn(
+                "group relative flex min-h-11 items-center gap-3 rounded-lg border border-transparent px-3 text-sm font-semibold transition-all",
+                active ? "border-primary/15 bg-primary/10 text-primary" : "text-muted-foreground hover:border-border hover:bg-accent/60 hover:text-foreground",
+              )}>
+                <span className={cn("absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary transition-opacity", active ? "opacity-100" : "opacity-0")} />
+                <Icon className="size-[18px] shrink-0" />
+                <span className="flex-1 truncate">{item.label}</span>
+                <Badge item={item} counts={props.counts} connected={props.isWhatsAppConnected} active={active} />
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function DesktopNavigation(props: AppNavigationProps) {
   return (
     <>
       <div className="border-b border-border px-2 pb-5 pt-1"><AppBrand /></div>
-      <nav className="mt-4 flex flex-1 flex-col gap-5 overflow-y-auto pr-1 subtle-scrollbar" aria-label="Navegação principal">
-        {navigationGroups.map((group) => (
-          <section key={group.title} aria-labelledby={`nav-${group.title}`}>
-            <p id={`nav-${group.title}`} className="mb-1.5 px-3 text-[9px] font-extrabold uppercase tracking-[0.16em] text-muted-foreground/65">{group.title}</p>
-            <div className="space-y-1">
-              {group.items.filter((item) => !item.adminOnly || props.isAdmin).map((item) => {
-                const active = isActive(props.pathname, item.to);
-                const Icon = item.icon;
-                return (
-                  <Link key={item.to} to={item.to} aria-current={active ? "page" : undefined} className={cn(
-                    "group relative flex min-h-11 items-center gap-3 rounded-lg border border-transparent px-3 text-sm font-semibold transition-all",
-                    active ? "border-primary/15 bg-primary/10 text-primary" : "text-muted-foreground hover:border-border hover:bg-accent/60 hover:text-foreground",
-                  )}>
-                    <span className={cn("absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary transition-opacity", active ? "opacity-100" : "opacity-0")} />
-                    <Icon className="size-[18px] shrink-0" />
-                    <span className="flex-1 truncate">{item.label}</span>
-                    <Badge item={item} counts={props.counts} connected={props.isWhatsAppConnected} active={active} />
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
+      <nav className="mt-4 flex flex-1 flex-col gap-4 overflow-y-auto pr-1 subtle-scrollbar" aria-label="Navegação principal">
+        {navigationGroups.map((group, index) => (
+          <DesktopGroup key={group.title} group={group} index={index} props={props} />
         ))}
       </nav>
       <AccountFooter {...props} />
@@ -110,34 +136,37 @@ export function DesktopNavigation(props: AppNavigationProps) {
 export function MobileDrawer(props: AppNavigationProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <nav className="grid flex-1 grid-cols-2 gap-2 overflow-y-auto overscroll-contain py-3 subtle-scrollbar" aria-label="Menu mobile">
-        {navigationGroups.flatMap((group) => group.items).filter((item) => !item.adminOnly || props.isAdmin).map((item) => {
-          const active = isActive(props.pathname, item.to);
-          const Icon = item.icon;
+      <nav className="flex-1 space-y-4 overflow-y-auto overscroll-contain py-3 subtle-scrollbar" aria-label="Menu mobile">
+        {navigationGroups.map((group) => {
+          const items = group.items.filter((item) => !item.adminOnly || props.isAdmin);
           return (
-            <Link
-              key={item.to}
-              to={item.to}
-              onClick={props.onNavigate}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex min-h-[78px] min-w-0 flex-col items-start justify-between rounded-lg border p-3 text-left transition-all",
-                active
-                  ? "border-primary/30 bg-primary/12 text-primary"
-                  : "border-border/55 bg-card/65 text-foreground active:scale-[.98] active:bg-accent",
-              )}
-            >
-              <div className="flex w-full items-center justify-between">
-                 <span className={cn("grid size-9 place-items-center rounded-lg", active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}> 
-                  <Icon className="size-[18px]" />
-                </span>
-                <Badge item={item} counts={props.counts} connected={props.isWhatsAppConnected} active={active} />
+            <section key={group.title}>
+              <p className="mb-2 px-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-muted-foreground/70">{group.title}</p>
+              <div className="grid grid-cols-2 gap-2">
+                {items.map((item) => {
+                  const active = isActive(props.pathname, item.to);
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      onClick={props.onNavigate}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "flex min-h-[52px] min-w-0 items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
+                        active ? "border-primary/30 bg-primary/12 text-primary" : "border-border/55 bg-card/65 text-foreground active:scale-[.98] active:bg-accent",
+                      )}
+                    >
+                      <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg", active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                        <Icon className="size-4" />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-xs font-bold">{item.label}</span>
+                      <Badge item={item} counts={props.counts} connected={props.isWhatsAppConnected} active={active} />
+                    </Link>
+                  );
+                })}
               </div>
-              <div className="flex w-full items-center justify-between gap-2">
-                <span className="truncate text-xs font-bold">{item.label}</span>
-                <ChevronRight className="size-3.5 opacity-35" />
-              </div>
-            </Link>
+            </section>
           );
         })}
       </nav>
