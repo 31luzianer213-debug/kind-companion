@@ -157,21 +157,6 @@ export const savePaymentSettings = createServerFn({ method: "POST" })
       }
     }
 
-    // 2. Salva no user_metadata apenas o que NÃO é segredo
-    // (metadata viaja dentro do token de sessão do usuário).
-    try {
-      const { mercadopago_token, asaas_token, ...safePayload } = payload;
-      await supabase.auth.updateUser({
-        data: {
-          payment_settings: {
-            ...safePayload,
-            updated_at: new Date().toISOString(),
-          },
-        },
-      });
-    } catch (metaErr) {
-      console.error("Erro ao salvar no metadata:", metaErr);
-    }
 
     return { ok: true as const, error: null };
   });
