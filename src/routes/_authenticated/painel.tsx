@@ -388,7 +388,8 @@ function PainelOverview() {
   const isSigmaOk = sigmaServers.some((server) => server.enabled);
   const isWaOk = waStatus?.state === "open";
   const isPixOk = Boolean(data?.settings?.pix_key || data?.settings?.asaas_token || data?.settings?.mercadopago_token);
-  const completedSteps = (isSigmaOk ? 1 : 0) + (isWaOk ? 1 : 0) + (isPixOk ? 1 : 0);
+  const hasClients = clients.length > 0;
+  const completedSteps = (isSigmaOk ? 1 : 0) + (isWaOk ? 1 : 0) + (isPixOk ? 1 : 0) + (hasClients ? 1 : 0);
 
   return (
     <div className="animate-in fade-in space-y-6 duration-300">
@@ -524,7 +525,7 @@ function PainelOverview() {
         </section>
       )}
 
-      {showOnboarding && completedSteps < 3 && (
+      {showOnboarding && completedSteps < 4 && (
         <section className="relative overflow-hidden rounded-md border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card p-4 shadow-sm sm:p-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2.5">
@@ -533,12 +534,12 @@ function PainelOverview() {
               </span>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-sm font-bold text-foreground">Ativação da sua operação</h2>
+                  <h2 className="text-sm font-bold text-foreground">Primeiros passos</h2>
                   <span className="rounded-md border border-primary/30 bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
-                    {completedSteps} de 3 prontos
+                    {completedSteps} de 4 prontos
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground">Conclua as 3 etapas para deixar tudo no piloto automático.</p>
+                <p className="text-xs text-muted-foreground">Siga na ordem. Cada passo fica marcado quando estiver pronto.</p>
               </div>
             </div>
             <Button
@@ -554,39 +555,50 @@ function PainelOverview() {
             </Button>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <StepCard
-              icon={Server}
-              step={1}
-              title="Servidor Sigma"
-              done={isSigmaOk}
-              doneLabel="Conectado"
-              todoLabel="Pendente"
-              description={isSigmaOk ? "Sincronização de acessos e renovações ativa." : "Informe a URL e o token para sincronizar acessos."}
-              to="/sigma"
-              cta={isSigmaOk ? "Ver configurações" : "Conectar Sigma"}
-            />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <StepCard
               icon={MessageSquare}
-              step={2}
-              title="WhatsApp"
+              step={1}
+              title="Conecte o WhatsApp"
               done={isWaOk}
               doneLabel="Online"
-              todoLabel="Desconectado"
-              description={isWaOk ? "Disparos automáticos de cobrança ativos." : "Escaneie o QR Code para enviar mensagens automáticas."}
+              todoLabel="Falta"
+              description={isWaOk ? "Pronto para enviar cobranças e responder clientes." : "Escaneie o QR Code com o celular da sua revenda."}
               to="/whatsapp"
-              cta={isWaOk ? "Ver conexão" : "Escanear QR Code"}
+              cta={isWaOk ? "Ver conexão" : "Conectar WhatsApp"}
+            />
+            <StepCard
+              icon={Server}
+              step={2}
+              title="Ligue seu painel Sigma"
+              done={isSigmaOk}
+              doneLabel="Conectado"
+              todoLabel="Falta"
+              description={isSigmaOk ? "Acessos e renovações sincronizados." : "Informe o endereço e o token do seu painel."}
+              to="/sigma"
+              cta={isSigmaOk ? "Ver painel" : "Ligar Sigma"}
+            />
+            <StepCard
+              icon={Users}
+              step={3}
+              title="Cadastre um cliente"
+              done={hasClients}
+              doneLabel="Feito"
+              todoLabel="Falta"
+              description={hasClients ? `${clients.length} cliente(s) cadastrado(s).` : "Adicione seu primeiro cliente ou importe do Sigma."}
+              to="/clientes"
+              cta={hasClients ? "Ver clientes" : "Novo cliente"}
             />
             <StepCard
               icon={CreditCard}
-              step={3}
-              title="Recebimento Pix"
+              step={4}
+              title="Configure o Pix"
               done={isPixOk}
-              doneLabel="Configurado"
-              todoLabel="Pendente"
-              description={isPixOk ? "Chave Pix ou gateway configurado." : "Defina sua chave Pix ou conecte Asaas / Mercado Pago."}
+              doneLabel="Pronto"
+              todoLabel="Falta"
+              description={isPixOk ? "Seus clientes já conseguem pagar." : "Defina sua chave Pix ou conecte Mercado Pago / Asaas."}
               to="/pagamentos"
-              cta={isPixOk ? "Ver chaves" : "Configurar Pix"}
+              cta={isPixOk ? "Ver recebimentos" : "Configurar Pix"}
             />
           </div>
         </section>
