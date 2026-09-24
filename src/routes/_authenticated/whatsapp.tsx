@@ -303,7 +303,7 @@ function WhatsAppConnection() {
         </Card>
         <Card className="rounded-lg border-border/70 shadow-sm">
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex size-10 items-center justify-center rounded-md bg-sky-500/10 text-sky-500">
+            <div className="flex size-10 items-center justify-center rounded-md bg-primary/10 text-primary">
               <Smartphone className="size-5" />
             </div>
             <div className="min-w-0">

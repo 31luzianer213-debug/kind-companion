@@ -709,7 +709,7 @@ function PagamentosPage() {
             <div className="space-y-1.5 p-3 rounded-lg bg-background/60 border border-border/50">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-foreground flex items-center gap-1.5">
-                  <Wallet className="size-3.5 text-sky-400" />
+                  <Wallet className="size-3.5 text-primary" />
                   URL do Webhook Mercado Pago
                 </span>
                 <span className="text-[11px] text-muted-foreground">Eventos: Pagamentos (payment)</span>

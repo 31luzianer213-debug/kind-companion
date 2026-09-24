@@ -787,7 +787,7 @@ function BotPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
                     <CardTitle className="text-base flex items-center gap-2 text-foreground font-bold">
-                      <Download className="size-5 text-sky-400" /> Seus Aplicativos
+                      <Download className="size-5 text-primary" /> Seus Aplicativos
                     </CardTitle>
                     <CardDescription className="text-xs">
                       Preencha só os aplicativos que você usa. O robô envia apenas o que estiver aqui — nada vem preenchido por padrão.
@@ -812,7 +812,7 @@ function BotPage() {
                       onClick={handleRestoreDefaultAppLinks}
                       className="rounded-md text-xs gap-1.5"
                     >
-                      <Sparkles className="size-3 text-sky-400" /> Limpar campos
+                      <Sparkles className="size-3 text-primary" /> Limpar campos
                     </Button>
                   </div>
                 </div>
@@ -823,9 +823,9 @@ function BotPage() {
                   <div className="space-y-1.5 p-3 rounded-md bg-muted/20 border border-border/50">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
-                        <Tv className="size-3.5 text-sky-400" /> Código no App Downloader
+                        <Tv className="size-3.5 text-primary" /> Código no App Downloader
                       </Label>
-                      <Badge variant="outline" className="text-[10px] text-sky-400 border-sky-400/30">
+                      <Badge variant="outline" className="text-[10px] text-primary border-sky-400/30">
                         TV Box / Firestick
                       </Badge>
                     </div>
@@ -911,7 +911,7 @@ function BotPage() {
                 {/* Instruções Smart TV */}
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold flex items-center gap-1.5">
-                    <Tv className="size-3.5 text-sky-400" /> Instruções para Smart TV (Samsung, LG e Roku)
+                    <Tv className="size-3.5 text-primary" /> Instruções para Smart TV (Samsung, LG e Roku)
                   </Label>
                   <Textarea
                     rows={2}
@@ -1140,7 +1140,7 @@ function BotPage() {
                   size="sm"
                   onClick={() => handleSendSim("4")}
                   disabled={simLoading}
-                  className="h-6 text-[10px] rounded-lg px-2 border-sky-500/30 text-sky-400 hover:bg-sky-500/10"
+                  className="h-6 text-[10px] rounded-lg px-2 border-sky-500/30 text-primary hover:bg-primary/10"
                 >
                   4 - Baixar Apps 📲
                 </Button>
