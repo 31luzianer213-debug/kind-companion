@@ -269,6 +269,33 @@ export type Database = {
           },
         ]
       }
+      clients_history: {
+        Row: {
+          action: string
+          client_id: string
+          created_at: string
+          data: Json
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          client_id: string
+          created_at?: string
+          data: Json
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          client_id?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount: number
@@ -979,6 +1006,7 @@ export type Database = {
     }
     Functions: {
       cleanup_old_logs: { Args: never; Returns: undefined }
+      restore_deleted_clients: { Args: { p_since?: string }; Returns: number }
       subscription_state: { Args: { p_user: string }; Returns: string }
     }
     Enums: {
