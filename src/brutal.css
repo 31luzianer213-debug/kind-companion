@@ -4,7 +4,7 @@
    textura granulada, movimento curto e mecânico.
    ========================================================= */
 
-:root { --radius: 0.25rem; --hard: 4px; --ease-snap: cubic-bezier(0.2, 0.9, 0.1, 1); }
+html:root { --radius: 0.25rem; --hard: 4px; --ease-snap: cubic-bezier(0.2, 0.9, 0.1, 1); }
 
 /* ---------- Textura granulada no site inteiro ---------- */
 body::after {
@@ -25,11 +25,8 @@ body::after {
 }
 
 /* ---------- Tipografia com peso de cartaz ---------- */
-@layer base {
-  h1, h2 { font-weight: 800 !important; letter-spacing: -0.035em !important; }
-  h1 { text-transform: none; }
-  ::selection { background: var(--primary); color: var(--primary-foreground); }
-}
+h1, h2 { font-weight: 800 !important; }
+::selection { background: var(--primary) !important; color: var(--primary-foreground) !important; }
 
 /* ---------- Cartões: borda seca + sombra dura no hover ---------- */
 .bg-card.border, .bg-card[class*="border"], .stat-card, .surface-card {
