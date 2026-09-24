@@ -4,7 +4,7 @@ import { createOrderServer, listOrdersServer, approveAndReleaseOrderServer, upda
 import { createMercadoPagoPixPayment } from "./mercadopago.server";
 import type { ButtonItem, ListSection } from "./billing.server";
 import { phoneVariants, samePhone } from "./phone";
-import { decideWithSalesAi } from "./bot-ai.server";
+import { decideWithSalesAi, getAiHistory, setAiHistory } from "./bot-ai.server";
 
 export type BotInteractivePayload =
   | {
