@@ -546,3 +546,16 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.025em; }
   [data-reveal] { opacity: 1; transform: none; transition: none; }
   .skeleton-shimmer { animation: none; }
 }
+
+/* Acessibilidade e detalhes finos */
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 6px; }
+button:focus-visible, a:focus-visible, [role="tab"]:focus-visible { outline-offset: 3px; }
+body { line-height: 1.6; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+p + p { margin-top: 0.75em; }
+h1, h2, h3, h4 { line-height: 1.15; text-wrap: balance; }
+p { text-wrap: pretty; }
+svg.lucide { flex-shrink: 0; vertical-align: middle; }
+@media (pointer: coarse) {
+  button, [role="button"], [role="tab"], a.inline-flex, input[type="checkbox"] + label, select { min-height: 44px; }
+  button[data-size="icon"], button.size-8, button.h-8, button.h-9, button.w-9 { min-width: 44px; }
+}

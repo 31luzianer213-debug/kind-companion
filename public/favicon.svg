@@ -1,26 +1,6 @@
 <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="favBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0b1120" />
-      <stop offset="100%" stop-color="#020408" />
-    </linearGradient>
-    <linearGradient id="favBorder" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#38bdf8" />
-      <stop offset="50%" stop-color="#06b6d4" />
-      <stop offset="100%" stop-color="#6366f1" />
-    </linearGradient>
-    <linearGradient id="favGlyph" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#38bdf8" />
-      <stop offset="50%" stop-color="#06b6d4" />
-      <stop offset="100%" stop-color="#2563eb" />
-    </linearGradient>
-    <linearGradient id="favPlay" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#22d3ee" />
-      <stop offset="100%" stop-color="#0284c7" />
-    </linearGradient>
-  </defs>
-  <rect x="2" y="2" width="44" height="44" rx="11" fill="url(#favBg)" stroke="url(#favBorder)" stroke-width="2" />
-  <path d="M 33 14.2 H 15.5 L 24.5 24 L 15.5 33.8 H 33" stroke="url(#favGlyph)" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" />
-  <polygon points="27,20.2 33.8,24 27,27.8" fill="url(#favPlay)" />
-  <circle cx="37.5" cy="10.5" r="2.2" fill="#22c55e" />
+  <rect x="2" y="2" width="44" height="44" rx="13" fill="#0B0D0C"/>
+  <path d="M33.5 13.5H15.2L24.4 23.9L15.2 34.5H33.5" stroke="#B8F23A" stroke-width="4.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M27.2 19.7L34.7 24L27.2 28.3V19.7Z" fill="#F4F6F2"/>
+  <circle cx="37.8" cy="10.3" r="2.1" fill="#B8F23A"/>
 </svg>
