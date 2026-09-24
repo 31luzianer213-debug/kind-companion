@@ -21,15 +21,17 @@ export const getMySubscription = createServerFn({ method: "GET" })
 /** Gera um Pix para assinar/renovar um plano do sistema. */
 export const createSubscriptionPix = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { planId: string; months?: number; document?: string }) => {
+  .inputValidator((input: { planId: string; months?: number; document?: string; payerName?: string }) => {
     if (!input?.planId) throw new Error("Escolha um plano.");
-    return input;
+    const payerName = String(input.payerName ?? "").trim().slice(0, 80);
+    const document = String(input.document ?? "").replace(/\D/g, "").slice(0, 14);
+    return { planId: String(input.planId), months: input.months, document, payerName };
   })
   .handler(async ({ data, context }) => {
     const { createSubscriptionPixServer } = await import("./subscription.server");
     const email = typeof context.claims?.email === "string" ? context.claims.email : null;
     const meta = (context.claims as any)?.user_metadata;
-    const name = typeof meta?.display_name === "string" ? meta.display_name : null;
+    const name = data.payerName || (typeof meta?.display_name === "string" ? meta.display_name : null);
     return await createSubscriptionPixServer({
       userId: context.userId,
       planId: data.planId,

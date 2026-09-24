@@ -1,15 +1,39 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { BadgeCheck, Check, Copy, Crown, Loader2, Lock, QrCode, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 function formatDoc(value: string) {
   const d = value.replace(/\D/g, "").slice(0, 14);
   if (d.length <= 11) return d.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
   return d.replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
 }
-import { toast } from "sonner";
-import { BadgeCheck, Check, Copy, Crown, Loader2, QrCode, ShieldCheck, Sparkles, Users } from "lucide-react";
+
+function isValidDoc(d: string) {
+  if (/^(\d)\1+$/.test(d)) return false;
+  if (d.length === 11) {
+    const calc = (n: number) => {
+      let s = 0;
+      for (let i = 0; i < n; i++) s += Number(d[i]) * (n + 1 - i);
+      const r = (s * 10) % 11;
+      return r === 10 ? 0 : r;
+    };
+    return calc(9) === Number(d[9]) && calc(10) === Number(d[10]);
+  }
+  if (d.length === 14) {
+    const calc = (n: number) => {
+      const w = n === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+      const s = w.reduce((acc, x, i) => acc + x * Number(d[i]), 0);
+      const r = s % 11;
+      return r < 2 ? 0 : 11 - r;
+    };
+    return calc(12) === Number(d[12]) && calc(13) === Number(d[13]);
+  }
+  return false;
+}
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -50,33 +74,38 @@ function AssinaturaPage() {
   const checkFn = useServerFn(checkSubscriptionPayment);
   const [months, setMonths] = useState(1);
   const [cpf, setCpf] = useState("");
-  const [cpfError, setCpfError] = useState(false);
-  const cpfRef = useRef<HTMLInputElement>(null);
+  const [payerName, setPayerName] = useState("");
+  const [checkoutPlan, setCheckoutPlan] = useState<SaasPlan | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [payment, setPayment] = useState<{ id: string; pix_code: string | null; pix_qr_base64: string | null; ticket_url: string | null; amount: number; planName: string } | null>(null);
 
   const { data: plansData } = useQuery({ queryKey: ["saas-plans"], queryFn: () => plansFn({}) });
   const { data: sub } = useQuery({ queryKey: ["my-subscription"], queryFn: () => subFn({}) });
   const plans = plansData?.plans ?? [];
+  const needsDoc = sub?.saasProvider === "misticpay";
 
   useEffect(() => {
-    try { const saved = localStorage.getItem("assinatura-doc"); if (saved) setCpf(formatDoc(saved)); } catch {}
+    try {
+      const saved = localStorage.getItem("assinatura-doc");
+      if (saved) setCpf(formatDoc(saved));
+      const savedName = localStorage.getItem("assinatura-nome");
+      if (savedName) setPayerName(savedName);
+    } catch {}
   }, []);
 
   const createPix = useMutation({
     mutationFn: async (plan: SaasPlan) => {
       const digits = cpf.replace(/\D/g, "");
-      if (sub?.saasProvider === "misticpay" && digits.length !== 11 && digits.length !== 14) {
-        setCpfError(true);
-        cpfRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-        cpfRef.current?.focus();
-        throw new Error("Preencha seu CPF ou CNPJ no campo acima para gerar o Pix.");
-      }
-      try { if (digits) localStorage.setItem("assinatura-doc", digits); } catch {}
-      const res = await pixFn({ data: { planId: plan.id, months, document: digits } });
+      try {
+        if (digits) localStorage.setItem("assinatura-doc", digits);
+        localStorage.setItem("assinatura-nome", payerName.trim());
+      } catch {}
+      const res = await pixFn({ data: { planId: plan.id, months, document: digits, payerName: payerName.trim() } });
       return { res, plan };
     },
     onSuccess: ({ res, plan }) => {
-      if (!res.ok) return toast.error(res.error);
+      if (!res.ok) return setFormError(res.error);
+      setCheckoutPlan(null);
       setPayment({
         id: res.payment.id,
         pix_code: res.payment.pix_code,
@@ -86,7 +115,7 @@ function AssinaturaPage() {
         planName: plan.name,
       });
     },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Falha ao gerar o Pix."),
+    onError: (err) => setFormError(err instanceof Error ? err.message : "Falha ao gerar o Pix."),
   });
 
   useEffect(() => {
@@ -179,14 +208,6 @@ function AssinaturaPage() {
         </Card>
       ) : (
         <>
-          {sub?.saasProvider === "misticpay" && (
-            <div className={cn("rounded-xl border p-4", cpfError ? "border-destructive bg-destructive/10" : "border-primary/40 bg-primary/5")}>
-              <label htmlFor="subscription-cpf" className="block text-sm font-bold text-foreground">Seu CPF ou CNPJ</label>
-              <p className="mt-0.5 text-xs text-muted-foreground">O banco exige esse dado para gerar o Pix. Preencha antes de escolher o plano.</p>
-              <input id="subscription-cpf" ref={cpfRef} value={cpf} onChange={(e) => { setCpf(formatDoc(e.target.value)); setCpfError(false); }} inputMode="numeric" autoComplete="off" placeholder="000.000.000-00" className="mt-2 h-11 w-full max-w-xs rounded-md border border-border bg-background px-3 text-base text-foreground" data-testid="subscription-cpf" />
-              {cpfError && <p className="mt-1.5 text-xs font-semibold text-destructive">Digite um CPF (11 números) ou CNPJ (14 números) para continuar.</p>}
-            </div>
-          )}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-foreground">Escolha seu plano</h2>
             {PERIODS.length > 1 && (
@@ -215,8 +236,8 @@ function AssinaturaPage() {
                     <ul className="space-y-2 text-sm">
                       {plan.features.map((f) => <li key={f} className="flex items-start gap-2 text-muted-foreground"><Check className="mt-0.5 size-4 shrink-0 text-success" /> {f}</li>)}
                     </ul>
-                    <Button className="w-full gap-2" variant={plan.highlighted ? "default" : "outline"} disabled={createPix.isPending || !sub?.saasPaymentsEnabled} onClick={() => createPix.mutate(plan)} data-testid={`subscribe-${plan.id}`}>
-                      {createPix.isPending && createPix.variables?.id === plan.id ? <Loader2 className="size-4 animate-spin" /> : current ? <BadgeCheck className="size-4" /> : <QrCode className="size-4" />}
+                    <Button className="w-full gap-2" variant={plan.highlighted ? "default" : "outline"} disabled={createPix.isPending || !sub?.saasPaymentsEnabled} onClick={() => { setCheckoutPlan(plan); setFormError(null); }} data-testid={`subscribe-${plan.id}`}>
+                      {current ? <BadgeCheck className="size-4" /> : <QrCode className="size-4" />}
                       {current ? "Renovar este plano" : "Assinar com Pix"}
                     </Button>
                   </CardContent>
@@ -228,6 +249,63 @@ function AssinaturaPage() {
       )}
 
       <p className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" /> Pagamento processado pelo {sub?.saasProvider === "misticpay" ? "MisticPay" : "Mercado Pago"}. Ao assinar você concorda com os <Link to="/termos" className="underline">Termos de Uso</Link>.</p>
+
+      <Dialog open={!!checkoutPlan} onOpenChange={(open) => { if (!open && !createPix.isPending) setCheckoutPlan(null); }}>
+        <DialogContent className="sm:max-w-md" data-testid="checkout-dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Lock className="size-4 text-primary" /> Finalizar assinatura</DialogTitle>
+            <DialogDescription>Confira o plano e informe os dados de quem vai pagar o Pix.</DialogDescription>
+          </DialogHeader>
+          {checkoutPlan && (
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const digits = cpf.replace(/\D/g, "");
+                if (payerName.trim().split(/\s+/).length < 2) return setFormError("Digite o nome completo de quem vai pagar.");
+                if (needsDoc && !isValidDoc(digits)) return setFormError("CPF ou CNPJ inválido. Confira os números.");
+                setFormError(null);
+                createPix.mutate(checkoutPlan);
+              }}
+            >
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Plano escolhido</p>
+                    <p className="mt-1 flex items-center gap-1.5 font-bold text-foreground"><Crown className="size-4 text-primary" /> {checkoutPlan.name}</p>
+                    <p className="text-xs text-muted-foreground">{months === 1 ? "Mensal · renova a cada 30 dias" : `${months} meses`}</p>
+                  </div>
+                  <p className="text-right text-2xl font-bold text-foreground">{formatBRL(priceFor(checkoutPlan, months))}</p>
+                </div>
+                {plans.length > 1 && (
+                  <select value={checkoutPlan.id} onChange={(e) => { const p = plans.find((x) => x.id === e.target.value); if (p) setCheckoutPlan(p); }} className="mt-3 h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground" aria-label="Trocar plano" data-testid="checkout-plan">
+                    {plans.map((p) => <option key={p.id} value={p.id}>{p.name} — {formatBRL(priceFor(p, months))}</option>)}
+                  </select>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="checkout-name" className="text-sm font-semibold text-foreground">Nome completo</label>
+                <input id="checkout-name" value={payerName} onChange={(e) => { setPayerName(e.target.value.slice(0, 80)); setFormError(null); }} autoComplete="name" placeholder="Como está no seu documento" className="h-11 w-full rounded-md border border-border bg-background px-3 text-base text-foreground" data-testid="checkout-name" />
+              </div>
+              {needsDoc && (
+                <div className="space-y-1.5">
+                  <label htmlFor="checkout-cpf" className="text-sm font-semibold text-foreground">CPF ou CNPJ</label>
+                  <input id="checkout-cpf" value={cpf} onChange={(e) => { setCpf(formatDoc(e.target.value)); setFormError(null); }} inputMode="numeric" autoComplete="off" placeholder="000.000.000-00" className="h-11 w-full rounded-md border border-border bg-background px-3 text-base text-foreground" data-testid="subscription-cpf" />
+                  <p className="text-xs text-muted-foreground">Exigido pelo banco para emitir o Pix. Usado só nesta cobrança.</p>
+                </div>
+              )}
+              {formError && <p className="rounded-md border border-destructive/30 bg-destructive/10 p-2.5 text-xs font-semibold text-destructive" role="alert">{formError}</p>}
+
+              <Button type="submit" className="h-11 w-full gap-2" disabled={createPix.isPending} data-testid="checkout-submit">
+                {createPix.isPending ? <Loader2 className="size-4 animate-spin" /> : <QrCode className="size-4" />}
+                {createPix.isPending ? "Gerando Pix…" : `Gerar Pix de ${formatBRL(priceFor(checkoutPlan, months))}`}
+              </Button>
+              <p className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground"><ShieldCheck className="size-3.5" /> Pagamento seguro · liberação automática após o Pix</p>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
