@@ -86,8 +86,8 @@ function AssinaturaPage() {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("assinatura-doc");
-      if (saved) setCpf(formatDoc(saved));
+      // CPF/CNPJ não fica mais guardado no aparelho; apaga cópias antigas.
+      localStorage.removeItem("assinatura-doc");
       const savedName = localStorage.getItem("assinatura-nome");
       if (savedName) setPayerName(savedName);
     } catch {}
@@ -97,7 +97,6 @@ function AssinaturaPage() {
     mutationFn: async (plan: SaasPlan) => {
       const digits = cpf.replace(/\D/g, "");
       try {
-        if (digits) localStorage.setItem("assinatura-doc", digits);
         localStorage.setItem("assinatura-nome", payerName.trim());
       } catch {}
       const res = await pixFn({ data: { planId: plan.id, months, document: digits, payerName: payerName.trim() } });
