@@ -36,11 +36,11 @@ export function SigmaLogo({ className, size = "md", showGlow = true }: SigmaLogo
         <defs>
           <linearGradient id={backgroundId} x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
             <stop stopColor="#1C201D" />
-            <stop offset="1" stopColor="#0B0D0C" />
+            <stop offset="1" stopColor="#0A0F1C" />
           </linearGradient>
           <linearGradient id={accentId} x1="12" y1="10" x2="38" y2="39" gradientUnits="userSpaceOnUse">
             <stop stopColor="#E4FF9A" />
-            <stop offset="0.52" stopColor="#B8F23A" />
+            <stop offset="0.52" stopColor="#22D3EE" />
             <stop offset="1" stopColor="#7FB81F" />
           </linearGradient>
           <filter id={glowId} x="-35%" y="-35%" width="170%" height="170%">
@@ -65,8 +65,8 @@ export function SigmaLogo({ className, size = "md", showGlow = true }: SigmaLogo
           filter={`url(#${glowId})`}
         />
         <path d="M27.2 19.7L34.7 24L27.2 28.3V19.7Z" fill="#F8FAFC" />
-        <circle cx="37.8" cy="10.3" r="2.1" fill="#B8F23A" />
-        <circle cx="37.8" cy="10.3" r="3.8" stroke="#B8F23A" strokeOpacity="0.25" />
+        <circle cx="37.8" cy="10.3" r="2.1" fill="#22D3EE" />
+        <circle cx="37.8" cy="10.3" r="3.8" stroke="#22D3EE" strokeOpacity="0.25" />
       </svg>
     </div>
   );
