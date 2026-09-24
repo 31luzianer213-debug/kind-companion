@@ -1,0 +1,1 @@
+ALTER TABLE public.system_settings ADD COLUMN IF NOT EXISTS misticpay_client_id text, ADD COLUMN IF NOT EXISTS misticpay_client_secret text;
