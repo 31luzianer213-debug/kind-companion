@@ -328,7 +328,7 @@ function SigmaServersSettings() {
               <CardHeader className="border-b border-border/50 pb-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className={`grid size-11 shrink-0 place-items-center rounded-md ${server.enabled ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
+                    <span className={`grid size-11 shrink-0 place-items-center rounded-md ${server.enabled ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
                       {server.enabled ? <Wifi className="size-5" /> : <WifiOff className="size-5" />}
                     </span>
                     <div className="min-w-0">
@@ -389,7 +389,7 @@ function SigmaServersSettings() {
                       const done = order[stage] < order[syncStage];
                       const active = stage === syncStage;
                       return (
-                        <span key={stage} className={`grid size-7 place-items-center rounded-full border text-[10px] font-bold transition-all ${done ? "border-emerald-500 bg-emerald-500 text-white" : active ? "border-primary bg-primary text-primary-foreground scale-110" : "border-border bg-muted text-muted-foreground"}`}>
+                        <span key={stage} className={`grid size-7 place-items-center rounded-full border text-[10px] font-bold transition-all ${done ? "border-success bg-success text-white" : active ? "border-primary bg-primary text-primary-foreground scale-110" : "border-border bg-muted text-muted-foreground"}`}>
                           {done ? <CheckCircle2 className="size-3.5" /> : order[stage] + 1}
                         </span>
                       );

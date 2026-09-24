@@ -177,10 +177,10 @@ function AutomaticBillingPage() {
           <CardDescription>Uma vez por dia o sistema confere os vencimentos e envia as mensagens ativadas abaixo.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex items-center justify-between gap-3 rounded-md border border-primary/30 bg-primary/10 p-3.5">
+          <div className={`flex items-center justify-between gap-3 rounded-md border p-3.5 transition-colors ${autoSend ? "border-primary/30 bg-primary/10" : "border-warning/40 bg-warning/10"}`}>
             <div>
               <p className="text-sm font-bold">Cobrar meus clientes automaticamente</p>
-              <p className="text-xs text-muted-foreground">Desligue apenas se quiser cobrar manualmente.</p>
+              <p className="text-xs text-muted-foreground">{autoSend ? "Ligado: as cobranças saem sozinhas todo dia." : "Desligado: nenhuma cobrança sai sozinha. Ligue para automatizar."}</p>
             </div>
             <Switch
               checked={autoSend}

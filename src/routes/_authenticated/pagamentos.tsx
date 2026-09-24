@@ -247,7 +247,7 @@ function PagamentosPage() {
             >
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2 font-bold text-sm text-foreground">
-                  <QrCode className="size-4 text-emerald-500" />
+                  <QrCode className="size-4 text-success" />
                   Chave Pix Direta
                 </div>
                 {activeProvider === "pix" ? (
@@ -328,7 +328,7 @@ function PagamentosPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-base flex items-center gap-2 text-foreground">
-                    <QrCode className="size-5 text-emerald-500" />
+                    <QrCode className="size-5 text-success" />
                     Dados da sua Chave Pix
                   </CardTitle>
                   <CardDescription className="mt-1">
@@ -381,7 +381,7 @@ function PagamentosPage() {
                         className="absolute right-2.5 text-muted-foreground hover:text-foreground"
                         title="Copiar Chave Pix"
                       >
-                        {copiedPix ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
+                        {copiedPix ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
                       </button>
                     ) : null}
                   </div>
@@ -423,7 +423,7 @@ function PagamentosPage() {
                 <div className="mt-3 p-3.5 rounded-md bg-muted/30 border border-border/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
                   <div className="space-y-0.5">
                     <span className="font-semibold text-foreground flex items-center gap-1.5">
-                      <QrCode className="size-3.5 text-emerald-500" />
+                      <QrCode className="size-3.5 text-success" />
                       Como os clientes verão no WhatsApp:
                     </span>
                     <p className="font-mono text-muted-foreground text-[11px]">
@@ -438,7 +438,7 @@ function PagamentosPage() {
                     onClick={handleCopyPix}
                     className="h-8 text-xs gap-1.5 shrink-0 self-start sm:self-auto"
                   >
-                    {copiedPix ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+                    {copiedPix ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
                     {copiedPix ? "Chave Copiada!" : "Testar Cópia"}
                   </Button>
                 </div>
@@ -530,12 +530,12 @@ function PagamentosPage() {
                   <div
                     className={`p-2 px-3 rounded-lg border text-xs flex items-center gap-2 flex-1 ${
                       mpStatus.ok
-                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                        ? "bg-success/10 border-success/30 text-success"
                         : "bg-destructive/10 border-destructive/30 text-destructive"
                     }`}
                   >
                     {mpStatus.ok ? (
-                      <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
+                      <CheckCircle2 className="size-4 shrink-0 text-success" />
                     ) : (
                       <AlertCircle className="size-4 shrink-0 text-destructive" />
                     )}
@@ -567,7 +567,7 @@ function PagamentosPage() {
                     onClick={() => handleCopyWebhook(mpWebhookUrl)}
                     className="shrink-0 text-xs gap-1.5 h-9"
                   >
-                    {copiedWebhook ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+                    {copiedWebhook ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
                     {copiedWebhook ? "Copiado!" : "Copiar Webhook"}
                   </Button>
                 </div>
@@ -669,12 +669,12 @@ function PagamentosPage() {
                   <div
                     className={`p-2 px-3 rounded-lg border text-xs flex items-center gap-2 flex-1 ${
                       asaasStatus.ok
-                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                        ? "bg-success/10 border-success/30 text-success"
                         : "bg-destructive/10 border-destructive/30 text-destructive"
                     }`}
                   >
                     {asaasStatus.ok ? (
-                      <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
+                      <CheckCircle2 className="size-4 shrink-0 text-success" />
                     ) : (
                       <AlertCircle className="size-4 shrink-0 text-destructive" />
                     )}
