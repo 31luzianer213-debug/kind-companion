@@ -57,9 +57,9 @@ function CobrancasPage() {
 type InvoiceRow = Tables<"invoices"> & { clients: { name: string; phone: string } | null };
 
 const labels: Record<string, { label: string; badge: string }> = {
-  pending: { label: "Pendente", badge: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400" },
-  overdue: { label: "Atrasada", badge: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400" },
-  paid: { label: "Paga", badge: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+  pending: { label: "Pendente", badge: "border-warning/30 bg-warning/10 text-warning" },
+  overdue: { label: "Atrasada", badge: "border-destructive/30 bg-destructive/10 text-destructive" },
+  paid: { label: "Paga", badge: "border-success/30 bg-success/10 text-success" },
   cancelled: { label: "Cancelada", badge: "border-border bg-muted/40 text-muted-foreground" },
 };
 
@@ -177,9 +177,9 @@ function Cobrancas() {
 
 
       <div className="grid gap-3 sm:grid-cols-4">
-        <Card className="surface-card"><CardContent className="flex items-center justify-between p-4"><div><p className="text-xs uppercase tracking-wider text-muted-foreground">A receber</p><p className="mt-1 text-2xl font-black">{formatBRL(metrics.totalOpen)}</p><p className="text-[11px] text-muted-foreground">{metrics.openCount} faturas</p></div><Clock className="size-6 text-amber-500" /></CardContent></Card>
-        <Card className="surface-card"><CardContent className="flex items-center justify-between p-4"><div><p className="text-xs uppercase tracking-wider text-muted-foreground">Em atraso</p><p className="mt-1 text-2xl font-black text-rose-500">{formatBRL(metrics.totalOverdue)}</p><p className="text-[11px] text-muted-foreground">{metrics.overdueCount} atrasadas</p></div><AlertTriangle className="size-6 text-rose-500" /></CardContent></Card>
-        <Card className="surface-card"><CardContent className="flex items-center justify-between p-4"><div><p className="text-xs uppercase tracking-wider text-muted-foreground">Recebido</p><p className="mt-1 text-2xl font-black text-emerald-500">{formatBRL(metrics.totalPaid)}</p><p className="text-[11px] text-muted-foreground">{metrics.paidCount} pagas</p></div><CheckCircle2 className="size-6 text-emerald-500" /></CardContent></Card>
+        <Card className="surface-card"><CardContent className="flex items-center justify-between p-4"><div><p className="text-xs uppercase tracking-wider text-muted-foreground">A receber</p><p className="mt-1 text-2xl font-black">{formatBRL(metrics.totalOpen)}</p><p className="text-[11px] text-muted-foreground">{metrics.openCount} faturas</p></div><Clock className="size-6 text-warning" /></CardContent></Card>
+        <Card className="surface-card"><CardContent className="flex items-center justify-between p-4"><div><p className="text-xs uppercase tracking-wider text-muted-foreground">Em atraso</p><p className="mt-1 text-2xl font-black text-destructive">{formatBRL(metrics.totalOverdue)}</p><p className="text-[11px] text-muted-foreground">{metrics.overdueCount} atrasadas</p></div><AlertTriangle className="size-6 text-destructive" /></CardContent></Card>
+        <Card className="surface-card"><CardContent className="flex items-center justify-between p-4"><div><p className="text-xs uppercase tracking-wider text-muted-foreground">Recebido</p><p className="mt-1 text-2xl font-black text-success">{formatBRL(metrics.totalPaid)}</p><p className="text-[11px] text-muted-foreground">{metrics.paidCount} pagas</p></div><CheckCircle2 className="size-6 text-success" /></CardContent></Card>
         <Card className="surface-card"><CardContent className="flex items-center justify-between p-4"><div><p className="text-xs uppercase tracking-wider text-muted-foreground">Lembretes</p><p className="mt-1 text-2xl font-black">{metrics.reminders}</p><p className="text-[11px] text-muted-foreground">enviados pela automação</p></div><MessageCircle className="size-6 text-primary" /></CardContent></Card>
       </div>
 
@@ -238,7 +238,7 @@ function Cobrancas() {
               <div className="rounded-lg border bg-muted/30 p-3"><p className="text-xs text-muted-foreground">Vencimento</p><p className="font-semibold">{formatDate(details.due_date)}</p></div>
               <div className="rounded-lg border bg-muted/30 p-3"><p className="text-xs text-muted-foreground">Lembretes</p><p className="font-semibold">{details.reminders_sent || 0}</p></div>
             </div>
-            {details.paid_at ? <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3"><p className="text-xs text-muted-foreground">Pagamento confirmado</p><p className="font-semibold text-emerald-500">{formatDate(details.paid_at)}</p></div> : null}
+            {details.paid_at ? <div className="rounded-lg border border-success/20 bg-success/5 p-3"><p className="text-xs text-muted-foreground">Pagamento confirmado</p><p className="font-semibold text-success">{formatDate(details.paid_at)}</p></div> : null}
             {((details as any).pix_code || data?.settings?.pix_key) ? <Button variant="outline" onClick={() => copyPix(details)} className="w-full gap-2"><Copy className="size-4" /> Copiar Pix registrado</Button> : null}
           </div> : null}
         </DialogContent>

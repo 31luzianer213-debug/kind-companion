@@ -84,7 +84,7 @@ function StepCard({
     <div
       className={cn(
         "flex flex-col justify-between rounded-md border p-4 transition-colors",
-        tone === "ok" ? "border-emerald-500/30 bg-emerald-500/5" : "border-border bg-card hover:border-primary/40",
+        tone === "ok" ? "border-success/30 bg-success/5" : "border-border bg-card hover:border-primary/40",
       )}
     >
       <div className="space-y-2">
@@ -99,7 +99,7 @@ function StepCard({
             variant="outline"
             className={cn(
               "shrink-0 gap-1 rounded-md py-0 text-[10px] font-semibold",
-              done ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500" : "border-amber-500/30 bg-amber-500/10 text-amber-500",
+              done ? "border-success/40 bg-success/10 text-success" : "border-warning/30 bg-warning/10 text-warning",
             )}
           >
             {done ? <CheckCircle2 className="size-3" /> : null}
@@ -656,7 +656,7 @@ function PainelOverview() {
                           size="sm"
                           onClick={() => approveMutation.mutate(order.id)}
                           disabled={approveMutation.isPending}
-                          className="h-8 w-full rounded-md bg-emerald-600 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700"
+                          className="h-8 w-full rounded-md bg-success text-xs font-semibold text-white shadow-sm hover:bg-success"
                         >
                           {approveMutation.isPending ? (
                             <RefreshCw className="mr-1.5 size-3.5 animate-spin" />
@@ -737,7 +737,7 @@ function PainelOverview() {
                       <div className="flex items-center gap-1.5">
                         <p className="truncate text-xs font-semibold text-foreground">{client.name}</p>
                         {isToday && (
-                          <span className="rounded border border-amber-500/30 bg-amber-500/15 px-1 text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400">
+                          <span className="rounded border border-warning/30 bg-warning/15 px-1 text-[9px] font-bold uppercase text-warning">
                             Hoje
                           </span>
                         )}
@@ -778,7 +778,7 @@ function PainelOverview() {
           <CardHeader className="flex flex-row items-center justify-between gap-3 px-4 pb-2 pt-4 sm:px-5">
             <div className="min-w-0">
               <CardTitle className="flex items-center gap-2 text-sm font-bold">
-                <AlertTriangle className="size-4 text-amber-500" /> Faturas pendentes
+                <AlertTriangle className="size-4 text-warning" /> Faturas pendentes
               </CardTitle>
               <CardDescription className="text-xs">Acompanhamento das cobranças emitidas</CardDescription>
             </div>

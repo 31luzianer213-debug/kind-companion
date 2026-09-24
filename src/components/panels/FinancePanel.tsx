@@ -87,9 +87,9 @@ export function FinancePanel() {
           <CardContent className="flex items-center justify-between p-4">
             <div>
               <p className="text-xs uppercase tracking-wider text-muted-foreground">Recebido no mês</p>
-              <p className="mt-1 text-2xl font-black text-emerald-500">{formatBRL(summary.received)}</p>
+              <p className="mt-1 text-2xl font-black text-success">{formatBRL(summary.received)}</p>
             </div>
-            <CheckCircle2 className="size-6 text-emerald-500" />
+            <CheckCircle2 className="size-6 text-success" />
           </CardContent>
         </Card>
         <Card className="surface-card">
@@ -98,16 +98,16 @@ export function FinancePanel() {
               <p className="text-xs uppercase tracking-wider text-muted-foreground">A receber no mês</p>
               <p className="mt-1 text-2xl font-black">{formatBRL(summary.pending)}</p>
             </div>
-            <Clock className="size-6 text-amber-500" />
+            <Clock className="size-6 text-warning" />
           </CardContent>
         </Card>
         <Card className="surface-card">
           <CardContent className="flex items-center justify-between p-4">
             <div>
               <p className="text-xs uppercase tracking-wider text-muted-foreground">Atrasado (total)</p>
-              <p className="mt-1 text-2xl font-black text-rose-500">{formatBRL(summary.overdue)}</p>
+              <p className="mt-1 text-2xl font-black text-destructive">{formatBRL(summary.overdue)}</p>
             </div>
-            <AlertTriangle className="size-6 text-rose-500" />
+            <AlertTriangle className="size-6 text-destructive" />
           </CardContent>
         </Card>
       </div>
@@ -138,7 +138,7 @@ export function FinancePanel() {
         <CardHeader className="pb-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <CardTitle className="flex items-center gap-2 text-base"><UserMinus className="size-4 text-rose-500" /> Clientes que pararam de renovar</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base"><UserMinus className="size-4 text-destructive" /> Clientes que pararam de renovar</CardTitle>
               <CardDescription>Vencidos há mais de 30 dias — vale uma mensagem para recuperar.</CardDescription>
             </div>
             <Badge variant="outline" className="text-xs">{inactive.length} cliente(s) • {formatBRL(lostRevenue)}/mês</Badge>

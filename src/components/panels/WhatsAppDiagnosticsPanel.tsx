@@ -58,7 +58,7 @@ export function WhatsAppDiagnosticsPanel() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Card>
             <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><Smartphone className="size-4" /> Status</CardTitle></CardHeader>
-            <CardContent><Badge className={connected ? "bg-emerald-500/15 text-emerald-500" : "bg-zinc-500/15 text-zinc-400"}>{connected ? "Conectado" : "Desconectado"}</Badge></CardContent>
+            <CardContent><Badge className={connected ? "bg-success/15 text-success" : "bg-zinc-500/15 text-zinc-400"}>{connected ? "Conectado" : "Desconectado"}</Badge></CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><Server className="size-4" /> Instância</CardTitle></CardHeader>
@@ -80,11 +80,11 @@ export function WhatsAppDiagnosticsPanel() {
         <CardContent className="space-y-3 text-sm">
           <p><span className="text-muted-foreground">Horário:</span> {formatCheckedAt(data?.checkedAt)}</p>
           {data?.lastError ? (
-            <div className="flex gap-2 rounded-md border border-amber-500/25 bg-amber-500/5 p-3 text-amber-600 dark:text-amber-400">
+            <div className="flex gap-2 rounded-md border border-warning/25 bg-warning/5 p-3 text-warning">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" /><span>{data.lastError}</span>
             </div>
           ) : connected ? (
-            <div className="flex gap-2 rounded-md border border-emerald-500/25 bg-emerald-500/5 p-3 text-emerald-600 dark:text-emerald-400">
+            <div className="flex gap-2 rounded-md border border-success/25 bg-success/5 p-3 text-success">
               <CheckCircle2 className="mt-0.5 size-4 shrink-0" /><span>A instância exclusiva desta conta está respondendo.</span>
             </div>
           ) : null}

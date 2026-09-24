@@ -92,13 +92,13 @@ function WhatsAppSimulator({
     <div className="rounded-lg border border-border/60 bg-card p-4 text-foreground shadow-sm">
       <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-3">
         <div className="flex items-center gap-2.5">
-          <div className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-500/15 text-xs font-bold text-emerald-400 border border-emerald-500/30 shadow-sm">
+          <div className="grid h-8 w-8 place-items-center rounded-lg bg-success/15 text-xs font-bold text-success border border-success/30 shadow-sm">
             {businessName ? businessName[0]?.toUpperCase() : "R"}
           </div>
           <div>
             <div className="flex items-center gap-1">
               <p className="text-xs font-bold text-foreground">{businessName || "Minha Revenda"}</p>
-              <CheckCircle2 className="size-3 text-emerald-500" />
+              <CheckCircle2 className="size-3 text-success" />
             </div>
             <p className="text-[10px] text-muted-foreground font-mono">online no WhatsApp</p>
           </div>

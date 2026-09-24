@@ -494,7 +494,7 @@ function BotPage() {
               <CardHeader className="pb-3 border-b border-border/50">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2 text-foreground font-bold">
-                    <Wallet className="size-5 text-emerald-500" /> Recebimento por Pix
+                    <Wallet className="size-5 text-success" /> Recebimento por Pix
                   </CardTitle>
                   <Badge variant={isMpActive ? "success" : "warning"} className="text-xs">
                     {isMpActive ? "Pix automático ativo" : "Chave Pix manual"}
@@ -506,20 +506,20 @@ function BotPage() {
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
                 {isMpActive ? (
-                  <div className="p-3.5 rounded-md bg-emerald-500/10 border border-emerald-500/25 flex items-start gap-2.5 text-xs text-foreground">
-                    <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <div className="p-3.5 rounded-md bg-success/10 border border-success/25 flex items-start gap-2.5 text-xs text-foreground">
+                    <CheckCircle2 className="size-4 text-success shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-emerald-400">Pix automático ativado</p>
+                      <p className="font-semibold text-success">Pix automático ativado</p>
                       <p className="text-muted-foreground text-[11px] mt-0.5">
                         Renovações e compras pelo robô geram o código Pix copia e cola com baixa automática no Sigma.
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="p-3.5 rounded-md bg-amber-500/10 border border-amber-500/25 flex items-start gap-2.5 text-xs text-foreground">
-                    <AlertCircle className="size-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="p-3.5 rounded-md bg-warning/10 border border-warning/25 flex items-start gap-2.5 text-xs text-foreground">
+                    <AlertCircle className="size-4 text-warning shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-amber-400">Modo manual</p>
+                      <p className="font-semibold text-warning">Modo manual</p>
                       <p className="text-muted-foreground text-[11px] mt-0.5">
                         O robô envia sua chave Pix e você aprova o pagamento em Pedidos. Configure o Mercado Pago para liberar na hora.
                       </p>
@@ -539,7 +539,7 @@ function BotPage() {
               <CardHeader className="pb-3 border-b border-border/50">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2 text-foreground font-bold">
-                    <DollarSign className="size-5 text-emerald-500" /> Tabela de Preços do Bot & Renovação
+                    <DollarSign className="size-5 text-success" /> Tabela de Preços do Bot & Renovação
                   </CardTitle>
                   <Button
                     type="button"
@@ -788,7 +788,7 @@ function BotPage() {
                       <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
                         <Tv className="size-3.5 text-primary" /> Código no App Downloader
                       </Label>
-                      <Badge variant="outline" className="text-[10px] text-primary border-sky-400/30">
+                      <Badge variant="outline" className="text-[10px] text-primary border-info/30">
                         TV Box / Firestick
                       </Badge>
                     </div>
@@ -808,9 +808,9 @@ function BotPage() {
                   <div className="space-y-1.5 p-3 rounded-md bg-muted/20 border border-border/50">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
-                        <Smartphone className="size-3.5 text-emerald-400" /> Link APK Android (Celular & TV)
+                        <Smartphone className="size-3.5 text-success" /> Link APK Android (Celular & TV)
                       </Label>
-                      <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-400/30">
+                      <Badge variant="outline" className="text-[10px] text-success border-success/30">
                         APK Direto
                       </Badge>
                     </div>
@@ -997,16 +997,16 @@ function BotPage() {
           <div className="rounded-md border-2 border-border/80 bg-background/95 p-3 shadow-lg overflow-hidden flex flex-col h-[760px]">
             {/* Header do WhatsApp */}
             <div className="bg-card text-foreground p-3 rounded-lg flex items-center gap-3 border border-border/60 shadow-sm shrink-0">
-              <div className="size-9 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-sm shadow-inner">
+              <div className="size-9 rounded-lg bg-success/15 text-success border border-success/30 flex items-center justify-center font-bold text-sm shadow-inner">
                 🤖
               </div>
               <div className="leading-tight flex-1">
                 <p className="text-xs font-bold truncate text-foreground">{form.businessName || "Minha Revenda IPTV"}</p>
                 <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  <span className={`size-1.5 rounded-full inline-block ${whatsappConnected ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`} /> {whatsappConnected ? "WhatsApp conectado" : "WhatsApp desconectado"}
+                  <span className={`size-1.5 rounded-full inline-block ${whatsappConnected ? "bg-success animate-pulse" : "bg-destructive"}`} /> {whatsappConnected ? "WhatsApp conectado" : "WhatsApp desconectado"}
                 </p>
               </div>
-              <Badge variant="outline" className={isMpActive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px]" : "border-border bg-muted/40 text-muted-foreground text-[10px]"}>
+              <Badge variant="outline" className={isMpActive ? "border-success/30 bg-success/10 text-success text-[10px]" : "border-border bg-muted/40 text-muted-foreground text-[10px]"}>
                 {isMpActive ? "Pix MP Ativo" : "Robô Ativo"}
               </Badge>
             </div>
@@ -1038,7 +1038,7 @@ function BotPage() {
               ))}
               {simLoading && (
                 <div className="flex items-center gap-1.5 text-muted-foreground text-xs p-2">
-                  <span className="size-1.5 rounded-full bg-emerald-400 animate-ping" /> Digitando resposta...
+                  <span className="size-1.5 rounded-full bg-success animate-ping" /> Digitando resposta...
                 </div>
               )}
             </div>
@@ -1073,7 +1073,7 @@ function BotPage() {
                   size="sm"
                   onClick={() => handleSendSim("2 114818587")}
                   disabled={simLoading}
-                  className="h-6 text-[10px] rounded-lg px-2 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                  className="h-6 text-[10px] rounded-lg px-2 border-success/30 text-success hover:bg-success/10"
                 >
                   2 114818587 (Pix)
                 </Button>
@@ -1103,7 +1103,7 @@ function BotPage() {
                   size="sm"
                   onClick={() => handleSendSim("4")}
                   disabled={simLoading}
-                  className="h-6 text-[10px] rounded-lg px-2 border-sky-500/30 text-primary hover:bg-primary/10"
+                  className="h-6 text-[10px] rounded-lg px-2 border-info/30 text-primary hover:bg-primary/10"
                 >
                   4 - Baixar Apps 📲
                 </Button>

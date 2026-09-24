@@ -30,10 +30,10 @@ function priceFor(plan: SaasPlan, months: number) {
 }
 
 const stateLabels: Record<string, { label: string; tone: string }> = {
-  active: { label: "Assinatura ativa", tone: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+  active: { label: "Assinatura ativa", tone: "border-success/30 bg-success/10 text-success" },
   trialing: { label: "Período de teste", tone: "border-primary/30 bg-primary/10 text-primary" },
-  grace: { label: "Vencida — somente leitura", tone: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400" },
-  blocked: { label: "Bloqueada", tone: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400" },
+  grace: { label: "Vencida — somente leitura", tone: "border-warning/30 bg-warning/10 text-warning" },
+  blocked: { label: "Bloqueada", tone: "border-destructive/30 bg-destructive/10 text-destructive" },
 };
 
 function AssinaturaPage() {
@@ -96,7 +96,7 @@ function AssinaturaPage() {
       </div>
 
       <Card className="surface-card rounded-lg border-border/70">
-        <CardContent className="grid gap-5 p-5 md:grid-cols-[1.2fr_1fr]">
+        <CardContent className="grid gap-5 p-5 !pt-5 md:grid-cols-[1.4fr_1fr] md:items-center">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className={cn("rounded-md text-xs font-semibold", stateInfo.tone)} data-testid="subscription-state">{stateInfo.label}</Badge>
@@ -109,7 +109,7 @@ function AssinaturaPage() {
               {state === "blocked" && "Sua assinatura está vencida há mais de 3 dias e o acesso foi bloqueado. Renove para voltar a usar o painel."}
             </p>
             {!sub?.saasPaymentsEnabled && (
-              <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300" data-testid="saas-payments-disabled">
+              <p className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning" data-testid="saas-payments-disabled">
                 Os pagamentos da assinatura ainda não foram habilitados pelo administrador do sistema (Access Token do Mercado Pago em Administração).
               </p>
             )}
@@ -121,7 +121,7 @@ function AssinaturaPage() {
               <span className="text-sm font-semibold text-muted-foreground"> / {limit ?? "∞"} clientes</span>
             </p>
             {limit ? (
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted"><div className={cn("h-full rounded-full", usage >= 90 ? "bg-rose-500" : "bg-primary")} style={{ width: `${usage}%` }} /></div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted"><div className={cn("h-full rounded-full", usage >= 90 ? "bg-destructive" : "bg-primary")} style={{ width: `${usage}%` }} /></div>
             ) : (
               <p className="mt-2 text-xs text-muted-foreground">Sem limite de clientes.</p>
             )}
@@ -161,13 +161,13 @@ function AssinaturaPage() {
               <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1" data-testid="period-selector">
                 {PERIODS.map((p) => (
                   <button key={p.months} type="button" onClick={() => setMonths(p.months)} className={cn("rounded-md px-3 py-1.5 text-xs font-bold transition-colors", months === p.months ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")} data-testid={`period-${p.months}`}>
-                    {p.label}{p.note && <span className="ml-1 text-[10px] text-emerald-500">{p.note}</span>}
+                    {p.label}{p.note && <span className="ml-1 text-[10px] text-success">{p.note}</span>}
                   </button>
                 ))}
               </div>
             )}
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className={cn("grid gap-4 pt-2", plans.length === 1 ? "max-w-md" : plans.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3")}>
             {plans.map((plan) => {
               const current = sub?.plan?.id === plan.id && state === "active";
               return (
@@ -181,7 +181,7 @@ function AssinaturaPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <ul className="space-y-2 text-sm">
-                      {plan.features.map((f) => <li key={f} className="flex items-start gap-2 text-muted-foreground"><Check className="mt-0.5 size-4 shrink-0 text-emerald-500" /> {f}</li>)}
+                      {plan.features.map((f) => <li key={f} className="flex items-start gap-2 text-muted-foreground"><Check className="mt-0.5 size-4 shrink-0 text-success" /> {f}</li>)}
                     </ul>
                     <Button className="w-full gap-2" variant={plan.highlighted ? "default" : "outline"} disabled={createPix.isPending || !sub?.saasPaymentsEnabled} onClick={() => createPix.mutate(plan)} data-testid={`subscribe-${plan.id}`}>
                       {createPix.isPending && createPix.variables?.id === plan.id ? <Loader2 className="size-4 animate-spin" /> : current ? <BadgeCheck className="size-4" /> : <QrCode className="size-4" />}

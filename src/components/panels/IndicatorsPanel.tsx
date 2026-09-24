@@ -60,7 +60,7 @@ export function IndicatorsPanel() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <AlertTriangle className="size-4 text-amber-500" /> Atenção rápida
+            <AlertTriangle className="size-4 text-warning" /> Atenção rápida
           </CardTitle>
         </CardHeader>
         <CardContent>

@@ -233,22 +233,22 @@ function getRelativeDueInfo(dueDateStr: string | null) {
     const days = Math.abs(diffDays);
     return {
       text: `Vencido há ${days} dia${days > 1 ? "s" : ""}`,
-      tone: "text-rose-500 font-semibold",
-      badge: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold",
+      tone: "text-destructive font-semibold",
+      badge: "border-destructive/30 bg-destructive/10 text-destructive font-semibold",
     };
   }
   if (diffDays === 0) {
     return {
       text: "Vence hoje!",
-      tone: "text-amber-500 font-bold",
-      badge: "border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold animate-pulse",
+      tone: "text-warning font-bold",
+      badge: "border-warning/40 bg-warning/15 text-warning font-bold animate-pulse",
     };
   }
   if (diffDays === 1) {
     return {
       text: "Vence amanhã",
-      tone: "text-amber-500",
-      badge: "border-amber-500/25 bg-amber-500/10 text-amber-500 font-medium",
+      tone: "text-warning",
+      badge: "border-warning/25 bg-warning/10 text-warning font-medium",
     };
   }
   if (diffDays <= 5) {
@@ -1073,9 +1073,9 @@ function ClientsRegistry() {
                 setTestCredentials(null);
                 setTestModalOpen(true);
               }}
-              className="gap-1.5 shadow-sm text-xs border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
+              className="gap-1.5 shadow-sm text-xs border-warning/30 text-warning hover:bg-warning/10"
             >
-              <Sparkles className="size-3.5 text-amber-500" />
+              <Sparkles className="size-3.5 text-warning" />
               Gerar Teste (4h)
             </Button>
           ) : null}
@@ -1108,7 +1108,7 @@ function ClientsRegistry() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
-              <Sparkles className="size-4 text-amber-400" />
+              <Sparkles className="size-4 text-warning" />
               Gerador de Teste Grátis — {sigmaServerName}
             </DialogTitle>
             <DialogDescription>
@@ -1175,7 +1175,7 @@ function ClientsRegistry() {
               <Button
                 onClick={handleGerarTeste}
                 disabled={generatingTest}
-                className="w-full gap-2 font-bold bg-amber-500 hover:bg-amber-600 text-black shadow-md mt-2"
+                className="w-full gap-2 font-bold bg-warning hover:bg-warning text-black shadow-md mt-2"
               >
                 {generatingTest ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
                 Gerar Teste Grátis Agora
@@ -1183,7 +1183,7 @@ function ClientsRegistry() {
             </div>
           ) : (
             <div className="space-y-4 py-2">
-              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-400 font-medium flex items-center gap-2">
+              <div className="p-3 rounded-lg bg-success/10 border border-success/25 text-xs text-success font-medium flex items-center gap-2">
                 <CheckCircle2 className="size-4 shrink-0" />
                 Acesso de teste criado com validade de {testCredentials.hours} horas!
               </div>
@@ -1270,7 +1270,7 @@ function ClientsRegistry() {
                       );
                       window.open(`https://wa.me/55${cleanPhoneDigits(testClientPhone)}?text=${text}`, "_blank");
                     }}
-                    className="w-full gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="w-full gap-1.5 bg-success hover:bg-success text-white"
                   >
                     <Send className="size-4" /> Enviar WhatsApp
                   </Button>
@@ -1308,12 +1308,12 @@ function ClientsRegistry() {
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Acessos Ativos</p>
-              <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">{stats.active}</p>
+              <p className="text-2xl font-bold mt-1 text-success">{stats.active}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% da base
               </p>
             </div>
-            <div className="rounded-lg p-2.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+            <div className="rounded-lg p-2.5 bg-success/10 text-success border border-success/20">
               <CheckCircle2 className="size-5" />
             </div>
           </CardContent>
@@ -1323,12 +1323,12 @@ function ClientsRegistry() {
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Em Atraso</p>
-              <p className="text-2xl font-bold mt-1 text-rose-600 dark:text-rose-400">{stats.overdue}</p>
+              <p className="text-2xl font-bold mt-1 text-destructive">{stats.overdue}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 Requerem cobrança
               </p>
             </div>
-            <div className="rounded-lg p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20">
+            <div className="rounded-lg p-2.5 bg-destructive/10 text-destructive border border-destructive/20">
               <AlertTriangle className="size-5" />
             </div>
           </CardContent>
@@ -1338,12 +1338,12 @@ function ClientsRegistry() {
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Vencem Hoje</p>
-              <p className="text-2xl font-bold mt-1 text-amber-500">{stats.todayDue}</p>
+              <p className="text-2xl font-bold mt-1 text-warning">{stats.todayDue}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 Vencimento do dia
               </p>
             </div>
-            <div className="rounded-lg p-2.5 bg-amber-500/10 text-amber-500 border border-amber-500/20">
+            <div className="rounded-lg p-2.5 bg-warning/10 text-warning border border-warning/20">
               <Clock className="size-5" />
             </div>
           </CardContent>
@@ -1459,7 +1459,7 @@ function ClientsRegistry() {
                             client.status === "active"
                               ? "bg-primary/10 text-primary border-primary/25 font-bold"
                               : client.status === "blocked"
-                              ? "bg-rose-500/10 text-rose-500 border-rose-500/25"
+                              ? "bg-destructive/10 text-destructive border-destructive/25"
                               : "bg-muted text-muted-foreground border-border"
                           }`}
                         >
@@ -1479,7 +1479,7 @@ function ClientsRegistry() {
                             rel="noreferrer"
                             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors font-mono mt-0.5"
                           >
-                            <MessageCircle className="size-3 text-emerald-500" />
+                            <MessageCircle className="size-3 text-success" />
                             {formatPhoneInput(client.phone)}
                           </a>
                         ) : null}
@@ -1545,7 +1545,7 @@ function ClientsRegistry() {
                             title="Copiar dados de acesso"
                             onClick={() => copiarDadosAcesso(client)}
                           >
-                            {isCopied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+                            {isCopied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
                             Copiar
                           </Button>
 
@@ -1567,7 +1567,7 @@ function ClientsRegistry() {
                             variant="outline"
                             size="sm"
                             disabled={isBusy}
-                            className="h-8 px-2.5 text-xs font-medium gap-1 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                            className="h-8 px-2.5 text-xs font-medium gap-1 border-success/30 text-success hover:bg-success/10"
                             title="Cobrar via WhatsApp"
                             onClick={() => setConfirmRemindClient(client)}
                           >
@@ -1601,7 +1601,7 @@ function ClientsRegistry() {
                                 Enviar links dos apps
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setConfirmRenewClient(client)} className="gap-2">
-                                <CalendarPlus className="size-4 text-emerald-500" />
+                                <CalendarPlus className="size-4 text-success" />
                                 Renovar +30 dias
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
@@ -1609,7 +1609,7 @@ function ClientsRegistry() {
                                 onClick={() => alternarBloqueio(client)}
                                 className="gap-2"
                               >
-                                <Ban className="size-4 text-amber-500" />
+                                <Ban className="size-4 text-warning" />
                                 {client.status === "blocked" ? "Desbloquear no Servidor" : "Bloquear no Servidor"}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
@@ -1651,9 +1651,9 @@ function ClientsRegistry() {
                       <div
                         className={`size-10 rounded-lg flex items-center justify-center font-bold text-xs shadow-sm border ${
                           client.status === "active"
-                            ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                            ? "bg-success/15 text-success border-success/30"
                             : client.status === "blocked"
-                            ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                            ? "bg-destructive/15 text-destructive border-destructive/30"
                             : "bg-muted text-muted-foreground border-border"
                         }`}
                       >
@@ -1667,7 +1667,7 @@ function ClientsRegistry() {
                           rel="noreferrer"
                           className="text-xs text-muted-foreground hover:text-primary font-mono inline-flex items-center gap-1 mt-0.5"
                         >
-                          <MessageCircle className="size-3 text-emerald-500" />
+                          <MessageCircle className="size-3 text-success" />
                           {formatPhoneInput(client.phone)}
                         </a>
                       </div>
@@ -1725,7 +1725,7 @@ function ClientsRegistry() {
                       onClick={() => copiarDadosAcesso(client)}
                       title="Copiar dados de acesso"
                     >
-                      {isCopied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+                      {isCopied ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
                       Acesso
                     </Button>
 
@@ -1757,7 +1757,7 @@ function ClientsRegistry() {
                       variant="outline"
                       size="sm"
                       disabled={isBusy}
-                      className="h-8 text-xs gap-1 px-1 text-emerald-500 hover:bg-emerald-500/10"
+                      className="h-8 text-xs gap-1 px-1 text-success hover:bg-success/10"
                       onClick={() => setConfirmRemindClient(client)}
                       title="Cobrar via WhatsApp"
                     >

@@ -79,7 +79,7 @@ function AdminPage() {
   if (!data?.ok) {
     return (
       <div className="mx-auto max-w-lg py-16 text-center" data-testid="admin-denied">
-        <div className="mx-auto mb-4 grid size-14 place-items-center rounded-lg bg-rose-500/10 text-rose-500">
+        <div className="mx-auto mb-4 grid size-14 place-items-center rounded-lg bg-destructive/10 text-destructive">
           <Lock className="size-7" />
         </div>
         <h1 className="text-xl font-bold text-foreground">Área restrita</h1>
@@ -280,7 +280,7 @@ function MercadoPagoCard({ hasTokenInitial }: { hasTokenInitial: boolean }) {
             <div
               className={`flex flex-1 items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
                 status.ok
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
+                  ? "border-success/30 bg-success/10 text-success"
                   : "border-destructive/30 bg-destructive/10 text-destructive"
               }`}
               data-testid="admin-test-result"
@@ -340,7 +340,7 @@ function WebhookCard() {
             className="h-9 shrink-0 gap-1.5"
             data-testid="admin-copy-webhook"
           >
-            {copied ? <CheckCircle2 className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+            {copied ? <CheckCircle2 className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
             {copied ? "Copiado!" : "Copiar"}
           </Button>
         </div>
@@ -465,8 +465,8 @@ function SubscriptionsCard() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
           { label: "Revendedores", value: stats.total },
-          { label: "Assinaturas ativas", value: stats.active, tone: "text-emerald-600 dark:text-emerald-400" },
-          { label: "Em teste", value: stats.trial, tone: "text-amber-600 dark:text-amber-400" },
+          { label: "Assinaturas ativas", value: stats.active, tone: "text-success" },
+          { label: "Em teste", value: stats.trial, tone: "text-warning" },
           { label: "Clientes cadastrados", value: stats.clients },
         ].map((item) => (
           <div key={item.label} className="rounded-lg border border-border/60 bg-card/70 px-4 py-3">
