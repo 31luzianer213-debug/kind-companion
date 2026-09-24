@@ -56,9 +56,6 @@ export async function sendViaBaileys(
     let instance = "";
     if (options?.userId) {
       instance = tenant.tenantInstanceName(options.userId);
-    } else {
-      const { resolveInstance } = await import("./evolution-api.server");
-      instance = await resolveInstance();
     }
     if (!instance) throw new Error("WhatsApp não conectado. Leia o QR Code na página do WhatsApp.");
     const sent = await tenant.tenantSendText(instance, normalizeNumber(phone), text, true);

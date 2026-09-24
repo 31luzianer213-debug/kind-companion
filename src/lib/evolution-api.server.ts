@@ -5,13 +5,22 @@
  */
 import { evolutionBaseUrl } from "./evolution-url";
 import { phoneVariants } from "./phone";
+import { AsyncLocalStorage } from "node:async_hooks";
+
+/** Única forma válida de instância: uma por conta, `sigma_<id da conta>`. */
+export const TENANT_INSTANCE_RE = /^sigma_[a-z0-9]{32}$/;
+const instanceScope = new AsyncLocalStorage<string>();
+
+/** Executa as chamadas legadas sempre na instância da conta informada. */
+export function withInstance<T>(instance: string | undefined | null, fn: () => Promise<T>): Promise<T> {
+  return instanceScope.run(String(instance || "").trim(), fn);
+}
 
 export function evolutionEnv() {
   const rawUrl = process.env["EVOLUTION_API_URL"] || "";
   const key = process.env["EVOLUTION_API_KEY"] || "";
-  const instance = (process.env["EVOLUTION_INSTANCE"] || "iptv_cobrancas").trim();
   if (!rawUrl.trim() || !key.trim()) return null;
-  return { base: evolutionBaseUrl(rawUrl), key: key.trim(), instance };
+  return { base: evolutionBaseUrl(rawUrl), key: key.trim() };
 }
 
 export function isEvolutionEnabled() {
@@ -42,9 +51,6 @@ async function evoRequest<T = any>(
   }
 }
 
-let cachedInstance: string | null = null;
-let cachedAt = 0;
-
 async function listInstances(): Promise<any[]> {
   const res = await evoRequest<any[]>(`/instance/fetchInstances`, { method: "GET" }, 10000);
   const items = Array.isArray(res.data) ? res.data : res.data?.instances || [];
@@ -56,18 +62,12 @@ function instanceNameOf(item: any) {
 }
 
 /**
- * Usa exclusivamente a instância definida em EVOLUTION_INSTANCE.
- * Nunca seleciona automaticamente uma sessão antiga: isso evita que preview,
- * produção ou instalações anteriores disputem chaves Signal e webhooks.
+ * Não existe mais instância geral: só vale a instância da conta que está
+ * sendo atendida. Sem conta, nada é criado nem enviado.
  */
-export async function resolveInstance(force = false): Promise<string> {
-  const env = evolutionEnv();
-  if (!env) return "";
-  if (!force && cachedInstance && Date.now() - cachedAt < 60000) return cachedInstance;
-
-  cachedInstance = env.instance;
-  cachedAt = Date.now();
-  return env.instance;
+export async function resolveInstance(_force = false): Promise<string> {
+  const scoped = instanceScope.getStore() || "";
+  return TENANT_INSTANCE_RE.test(scoped) ? scoped : "";
 }
 
 /** Garante que a instância exista no servidor Evolution. */
@@ -76,6 +76,7 @@ export async function evoEnsureInstance(webhookUrl?: string) {
   if (!env) return { ok: false, created: false };
 
   const instance = await resolveInstance(true);
+  if (!instance) return { ok: false, created: false };
   const items = await listInstances();
   const exists = items.some((i: any) => instanceNameOf(i) === instance);
 
