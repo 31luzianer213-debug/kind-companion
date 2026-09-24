@@ -151,6 +151,12 @@ export type AdminSubscriptionRow = {
   trial_ends_at: string | null;
   current_period_end: string | null;
   clients: number;
+  created_at: string | null;
+  last_sign_in_at: string | null;
+  banned: boolean;
+  panels: number;
+  whatsapp: string | null;
+  plan_id: string | null;
 };
 
 /** Lista os revendedores e o estado de cada assinatura. */
@@ -163,12 +169,24 @@ export const listAdminSubscriptions = createServerFn({ method: "GET" })
       return { ok: false as const, error: "Acesso restrito ao administrador do sistema.", rows: [] as AdminSubscriptionRow[] };
     }
     const [{ data: subs }, users, { data: clients }] = await Promise.all([
-      (supabaseAdmin as any).from("saas_subscriptions").select("user_id, status, trial_ends_at, current_period_end"),
-      (supabaseAdmin as any).auth.admin.listUsers({ page: 1, perPage: 200 }),
-      (supabaseAdmin as any).from("clients").select("user_id"),
+      (supabaseAdmin as any).from("saas_subscriptions").select("user_id, plan_id, status, trial_ends_at, current_period_end"),
+      (supabaseAdmin as any).auth.admin.listUsers({ page: 1, perPage: 1000 }),
+      (supabaseAdmin as any).from("clients").select("user_id").limit(100000),
+    ]);
+    const [{ data: panels }, { data: wa }] = await Promise.all([
+      (supabaseAdmin as any).from("sigma_panels").select("user_id"),
+      (supabaseAdmin as any).from("whatsapp_settings").select("user_id, connection_status, connected_number"),
     ]);
     const emails = new Map<string, string>();
-    for (const u of users?.data?.users ?? []) emails.set(u.id, u.email ?? "");
+    const authInfo = new Map<string, any>();
+    for (const u of users?.data?.users ?? []) {
+      emails.set(u.id, u.email ?? "");
+      authInfo.set(u.id, u);
+    }
+    const panelCounts = new Map<string, number>();
+    for (const p of panels ?? []) panelCounts.set(p.user_id, (panelCounts.get(p.user_id) ?? 0) + 1);
+    const waById = new Map<string, any>();
+    for (const w of wa ?? []) waById.set(w.user_id, w);
     const counts = new Map<string, number>();
     for (const c of clients ?? []) counts.set(c.user_id, (counts.get(c.user_id) ?? 0) + 1);
     const subsById = new Map<string, any>();
@@ -183,6 +201,12 @@ export const listAdminSubscriptions = createServerFn({ method: "GET" })
         trial_ends_at: s?.trial_ends_at ?? null,
         current_period_end: s?.current_period_end ?? null,
         clients: counts.get(id) ?? 0,
+        created_at: authInfo.get(id)?.created_at ?? null,
+        last_sign_in_at: authInfo.get(id)?.last_sign_in_at ?? null,
+        banned: Boolean(authInfo.get(id)?.banned_until && new Date(authInfo.get(id).banned_until).getTime() > Date.now()),
+        panels: panelCounts.get(id) ?? 0,
+        whatsapp: waById.get(id)?.connection_status === "connected" ? (waById.get(id)?.connected_number || "conectado") : null,
+        plan_id: s?.plan_id ?? null,
       };
     });
     rows.sort((a, b) => a.email.localeCompare(b.email));
@@ -294,27 +318,8 @@ export const deleteAdminReseller = createServerFn({ method: "POST" })
     if (data.userId === (context as any).userId) {
       return { ok: false as const, error: "Você não pode excluir a sua própria conta de administrador." };
     }
-    const tables = [
-      "billing_rule_sends",
-      "billing_rules",
-      "message_logs",
-      "invoices",
-      "orders",
-      "iptv_lists",
-      "clients",
-      "sigma_panels",
-      "whatsapp_settings",
-      "bot_settings",
-      "activity_logs",
-      "saas_payments",
-      "saas_subscriptions",
-    ];
-    for (const table of tables) {
-      await (supabaseAdmin as any).from(table).delete().eq("user_id", data.userId);
-    }
-    await (supabaseAdmin as any).from("profiles").delete().eq("id", data.userId);
-    const { error } = await (supabaseAdmin as any).auth.admin.deleteUser(data.userId);
-    if (error) return { ok: false as const, error: error.message };
+    const res = await deleteResellerData(supabaseAdmin, data.userId);
+    if (!res.ok) return res;
     return { ok: true as const };
   });
 
@@ -610,4 +615,116 @@ export const deleteAdminPlan = createServerFn({ method: "POST" })
     const { error } = await (supabaseAdmin as any).from("saas_plans").delete().eq("id", data.id);
     if (error) return { ok: false as const, error: error.message };
     return { ok: true as const };
+  });
+
+
+async function deleteResellerData(supabaseAdmin: any, userId: string) {
+  const tables = [
+    "billing_rule_sends", "billing_rules", "message_logs", "invoices", "orders", "iptv_lists",
+    "client_trials", "bot_conversations", "telegram_chats", "telegram_settings",
+    "clients", "sigma_panels", "whatsapp_settings", "bot_settings", "sale_plans",
+    "saas_payments", "saas_subscriptions",
+  ];
+  for (const table of tables) {
+    await supabaseAdmin.from(table).delete().eq("user_id", userId);
+  }
+  await supabaseAdmin.from("profiles").delete().eq("id", userId);
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
+type BulkAction = "delete" | "grant" | "block" | "trial" | "suspend" | "unsuspend";
+
+/** Aplica a mesma ação em vários revendedores de uma vez. */
+export const bulkAdminResellers = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { userIds: string[]; action: BulkAction; days?: number }) => input)
+  .handler(async ({ data, context }) => {
+    if (!(await assertAdmin(context.claims))) {
+      return { ok: false as const, done: 0, failed: 0, error: "Acesso restrito ao administrador do sistema." };
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const me = (context as any).userId as string;
+    const ids = Array.from(new Set((data.userIds ?? []).map(String).filter(Boolean))).filter((id) => id !== me).slice(0, 200);
+    if (!ids.length) return { ok: false as const, done: 0, failed: 0, error: "Selecione ao menos um revendedor (sua conta não entra)." };
+    const days = Math.max(1, Math.min(365, Number(data.days) || 30));
+    let done = 0;
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        let error: any = null;
+        if (data.action === "delete") {
+          const r = await deleteResellerData(admin, id);
+          if (!r.ok) error = r.error;
+        } else if (data.action === "block") {
+          ({ error } = await admin.from("saas_subscriptions")
+            .update({ status: "canceled", current_period_end: new Date(Date.now() - 86_400_000).toISOString() })
+            .eq("user_id", id));
+        } else if (data.action === "trial") {
+          ({ error } = await admin.from("saas_subscriptions").upsert(
+            { user_id: id, status: "trialing", trial_ends_at: new Date(Date.now() + 7 * 86_400_000).toISOString() },
+            { onConflict: "user_id" }));
+        } else if (data.action === "grant") {
+          const { data: cur } = await admin.from("saas_subscriptions").select("current_period_end").eq("user_id", id).maybeSingle();
+          const base = cur?.current_period_end ? new Date(cur.current_period_end).getTime() : 0;
+          const start = base > Date.now() ? base : Date.now();
+          ({ error } = await admin.from("saas_subscriptions").upsert(
+            { user_id: id, status: "active", current_period_end: new Date(start + days * 86_400_000).toISOString() },
+            { onConflict: "user_id" }));
+        } else if (data.action === "suspend" || data.action === "unsuspend") {
+          ({ error } = await admin.auth.admin.updateUserById(id, { ban_duration: data.action === "suspend" ? "876000h" : "none" }));
+        }
+        if (error) failed++;
+        else done++;
+      } catch {
+        failed++;
+      }
+    }
+    return { ok: failed === 0, done, failed, error: failed ? `${failed} conta(s) não puderam ser alteradas.` : null };
+  });
+
+/** Todos os dados de um revendedor para o administrador conferir. */
+export const getAdminResellerDetails = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { userId: string }) => input)
+  .handler(async ({ data, context }) => {
+    if (!(await assertAdmin(context.claims))) return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const id = String(data.userId);
+    const [user, profile, sub, clients, panels, wa, invoices, orders, logs, payments] = await Promise.all([
+      admin.auth.admin.getUserById(id),
+      admin.from("profiles").select("display_name").eq("id", id).maybeSingle(),
+      admin.from("saas_subscriptions").select("plan_id,status,trial_ends_at,current_period_end").eq("user_id", id).maybeSingle(),
+      admin.from("clients").select("id,name,phone,status,monthly_fee,next_due_date,iptv_username,created_at").eq("user_id", id).order("name").limit(500),
+      admin.from("sigma_panels").select("id,name,url,enabled,last_sync_at").eq("user_id", id),
+      admin.from("whatsapp_settings").select("business_name,connection_status,connected_number,auto_send_enabled,payment_provider,pix_key").eq("user_id", id).maybeSingle(),
+      admin.from("invoices").select("amount,status").eq("user_id", id).limit(5000),
+      admin.from("orders").select("id", { count: "exact", head: true }).eq("user_id", id),
+      admin.from("message_logs").select("status,created_at,phone,body").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
+      admin.from("saas_payments").select("amount,status,months,created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
+    ]);
+    const inv = (invoices.data ?? []) as any[];
+    const sum = (st: string) => inv.filter((i) => i.status === st).reduce((a, i) => a + Number(i.amount || 0), 0);
+    const u = user?.data?.user;
+    return {
+      ok: true as const,
+      account: {
+        email: u?.email ?? "",
+        name: profile.data?.display_name ?? null,
+        created_at: u?.created_at ?? null,
+        last_sign_in_at: u?.last_sign_in_at ?? null,
+        banned_until: u?.banned_until ?? null,
+      },
+      subscription: sub.data ?? null,
+      clients: clients.data ?? [],
+      panels: panels.data ?? [],
+      whatsapp: wa.data ? { ...wa.data, pix_key: wa.data.pix_key ? "configurada" : null } : null,
+      invoices: { total: inv.length, paid: sum("paid"), pending: sum("pending"), overdue: sum("overdue") },
+      orders: orders.count ?? 0,
+      messages: logs.data ?? [],
+      payments: payments.data ?? [],
+    };
   });
