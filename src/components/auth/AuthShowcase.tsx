@@ -41,13 +41,13 @@ export function AuthShowcase() {
           {benefits.map(({ icon: Icon, title, text }) => (
             <div key={title} className="flex items-center gap-3 rounded-lg border border-border bg-background/40 p-3.5">
               <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
-                <Icon className="size-[18px] text-foreground" />
+                <Icon className="size-[18px]" />
               </span>
               <div>
                 <p className="text-sm font-bold">{title}</p>
                 <p className="text-xs text-foreground/60">{text}</p>
               </div>
-              <CheckCircle2 className="ml-auto size-4 shrink-0 text-emerald-300" />
+              <CheckCircle2 className="ml-auto size-4 shrink-0 text-primary" />
             </div>
           ))}
         </div>
