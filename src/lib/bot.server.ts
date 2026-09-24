@@ -945,7 +945,52 @@ function buildMainMenu(config: BotConfigData, serverName: string): BotProcessRes
   };
 }
 
+/** Processa a mensagem guardando o ponto da conversa no banco (não se perde ao reiniciar). */
 export async function processBotMessage(
+  supabase: any,
+  userId: string,
+  params: { phone: string; text: string; pushName?: string },
+  opts?: { skipAi?: boolean },
+): Promise<BotProcessResult> {
+  const phoneKey = String(params.phone || "").replace(/\D/g, "");
+  const canPersist = Boolean(supabase?.from && userId && userId !== "default" && phoneKey);
+  if (canPersist) {
+    try {
+      const { data } = await supabase
+        .from("bot_conversations")
+        .select("session, ai_history")
+        .eq("user_id", userId)
+        .eq("phone", phoneKey)
+        .maybeSingle();
+      if (data?.session) conversationSessions.set(phoneKey, data.session as ConversationSession);
+      else conversationSessions.delete(phoneKey);
+      setAiHistory(phoneKey, Array.isArray(data?.ai_history) ? data.ai_history : []);
+    } catch (err) {
+      console.warn("[bot] Não foi possível ler a conversa salva:", err);
+    }
+  }
+  try {
+    return await processBotMessageInner(supabase, userId, params, opts);
+  } finally {
+    if (canPersist) {
+      try {
+        await supabase.from("bot_conversations").upsert(
+          {
+            user_id: userId,
+            phone: phoneKey,
+            session: conversationSessions.get(phoneKey) ?? null,
+            ai_history: getAiHistory(phoneKey),
+          },
+          { onConflict: "user_id,phone" },
+        );
+      } catch (err) {
+        console.warn("[bot] Não foi possível salvar a conversa:", err);
+      }
+    }
+  }
+}
+
+async function processBotMessageInner(
   supabase: any,
   userId: string,
   params: {

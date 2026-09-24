@@ -29,6 +29,10 @@ export function getAiHistory(phone: string): HistoryItem[] {
   return history.get(phone) ?? [];
 }
 
+export function setAiHistory(phone: string, items: HistoryItem[]): void {
+  history.set(phone, items.slice(-HISTORY_LIMIT));
+}
+
 export function pushAiHistory(phone: string, item: HistoryItem): void {
   const list = history.get(phone) ?? [];
   list.push(item);
