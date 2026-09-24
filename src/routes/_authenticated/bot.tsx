@@ -22,6 +22,7 @@ import {
   Send,
   Sparkles,
   ShieldCheck,
+  Check,
   RotateCcw,
   Clock,
   Package,
