@@ -463,10 +463,6 @@ function PainelOverview() {
                     <p className="text-xs text-foreground/50">Previsto no mês: {formatBRL(expected)}</p>
                   </div>
                   <div className="mt-auto flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                    <Button onClick={runBilling} disabled={running} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
-                      {running ? <Clock3 className="size-4 animate-spin" /> : <Send className="size-4" />}
-                      {running ? "Processando…" : "Rodar cobranças agora"}
-                    </Button>
                     <Button asChild variant="ghost" className="gap-2 text-foreground hover:bg-foreground/10 hover:text-foreground">
                       <Link to="/clientes" search={{ novo: "1" } as never}>
                         <Plus className="size-4" /> Novo cliente
