@@ -1854,6 +1854,7 @@ export async function updateSigmaCustomer(
   if (input.phone) {
     payload.phone = input.phone.replace(/\D/g, "");
     payload.contact = input.phone.replace(/\D/g, "");
+    payload.whatsapp = input.phone.replace(/\D/g, "");
   }
   if (input.email) payload.email = input.email;
   if (input.screens) {

@@ -576,7 +576,7 @@ export async function runSigmaSyncForUser(
 
     const { data: existing } = await supabase
       .from("clients")
-      .select("id, sigma_customer_id, iptv_username")
+      .select("id, sigma_customer_id, iptv_username, phone")
       .eq("user_id", userId);
 
     const bySigmaId = new Map<string, any>();
@@ -628,7 +628,13 @@ export async function runSigmaSyncForUser(
       if (match) {
         const { error } = await supabase
           .from("clients")
-          .update({ ...base, status: localStatus })
+          .update({
+            ...base,
+            status: localStatus,
+            ...(!String(match.phone || "").replace(/\D/g, "") && customer.phone
+              ? { phone: String(customer.phone).replace(/\D/g, "") }
+              : {}),
+          })
           .eq("id", match.id)
           .eq("user_id", userId);
 

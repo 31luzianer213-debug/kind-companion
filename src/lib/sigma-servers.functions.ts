@@ -344,7 +344,7 @@ async function syncOneServer(supabase: any, userId: string, server: any) {
 
   const { data: existing } = await supabase
     .from("clients")
-    .select("id, sigma_customer_id, iptv_username")
+    .select("id, sigma_customer_id, iptv_username, phone")
     .eq("user_id", userId)
     .eq("panel_id", server.id);
 
@@ -381,7 +381,7 @@ async function syncOneServer(supabase: any, userId: string, server: any) {
     };
 
     if (match) {
-      const { error } = await supabase.from("clients").update(values).eq("id", match.id).eq("user_id", userId);
+      const { error } = await supabase.from("clients").update({ ...values, ...(!String((match as any).phone || "").replace(/\D/g, "") && customer.phone ? { phone: String(customer.phone).replace(/\D/g, "") } : {}) }).eq("id", match.id).eq("user_id", userId);
       if (!error) updated++;
     } else {
       const { error } = await supabase.from("clients").insert({
