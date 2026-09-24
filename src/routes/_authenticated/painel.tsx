@@ -438,7 +438,7 @@ function PainelOverview() {
                     <p className="inline-flex items-center gap-2 text-sm font-medium text-foreground/70">
                       <TrendingUp className="size-4 text-ring" /> Recebido neste mês
                     </p>
-                    <span className="rounded-full bg-ring px-2.5 py-1 text-xs font-bold tabular-nums text-foreground">{paidPct}% da meta</span>
+                    <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-bold tabular-nums text-primary-foreground">{paidPct}% da meta</span>
                   </div>
                   <p className="font-display text-5xl font-bold tracking-tight tabular-nums sm:text-7xl">{formatBRL(totalPaid)}</p>
                   <div className="space-y-3">
@@ -462,7 +462,7 @@ function PainelOverview() {
                     <p className="text-xs text-foreground/50">Previsto no mês: {formatBRL(expected)}</p>
                   </div>
                   <div className="mt-auto flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                    <Button onClick={runBilling} disabled={running} className="gap-2 bg-ring text-foreground hover:bg-ring/90">
+                    <Button onClick={runBilling} disabled={running} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
                       {running ? <Clock3 className="size-4 animate-spin" /> : <Send className="size-4" />}
                       {running ? "Processando…" : "Rodar cobranças agora"}
                     </Button>
