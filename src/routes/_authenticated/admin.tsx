@@ -46,6 +46,7 @@ import {
   saveAdminSettings,
   startAdminTrial,
   testMercadoPagoToken,
+  testMisticPayCreds,
   updateAdminSubscription,
 } from "@/lib/admin.functions";
 
@@ -107,8 +108,8 @@ function AdminPage() {
             Assinaturas dos revendedores, plano vendido e conta que recebe as mensalidades.
           </p>
         </div>
-        <Badge variant={data.settings.has_token ? "success" : "secondary"} className="w-fit text-xs" data-testid="admin-token-status">
-          {data.settings.has_token ? "Recebimento configurado" : "Recebimento pendente"}
+        <Badge variant={(data.settings.saas_provider === "misticpay" ? (data.settings as any).has_mistic : data.settings.has_token) ? "success" : "secondary"} className="w-fit text-xs" data-testid="admin-token-status">
+          {(data.settings.saas_provider === "misticpay" ? (data.settings as any).has_mistic : data.settings.has_token) ? "Recebimento configurado" : "Recebimento pendente"}
         </Badge>
       </div>
 
@@ -148,11 +149,153 @@ function AdminPage() {
         </TabsContent>
 
         <TabsContent value="recebimento" className="space-y-5">
+          <ProviderSwitch current={data.settings.saas_provider} hasMp={Boolean(data.settings.has_token)} hasMistic={Boolean((data.settings as any).has_mistic)} />
+          <MisticPayCard hasInitial={Boolean((data.settings as any).has_mistic)} idHint={(data.settings as any).mistic_client_id_hint ?? ""} />
           <MercadoPagoCard hasTokenInitial={Boolean(data.settings.has_token)} />
           <WebhookCard />
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function ProviderSwitch({ current, hasMp, hasMistic }: { current: string; hasMp: boolean; hasMistic: boolean }) {
+  const queryClient = useQueryClient();
+  const saveFn = useServerFn(saveAdminSettings);
+  const choose = useMutation({
+    mutationFn: async (provider: "mercadopago" | "misticpay") => {
+      const res = await saveFn({ data: { provider } });
+      if (!res.ok) throw new Error(res.error || "Falha ao salvar.");
+      return provider;
+    },
+    onSuccess: (p) => {
+      toast.success(p === "misticpay" ? "Agora as assinaturas são pagas pela MisticPay." : "Agora as assinaturas são pagas pelo Mercado Pago.");
+      queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const options = [
+    { id: "misticpay" as const, label: "MisticPay", ready: hasMistic },
+    { id: "mercadopago" as const, label: "Mercado Pago", ready: hasMp },
+  ];
+  return (
+    <Card className="surface-card border-border/70">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Por onde você recebe as assinaturas</CardTitle>
+        <CardDescription>Escolha a conta usada para gerar o Pix dos revendedores.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-2 sm:grid-cols-2">
+        {options.map((o) => {
+          const active = (current || "mercadopago") === o.id;
+          return (
+            <button
+              key={o.id}
+              type="button"
+              disabled={choose.isPending || active}
+              onClick={() => (o.ready ? choose.mutate(o.id) : toast.error(`Salve as credenciais da ${o.label} primeiro.`))}
+              className={`flex items-center justify-between rounded-lg border px-4 py-3 text-left text-sm font-semibold transition-colors ${active ? "border-primary bg-primary/10 text-foreground" : "border-border/70 text-muted-foreground hover:text-foreground"}`}
+            >
+              <span>{o.label}</span>
+              <span className="text-xs font-medium">{active ? "Em uso" : o.ready ? "Usar esta" : "Não configurada"}</span>
+            </button>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MisticPayCard({ hasInitial, idHint }: { hasInitial: boolean; idHint: string }) {
+  const queryClient = useQueryClient();
+  const saveFn = useServerFn(saveAdminSettings);
+  const testFn = useServerFn(testMisticPayCreds);
+  const [clientId, setClientId] = useState("");
+  const [secret, setSecret] = useState("");
+  const [show, setShow] = useState(false);
+  const [has, setHas] = useState(hasInitial);
+  const [testing, setTesting] = useState(false);
+  const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
+  const webhookUrl = (typeof window !== "undefined" ? window.location.origin : "") + "/api/public/hooks/saas-misticpay";
+  const ready = clientId.trim() && secret.trim();
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const res = await saveFn({ data: { misticpay_client_id: clientId, misticpay_client_secret: secret, provider: "misticpay" } });
+      if (!res.ok) throw new Error(res.error || "Falha ao salvar.");
+    },
+    onSuccess: () => {
+      toast.success("MisticPay salva e em uso para as assinaturas.");
+      setClientId(""); setSecret(""); setHas(true);
+      queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  async function handleTest() {
+    setTesting(true); setStatus(null);
+    try {
+      const res = await testFn({ data: { clientId, clientSecret: secret } });
+      setStatus(res.ok ? { ok: true, message: res.message } : { ok: false, message: res.error });
+    } catch {
+      setStatus({ ok: false, message: "Erro ao testar." });
+    } finally { setTesting(false); }
+  }
+
+  return (
+    <Card className="surface-card border-border/70">
+      <CardHeader className="border-b border-border/50 pb-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base"><Wallet className="size-5 text-primary" /> MisticPay</CardTitle>
+            <CardDescription className="mt-1">Pix com taxa fixa. Pegue as credenciais no painel da MisticPay em API → Chaves de Acesso.</CardDescription>
+          </div>
+          <Badge variant={has ? "success" : "secondary"} className="shrink-0 text-xs">{has ? "Configurado" : "Pendente"}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Client ID (pk_…)</Label>
+            <Input value={clientId} onChange={(e) => { setClientId(e.target.value); setStatus(null); }} placeholder={has ? `${idHint} (vazio mantém o atual)` : "pk_..."} className="font-mono text-sm" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Client Secret (sk_…)</Label>
+            <div className="relative flex items-center">
+              <Input type={show ? "text" : "password"} value={secret} onChange={(e) => { setSecret(e.target.value); setStatus(null); }} placeholder={has ? "•••••••• (vazio mantém o atual)" : "sk_..."} className="pr-10 font-mono text-sm" />
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShow(!show)} className="absolute right-1 size-7 text-muted-foreground">
+                {show ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+              </Button>
+            </div>
+          </div>
+        </div>
+        <p className="text-[11px] text-muted-foreground">Ao criar a chave, marque a permissão de receber (cash-in). A credencial antiga ci_/cs_ também funciona, mas a MisticPay desliga ela em 30/09/2026.</p>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold">Endereço de confirmação (opcional)</Label>
+          <div className="flex items-center gap-2">
+            <Input readOnly value={webhookUrl} className="h-9 font-mono text-xs" />
+            <Button type="button" variant="outline" size="sm" className="h-9 shrink-0" onClick={() => { navigator.clipboard.writeText(webhookUrl); toast.success("Endereço copiado!"); }}><Copy className="size-3.5" /></Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">O sistema já manda esse endereço em cada Pix. Mesmo sem ele, a tela do revendedor confere o pagamento sozinha a cada 5 segundos.</p>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Button type="button" variant="outline" size="sm" onClick={handleTest} disabled={testing || !ready} className="gap-2 text-xs">
+            {testing ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5 text-primary" />} Testar credenciais
+          </Button>
+          {status && (
+            <div className={`flex flex-1 items-center gap-2 rounded-lg border px-3 py-2 text-xs ${status.ok ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+              {status.ok ? <CheckCircle2 className="size-4 shrink-0" /> : <AlertCircle className="size-4 shrink-0" />}<span>{status.message}</span>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end border-t border-border/50 pt-3">
+          <Button type="button" onClick={() => save.mutate()} disabled={save.isPending || !ready} className="gap-1.5 px-6 font-semibold">
+            {save.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />} Salvar e usar MisticPay
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -31,6 +31,7 @@ import { Route as ApiPublicHooksAsaasRouteImport } from './routes/api/public/hoo
 import { Route as ApiPublicHooksCobrancaDiariaRouteImport } from './routes/api/public/hooks/cobranca-diaria'
 import { Route as ApiPublicHooksMercadopagoRouteImport } from './routes/api/public/hooks/mercadopago'
 import { Route as ApiPublicHooksSaasMercadopagoRouteImport } from './routes/api/public/hooks/saas-mercadopago'
+import { Route as ApiPublicHooksSaasMisticpayRouteImport } from './routes/api/public/hooks/saas-misticpay'
 import { Route as ApiPublicHooksSigmaSyncRouteImport } from './routes/api/public/hooks/sigma-sync'
 import { Route as ApiPublicHooksTelegramRouteImport } from './routes/api/public/hooks/telegram'
 import { Route as ApiPublicHooksWhatsappBotRouteImport } from './routes/api/public/hooks/whatsapp-bot'
@@ -150,6 +151,12 @@ const ApiPublicHooksSaasMercadopagoRoute =
     path: '/api/public/hooks/saas-mercadopago',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSaasMisticpayRoute =
+  ApiPublicHooksSaasMisticpayRouteImport.update({
+    id: '/api/public/hooks/saas-misticpay',
+    path: '/api/public/hooks/saas-misticpay',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSigmaSyncRoute = ApiPublicHooksSigmaSyncRouteImport.update({
   id: '/api/public/hooks/sigma-sync',
   path: '/api/public/hooks/sigma-sync',
@@ -195,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/saas-mercadopago': typeof ApiPublicHooksSaasMercadopagoRoute
+  '/api/public/hooks/saas-misticpay': typeof ApiPublicHooksSaasMisticpayRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
   '/api/public/hooks/telegram': typeof ApiPublicHooksTelegramRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
@@ -222,6 +230,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/saas-mercadopago': typeof ApiPublicHooksSaasMercadopagoRoute
+  '/api/public/hooks/saas-misticpay': typeof ApiPublicHooksSaasMisticpayRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
   '/api/public/hooks/telegram': typeof ApiPublicHooksTelegramRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
@@ -251,6 +260,7 @@ export interface FileRoutesById {
   '/api/public/hooks/cobranca-diaria': typeof ApiPublicHooksCobrancaDiariaRoute
   '/api/public/hooks/mercadopago': typeof ApiPublicHooksMercadopagoRoute
   '/api/public/hooks/saas-mercadopago': typeof ApiPublicHooksSaasMercadopagoRoute
+  '/api/public/hooks/saas-misticpay': typeof ApiPublicHooksSaasMisticpayRoute
   '/api/public/hooks/sigma-sync': typeof ApiPublicHooksSigmaSyncRoute
   '/api/public/hooks/telegram': typeof ApiPublicHooksTelegramRoute
   '/api/public/hooks/whatsapp-bot': typeof ApiPublicHooksWhatsappBotRoute
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/cobranca-diaria'
     | '/api/public/hooks/mercadopago'
     | '/api/public/hooks/saas-mercadopago'
+    | '/api/public/hooks/saas-misticpay'
     | '/api/public/hooks/sigma-sync'
     | '/api/public/hooks/telegram'
     | '/api/public/hooks/whatsapp-bot'
@@ -307,6 +318,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/cobranca-diaria'
     | '/api/public/hooks/mercadopago'
     | '/api/public/hooks/saas-mercadopago'
+    | '/api/public/hooks/saas-misticpay'
     | '/api/public/hooks/sigma-sync'
     | '/api/public/hooks/telegram'
     | '/api/public/hooks/whatsapp-bot'
@@ -335,6 +347,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/cobranca-diaria'
     | '/api/public/hooks/mercadopago'
     | '/api/public/hooks/saas-mercadopago'
+    | '/api/public/hooks/saas-misticpay'
     | '/api/public/hooks/sigma-sync'
     | '/api/public/hooks/telegram'
     | '/api/public/hooks/whatsapp-bot'
@@ -351,6 +364,7 @@ export interface RootRouteChildren {
   ApiPublicHooksCobrancaDiariaRoute: typeof ApiPublicHooksCobrancaDiariaRoute
   ApiPublicHooksMercadopagoRoute: typeof ApiPublicHooksMercadopagoRoute
   ApiPublicHooksSaasMercadopagoRoute: typeof ApiPublicHooksSaasMercadopagoRoute
+  ApiPublicHooksSaasMisticpayRoute: typeof ApiPublicHooksSaasMisticpayRoute
   ApiPublicHooksSigmaSyncRoute: typeof ApiPublicHooksSigmaSyncRoute
   ApiPublicHooksTelegramRoute: typeof ApiPublicHooksTelegramRoute
   ApiPublicHooksWhatsappBotRoute: typeof ApiPublicHooksWhatsappBotRoute
@@ -513,6 +527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSaasMercadopagoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/saas-misticpay': {
+      id: '/api/public/hooks/saas-misticpay'
+      path: '/api/public/hooks/saas-misticpay'
+      fullPath: '/api/public/hooks/saas-misticpay'
+      preLoaderRoute: typeof ApiPublicHooksSaasMisticpayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sigma-sync': {
       id: '/api/public/hooks/sigma-sync'
       path: '/api/public/hooks/sigma-sync'
@@ -589,6 +610,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksCobrancaDiariaRoute: ApiPublicHooksCobrancaDiariaRoute,
   ApiPublicHooksMercadopagoRoute: ApiPublicHooksMercadopagoRoute,
   ApiPublicHooksSaasMercadopagoRoute: ApiPublicHooksSaasMercadopagoRoute,
+  ApiPublicHooksSaasMisticpayRoute: ApiPublicHooksSaasMisticpayRoute,
   ApiPublicHooksSigmaSyncRoute: ApiPublicHooksSigmaSyncRoute,
   ApiPublicHooksTelegramRoute: ApiPublicHooksTelegramRoute,
   ApiPublicHooksWhatsappBotRoute: ApiPublicHooksWhatsappBotRoute,

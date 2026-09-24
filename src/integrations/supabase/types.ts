@@ -761,6 +761,8 @@ export type Database = {
           created_at: string
           id: string
           mercadopago_token: string | null
+          misticpay_client_id: string | null
+          misticpay_client_secret: string | null
           saas_provider: string
           updated_at: string
         }
@@ -769,6 +771,8 @@ export type Database = {
           created_at?: string
           id?: string
           mercadopago_token?: string | null
+          misticpay_client_id?: string | null
+          misticpay_client_secret?: string | null
           saas_provider?: string
           updated_at?: string
         }
@@ -777,6 +781,8 @@ export type Database = {
           created_at?: string
           id?: string
           mercadopago_token?: string | null
+          misticpay_client_id?: string | null
+          misticpay_client_secret?: string | null
           saas_provider?: string
           updated_at?: string
         }

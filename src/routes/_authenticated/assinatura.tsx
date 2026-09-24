@@ -43,6 +43,7 @@ function AssinaturaPage() {
   const pixFn = useServerFn(createSubscriptionPix);
   const checkFn = useServerFn(checkSubscriptionPayment);
   const [months, setMonths] = useState(1);
+  const [cpf, setCpf] = useState("");
   const [payment, setPayment] = useState<{ id: string; pix_code: string | null; pix_qr_base64: string | null; ticket_url: string | null; amount: number; planName: string } | null>(null);
 
   const { data: plansData } = useQuery({ queryKey: ["saas-plans"], queryFn: () => plansFn({}) });
@@ -50,7 +51,7 @@ function AssinaturaPage() {
   const plans = plansData?.plans ?? [];
 
   const createPix = useMutation({
-    mutationFn: (plan: SaasPlan) => pixFn({ data: { planId: plan.id, months } }).then((res) => ({ res, plan })),
+    mutationFn: (plan: SaasPlan) => pixFn({ data: { planId: plan.id, months, document: cpf } }).then((res) => ({ res, plan })),
     onSuccess: ({ res, plan }) => {
       if (!res.ok) return toast.error(res.error);
       setPayment({
@@ -110,7 +111,7 @@ function AssinaturaPage() {
             </p>
             {!sub?.saasPaymentsEnabled && (
               <p className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning" data-testid="saas-payments-disabled">
-                Os pagamentos da assinatura ainda não foram habilitados pelo administrador do sistema (Access Token do Mercado Pago em Administração).
+                Os pagamentos da assinatura ainda não foram habilitados pelo administrador do sistema (conta de recebimento em Administração).
               </p>
             )}
           </div>
@@ -157,6 +158,12 @@ function AssinaturaPage() {
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-foreground">Escolha seu plano</h2>
+            {sub?.saasProvider === "misticpay" && (
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                CPF ou CNPJ para o Pix
+                <input value={cpf} onChange={(e) => setCpf(e.target.value)} inputMode="numeric" placeholder="000.000.000-00" className="h-9 w-44 rounded-md border border-border bg-background px-3 text-sm text-foreground" data-testid="subscription-cpf" />
+              </label>
+            )}
             {PERIODS.length > 1 && (
               <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1" data-testid="period-selector">
                 {PERIODS.map((p) => (
@@ -195,7 +202,7 @@ function AssinaturaPage() {
         </>
       )}
 
-      <p className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" /> Pagamento processado pelo Mercado Pago. Ao assinar você concorda com os <Link to="/termos" className="underline">Termos de Uso</Link>.</p>
+      <p className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" /> Pagamento processado pelo {sub?.saasProvider === "misticpay" ? "MisticPay" : "Mercado Pago"}. Ao assinar você concorda com os <Link to="/termos" className="underline">Termos de Uso</Link>.</p>
     </div>
   );
 }

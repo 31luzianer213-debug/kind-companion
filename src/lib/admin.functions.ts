@@ -27,6 +27,8 @@ export const getAdminSettings = createServerFn({ method: "GET" })
       settings: {
         saas_provider: settings?.saas_provider ?? "mercadopago",
         has_token: Boolean(settings?.mercadopago_token),
+        has_mistic: Boolean(settings?.misticpay_client_id && settings?.misticpay_client_secret),
+        mistic_client_id_hint: settings?.misticpay_client_id ? `${settings.misticpay_client_id.slice(0, 6)}…` : "",
         admin_email: settings?.admin_email ?? "",
       },
     };
@@ -35,14 +37,17 @@ export const getAdminSettings = createServerFn({ method: "GET" })
 /** Salva o Access Token do Mercado Pago. */
 export const saveAdminSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { mercadopago_token?: string }) => input)
+  .inputValidator((input: { mercadopago_token?: string; provider?: "mercadopago" | "misticpay"; misticpay_client_id?: string; misticpay_client_secret?: string }) => input)
   .handler(async ({ data, context }) => {
     const { isAdminEmail } = await import("./system-settings.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     if (!(await isAdminEmail(emailFromClaims(context.claims)))) {
       return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
     }
-    const payload: Record<string, unknown> = { id: "global", saas_provider: "mercadopago" };
+    const payload: Record<string, unknown> = { id: "global" };
+    if (data.provider === "mercadopago" || data.provider === "misticpay") payload.saas_provider = data.provider;
+    if (typeof data.misticpay_client_id === "string" && data.misticpay_client_id.trim()) payload.misticpay_client_id = data.misticpay_client_id.trim();
+    if (typeof data.misticpay_client_secret === "string" && data.misticpay_client_secret.trim()) payload.misticpay_client_secret = data.misticpay_client_secret.trim();
     // Só sobrescreve o token quando um novo valor é enviado (mantém o atual se vier vazio).
     if (typeof data.mercadopago_token === "string" && data.mercadopago_token.trim()) {
       payload.mercadopago_token = data.mercadopago_token.trim();
@@ -727,4 +732,33 @@ export const getAdminResellerDetails = createServerFn({ method: "GET" })
       messages: logs.data ?? [],
       payments: payments.data ?? [],
     };
+  });
+
+/** Testa as credenciais da MisticPay consultando uma transação inexistente. */
+export const testMisticPayCreds = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { clientId: string; clientSecret: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { isAdminEmail } = await import("./system-settings.server");
+    if (!(await isAdminEmail(emailFromClaims(context.claims)))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
+    }
+    const clientId = data.clientId?.trim();
+    const clientSecret = data.clientSecret?.trim();
+    if (!clientId || !clientSecret) return { ok: false as const, error: "Preencha o Client ID e o Client Secret." };
+    const basic = !(clientId.startsWith("ci_") || clientSecret.startsWith("cs_"));
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (basic) headers.Authorization = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`;
+    else { headers.ci = clientId; headers.cs = clientSecret; }
+    try {
+      const res = await fetch("https://api.misticpay.com/api/transactions/check", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ transactionId: "0" }),
+      });
+      if (res.status === 401 || res.status === 403) return { ok: false as const, error: "A MisticPay recusou essas credenciais." };
+      return { ok: true as const, message: "Credenciais aceitas pela MisticPay." };
+    } catch {
+      return { ok: false as const, error: "Não foi possível falar com a MisticPay." };
+    }
   });
