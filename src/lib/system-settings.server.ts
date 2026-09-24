@@ -6,12 +6,14 @@ export type SystemSettings = {
   saas_provider: string;
   mercadopago_token: string | null;
   admin_email: string | null;
+  misticpay_client_id: string | null;
+  misticpay_client_secret: string | null;
 };
 
 export async function getSystemSettings(): Promise<SystemSettings | null> {
   const { data } = await (supabaseAdmin as any)
     .from("system_settings")
-    .select("saas_provider, mercadopago_token, admin_email")
+    .select("saas_provider, mercadopago_token, admin_email, misticpay_client_id, misticpay_client_secret")
     .eq("id", "global")
     .maybeSingle();
   return (data as SystemSettings) ?? null;
@@ -24,6 +26,20 @@ export async function getMercadoPagoToken(): Promise<string | null> {
   if (token) return token;
   const envToken = process.env["SAAS_MERCADOPAGO_TOKEN"]?.trim();
   return envToken || null;
+}
+
+export async function getMisticCreds(): Promise<{ clientId: string; clientSecret: string } | null> {
+  const s = await getSystemSettings();
+  const clientId = s?.misticpay_client_id?.trim();
+  const clientSecret = s?.misticpay_client_secret?.trim();
+  return clientId && clientSecret ? { clientId, clientSecret } : null;
+}
+
+/** Qual conta recebe as assinaturas agora. */
+export async function getSaasProvider(): Promise<"mercadopago" | "misticpay" | null> {
+  const s = await getSystemSettings();
+  if (s?.saas_provider === "misticpay") return (await getMisticCreds()) ? "misticpay" : null;
+  return (await getMercadoPagoToken()) ? "mercadopago" : null;
 }
 
 export async function getAdminEmail(): Promise<string> {
