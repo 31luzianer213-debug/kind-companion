@@ -526,6 +526,10 @@ function ClientsRegistry() {
       const dueDay = Number(values.due_day || 10);
       if (dueDay < 1 || dueDay > 31) throw new Error("O dia de vencimento deve estar entre 1 e 31.");
       if (Number(values.screens || 1) < 1) throw new Error("Informe ao menos 1 tela.");
+      const chosenServer = values.panel_id || defaultSigmaServer?.id || "";
+      if (!values.id && !sigmaServers.some((server) => server.enabled && server.id === chosenServer)) {
+        throw new Error("Escolha o servidor Sigma do cliente. Sem servidor, o acesso não é criado de verdade.");
+      }
 
       const { data: auth } = await supabase.auth.getUser();
       const payload = {
@@ -1831,7 +1835,7 @@ function ClientsRegistry() {
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">
-                  Painel Sigma de origem {sigmaServers.some((server) => server.enabled) ? "*" : "(opcional)"}
+                  Servidor Sigma *
                 </Label>
                 <Select
                   value={form.panel_id || defaultSigmaServer?.id || ""}
@@ -1859,7 +1863,7 @@ function ClientsRegistry() {
                   <p className="text-[11px] text-muted-foreground">O painel de origem fica bloqueado para preservar as operações deste cliente.</p>
                 ) : !sigmaServers.some((server) => server.enabled) ? (
                   <p className="text-[11px] text-muted-foreground">
-                    Você ainda não cadastrou um servidor Sigma. O cliente será salvo só aqui no painel e poderá ser vinculado depois.
+                    Cadastre um servidor Sigma em "Painel Sigma" antes de criar clientes. Sem servidor, o acesso do cliente não é criado.
                   </p>
                 ) : null}
               </div>
