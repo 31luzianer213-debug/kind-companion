@@ -430,19 +430,19 @@ function PainelOverview() {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-12">
-              <div className="dash-hero relative overflow-hidden rounded-2xl bg-foreground p-6 text-background shadow-xl sm:p-8 lg:col-span-7">
+              <div className="dash-hero relative overflow-hidden rounded-2xl border border-border bg-card p-6 text-foreground shadow-xl sm:p-8 lg:col-span-7">
                 <div aria-hidden className="hero-grid pointer-events-none absolute inset-0 opacity-20" />
                 <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 size-72 rounded-full bg-[radial-gradient(closest-side,var(--ring),transparent)] opacity-40 blur-3xl" />
                 <div className="relative flex h-full flex-col gap-6">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="inline-flex items-center gap-2 text-sm font-medium text-background/70">
+                    <p className="inline-flex items-center gap-2 text-sm font-medium text-foreground/70">
                       <TrendingUp className="size-4 text-ring" /> Recebido neste mês
                     </p>
-                    <span className="rounded-full bg-ring px-2.5 py-1 text-xs font-bold tabular-nums text-foreground">{paidPct}% da meta</span>
+                    <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-bold tabular-nums text-primary-foreground">{paidPct}% da meta</span>
                   </div>
                   <p className="font-display text-5xl font-bold tracking-tight tabular-nums sm:text-7xl">{formatBRL(totalPaid)}</p>
                   <div className="space-y-3">
-                    <div className="flex h-3 overflow-hidden rounded-full bg-background/10">
+                    <div className="flex h-3 overflow-hidden rounded-full bg-foreground/10">
                       <div className="h-full bg-ring transition-[width] duration-700 ease-out" style={{ width: `${pct(totalPaid)}%` }} />
                       <div className="h-full bg-warning/80 transition-[width] duration-700 ease-out" style={{ width: `${pct(totalPending - totalOverdue)}%` }} />
                       <div className="h-full bg-destructive/80 transition-[width] duration-700 ease-out" style={{ width: `${pct(totalOverdue)}%` }} />
@@ -454,24 +454,24 @@ function PainelOverview() {
                         { c: "bg-destructive", l: "Atrasado", v: totalOverdue },
                       ].map((x) => (
                         <div key={x.l} className="min-w-0">
-                          <p className="flex items-center gap-1.5 text-background/60"><span className={cn("size-2 rounded-sm", x.c)} />{x.l}</p>
+                          <p className="flex items-center gap-1.5 text-foreground/60"><span className={cn("size-2 rounded-sm", x.c)} />{x.l}</p>
                           <p className="mt-0.5 truncate font-semibold tabular-nums">{formatBRL(x.v)}</p>
                         </div>
                       ))}
                     </div>
-                    <p className="text-xs text-background/50">Previsto no mês: {formatBRL(expected)}</p>
+                    <p className="text-xs text-foreground/50">Previsto no mês: {formatBRL(expected)}</p>
                   </div>
                   <div className="mt-auto flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                    <Button onClick={runBilling} disabled={running} className="gap-2 bg-ring text-foreground hover:bg-ring/90">
+                    <Button onClick={runBilling} disabled={running} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
                       {running ? <Clock3 className="size-4 animate-spin" /> : <Send className="size-4" />}
                       {running ? "Processando…" : "Rodar cobranças agora"}
                     </Button>
-                    <Button asChild variant="ghost" className="gap-2 text-background hover:bg-background/10 hover:text-background">
+                    <Button asChild variant="ghost" className="gap-2 text-foreground hover:bg-foreground/10 hover:text-foreground">
                       <Link to="/clientes" search={{ novo: "1" } as never}>
                         <Plus className="size-4" /> Novo cliente
                       </Link>
                     </Button>
-                    <Button variant="ghost" onClick={handleSyncSigma} disabled={syncingSigma} className="gap-2 text-background/80 hover:bg-background/10 hover:text-background">
+                    <Button variant="ghost" onClick={handleSyncSigma} disabled={syncingSigma} className="gap-2 text-foreground/80 hover:bg-foreground/10 hover:text-foreground">
                       <RefreshCw className={cn("size-4", syncingSigma && "animate-spin")} /> Sincronizar Sigma
                     </Button>
                   </div>
