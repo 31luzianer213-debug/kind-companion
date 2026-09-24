@@ -24,12 +24,12 @@ export function AuthShowcase() {
       </Link>
 
       <div className="relative z-10 my-12 max-w-xl">
-        <span className="inline-flex items-center gap-2 rounded-full border border-foreground/20 bg-foreground/10 px-3 py-1.5 text-xs font-bold text-foreground">
+        <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
           <Sparkles className="size-3.5" /> Sua operação em piloto automático
         </span>
         <h1 className="mt-6 font-display text-4xl font-extrabold leading-[1.08] xl:text-5xl">
           Menos tarefas repetidas.
-          <span className="mt-2 block text-foreground/75">
+          <span className="mt-2 block text-primary">
             Mais tempo para vender.
           </span>
         </h1>
@@ -39,8 +39,8 @@ export function AuthShowcase() {
 
         <div className="mt-9 grid gap-3">
           {benefits.map(({ icon: Icon, title, text }) => (
-            <div key={title} className="flex items-center gap-3 rounded-lg border border-foreground/15 bg-foreground/[0.07] p-3.5">
-              <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-foreground/15 bg-foreground/10">
+            <div key={title} className="flex items-center gap-3 rounded-lg border border-border bg-background/40 p-3.5">
+              <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
                 <Icon className="size-[18px] text-foreground" />
               </span>
               <div>
