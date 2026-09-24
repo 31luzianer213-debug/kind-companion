@@ -29,7 +29,7 @@ export function SigmaLogo({ className, size = "md", showGlow = true }: SigmaLogo
         viewBox="0 0 48 48"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={cn("h-full w-full", showGlow && "drop-shadow-[0_8px_16px_rgba(140,190,40,0.28)]")}
+        className={cn("h-full w-full", showGlow && "drop-shadow-[0_8px_16px_rgba(34,211,238,0.28)]")}
         role="img"
         aria-label="Logo Sigma Control"
       >
