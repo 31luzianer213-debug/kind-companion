@@ -162,13 +162,13 @@ function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b-2 border-foreground bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2.5">
             <SigmaLogo size="sm" />
-            <span className="font-display text-base font-semibold tracking-tight sm:text-lg">Sigma Control</span>
+            <span className="font-display text-base font-extrabold uppercase tracking-tight sm:text-lg">Sigma<span className="text-primary">/</span>Control</span>
           </Link>
-          <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
+          <nav className="mono-label hidden items-center gap-6 text-muted-foreground md:flex">
             <a href="#recursos" className="transition-colors hover:text-foreground">Recursos</a>
             <a href="#como-funciona" className="transition-colors hover:text-foreground">Como funciona</a>
             <a href="#preco" className="transition-colors hover:text-foreground">Preço</a>
@@ -199,12 +199,15 @@ function LandingPage() {
           />
           <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-20">
             <div className="space-y-6">
-              <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                <span className="size-1.5 rounded-full bg-primary" />
-                7 dias grátis, sem cartão
+              <span className="brutal-tag">
+                <span className="blink size-1.5 bg-primary-foreground" />
+                7 dias grátis — sem cartão
               </span>
-              <h1 className="font-display text-4xl font-bold leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
-                Sua revenda IPTV cobrando <span className="hero-mark">no automático</span>
+              <h1 className="word-rise font-display text-5xl font-extrabold uppercase leading-[0.9] tracking-tighter sm:text-7xl lg:text-[5.5rem]">
+                <span>Sua</span> <span style={{ animationDelay: "80ms" }}>revenda</span>{" "}
+                <span style={{ animationDelay: "160ms" }} className="outline-text">IPTV</span>{" "}
+                <span style={{ animationDelay: "240ms" }}>cobrando</span>{" "}
+                <span style={{ animationDelay: "320ms" }} className="lime-sweep px-1">no automático</span>
               </h1>
               <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
                 Clientes organizados, painel Sigma conectado, Pix confirmado sozinho e um robô que atende seu WhatsApp o dia inteiro.
@@ -226,15 +229,16 @@ function LandingPage() {
                   { k: "0", v: "planilhas" },
                 ].map((s) => (
                   <div key={s.k}>
-                    <dt className="font-display text-2xl font-semibold text-foreground">{s.k}</dt>
-                    <dd className="text-xs text-muted-foreground">{s.v}</dd>
+                    <dt className="font-display text-3xl font-extrabold text-primary">{s.k}</dt>
+                    <dd className="mono-label text-muted-foreground">{s.v}</dd>
                   </div>
                 ))}
               </dl>
             </div>
 
             {/* Conversa demonstrativa */}
-            <div className="rounded-lg border border-border bg-card p-4 shadow-sm shadow-primary/5 sm:p-6">
+            <div className="brutal-box rise-in relative bg-card p-4 sm:p-6 lg:rotate-[1.2deg] lg:transition-transform lg:hover:rotate-0">
+              <span className="brutal-tag absolute -top-4 left-4">Ao vivo</span>
               <div className="mb-4 flex items-center gap-3 border-b border-border pb-3">
                 <div className="flex size-10 items-center justify-center rounded-full bg-primary/12 text-primary">
                   <Bot className="size-5" />
@@ -267,11 +271,21 @@ function LandingPage() {
           </div>
         </section>
 
+        <div className="marquee border-y-2 border-foreground bg-primary py-3 text-primary-foreground" aria-hidden>
+          {[0, 1].map((k) => (
+            <div key={k} className="gap-8 pr-8">
+              {["Cobrança automática", "Pix confirmado", "Painel Sigma", "Robô 24h", "WhatsApp", "Telegram", "Renovação sozinha"].map((t) => (
+                <span key={t} className="flex items-center gap-8 whitespace-nowrap font-display text-xl font-extrabold uppercase">{t}<span>✦</span></span>
+              ))}
+            </div>
+          ))}
+        </div>
+
         {/* Recursos */}
         <section data-reveal id="recursos" className="border-t border-border bg-muted/30 py-16 sm:py-20">
           <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
             <div className="max-w-2xl">
-              <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+              <h2 className="font-display text-4xl font-extrabold uppercase leading-[0.95] tracking-tighter sm:text-6xl">
                 Tudo que a revenda precisa, em um lugar só
               </h2>
               <p className="mt-3 text-muted-foreground">
@@ -279,9 +293,10 @@ function LandingPage() {
               </p>
             </div>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {pillars.map((f) => (
-                <article key={f.title} className="rounded-lg border border-border bg-card p-5 transition-shadow hover:shadow-lg hover:shadow-primary/5">
-                  <div className="mb-3 flex size-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+              {pillars.map((f, i) => (
+                <article key={f.title} className="group relative border-2 border-foreground/80 bg-card p-5 transition-all duration-200 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[6px_6px_0_0_var(--primary)]">
+                  <span className="mono-label absolute right-4 top-4 text-muted-foreground">/{String(i + 1).padStart(2, "0")}</span>
+                  <div className="mb-3 flex size-11 items-center justify-center border-2 border-foreground bg-primary text-primary-foreground transition-transform group-hover:rotate-[-8deg]">
                     <f.icon className="size-5" />
                   </div>
                   <h3 className="font-display text-base font-semibold">{f.title}</h3>
@@ -295,12 +310,12 @@ function LandingPage() {
         {/* Como funciona */}
         <section data-reveal id="como-funciona" className="py-16 sm:py-20">
           <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-            <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Do zero ao automático</h2>
+            <h2 className="font-display text-4xl font-extrabold uppercase leading-[0.95] tracking-tighter sm:text-6xl">Do zero ao automático</h2>
             <p className="mt-3 max-w-xl text-muted-foreground">Quatro passos e sua operação passa a rodar sem você.</p>
             <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {steps.map((s, i) => (
-                <li key={s.title} className="relative rounded-lg border border-border bg-card p-5">
-                  <span className="font-display text-sm font-semibold text-primary">0{i + 1}</span>
+                <li key={s.title} className="relative overflow-hidden border-2 border-foreground/80 bg-card p-5 transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0_0_var(--primary)]">
+                  <span className="outline-text block font-display text-6xl font-extrabold leading-none">0{i + 1}</span>
                   <s.icon className="mt-3 size-5 text-primary" />
                   <h3 className="mt-3 font-display text-base font-semibold">{s.title}</h3>
                   <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{s.text}</p>
@@ -313,15 +328,15 @@ function LandingPage() {
         {/* Preço */}
         <section data-reveal id="preco" className="border-t border-border bg-muted/30 py-16 sm:py-20">
           <div className="mx-auto w-full max-w-3xl px-4 text-center sm:px-6">
-            <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Um preço, tudo liberado</h2>
+            <h2 className="font-display text-4xl font-extrabold uppercase leading-[0.95] tracking-tighter sm:text-6xl">Um preço, tudo liberado</h2>
             <p className="mt-3 text-muted-foreground">Sem limite de clientes e sem fidelidade.</p>
-            <div className="mt-10 rounded-lg border border-primary/30 bg-card p-6 text-left shadow-sm shadow-primary/10 sm:p-8">
+            <div className="brutal-box mt-10 bg-card p-6 text-left sm:p-8">
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <p className="font-display text-lg font-semibold">{plan.name}</p>
                   <p className="text-sm text-muted-foreground">{plan.description}</p>
                 </div>
-                <p className="font-display text-4xl font-semibold text-primary">
+                <p className="font-display text-6xl font-extrabold tracking-tighter text-primary">
                   {formatBRL(plan.price_monthly)}
                   <span className="text-base font-normal text-muted-foreground">/mês</span>
                 </p>
@@ -346,7 +361,7 @@ function LandingPage() {
         {/* Dúvidas */}
         <section data-reveal id="duvidas" className="py-16 sm:py-20">
           <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
-            <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Perguntas frequentes</h2>
+            <h2 className="font-display text-4xl font-extrabold uppercase leading-[0.95] tracking-tighter sm:text-6xl">Perguntas frequentes</h2>
             <Accordion type="single" collapsible className="mt-8">
               {faq.map((item) => (
                 <AccordionItem key={item.q} value={item.q}>
@@ -359,9 +374,9 @@ function LandingPage() {
         </section>
 
         {/* Chamada final */}
-        <section className="border-t border-border bg-primary/5 py-16">
+        <section className="border-t-2 border-foreground bg-primary py-20 text-primary-foreground [&_.text-muted-foreground]:text-primary-foreground/75 [&_a]:border-foreground [&_a]:bg-foreground [&_a]:text-background">
           <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-5 px-4 text-center sm:px-6">
-            <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h2 className="font-display text-4xl font-extrabold uppercase leading-[0.95] tracking-tighter sm:text-6xl">
               Comece hoje e cobre no automático já na próxima semana
             </h2>
             <p className="max-w-xl text-muted-foreground">
@@ -376,7 +391,7 @@ function LandingPage() {
         </section>
       </main>
 
-      <footer className="border-t border-border py-8">
+      <footer className="border-t-2 border-foreground py-8">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 px-4 text-sm text-muted-foreground sm:flex-row sm:px-6">
           <div className="flex items-center gap-2">
             <SigmaLogo size="sm" showGlow={false} />
