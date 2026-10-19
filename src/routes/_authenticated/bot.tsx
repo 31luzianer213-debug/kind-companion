@@ -214,7 +214,10 @@ function BotPage() {
     if (e) e.preventDefault();
     setSaving(true);
     try {
-      const res = await saveSettings({ data: form });
+      // Provedor e token são definidos em Recebimentos (Pix). Enviar esses
+      // campos daqui sobrescrevia a escolha do painel (ex.: voltava para Mercado Pago).
+      const { payment_provider: _provider, mercadopago_token: _token, ...payload } = form;
+      const res = await saveSettings({ data: payload });
       if (res?.ok) {
         toast.success("Configurações do Robô salvas com sucesso! 🤖⚡");
         queryClient.invalidateQueries({ queryKey: ["bot-settings"] });
@@ -231,7 +234,8 @@ function BotPage() {
   async function handleToggleEnabled(val: boolean) {
     setForm((prev) => ({ ...prev, enabled: val }));
     try {
-      const res = await saveSettings({ data: { ...form, enabled: val } });
+      const { payment_provider: _provider, mercadopago_token: _token, ...payload } = form;
+      const res = await saveSettings({ data: { ...payload, enabled: val } });
       if (res?.ok) {
         queryClient.invalidateQueries({ queryKey: ["bot-settings"] });
         if (val) {
@@ -360,7 +364,9 @@ function BotPage() {
     ]);
   }
 
-  const isMpActive = Boolean(form.mercadopago_token?.trim());
+  // O selo abaixo precisa refletir o provedor escolhido em Recebimentos:
+  // ter token salvo não significa que o painel está cobrando pelo Mercado Pago.
+  const isMpActive = form.payment_provider === "mercadopago" && Boolean(form.mercadopago_token?.trim());
 
   return (
     <div className="space-y-6 max-w-7xl animate-in fade-in duration-300">
@@ -439,9 +445,17 @@ function BotPage() {
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {[
-            ["1", "Teste grátis", "Gera acesso temporário no Sigma"],
-            ["2", "Renovação", "Localiza o cliente e prepara o Pix"],
-            ["3", "Planos", "Apresenta preços e períodos"],
+            [
+              "1",
+              "Teste grátis",
+              form.testEnabled ? "Gera acesso temporário no Sigma" : "Desativado no painel — o robô não oferece",
+            ],
+            [
+              "2",
+              "Renovação",
+              isMpActive ? "Localiza o cliente e gera o Pix automático" : "Localiza o cliente e envia a chave Pix / link",
+            ],
+            ["3", "Planos", "Apresenta os preços da tabela acima"],
             ["4", "Aplicativos", "Envia links para cada aparelho"],
             ["5", "Reenviar acesso", "Entrega usuário, senha e lista M3U"],
             ["6", "Atendimento", "Encaminha para uma pessoa"],
@@ -472,7 +486,11 @@ function BotPage() {
                     <Wallet className="size-5 text-success" /> Recebimento por Pix
                   </CardTitle>
                   <Badge variant={isMpActive ? "success" : "warning"} className="text-xs">
-                    {isMpActive ? "Pix automático ativo" : "Chave Pix manual"}
+                    {isMpActive
+                      ? "Pix automático ativo"
+                      : form.payment_provider === "asaas"
+                        ? "Cobrança pelo Asaas (manual no robô)"
+                        : "Chave Pix manual"}
                   </Badge>
                 </div>
                 <CardDescription>
@@ -1066,7 +1084,7 @@ function BotPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleSendSim("1")}
+                  onClick={() => handleSendSim("plano 1m")}
                   disabled={simLoading}
                   className="h-6 text-[10px] rounded-lg px-2 border-primary/30 text-primary hover:bg-primary/10"
                 >

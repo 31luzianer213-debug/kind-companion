@@ -352,12 +352,14 @@ export async function saveBotConfigServer(
   writeLocalConfig(uid, updated);
 
   if (updated.mercadopago_token || updated.pixKey || updated.pixHolder) {
+    const previousLocal = readLocalPaymentSettings(uid) || {};
     writeLocalPaymentSettings(uid, {
       user_id: userId,
-      mercadopago_token: updated.mercadopago_token ?? "",
-      payment_provider: updated.payment_provider ?? "mercadopago",
-      pix_key: updated.pixKey ?? "",
-      pix_holder: updated.pixHolder ?? "",
+      mercadopago_token: updated.mercadopago_token ?? previousLocal.mercadopago_token ?? "",
+      // Preserva o provedor escolhido em Recebimentos (Pix); não assume Mercado Pago.
+      payment_provider: updated.payment_provider || previousLocal.payment_provider || "pix",
+      pix_key: updated.pixKey ?? previousLocal.pix_key ?? "",
+      pix_holder: updated.pixHolder ?? previousLocal.pix_holder ?? "",
     });
   }
 
@@ -384,7 +386,12 @@ export async function saveBotConfigServer(
       };
       if (updated.mercadopago_token) {
         updatePayload.mercadopago_token = updated.mercadopago_token.trim();
-        updatePayload.payment_provider = "mercadopago";
+      }
+      // O provedor é escolhido em Recebimentos (Pix) e não pode ser trocado aqui.
+      // Antes, só existir um token salvava "mercadopago" e o painel voltava sozinho
+      // para o modo automático mesmo com o revendedor usando chave Pix manual.
+      if (updated.payment_provider) {
+        updatePayload.payment_provider = updated.payment_provider;
       }
       if (updated.pixKey) updatePayload.pix_key = updated.pixKey.trim();
       if (updated.pixHolder) updatePayload.pix_holder = updated.pixHolder.trim();
@@ -445,6 +452,15 @@ export async function createTrialForBot(
 }> {
   const cleanPhone = params.phone.replace(/\D/g, "");
   const botConfig = await loadBotConfig(supabase, userId);
+
+  // Teste grátis desligado no painel: nem o bot nem a geração rápida liberam.
+  if (botConfig.testEnabled === false) {
+    return {
+      ok: false,
+      error:
+        `No momento não estamos liberando teste grátis, mas posso te passar os valores ou já deixar seu acesso ativo 😊`,
+    };
+  }
 
   // 1. Verificação Anti-Fraude: confere se esse número já teve teste nos últimos X dias
   if (botConfig.blockRepeatDays > 0 && cleanPhone) {
@@ -565,7 +581,7 @@ export async function createTrialForBot(
       iptv_username: trialUsername,
       iptv_password: trialPassword,
       screens: 1,
-      monthly_fee: 35.0,
+      monthly_fee: botConfig.renewalPrice || botConfig.planMonthlyPrice || 35.0,
       next_due_date: expiryIso,
       status: "active",
       notes: `[TESTE_BOT_WHATSAPP]\nM3U: ${m3uUrl}\nServidor: ${serverName}\nPacote: ${botConfig.testPackageName}`,
@@ -614,6 +630,104 @@ type ConversationSession = {
 const conversationSessions = new Map<string, ConversationSession>();
 
 /**
+ * Descobre COMO o robô deve cobrar, seguindo exatamente o que está configurado
+ * na tela "Recebimentos (Pix)" do painel:
+ *  - provedor "Mercado Pago" + token  -> Pix automático (baixa sozinho)
+ *  - provedor "Chave Pix" ou "Asaas"  -> cobrança manual (chave Pix e/ou link)
+ *
+ * Sem essa trava, um token antigo do Mercado Pago salvo no banco fazia o robô
+ * gerar cobrança automática mesmo com o painel configurado como chave manual.
+ */
+export type BotPaymentChannel = {
+  provider: string;
+  automatic: boolean;
+  mpToken: string;
+  pixKey: string;
+  pixHolder: string;
+  paymentLink: string;
+};
+
+export function resolveBotPaymentChannel(
+  config: BotConfigData,
+  wsRow: any,
+  userId?: string,
+): BotPaymentChannel {
+  const local = readLocalPaymentSettings(userId);
+  const rawProvider = String(
+    config.payment_provider || wsRow?.payment_provider || local?.payment_provider || "",
+  )
+    .toLowerCase()
+    .trim();
+
+  const savedMpToken = String(
+    config.mercadopago_token || wsRow?.mercadopago_token || local?.mercadopago_token || "",
+  ).trim();
+
+  // Sem provedor escolhido no painel, decide pelo que realmente existe salvo.
+  const provider = rawProvider || (savedMpToken ? "mercadopago" : "pix");
+
+  const pixKey = String(config.pixKey || wsRow?.pix_key || local?.pix_key || "").trim();
+  const pixHolder = String(
+    config.pixHolder || wsRow?.pix_holder || local?.pix_holder || config.businessName || "",
+  ).trim();
+  const paymentLink = String(wsRow?.payment_link || local?.payment_link || "").trim();
+
+  return {
+    provider,
+    automatic: provider === "mercadopago" && Boolean(savedMpToken),
+    mpToken: provider === "mercadopago" ? savedMpToken : "",
+    pixKey,
+    pixHolder,
+    paymentLink,
+  };
+}
+
+/**
+ * Instruções de pagamento para o modo MANUAL.
+ * Nunca inventa uma chave Pix: se o painel não tiver nada configurado, avisa
+ * com clareza em vez de mandar o cliente pagar em uma chave inexistente.
+ */
+function buildManualPaymentInstructions(channel: BotPaymentChannel): {
+  text: string;
+  copyCode: string | null;
+  holder: string;
+} {
+  const holder = channel.pixHolder || "";
+  const linkLine = channel.paymentLink
+    ? `\n\nSe preferir, pode pagar direto por este link:\n${channel.paymentLink}`
+    : "";
+
+  if (channel.pixKey) {
+    return {
+      text:
+        `Minha chave Pix é ${channel.pixKey}` +
+        (holder ? ` (em nome de ${holder})` : "") +
+        `.` +
+        linkLine +
+        `\n\nDepois que fizer o pagamento, me manda o comprovante aqui que eu libero na hora 🙂`,
+      copyCode: channel.pixKey,
+      holder,
+    };
+  }
+
+  if (channel.paymentLink) {
+    return {
+      text: `É só pagar por este link:\n${channel.paymentLink}\n\nAssim que o pagamento aparecer aqui eu libero seu acesso 🙂`,
+      copyCode: channel.paymentLink,
+      holder,
+    };
+  }
+
+  return {
+    text:
+      `Vou te passar os dados de pagamento por aqui mesmo e, assim que o pagamento for confirmado, seu acesso é liberado 🙂\n\n` +
+      `Se quiser adiantar, me diga qual forma prefere (Pix ou link).`,
+    copyCode: null,
+    holder,
+  };
+}
+
+/**
  * Cria pedido para o plano escolhido e formata a resposta com Pix Copia e Cola (Mercado Pago) ou Chave Manual
  */
 async function handlePlanOrderCreation({
@@ -655,12 +769,9 @@ async function handlePlanOrderCreation({
     type: "new_access",
   });
 
-  const mpToken =
-    config.mercadopago_token ||
-    wsRow?.mercadopago_token?.trim() ||
-    readLocalPaymentSettings(userId)?.mercadopago_token?.trim() ||
-    DEFAULT_BOT_CONFIG.mercadopago_token?.trim() ||
-    "";
+  // Só cobra automático quando o painel realmente está em Mercado Pago.
+  const channel = resolveBotPaymentChannel(config, wsRow, userId);
+  const mpToken = channel.mpToken;
 
   let mpPixResult: any = null;
 
@@ -726,31 +837,31 @@ async function handlePlanOrderCreation({
     };
   }
 
-  // MODO MANUAL (Sem Mercado Pago cadastrado ou falha de token)
-  const effectivePixKey = config.pixKey || wsRow?.pix_key || readLocalPaymentSettings(userId)?.pix_key || "Consulte nossa chave Pix com nosso suporte";
-  const effectivePixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
+  // MODO MANUAL (painel em Chave Pix / Asaas ou falha de token)
+  const manual = buildManualPaymentInstructions(channel);
 
   const reply =
     `Show! Anotei o ${planName}, dá R$ ${amount.toFixed(2).replace(".", ",")}.\n\n` +
-    `Minha chave Pix é ${effectivePixKey} (em nome de ${effectivePixHolder}).\n\n` +
-    `Depois que fizer o Pix, me manda o comprovante aqui que eu libero seu acesso na hora 🙂`;
+    manual.text;
 
   return {
     reply,
     action: "order_created_manual",
     interactive: {
       type: "buttons",
-      title: "💳 Chave Pix (Manual)",
+      title: channel.provider === "asaas" ? "💳 Pagamento (Asaas)" : "💳 Chave Pix (Manual)",
       description: reply,
-      footer: `Pedido #${order.order_number} • Titular: ${effectivePixHolder}`,
-      buttons: [
-        {
-          id: "btn_copy_pix",
-          displayText: "📋 Copiar Chave Pix",
-          type: "copy",
-          copyCode: effectivePixKey,
-        },
-      ],
+      footer: `Pedido #${order.order_number}${manual.holder ? ` • Titular: ${manual.holder}` : ""}`,
+      buttons: manual.copyCode
+        ? [
+            {
+              id: "btn_copy_pix",
+              displayText: "📋 Copiar Chave Pix",
+              type: "copy",
+              copyCode: manual.copyCode,
+            },
+          ]
+        : [{ id: "6", displayText: "Falar com atendente", type: "reply" }],
     },
   };
 }
@@ -792,12 +903,9 @@ async function handleRenewOrderCreation({
     target_username: targetUsername,
   });
 
-  const mpToken =
-    config.mercadopago_token ||
-    wsRow?.mercadopago_token?.trim() ||
-    readLocalPaymentSettings(userId)?.mercadopago_token?.trim() ||
-    DEFAULT_BOT_CONFIG.mercadopago_token?.trim() ||
-    "";
+  // Só cobra automático quando o painel está realmente em Mercado Pago.
+  const channel = resolveBotPaymentChannel(config, wsRow, userId);
+  const mpToken = channel.mpToken;
 
   let mpPixResult: any = null;
 
@@ -863,31 +971,31 @@ async function handleRenewOrderCreation({
     };
   }
 
-  // MODO MANUAL (Sem Mercado Pago cadastrado ou falha no token)
-  const effectivePixKey = config.pixKey || wsRow?.pix_key || readLocalPaymentSettings(userId)?.pix_key || "Consulte nossa chave Pix com nosso suporte";
-  const effectivePixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
+  // MODO MANUAL (painel em Chave Pix / Asaas ou falha no token)
+  const manual = buildManualPaymentInstructions(channel);
 
   const reply =
     `Beleza${clientMatch?.name ? `, ${String(clientMatch.name).split(" ")[0]}` : ""}! Vou renovar o usuário ${targetUsername}, fica R$ ${amount.toFixed(2).replace(".", ",")}.\n\n` +
-    `Minha chave Pix é ${effectivePixKey} (em nome de ${effectivePixHolder}).\n\n` +
-    `Assim que pagar, me manda o comprovante aqui que eu renovo na hora 🙂`;
+    manual.text;
 
   return {
     reply,
     action: "renew_pix_manual_sent",
     interactive: {
       type: "buttons",
-      title: "💳 Chave Pix (Renovação)",
+      title: channel.provider === "asaas" ? "💳 Renovação (Asaas)" : "💳 Chave Pix (Renovação)",
       description: reply,
-      footer: `Pedido #${order.order_number} • Titular: ${effectivePixHolder}`,
-      buttons: [
-        {
-          id: "btn_copy_pix",
-          displayText: "📋 Copiar Chave Pix",
-          type: "copy",
-          copyCode: effectivePixKey,
-        },
-      ],
+      footer: `Pedido #${order.order_number}${manual.holder ? ` • Titular: ${manual.holder}` : ""}`,
+      buttons: manual.copyCode
+        ? [
+            {
+              id: "btn_copy_pix",
+              displayText: "📋 Copiar Chave Pix",
+              type: "copy",
+              copyCode: manual.copyCode,
+            },
+          ]
+        : [{ id: "6", displayText: "Falar com atendente", type: "reply" }],
     },
   };
 }
@@ -911,12 +1019,30 @@ function normalizeBotInput(value: string): string {
 
 function buildMainMenu(config: BotConfigData, serverName: string): BotProcessResult {
   const business = config.businessName || "Central IPTV";
+  const testEnabled = config.testEnabled !== false;
   const custom = (config.menuGreeting || "").trim();
   const greeting = custom
     ? custom.replace(/\{empresa\}/g, business).replace(/\{servidor\}/g, serverName)
-    : `Oi! Tudo bem? 😊 Aqui é da ${business}.\n\n` +
-      `Me diz o que você precisa que eu já resolvo por aqui: pode ser um teste grátis de ${config.testDurationHours} horas, renovar seu acesso, ver os valores dos planos, pegar os aplicativos ou receber de novo seu usuário e senha.\n\n` +
-      `Pode escrever do seu jeito que eu entendo.`;
+    : testEnabled
+      ? `Oi! Tudo bem? 😊 Aqui é da ${business}.\n\n` +
+        `Me diz o que você precisa que eu já resolvo por aqui: pode ser um teste grátis de ${config.testDurationHours} horas, renovar seu acesso, ver os valores dos planos, pegar os aplicativos ou receber de novo seu usuário e senha.\n\n` +
+        `Pode escrever do seu jeito que eu entendo.`
+      : `Oi! Tudo bem? 😊 Aqui é da ${business}.\n\n` +
+        `Me diz o que você precisa que eu já resolvo por aqui: renovar seu acesso, ver os valores dos planos, pegar os aplicativos ou receber de novo seu usuário e senha.\n\n` +
+        `Pode escrever do seu jeito que eu entendo.`;
+
+  // O menu só oferece teste quando o teste grátis está liberado no painel.
+  const buttons: ButtonItem[] = testEnabled
+    ? [
+        { id: "1", displayText: "Quero testar", type: "reply" },
+        { id: "3", displayText: "Ver valores", type: "reply" },
+        { id: "2", displayText: "Quero renovar", type: "reply" },
+      ]
+    : [
+        { id: "3", displayText: "Ver valores", type: "reply" },
+        { id: "2", displayText: "Quero renovar", type: "reply" },
+        { id: "4", displayText: "Aplicativos", type: "reply" },
+      ];
 
   return {
     reply: greeting,
@@ -926,11 +1052,7 @@ function buildMainMenu(config: BotConfigData, serverName: string): BotProcessRes
       title: business,
       description: greeting,
       footer: serverName,
-      buttons: [
-        { id: "1", displayText: "Quero testar", type: "reply" },
-        { id: "3", displayText: "Ver valores", type: "reply" },
-        { id: "2", displayText: "Quero renovar", type: "reply" },
-      ],
+      buttons,
     },
   };
 }
@@ -1020,9 +1142,20 @@ async function processBotMessageInner(
   } catch {}
 
   const serverName = config.serverName || wsRow?.sigma_server_name?.trim() || config.businessName || "Meu Servidor";
-  const streamingDns = config.streamingDns || wsRow?.sigma_streaming_dns?.trim() || "";
-  const pixKey = config.pixKey || wsRow?.pix_key || readLocalPaymentSettings(userId)?.pix_key || "Consulte nossa chave Pix";
-  const pixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
+  let streamingDns = config.streamingDns || wsRow?.sigma_streaming_dns?.trim() || "";
+  // O servidor usado pelo robô é o mesmo cadastrado na tela Sigma (sigma_panels),
+  // então as credenciais e o DNS podem estar só lá e não em whatsapp_settings.
+  let panelConfigured = false;
+  try {
+    const { resolveSigmaPanel } = await import("./sigma-credentials.server");
+    const resolved = await resolveSigmaPanel(supabase, userId);
+    panelConfigured = resolved.source !== "none";
+    if (!streamingDns && resolved.streamingDns) streamingDns = resolved.streamingDns;
+  } catch {}
+  // Cobrança sempre alinhada com a tela Recebimentos do painel.
+  const paymentChannel = resolveBotPaymentChannel(config, wsRow, userId);
+  // Teste só cabe quando existe painel Sigma conectado E endereço de streaming.
+  const hasPanelAccess = panelConfigured && Boolean(extractCleanIptvDns(streamingDns));
 
   // =========================================================================
   // ROTEADOR DO MENU (local, sem IA): entende a intenção e cai no fluxo certo
@@ -1083,11 +1216,11 @@ async function processBotMessageInner(
       };
     }
 
-    // Se é Mercado Pago, consulta em tempo real na API do MP para ver se foi pago
-    if (order.status === "pending" && wsRow?.mercadopago_token && order.gateway_payment_id) {
+    // Se é Mercado Pago (provedor ativo no painel), consulta em tempo real na API do MP
+    if (order.status === "pending" && paymentChannel.automatic && order.gateway_payment_id) {
       try {
         const mpCheck = await fetch(`https://api.mercadopago.com/v1/payments/${order.gateway_payment_id}`, {
-          headers: { Authorization: `Bearer ${wsRow.mercadopago_token.trim()}` },
+          headers: { Authorization: `Bearer ${paymentChannel.mpToken}` },
         });
         if (mpCheck.ok) {
           const mpData = await mpCheck.json();
@@ -1131,7 +1264,7 @@ async function processBotMessageInner(
         `Ainda não caiu o pagamento do seu ${order.plan_name} (R$ ${Number(order.amount).toFixed(2).replace(".", ",")}).\n` +
         (order.payment_method === "mercadopago_pix"
           ? `Assim que o Pix for concluído eu libero automaticamente, não precisa avisar.${pixCodeNotice}`
-          : `Minha chave Pix é ${pixKey} (em nome de ${pixHolder}). Depois me manda o comprovante aqui que eu libero 🙂`),
+          : buildManualPaymentInstructions(paymentChannel).text),
       action: "order_status_checked",
       interactive: {
         type: "buttons",
@@ -1368,6 +1501,47 @@ async function processBotMessageInner(
     text.includes("gratis") ||
     text.includes("grátis")
   ) {
+    // 1. O revendedor pode desligar o teste grátis no painel
+    if (config.testEnabled === false) {
+      return {
+        reply:
+          `No momento não estamos liberando teste grátis por aqui 🙏\n\n` +
+          `Mas posso te passar os valores dos planos ou te chamar no atendimento, o que você prefere?`,
+        action: "trial_disabled",
+        interactive: {
+          type: "buttons",
+          title: "Teste indisponível",
+          description: "O teste grátis está desativado no momento.",
+          footer: serverName,
+          buttons: [
+            { id: "3", displayText: "Ver valores", type: "reply" },
+            { id: "6", displayText: "Falar com atendente", type: "reply" },
+          ],
+        },
+      };
+    }
+
+    // 2. Sem servidor/DNS configurado o teste não pode ser gerado:
+    //    manda direto para o atendimento humano em vez de falhar.
+    if (!hasPanelAccess) {
+      return {
+        reply:
+          `Quero te liberar um teste, mas preciso confirmar uma coisa com o responsável antes 🙂\n\n` +
+          `Já chamei o atendimento aqui na conversa — me diga por favor qual aparelho você usa (TV Box, Smart TV, celular ou computador).`,
+        action: "trial_panel_missing",
+        interactive: {
+          type: "buttons",
+          title: "Um instante",
+          description: "O atendimento vai te responder por aqui.",
+          footer: serverName,
+          buttons: [
+            { id: "3", displayText: "Ver valores", type: "reply" },
+            { id: "6", displayText: "Falar com atendente", type: "reply" },
+          ],
+        },
+      };
+    }
+
     const trialRes = await createTrialForBot(supabase, userId, {
       phone: cleanPhone,
       senderName: params.pushName,
@@ -1594,9 +1768,27 @@ async function processBotMessageInner(
     const p3 = `R$ ${Number(config.planSemiannualPrice || 160).toFixed(2).replace(".", ",")}`;
     const p4 = `R$ ${Number(config.planAnnualPrice || 290).toFixed(2).replace(".", ",")}`;
 
+    // O texto dos planos acompanha a tabela de preços do painel.
+    // Se o revendedor nunca editou o texto, ele é montado com os valores reais.
+    const customizedPlans = (config.plansText || "").trim();
+    const plansText =
+      !customizedPlans || customizedPlans === DEFAULT_BOT_CONFIG.plansText.trim()
+        ? generateDefaultPlansText({
+            planMonthlyPrice: config.planMonthlyPrice,
+            planQuarterlyPrice: config.planQuarterlyPrice,
+            planSemiannualPrice: config.planSemiannualPrice,
+            planAnnualPrice: config.planAnnualPrice,
+            serverName,
+          })
+        : customizedPlans;
+
+    const payLabel = paymentChannel.automatic
+      ? "que eu já gero o Pix pra você"
+      : "que eu já te passo como pagar";
+
     const reply =
-      `${config.plansText}\n\n` +
-      `Me diz qual deles você prefere que eu já gero o Pix pra você 🙂`;
+      `${plansText}\n\n` +
+      `Me diz qual deles você prefere ${payLabel} 🙂`;
 
     return {
       reply,
@@ -1604,7 +1796,9 @@ async function processBotMessageInner(
       interactive: {
         type: "list",
         title: "Nossos planos",
-        description: "Escolhe o que combina mais com você que eu já gero o Pix.",
+        description: paymentChannel.automatic
+          ? "Escolhe o que combina mais com você que eu já gero o Pix."
+          : "Escolhe o que combina mais com você que eu já te passo como pagar.",
         buttonText: "Ver planos",
         footerText: serverName,
         sections: [
@@ -1672,11 +1866,24 @@ async function processBotMessageInner(
     const winUrl = (config.appWindowsLink || "").trim();
 
     if (!appsReply) {
+      // Nada configurado no painel (nem links, nem DNS): não adianta perguntar
+      // o aparelho, então chama o atendimento e oferece as opções que existem.
       return {
         reply:
-          `Sobre o aplicativo, deixa eu confirmar direitinho qual é o certo pro seu aparelho e já te mando aqui 🙂\n\n` +
-          `Me diz qual você usa: TV Box, Smart TV, celular Android, iPhone ou computador?`,
+          `Sobre o aplicativo, deixa eu te passar certinho qual é o melhor pro seu aparelho 🙂\n\n` +
+          `Já chamei o atendimento aqui na conversa. Enquanto isso, posso te passar os valores dos planos ou reenviar seus dados de acesso.`,
         action: "apps_not_configured",
+        interactive: {
+          type: "buttons",
+          title: "Aplicativos",
+          description: "O atendimento vai te mandar o aplicativo certo.",
+          footer: serverName,
+          buttons: [
+            { id: "3", displayText: "Ver valores", type: "reply" },
+            { id: "5", displayText: "Meus dados", type: "reply" },
+            { id: "6", displayText: "Falar com atendente", type: "reply" },
+          ],
+        },
       };
     }
 
@@ -1751,20 +1958,24 @@ async function processBotMessageInner(
     const u = client.iptv_username || client.name;
     const p = client.iptv_password || "••••••••";
     const cleanDns = extractCleanIptvDns(streamingDns) || "";
-    const m3uUrl = generateM3uUrl(cleanDns, u, p, "ts");
-    const epgUrl = generateEpgUrl(cleanDns, u, p);
+    // Sem DNS configurado não existe lista M3U válida: o robô entrega só as
+    // credenciais e o atendimento completa o endereço do servidor.
+    const hasDns = Boolean(cleanDns);
+    const m3uUrl = hasDns ? generateM3uUrl(cleanDns, u, p, "ts") : "";
+    const epgUrl = hasDns ? generateEpgUrl(cleanDns, u, p) : "";
 
     const appsBlock = generateAppsMessage(config);
     const reply =
       `Claro! Seguem seus dados${client.name ? `, ${String(client.name).split(" ")[0]}` : ""}:\n\n` +
       `Servidor: ${serverName}\n` +
-      `Endereço: ${cleanDns}\n` +
+      (hasDns ? `Endereço: ${cleanDns}\n` : "") +
       `Usuário: ${u}\n` +
       `Senha: ${p}\n` +
       `Telas: ${client.screens ?? 1}\n` +
       (client.next_due_date ? `Vence em: ${client.next_due_date}\n` : "") +
-      `\nSua lista:\n${m3uUrl}\n\n` +
-      `Guia de programação:\n${epgUrl}\n\n` +
+      (hasDns
+        ? `\nSua lista:\n${m3uUrl}\n\n` + `Guia de programação:\n${epgUrl}\n\n`
+        : `\nO endereço do servidor eu te passo aqui no atendimento em instantes 🙂\n\n`) +
       (appsBlock ? `${appsBlock}\n\n` : "") +
       `Qualquer coisa me chama 🙂`;
 
