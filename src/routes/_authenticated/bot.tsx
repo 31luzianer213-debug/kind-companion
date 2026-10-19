@@ -44,6 +44,7 @@ import {
   Download,
   Laptop,
   Monitor,
+  ListChecks,
 } from "lucide-react";
 import { TelegramPanel } from "@/components/panels/TelegramPanel";
 
@@ -136,9 +137,6 @@ function BotPage() {
     appWebPlayerLink: "",
     appSmartTvText: "",
     appsCustomText: "",
-    aiEnabled: true,
-    aiAgentName: "Ana",
-    aiInstructions: "",
   });
 
   // Simulator State
@@ -208,9 +206,6 @@ function BotPage() {
         appWebPlayerLink: c.appWebPlayerLink || "",
         appSmartTvText: c.appSmartTvText || "",
         appsCustomText: c.appsCustomText || "",
-        aiEnabled: c.aiEnabled ?? true,
-        aiAgentName: c.aiAgentName || "Ana",
-        aiInstructions: c.aiInstructions || "",
       });
     }
   }, [botData]);
@@ -406,49 +401,29 @@ function BotPage() {
       <Card className="surface-card border-primary/30 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
-            <Sparkles className="size-4 text-primary" /> Atendente com inteligência artificial
+            <ListChecks className="size-4 text-primary" /> Atendimento por menu — sem inteligência artificial
           </CardTitle>
           <CardDescription className="text-xs">
-            Em vez de um menu com números, a atendente conversa naturalmente, entende o que o cliente quer e já
-            libera teste, envia planos, gera o Pix de renovação ou reenvia os dados de acesso.
+            O robô responde com o menu de opções abaixo, na hora e sem gastar nenhum crédito. Se o cliente escrever
+            com as próprias palavras (ex.: "quero renovar meu acesso"), o sistema reconhece e manda direto para a
+            opção certa.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/40 p-3">
+        <CardContent className="grid gap-3">
+          <div className="flex items-start gap-2.5 rounded-md border border-border/60 bg-muted/40 p-3">
+            <ShieldCheck className="size-4 text-success shrink-0 mt-0.5" />
             <div>
-              <Label htmlFor="ai-toggle" className="text-sm font-semibold cursor-pointer">
-                Conversa por inteligência artificial
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Desligue para voltar ao menu tradicional de números.
+              <p className="text-xs font-semibold text-foreground">Custo zero por mensagem</p>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Nenhuma mensagem é enviada para serviços externos de IA. As respostas são montadas dentro do próprio
+                sistema, então nada consome créditos e a resposta é imediata.
               </p>
             </div>
-            <Switch
-              id="ai-toggle"
-              checked={form.aiEnabled}
-              onCheckedChange={(v) => setForm((f) => ({ ...f, aiEnabled: v }))}
-            />
           </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Nome da atendente</Label>
-              <Input
-                value={form.aiAgentName}
-                onChange={(e) => setForm((f) => ({ ...f, aiAgentName: e.target.value }))}
-                placeholder="Ana"
-              />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-xs">Como ela deve vender</Label>
-              <Textarea
-                rows={4}
-                value={form.aiInstructions}
-                onChange={(e) => setForm((f) => ({ ...f, aiInstructions: e.target.value }))}
-                placeholder="Ex.: sempre ofereça o teste grátis primeiro, destaque o plano semestral e nunca dê desconto abaixo de R$ 30."
-              />
-            </div>
-          </div>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Os textos de cada opção (menu principal, planos, aplicativos e atendimento humano) ficam em
+            <span className="font-semibold text-foreground"> Textos do Menu &amp; Suporte</span>, logo abaixo.
+          </p>
         </CardContent>
       </Card>
 

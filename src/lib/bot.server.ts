@@ -4,7 +4,7 @@ import { createOrderServer, listOrdersServer, approveAndReleaseOrderServer, upda
 import { createMercadoPagoPixPayment } from "./mercadopago.server";
 import type { ButtonItem, ListSection } from "./billing.server";
 import { phoneVariants, samePhone } from "./phone";
-import { decideWithSalesAi, getAiHistory, setAiHistory } from "./bot-ai.server";
+import { detectMenuIntent } from "./bot-ai.server";
 
 export type BotInteractivePayload =
   | {
@@ -64,10 +64,6 @@ export type BotConfigData = {
   appWebPlayerLink?: string;
   appSmartTvText?: string;
   appsCustomText?: string;
-  // IA de vendas
-  aiEnabled?: boolean;
-  aiAgentName?: string;
-  aiInstructions?: string;
 };
 
 export const DEFAULT_BOT_CONFIG: BotConfigData = {
@@ -113,9 +109,6 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
   appWebPlayerLink: "",
   appSmartTvText: "",
   appsCustomText: "",
-  aiEnabled: true,
-  aiAgentName: "Ana",
-  aiInstructions: "",
 };
 
 export function generateDefaultPlansText(params: {
@@ -330,9 +323,6 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
       appWebPlayerLink: metaBot?.appWebPlayerLink ?? DEFAULT_BOT_CONFIG.appWebPlayerLink,
       appSmartTvText: metaBot?.appSmartTvText ?? DEFAULT_BOT_CONFIG.appSmartTvText,
       appsCustomText: metaBot?.appsCustomText ?? DEFAULT_BOT_CONFIG.appsCustomText,
-      aiEnabled: metaBot?.aiEnabled ?? DEFAULT_BOT_CONFIG.aiEnabled,
-      aiAgentName: metaBot?.aiAgentName?.trim() || DEFAULT_BOT_CONFIG.aiAgentName,
-      aiInstructions: metaBot?.aiInstructions ?? DEFAULT_BOT_CONFIG.aiInstructions,
     };
 
     botConfigCache.set(uid, config);
@@ -950,7 +940,6 @@ export async function processBotMessage(
   supabase: any,
   userId: string,
   params: { phone: string; text: string; pushName?: string },
-  opts?: { skipAi?: boolean },
 ): Promise<BotProcessResult> {
   const phoneKey = String(params.phone || "").replace(/\D/g, "");
   const canPersist = Boolean(supabase?.from && userId && userId !== "default" && phoneKey);
@@ -958,19 +947,18 @@ export async function processBotMessage(
     try {
       const { data } = await supabase
         .from("bot_conversations")
-        .select("session, ai_history")
+        .select("session")
         .eq("user_id", userId)
         .eq("phone", phoneKey)
         .maybeSingle();
       if (data?.session) conversationSessions.set(phoneKey, data.session as ConversationSession);
       else conversationSessions.delete(phoneKey);
-      setAiHistory(phoneKey, Array.isArray(data?.ai_history) ? data.ai_history : []);
     } catch (err) {
       console.warn("[bot] Não foi possível ler a conversa salva:", err);
     }
   }
   try {
-    return await processBotMessageInner(supabase, userId, params, opts);
+    return await processBotMessageInner(supabase, userId, params);
   } finally {
     if (canPersist) {
       try {
@@ -979,7 +967,6 @@ export async function processBotMessage(
             user_id: userId,
             phone: phoneKey,
             session: conversationSessions.get(phoneKey) ?? null,
-            ai_history: getAiHistory(phoneKey),
           },
           { onConflict: "user_id,phone" },
         );
@@ -998,7 +985,7 @@ async function processBotMessageInner(
     text: string;
     pushName?: string;
   },
-  opts?: { skipAi?: boolean },
+  opts?: { skipRouter?: boolean },
 ): Promise<BotProcessResult> {
   const config = await loadBotConfig(supabase, userId);
 
@@ -1010,13 +997,12 @@ async function processBotMessageInner(
   const cleanPhone = params.phone.replace(/\D/g, "");
   const text = normalizeBotInput(params.text ?? "");
 
-  const aiOn = config.aiEnabled !== false && !opts?.skipAi;
   const isGreeting = ["oi", "olá", "ola", "opa", "ei", "eae", "e ai", "bom dia", "boa tarde", "boa noite", "start"].includes(text);
   const wantsMenu = ["menu", "início", "inicio", "0", "voltar ao menu", "voltar menu", "menu inicial", "menu principal"].includes(text);
 
-  // Saudações e pedido explícito de menu não precisam de uma segunda consulta
-  // ao banco: loadBotConfig já trouxe nome, servidor e duração do teste.
-  if (wantsMenu || (isGreeting && !aiOn)) {
+  // Saudações e pedido explícito de menu não precisam consultar mais nada:
+  // o menu é montado na hora, sem custo e sem espera.
+  if (wantsMenu || isGreeting) {
     const quickServerName = config.serverName || config.businessName || "Meu Servidor";
     return buildMainMenu(config, quickServerName);
   }
@@ -1039,77 +1025,22 @@ async function processBotMessageInner(
   const pixHolder = config.pixHolder || wsRow?.pix_holder || readLocalPaymentSettings(userId)?.pix_holder || config.businessName;
 
   // =========================================================================
-  // IA DE VENDAS: entende o que o cliente quer e dispara a ação certa
+  // ROTEADOR DO MENU (local, sem IA): entende a intenção e cai no fluxo certo
   // =========================================================================
-  const runSalesAi = async (): Promise<BotProcessResult | null> => {
-    let clientSummary = "ainda não é cliente cadastrado";
-    try {
-      const { data } = await supabase
-        .from("clients")
-        .select("name,iptv_username,next_due_date,monthly_fee")
-        .eq("user_id", userId)
-        .in("phone", phoneVariants(cleanPhone))
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (data) {
-        clientSummary =
-          `já é cliente — nome ${data.name}, usuário ${data.iptv_username || "não informado"}, ` +
-          `vencimento ${data.next_due_date || "não informado"}, mensalidade R$ ${data.monthly_fee ?? config.renewalPrice}`;
-      }
-    } catch {}
-
-    const decision = await decideWithSalesAi({
-      config,
-      serverName,
-      phone: cleanPhone,
-      text: params.text,
-      customerName: params.pushName,
-      clientSummary,
-    });
-    if (!decision) return null;
-
-    const routes: Record<string, string> = {
-      trial: "1",
-      renew: "2",
-      plans: "3",
-      apps: "4",
-      credentials: "5",
-      support: "6",
-      order_status: "status",
-      buy_1m: "plano 1m",
-      buy_3m: "plano 3m",
-      buy_6m: "plano 6m",
-      buy_12m: "plano 12m",
-    };
-
-    const route = routes[decision.intent];
-    if (!route) {
-      return { reply: decision.reply, action: "ai_sales_reply" };
-    }
-
-    const forwarded =
-      decision.intent === "renew" && decision.username ? `renovar ${decision.username}` : route;
-
-    const result = await processBotMessage(
+  const activeSession = conversationSessions.get(cleanPhone);
+  const hasActiveSession = Boolean(activeSession && Date.now() - activeSession.timestamp < 15 * 60 * 1000);
+  const routed = opts?.skipRouter || hasActiveSession ? null : detectMenuIntent(params.text);
+  if (routed) {
+    // Em renovação o texto original é importante: pode trazer o usuário junto
+    // ("renovar carlos123"). Nos outros casos basta o comando da opção do menu.
+    const forwardText = routed.intent === "renew" ? params.text : routed.command;
+    const forwarded = await processBotMessageInner(
       supabase,
       userId,
-      { phone: params.phone, text: forwarded, pushName: params.pushName },
-      { skipAi: true },
+      { phone: params.phone, text: forwardText, pushName: params.pushName },
+      { skipRouter: true },
     );
-
-    if (!result.reply) return { reply: decision.reply, action: "ai_sales_reply" };
-    return {
-      ...result,
-      reply: `${decision.reply}\n\n${result.reply}`.trim(),
-      action: `ai_${result.action}`,
-    };
-  };
-
-  if (aiOn && isGreeting) {
-    const aiResult = await runSalesAi();
-    if (aiResult) return aiResult;
-    return buildMainMenu(config, serverName);
+    if (forwarded.reply) return forwarded;
   }
 
 
@@ -1893,11 +1824,7 @@ async function processBotMessageInner(
     };
   }
 
-  if (aiOn) {
-    const aiResult = await runSalesAi();
-    if (aiResult) return aiResult;
-  }
-
+  // Nada reconhecido: devolve o menu principal (fechado, sem custo, sem IA)
   return buildMainMenu(config, serverName);
 
 }
