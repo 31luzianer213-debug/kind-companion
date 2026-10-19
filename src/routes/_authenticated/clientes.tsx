@@ -1,5 +1,5 @@
 import { ClientOperationsPanel } from "@/components/panels/ClientOperationsPanel";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useMemo, useEffect } from "react";
@@ -112,6 +112,11 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/clientes")({
+  // O atalho "Novo cliente" do painel chega com ?novo=1. Sem este validador o
+  // parâmetro era ignorado e o botão não abria o formulário.
+  validateSearch: (search: Record<string, unknown>): { novo?: "1" } => ({
+    novo: search.novo === "1" || search.novo === 1 || search.novo === true ? "1" : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Clientes & Acessos Sigma — Sigma Control" },
@@ -265,7 +270,7 @@ function getRelativeDueInfo(dueDateStr: string | null) {
   };
 }
 
-function ClientsRegistry() {
+function ClientsRegistry({ autoOpenNew = false, onAutoOpenHandled }: { autoOpenNew?: boolean; onAutoOpenHandled?: () => void }) {
   const queryClient = useQueryClient();
   const send = useServerFn(sendWhatsAppMessage);
   const sendAccess = useServerFn(sendAccessDetails);
@@ -302,6 +307,14 @@ function ClientsRegistry() {
   const [syncing, setSyncing] = useState(false);
   const [form, setForm] = useState<ClientForm>(empty);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Atalho "Novo cliente" vindo do painel: abre o formulário em branco.
+  useEffect(() => {
+    if (!autoOpenNew) return;
+    setForm(empty);
+    setOpen(true);
+    onAutoOpenHandled?.();
+  }, [autoOpenNew, onAutoOpenHandled]);
 
   // Planos de venda cadastrados em Configurações — preenchem valor e vencimento de uma vez
   const { data: salePlansData } = useQuery({
@@ -2437,7 +2450,7 @@ function ClientsRegistry() {
               onClick={() => {
                 if (viewAccessClient) copiarDadosAcesso(viewAccessClient);
               }}
-              className="gap-1.5 text-xs font-semibold border-white/20 text-white hover:bg-white/10"
+              className="gap-1.5 border-white/20 text-white hover:bg-white/10"
             >
               <Copy className="size-3.5" />
               Copiar Mensagem WhatsApp Completa
@@ -2451,7 +2464,7 @@ function ClientsRegistry() {
                   setViewAccessClient(null);
                 }
               }}
-              className="gap-1.5 text-xs font-bold bg-white text-black hover:bg-zinc-200 border-0 shadow-sm"
+              className="gap-1.5 border-0 text-xs font-bold shadow-sm"
             >
               {actionBusyId ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
               Enviar no WhatsApp do Cliente
@@ -2470,7 +2483,7 @@ function ClientsRegistry() {
                 Tem certeza que deseja remover o cliente <strong>{clientToDelete?.name}</strong> do sistema?
               </p>
               {clientToDelete?.hasSigma ? (
-                <div className="flex items-start space-x-3 rounded-lg border border-white/20 bg-zinc-900 p-3 mt-2">
+                <div className="mt-2 flex items-start space-x-3 rounded-lg border border-border bg-muted/40 p-3">
                   <Checkbox
                     id="deleteSigma"
                     checked={deleteFromSigma}
@@ -2499,9 +2512,9 @@ function ClientsRegistry() {
                 e.preventDefault();
                 executarExclusao();
               }}
-              className="bg-white text-black hover:bg-zinc-200 font-bold border-0 shadow-sm"
+              className="font-bold"
             >
-              {deleting ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
+              {deleting ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
               Confirmar Exclusão
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -2513,6 +2526,18 @@ function ClientsRegistry() {
 
 function Clientes() {
   const [tab, setTab] = useState("cadastro");
+  const { novo } = Route.useSearch();
+  const navigate = useNavigate();
+  const [autoNew, setAutoNew] = useState(false);
+
+  useEffect(() => {
+    if (novo !== "1") return;
+    setTab("cadastro");
+    setAutoNew(true);
+    // Limpa o parâmetro para que voltar/atualizar não reabra o formulário.
+    void navigate({ to: "/clientes", search: {}, replace: true });
+  }, [novo, navigate]);
+
   return (
     <div className="space-y-4">
       <Tabs value={tab} onValueChange={setTab}>
@@ -2521,7 +2546,11 @@ function Clientes() {
           <TabsTrigger value="operacao">Ações em massa</TabsTrigger>
         </TabsList>
       </Tabs>
-      {tab === "cadastro" ? <ClientsRegistry /> : <ClientOperationsPanel />}
+      {tab === "cadastro" ? (
+        <ClientsRegistry autoOpenNew={autoNew} onAutoOpenHandled={() => setAutoNew(false)} />
+      ) : (
+        <ClientOperationsPanel />
+      )}
     </div>
   );
 }

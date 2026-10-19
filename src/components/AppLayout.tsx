@@ -1,7 +1,7 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { X } from "lucide-react";
+import { X, Menu } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { DesktopNavigation, MobileBottomNavigation, MobileDrawer } from "@/components/layout/AppNavigation";
@@ -48,29 +48,28 @@ async function getPendingOrderCount(
 }
 
 
-export function AppLayout({ children, userId }: { children: ReactNode; userId: string }) {
+export function AppLayout({
+  children,
+  userId,
+  email: initialEmail = null,
+}: {
+  children: ReactNode;
+  userId: string;
+  email?: string | null;
+}) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const statusFn = useServerFn(getWhatsAppStatus);
   const ordersFn = useServerFn(getOrdersList);
   const adminStatusFn = useServerFn(getAdminStatus);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [email, setEmail] = useState<string | null>(null);
+  // O e-mail já vem da sessão resolvida no layout autenticado: sem chamada extra
+  // à rede (e sem o menu mostrando "Carregando…" quando a rede hesita).
+  const [email, setEmail] = useState<string | null>(initialEmail);
 
   useEffect(() => {
-    let active = true;
-    supabase.auth
-      .getUser()
-      .then(({ data }) => {
-        if (active) setEmail(data.user?.email ?? null);
-      })
-      .catch(() => {
-        if (active) setEmail(null);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+    setEmail(initialEmail);
+  }, [initialEmail]);
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -173,7 +172,17 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-        <GlobalSearch enableShortcut={false} />
+          <GlobalSearch enableShortcut={false} />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Abrir menu"
+            className="size-10 rounded-lg text-muted-foreground"
+          >
+            <Menu className="size-[18px]" />
+          </Button>
         </div>
       </header>
 
@@ -213,17 +222,31 @@ export function AppLayout({ children, userId }: { children: ReactNode; userId: s
       </aside>
 
       <main className="relative min-w-0 flex-1 overflow-x-hidden">
-        <div className="sticky top-0 z-40 hidden border-b border-border bg-background/90 backdrop-blur-xl lg:block">
-          <div className="mx-auto flex w-full max-w-[var(--ui-page-max)] justify-end px-8 py-2.5 xl:px-10">
-            <GlobalSearch />
+        <div className="sticky top-0 z-40 hidden border-b border-border bg-background/85 backdrop-blur-xl lg:block">
+          <div className="mx-auto flex w-full max-w-[var(--ui-page-max)] items-center justify-between gap-6 px-8 py-3 xl:px-10">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Sigma Control</p>
+              <h1 className="truncate font-display text-xl font-bold tracking-tight text-foreground">{mobilePageTitle(pathname)}</h1>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              <GlobalSearch />
+              {email ? (
+                <span className="hidden items-center gap-2 rounded-full border border-border bg-card/70 py-1 pl-1 pr-3 xl:inline-flex">
+                  <span className="grid size-7 place-items-center rounded-full bg-primary text-[11px] font-black text-primary-foreground">
+                    {(email[0] ?? "U").toUpperCase()}
+                  </span>
+                  <span className="max-w-[160px] truncate text-xs font-semibold text-muted-foreground">{email}</span>
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
         <div
           key={pathname}
-          className="page-enter mobile-app-content relative mx-auto min-h-full w-full max-w-[var(--ui-page-max)] px-3 pb-28 pt-3 sm:px-5 sm:pt-5 md:px-6 md:pb-12 md:pt-6 lg:px-8 lg:pt-6 xl:px-10"
+          className="page-enter mobile-app-content relative mx-auto min-h-full w-full max-w-[var(--ui-page-max)] px-3 pb-28 pt-3 sm:px-5 sm:pt-5 md:px-6 md:pb-12 md:pt-6 lg:px-8 lg:pt-7 xl:px-10"
         >
           {pageDescriptions[pathname] ? (
-            <p className="mb-3 text-xs text-muted-foreground sm:mb-4 sm:text-sm">{pageDescriptions[pathname]}</p>
+            <p className="mb-4 text-xs text-muted-foreground sm:mb-5 sm:text-sm">{pageDescriptions[pathname]}</p>
           ) : null}
           {children}
         </div>

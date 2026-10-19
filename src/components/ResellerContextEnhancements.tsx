@@ -93,7 +93,7 @@ function TrialServerSelector() {
 
         <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
           {servers.length === 0 ? (
-            <span className="inline-flex items-center gap-1.5 text-amber-500">
+            <span className="inline-flex items-center gap-1.5 text-warning">
               <Server className="size-3.5" /> Nenhum servidor Sigma ativo cadastrado. Adicione um servidor na área Sigma primeiro.
             </span>
           ) : selectedServer ? (
@@ -116,15 +116,15 @@ function TrialServerSelector() {
 
 function BillingAutomationNotice() {
   return (
-    <Card className="surface-card border-emerald-500/25 bg-emerald-500/5 mb-6">
-      <CardContent className="p-4 flex items-start gap-3">
-        <div className="rounded-md bg-emerald-500/10 p-2.5 text-emerald-500">
+    <Card className="surface-card mb-6 border-success/25 bg-success/5">
+      <CardContent className="flex items-start gap-3 p-4">
+        <div className="rounded-md bg-success/10 p-2.5 text-success">
           <ShieldCheck className="size-5" />
         </div>
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-sm font-bold text-foreground">Cobranças trabalham no automático</h2>
-            <Badge variant="outline" className="text-[10px] border-emerald-500/30 text-emerald-500">Monitor financeiro</Badge>
+            <Badge variant="outline" className="border-success/30 text-[10px] text-success">Monitor financeiro</Badge>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Use esta tela principalmente para acompanhar pendências, atrasos, pagamentos e falhas. Cobrar manualmente, reenviar mensagem ou dar baixa ficam como ações de exceção quando você realmente precisar intervir.

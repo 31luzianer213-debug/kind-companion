@@ -79,6 +79,19 @@ export async function getSubscriptionSummaryServer(userId: string): Promise<Subs
       .select("*, saas_plans(*)")
       .maybeSingle();
     subscription = created;
+
+    // Se a gravação falhar (ex.: plano padrão inexistente / FK / RLS), o usuário
+    // NÃO pode ser tratado como "assinatura bloqueada". Antes isso jogava a conta
+    // recém-criada num muro de "Assinatura vencida" logo depois do login.
+    if (!subscription) {
+      subscription = {
+        status: "trialing",
+        trial_ends_at: trialEndsAt,
+        current_period_end: null,
+        plan_id: null,
+        saas_plans: null,
+      };
+    }
   }
 
   const state = computeState(subscription);

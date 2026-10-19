@@ -15,7 +15,7 @@ import { approveOrder, getOrdersList, type OrderItem } from "@/lib/orders.functi
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatBRL, formatDate, formatDateTime } from "@/lib/format";
+import { currentMonthKey, daysUntil, formatBRL, formatDate, formatDateTime, todayISO } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
@@ -114,44 +114,6 @@ function StepCard({
         </Link>
       </Button>
     </div>
-  );
-}
-
-function MetricCard({
-  label,
-  value,
-  hint,
-  extra,
-  icon: Icon,
-  accent,
-  valueClass,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  extra?: React.ReactNode;
-  icon: React.ComponentType<{ className?: string }>;
-  accent: string;
-  valueClass?: string;
-}) {
-  return (
-    <Card className="surface-card overflow-hidden rounded-md border-border/70 transition-colors hover:border-border">
-      <CardContent className="space-y-3 p-4">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
-          <span className={cn("grid size-8 shrink-0 place-items-center rounded-md border", accent)}>
-            <Icon className="size-4" />
-          </span>
-        </div>
-        <div className="min-w-0">
-          <p className={cn("truncate text-2xl font-bold tracking-tight text-foreground", valueClass)}>{value}</p>
-          <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-            <span className="truncate">{hint}</span>
-            {extra}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -270,7 +232,7 @@ function PainelOverview() {
   const overdueInvoices = useMemo(() => invoices.filter((i) => i.status === "overdue"), [invoices]);
   const paidInvoices = useMemo(() => invoices.filter((i) => i.status === "paid"), [invoices]);
 
-  const monthKey = new Date().toISOString().slice(0, 7);
+  const monthKey = currentMonthKey();
   const totalPaid = useMemo(
     () =>
       paidInvoices
@@ -284,39 +246,37 @@ function PainelOverview() {
   const serverDisplayName =
     sigmaServers.length > 1 ? `${sigmaServers.length} painéis Sigma` : defaultSigmaServer?.name || "Servidor Sigma";
 
-  const todayStr = new Date().toISOString().split("T")[0] ?? "";
+  const todayStr = todayISO();
   const upcomingClients = useMemo(
     () =>
       clients
         .filter((c) => {
           if (!c.next_due_date || c.status !== "active") return false;
-          const diffDays = Math.ceil(
-            (new Date(String(c.next_due_date)).getTime() - new Date(todayStr).getTime()) / 86_400_000,
-          );
-          return diffDays >= 0 && diffDays <= 3;
+          const diffDays = daysUntil(String(c.next_due_date));
+          return diffDays !== null && diffDays >= 0 && diffDays <= 3;
         })
         .slice(0, 5),
-    [clients, todayStr],
+    [clients],
   );
 
   const clientHealth = useMemo(() => {
-    const today = new Date(todayStr).getTime();
     let due7 = 0;
     let expired = 0;
     for (const c of clients) {
       if (c.status !== "active" || !c.next_due_date) continue;
-      const diffDays = Math.ceil((new Date(String(c.next_due_date)).getTime() - today) / 86_400_000);
+      const diffDays = daysUntil(String(c.next_due_date));
+      if (diffDays === null) continue;
       if (diffDays < 0) expired += 1;
       else if (diffDays <= 7) due7 += 1;
     }
     return { due7, expired, inactive: clients.filter((c) => c.status !== "active").length };
-  }, [clients, todayStr]);
+  }, [clients]);
 
   const chartData = useMemo(
     () => [
-      { name: "Recebido no mês", valor: totalPaid, fill: "#10b981" },
-      { name: "Em aberto", valor: totalPending, fill: "#f59e0b" },
-      { name: "Atrasado", valor: totalOverdue, fill: "#f43f5e" },
+      { name: "Recebido no mês", valor: totalPaid, fill: "var(--success)" },
+      { name: "Em aberto", valor: totalPending, fill: "var(--warning)" },
+      { name: "Atrasado", valor: totalOverdue, fill: "var(--destructive)" },
     ],
     [totalPaid, totalPending, totalOverdue],
   );

@@ -13,10 +13,10 @@ import {
 } from "./navigation";
 
 export interface NavigationCounts {
-  clients: number;
-  overdueInvoices: number;
-  pendingOrders: number;
-  sigmaClients: number;
+  clients?: number;
+  overdueInvoices?: number;
+  pendingOrders?: number;
+  sigmaClients?: number;
 }
 
 interface AppNavigationProps {
@@ -53,9 +53,9 @@ function Badge({ item, counts, connected, active }: { item: NavigationItem; coun
     <span className={cn(
       "min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] font-extrabold tabular-nums",
           active && "bg-primary/10 text-primary",
-      !active && badge.tone === "warning" && "bg-amber-500/15 text-amber-500",
-      !active && badge.tone === "danger" && "bg-rose-500/15 text-rose-500",
-      !active && badge.tone === "success" && "bg-emerald-500/15 text-emerald-500",
+      !active && badge.tone === "warning" && "bg-warning/15 text-warning",
+      !active && badge.tone === "danger" && "bg-destructive/15 text-destructive",
+      !active && badge.tone === "success" && "bg-success/15 text-success",
       !active && badge.tone === "neutral" && "bg-muted text-muted-foreground",
     )}>{badge.value}</span>
   );
@@ -207,8 +207,8 @@ function AccountFooter(props: AppNavigationProps & { compactMobile?: boolean }) 
       <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-t border-border/50 pt-3">
         <div className="min-w-0 rounded-md bg-card/55 px-3 py-2">
           <p className="truncate text-[11px] font-bold">{props.email?.split("@")[0] ?? "Minha conta"}</p>
-          <p className={cn("mt-0.5 flex items-center gap-1.5 text-[9px]", props.isWhatsAppConnected ? "text-emerald-500" : "text-muted-foreground")}>
-            <span className={cn("size-1.5 rounded-full", props.isWhatsAppConnected ? "bg-emerald-500" : "bg-zinc-500")} />
+          <p className={cn("mt-0.5 flex items-center gap-1.5 text-[9px]", props.isWhatsAppConnected ? "text-success" : "text-muted-foreground")}>
+            <span className={cn("size-1.5 rounded-full", props.isWhatsAppConnected ? "bg-success" : "bg-muted-foreground/50")} />
             {props.isWhatsAppConnected ? "WhatsApp online" : "WhatsApp offline"}
           </p>
         </div>
@@ -222,9 +222,9 @@ function AccountFooter(props: AppNavigationProps & { compactMobile?: boolean }) 
     <div className="space-y-3 border-t border-border/50 pt-4">
       <Link to="/whatsapp" onClick={props.onNavigate} className={cn(
         "flex items-center justify-between rounded-md border px-3 py-2.5 text-xs font-bold",
-        props.isWhatsAppConnected ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-500" : "border-border/70 bg-card/60 text-muted-foreground",
+        props.isWhatsAppConnected ? "border-success/25 bg-success/10 text-success" : "border-border/70 bg-card/60 text-muted-foreground",
       )}>
-        <span className="flex items-center gap-2"><span className={cn("size-2 rounded-full", props.isWhatsAppConnected ? "bg-emerald-500" : "bg-zinc-500")} />{props.isWhatsAppConnected ? "WhatsApp online" : "WhatsApp desconectado"}</span>
+        <span className="flex items-center gap-2"><span className={cn("size-2 rounded-full", props.isWhatsAppConnected ? "bg-success" : "bg-muted-foreground/50")} />{props.isWhatsAppConnected ? "WhatsApp online" : "WhatsApp desconectado"}</span>
         <ChevronRight className="size-3.5 opacity-50" />
       </Link>
       <div className="flex items-center gap-2 rounded-md border border-border/60 bg-card/65 p-2.5">

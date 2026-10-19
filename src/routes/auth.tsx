@@ -57,6 +57,25 @@ function friendlyError(message: string) {
   return message || "Não foi possível concluir. Tente novamente.";
 }
 
+/**
+ * Erro que não veio do Supabase (rede, DNS, certificado, configuração ausente).
+ * Antes essas falhas escapavam do try/catch, o botão ficava travado em
+ * "Entrando…" e nada era mostrado ao usuário — parecia que o login não funcionava.
+ */
+const NETWORK_MESSAGE =
+  "Não foi possível falar com o servidor de acesso agora. Verifique sua conexão e tente novamente.";
+
+function describeThrown(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (/Missing Supabase environment variable/i.test(message)) {
+    return "A conexão com o banco não está configurada neste ambiente. Avise o suporte.";
+  }
+  if (/Failed to fetch|NetworkError|Network request failed|load failed|timeout/i.test(message)) {
+    return NETWORK_MESSAGE;
+  }
+  return friendlyError(message) || NETWORK_MESSAGE;
+}
+
 function passwordStrength(password: string) {
   const checks = [
     password.length >= 6,
@@ -68,7 +87,7 @@ function passwordStrength(password: string) {
   return {
     score,
     label: ["", "Fraca", "Boa", "Forte", "Excelente"][score],
-    color: score <= 1 ? "bg-rose-500" : score === 2 ? "bg-amber-500" : "bg-emerald-500",
+    color: score <= 1 ? "bg-destructive" : score === 2 ? "bg-warning" : "bg-success",
   };
 }
 
@@ -93,39 +112,44 @@ function AuthPage() {
 
   useEffect(() => {
     void (async () => {
-      const url = new URL(window.location.href);
-      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-      const isRecovery = url.searchParams.get("reset") === "true" || hashParams.get("type") === "recovery";
+      try {
+        const url = new URL(window.location.href);
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+        const isRecovery = url.searchParams.get("reset") === "true" || hashParams.get("type") === "recovery";
 
-      if (url.searchParams.has("code")) {
-        const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
-        url.searchParams.delete("code");
-        url.searchParams.delete("state");
-        window.history.replaceState({}, "", url.pathname + url.search + url.hash);
-        if (!error && isRecovery) {
-          setResetMode(true);
+        if (url.searchParams.has("code")) {
+          const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+          url.searchParams.delete("code");
+          url.searchParams.delete("state");
+          window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+          if (!error && isRecovery) {
+            setResetMode(true);
+            return;
+          }
+          if (!error) {
+            toast.success("E-mail confirmado. Sua conta está pronta!");
+            navigate({ to: "/painel" });
+            return;
+          }
+        }
+
+        if (isRecovery) {
+          // O Supabase cria a sessão de recuperação a partir do link do e-mail.
+          const { data } = await supabase.auth.getSession();
+          if (data.session) {
+            setResetMode(true);
+            return;
+          }
+          toast.error("Link de recuperação inválido ou expirado. Solicite um novo.");
           return;
         }
-        if (!error) {
-          toast.success("E-mail confirmado. Sua conta está pronta!");
-          navigate({ to: "/painel" });
-          return;
-        }
-      }
 
-      if (isRecovery) {
-        // O Supabase cria a sessão de recuperação a partir do link do e-mail.
         const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          setResetMode(true);
-          return;
-        }
-        toast.error("Link de recuperação inválido ou expirado. Solicite um novo.");
-        return;
+        if (data.session) navigate({ to: "/painel" });
+      } catch (error) {
+        // Nunca deixar a tela de login morrer em silêncio.
+        console.error("[auth] falha ao preparar a sessão", error);
       }
-
-      const { data } = await supabase.auth.getSession();
-      if (data.session) navigate({ to: "/painel" });
     })();
   }, [navigate]);
 
@@ -134,12 +158,20 @@ function AuthPage() {
     if (newPassword.length < 6) return toast.error("A nova senha precisa ter pelo menos 6 caracteres.");
     if (newPassword !== newPasswordConfirmation) return toast.error("As senhas não coincidem.");
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setLoading(false);
-    if (error) return toast.error(friendlyError(error.message));
-    toast.success("Senha atualizada! Você já está conectado.");
-    window.history.replaceState({}, "", "/auth");
-    navigate({ to: "/painel" });
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        toast.error(friendlyError(error.message));
+        return;
+      }
+      toast.success("Senha atualizada! Você já está conectado.");
+      window.history.replaceState({}, "", "/auth");
+      navigate({ to: "/painel" });
+    } catch (error) {
+      toast.error(describeThrown(error));
+    } finally {
+      setLoading(false);
+    }
   }
 
   function openRecovery() {
@@ -153,73 +185,102 @@ function AuthPage() {
     if (!email.trim() || !password) return toast.error("Preencha seu e-mail e senha.");
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    setLoading(false);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
 
-    if (error) {
-      if (/Invalid login credentials|invalid_grant/i.test(error.message)) {
-        toast.error("E-mail ou senha incorretos.", {
-          description: "Confira os dados ou recupere sua senha.",
-          action: { label: "Recuperar", onClick: openRecovery },
-        });
-      } else if (/Email not confirmed|not confirmed/i.test(error.message)) {
-        toast.error("Seu e-mail ainda não foi confirmado.", {
-          action: {
-            label: "Reenviar",
-            onClick: async () => {
-              const result = await supabase.auth.resend({ type: "signup", email: email.trim() });
-              result.error ? toast.error(friendlyError(result.error.message)) : toast.success("Confirmação reenviada!");
+      if (error) {
+        if (/Invalid login credentials|invalid_grant/i.test(error.message)) {
+          toast.error("E-mail ou senha incorretos.", {
+            description: "Confira os dados ou recupere sua senha.",
+            action: { label: "Recuperar", onClick: openRecovery },
+          });
+        } else if (/Email not confirmed|not confirmed/i.test(error.message)) {
+          toast.error("Seu e-mail ainda não foi confirmado.", {
+            action: {
+              label: "Reenviar",
+              onClick: async () => {
+                const result = await supabase.auth.resend({ type: "signup", email: email.trim() });
+                result.error ? toast.error(friendlyError(result.error.message)) : toast.success("Confirmação reenviada!");
+              },
             },
-          },
-        });
-      } else toast.error(friendlyError(error.message));
-      return;
-    }
+          });
+        } else toast.error(friendlyError(error.message));
+        return;
+      }
 
-    toast.success("Bem-vindo de volta!");
-    navigate({ to: "/painel" });
+      // Sem sessão retornada não há como entrar: avisa em vez de navegar em falso.
+      if (!data.session) {
+        toast.error("Não foi possível abrir sua sessão agora. Tente novamente em instantes.");
+        return;
+      }
+
+      toast.success("Bem-vindo de volta!");
+      await navigate({ to: "/painel", replace: true });
+    } catch (error) {
+      toast.error(describeThrown(error), { duration: 8_000 });
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function signUp(event: React.FormEvent) {
     event.preventDefault();
     if (!email.trim()) return toast.error("Informe seu e-mail.");
     if (password.length < 6) return toast.error("A senha precisa ter pelo menos 6 caracteres.");
+    if (confirmation && password !== confirmation) return toast.error("As senhas não coincidem.");
 
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: { data: { display_name: name.trim() || email.trim().split("@")[0] } },
-    });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { display_name: name.trim() || email.trim().split("@")[0] } },
+      });
 
-    if (error) {
-      setLoading(false);
-      if (/already registered/i.test(error.message)) {
-        setTab("login");
-        toast.info("Este e-mail já possui uma conta.", {
-          action: { label: "Recuperar senha", onClick: openRecovery },
-        });
-      } else toast.error(friendlyError(error.message));
-      return;
-    }
-
-    let session = data.session;
-    if (!session) {
-      const signIn = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-      if (signIn.error) {
-        setLoading(false);
-        toast.error(friendlyError(signIn.error.message));
+      if (error) {
+        if (/already registered/i.test(error.message)) {
+          setTab("login");
+          toast.info("Este e-mail já possui uma conta.", {
+            action: { label: "Recuperar senha", onClick: openRecovery },
+          });
+        } else toast.error(friendlyError(error.message));
         return;
       }
-      session = signIn.data.session;
-    }
 
-    if (session) {
-      await supabase.from("profiles").upsert({ id: session.user.id, display_name: name.trim() || email.trim().split("@")[0] });
+      let session = data.session;
+      if (!session) {
+        const signIn = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        if (signIn.error) {
+          toast.error(
+            /Email not confirmed|not confirmed/i.test(signIn.error.message)
+              ? "Enviamos um link de confirmação para o seu e-mail. Confirme para entrar."
+              : friendlyError(signIn.error.message),
+          );
+          return;
+        }
+        session = signIn.data.session;
+      }
+
+      if (session) {
+        await supabase.from("profiles").upsert({
+          id: session.user.id,
+          display_name: name.trim() || email.trim().split("@")[0],
+        });
+      }
+
+      if (!session) {
+        setTab("login");
+        toast.success("Conta criada! Confirme o e-mail que enviamos para entrar.");
+        return;
+      }
+
+      toast.success("Conta criada com sucesso!");
+      await navigate({ to: "/painel", replace: true });
+    } catch (error) {
+      toast.error(describeThrown(error), { duration: 8_000 });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-    toast.success("Conta criada com sucesso!");
-    navigate({ to: "/painel" });
   }
 
 
@@ -229,10 +290,17 @@ function AuthPage() {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: `${window.location.origin}/auth`,
       });
-      if (result.error) toast.error("Não foi possível entrar com o Google.");
-      else if (!result.redirected) navigate({ to: "/painel" });
-    } catch {
-      toast.error("Erro ao autenticar com o Google.");
+      if (result.error) toast.error("Não foi possível entrar com o Google.", { description: describeThrown(result.error) });
+      else if (!result.redirected) {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          toast.error("A conta Google foi autorizada, mas a sessão não abriu. Tente novamente.");
+          return;
+        }
+        await navigate({ to: "/painel", replace: true });
+      }
+    } catch (error) {
+      toast.error("Erro ao autenticar com o Google.", { description: describeThrown(error) });
     } finally {
       setGoogleLoading(false);
     }
@@ -242,12 +310,20 @@ function AuthPage() {
     event.preventDefault();
     if (!forgotEmail.trim()) return toast.error("Digite o e-mail da sua conta.");
     setForgotLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
-      redirectTo: `${window.location.origin}/auth?reset=true`,
-    });
-    setForgotLoading(false);
-    if (error) return toast.error(friendlyError(error.message));
-    setForgotSent(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+        redirectTo: `${window.location.origin}/auth?reset=true`,
+      });
+      if (error) {
+        toast.error(friendlyError(error.message));
+        return;
+      }
+      setForgotSent(true);
+    } catch (error) {
+      toast.error(describeThrown(error));
+    } finally {
+      setForgotLoading(false);
+    }
   }
 
   const strength = passwordStrength(password);
@@ -339,6 +415,7 @@ function AuthPage() {
 
               <TabsContent value="signup" className="mt-0">
                 <form onSubmit={signUp} className="space-y-4">
+                  <AuthField id="signup-name" label="Seu nome" icon={<User className="size-4" />} type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Como podemos te chamar" autoComplete="name" />
                   <AuthField id="signup-email" label="E-mail" icon={<Mail className="size-4" />} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" autoComplete="email" />
                   <AuthField
                     id="signup-password"
@@ -361,6 +438,29 @@ function AuthPage() {
                       {[1, 2, 3, 4].map((level) => <span key={level} className={cn("h-1 rounded-full bg-muted", strength.score >= level && strength.color)} />)}
                     </div>
                   )}
+                  <AuthField
+                    id="signup-confirmation"
+                    label="Confirme a senha"
+                    icon={<Lock className="size-4" />}
+                    type={showConfirmation ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={confirmation}
+                    onChange={(e) => setConfirmation(e.target.value)}
+                    placeholder="Repita a senha"
+                    autoComplete="new-password"
+                    revealable
+                    revealed={showConfirmation}
+                    onReveal={() => setShowConfirmation((value) => !value)}
+                    invalid={mismatch}
+                    hint={
+                      confirmation && matches
+                        ? <span className="inline-flex items-center gap-1 text-[11px] font-bold text-success"><Check className="size-3" /> Senhas iguais</span>
+                        : mismatch
+                          ? <span className="inline-flex items-center gap-1 text-[11px] font-bold text-destructive"><X className="size-3" /> Diferentes</span>
+                          : null
+                    }
+                  />
 
                   <Button type="submit" disabled={loading} className="h-12 w-full rounded-md text-sm font-bold shadow-lg shadow-primary/15">
                     {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
@@ -395,7 +495,7 @@ function AuthPage() {
           </DialogHeader>
           {forgotSent ? (
             <div className="space-y-4 py-2 text-center">
-              <span className="mx-auto grid size-12 place-items-center rounded-full bg-emerald-500/10 text-emerald-500"><Check className="size-5" /></span>
+              <span className="mx-auto grid size-12 place-items-center rounded-full bg-success/10 text-success"><Check className="size-5" /></span>
               <p className="text-sm">Link enviado para <strong>{forgotEmail}</strong>.</p>
               <p className="text-xs text-muted-foreground">Confira também sua caixa de spam.</p>
               <Button variant="outline" className="w-full" onClick={() => setForgotOpen(false)}>Entendi</Button>

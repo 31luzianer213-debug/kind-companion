@@ -52,7 +52,11 @@ export function GlobalSearch({ enableShortcut = true }: { enableShortcut?: boole
     queryFn: async () => {
       const raw = term.trim();
       const digits = onlyDigits(raw);
-      const filters = [`name.ilike.%${raw}%`, `iptv_username.ilike.%${raw}%`];
+      // Vírgula e parênteses são separadores do filtro `.or()` do PostgREST:
+      // sem escapar, digitar "Silva, João" quebrava a consulta.
+      const safe = raw.replace(/[,()*\\]/g, " ").replace(/\s+/g, " ").trim();
+      if (!safe) return [];
+      const filters = [`name.ilike.%${safe}%`, `iptv_username.ilike.%${safe}%`];
       if (digits.length >= 3) filters.push(`phone.ilike.%${digits}%`);
       const { data } = await supabase
         .from("clients")

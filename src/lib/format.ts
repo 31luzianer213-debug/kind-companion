@@ -11,7 +11,39 @@ export function formatDate(value: string | null | undefined) {
 
 export function formatDateTime(value: string | null | undefined) {
   if (!value) return "—";
-  return new Date(value).toLocaleString("pt-BR");
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return parsed.toLocaleString("pt-BR");
+}
+
+/**
+ * Data de hoje (AAAA-MM-DD) no fuso local.
+ *
+ * `new Date().toISOString().split("T")[0]` devolve o dia em UTC: no Brasil, a
+ * partir das 21h o sistema considerava "hoje" o dia seguinte, o que fazia
+ * clientes vencidos aparecerem como "vencem hoje/em breve" e vice-versa.
+ */
+export function todayISO(date: Date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** Mês atual (AAAA-MM) no fuso local. Mesmo motivo do todayISO(). */
+export function currentMonthKey(date: Date = new Date()) {
+  return todayISO(date).slice(0, 7);
+}
+
+/** Dias inteiros entre hoje e a data informada, contando o dia local. */
+export function daysUntil(value: string | null | undefined) {
+  if (!value) return null;
+  const [y, m, d] = value.slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return null;
+  const target = new Date(y, m - 1, d).getTime();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return Math.round((target - today) / 86_400_000);
 }
 
 export function onlyDigits(phone: string) {

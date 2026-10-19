@@ -29,8 +29,8 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
   if (sub.state === "blocked" && !allowed) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center" data-testid="subscription-blocked">
-        <div className="max-w-md space-y-4 rounded-md border border-rose-500/30 bg-card p-6 text-center shadow-sm">
-          <span className="mx-auto grid size-12 place-items-center rounded-md bg-rose-500/10 text-rose-500"><Lock className="size-5" /></span>
+        <div className="max-w-md space-y-4 rounded-md border border-destructive/30 bg-card p-6 text-center shadow-sm">
+          <span className="mx-auto grid size-12 place-items-center rounded-md bg-destructive/10 text-destructive"><Lock className="size-5" /></span>
           <h2 className="text-lg font-bold text-foreground">Assinatura vencida</h2>
           <p className="text-sm text-muted-foreground">Seus dados estão guardados com segurança. Renove sua assinatura para voltar a gerenciar clientes, cobranças e o robô do WhatsApp.</p>
           <Button asChild className="w-full"><Link to="/assinatura">Renovar agora</Link></Button>
@@ -46,7 +46,7 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
     <>
       {(showTrial || showGrace) && !pathname.startsWith("/assinatura") && (
         <div
-          className={`mb-4 flex flex-col gap-2 rounded-lg border p-3 text-sm sm:flex-row sm:items-center sm:justify-between ${showGrace ? "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200" : "border-primary/30 bg-primary/10 text-foreground"}`}
+          className={`mb-4 flex flex-col gap-2 rounded-lg border p-3 text-sm sm:flex-row sm:items-center sm:justify-between ${showGrace ? "border-warning/30 bg-warning/10 text-warning" : "border-primary/30 bg-primary/10 text-foreground"}`}
           data-testid="subscription-banner"
         >
           <span className="flex items-center gap-2 font-semibold">

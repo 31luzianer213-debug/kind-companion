@@ -1,4 +1,4 @@
-const CACHE_NAME = "iptv-manager-shell-v1";
+const CACHE_NAME = "iptv-manager-shell-v2";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/favicon.svg", "/favicon.png"];
 
 self.addEventListener("install", (event) => {
@@ -26,6 +26,15 @@ function shouldBypass(request) {
   return false;
 }
 
+// Somente a casca pública é cacheada. Páginas autenticadas (/painel, /clientes...)
+// carregam dados do cliente no HTML/estado e NÃO devem ficar em cache no aparelho:
+// isso evita servir conteúdo de uma conta para outra depois de trocar de usuário.
+const PUBLIC_PATHS = ["/", "/auth", "/termos", "/privacidade"];
+
+function isPublicNavigation(url) {
+  return PUBLIC_PATHS.includes(url.pathname);
+}
+
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (shouldBypass(request)) return;
@@ -38,11 +47,17 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => undefined);
+          if (isPublicNavigation(url) && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => undefined);
+          }
           return response;
         })
         .catch(async () => {
+          if (!isPublicNavigation(url)) {
+            const shell = await caches.match("/");
+            if (shell) return shell;
+          }
           const cached = await caches.match(request);
           return cached || caches.match("/");
         }),
