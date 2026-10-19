@@ -1,8 +1,17 @@
 /**
- * Módulo de Conexão WhatsApp — Baileys Nativo.
- * Conecta diretamente ao daemon local Baileys (porta 3001) para envio instantâneo e zero delays.
- * 100% Baileys — ZERO chamadas para Evolution API.
+ * Módulo de Conexão WhatsApp.
+ *
+ * Há dois modos possíveis, decididos por `isEvolutionEnabled()`:
+ *  - Baileys nativo (padrão): fala com o daemon local em BAILEYS_URL;
+ *  - Evolution API: quando EVOLUTION_API_URL + EVOLUTION_API_KEY existem.
+ *
+ * Os nomes históricos (`getEvolutionConfig`, `evolutionRequest`) foram mantidos
+ * para não quebrar importações antigas, mas hoje apenas repassam para o modo ativo.
  */
+
+import {
+  getRequest,
+} from "@tanstack/react-start/server";
 
 const BAILEYS_PORT = process.env.BAILEYS_PORT ? Number(process.env.BAILEYS_PORT) : 3001;
 const BAILEYS_URL = process.env.BAILEYS_API_URL || `http://127.0.0.1:${BAILEYS_PORT}`;
@@ -40,17 +49,58 @@ export async function findInstanceToken(_instanceName?: string) {
   return "baileys_token";
 }
 
-export function publicAppUrl() {
-  const raw = process.env["PUBLIC_APP_URL"] || "https://embrace-essence-app.lovable.app";
-  return raw.replace(/\/+$/, "");
+/**
+ * Origem pública do app.
+ *
+ * Antes existia um domínio fixo de preview como fallback
+ * (`embrace-essence-app.lovable.app`). Sem `PUBLIC_APP_URL` configurado, o
+ * webhook registrado no provedor apontava para o domínio errado e o robô
+ * simplesmente não recebia mensagens — com a tela parecendo "conectada".
+ *
+ * Agora a ordem é: PUBLIC_APP_URL → domínio da requisição atual → "" (vazio).
+ * Nunca inventamos um domínio que não é do cliente.
+ */
+export function publicAppUrl(): string {
+  const raw = process.env["PUBLIC_APP_URL"]?.trim();
+  if (raw) return raw.replace(/\/+$/, "");
+  const fromRequest = requestOrigin();
+  if (fromRequest) return fromRequest;
+  const vercel = process.env["VERCEL_URL"]?.trim();
+  if (vercel) return `https://${vercel.replace(/\/+$/, "")}`;
+  return "";
+}
+
+/** Descobre a origem a partir dos cabeçalhos da requisição em andamento. */
+function requestOrigin(): string | null {
+  try {
+    const request = getRequest?.();
+    const headers = request?.headers;
+    if (!headers) return null;
+    const host = headers.get("x-forwarded-host") || headers.get("host");
+    if (!host) return null;
+    const proto = headers.get("x-forwarded-proto") || "https";
+    return `${proto.split(",")[0].trim()}://${host.split(",")[0].trim()}`.replace(/\/+$/, "");
+  } catch {
+    return null;
+  }
 }
 
 export function botWebhookUrl(_appUrl?: string, userId?: string) {
-  // Usa sempre a URL oficial (ou PUBLIC_APP_URL). A origem do navegador não
-  // participa da decisão, impedindo previews de sequestrarem o webhook.
+  // Usa sempre a URL oficial (ou PUBLIC_APP_URL / domínio da requisição). A
+  // origem do navegador não participa da decisão, impedindo previews de
+  // sequestrarem o webhook.
   const base = publicAppUrl();
+  if (!base) {
+    console.error(
+      "[WhatsApp] PUBLIC_APP_URL não configurado: não é possível registrar o webhook do robô.",
+    );
+    return "";
+  }
   const url = new URL(`${base}/api/public/hooks/whatsapp-bot`);
   if (userId) url.searchParams.set("userId", userId);
+  // O robô agora exige token: sem ele o provedor recebe 401 e nada é processado.
+  const token = process.env["WHATSAPP_WEBHOOK_TOKEN"]?.trim();
+  if (token) url.searchParams.set("token", token);
   return url.toString();
 }
 

@@ -21,6 +21,11 @@ data/*.tmp
 .wrangler/
 .dev.vars
 
+# Variáveis de ambiente — nunca versionar (use .env.example como modelo)
+.env
+.env.*
+!.env.example
+
 # WhatsApp Baileys Auth Session
 auth_baileys/
 data/auth_baileys/

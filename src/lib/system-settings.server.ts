@@ -1,6 +1,15 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const DEFAULT_ADMIN_EMAIL = (process.env["ADMIN_EMAIL"]?.trim() || "frfrfrfrfr@gmail.com").toLowerCase();
+/**
+ * E-mail do admin definido por ambiente — usado apenas quando o painel Admin
+ * ainda não gravou um valor em `system_settings.admin_email`.
+ *
+ * IMPORTANTE: não existe mais e-mail padrão fixo no código. Antes havia um
+ * fallback hardcoded e, como o cadastro é aberto, qualquer pessoa que se
+ * registrasse com aquele e-mail viraria administrador do sistema. Agora, sem
+ * `admin_email` no banco nem `ADMIN_EMAIL` no ambiente, ninguém é admin.
+ */
+const ENV_ADMIN_EMAIL = (process.env["ADMIN_EMAIL"]?.trim() || "").toLowerCase();
 
 export type SystemSettings = {
   saas_provider: string;
@@ -42,12 +51,17 @@ export async function getSaasProvider(): Promise<"mercadopago" | "misticpay" | n
   return (await getMercadoPagoToken()) ? "mercadopago" : null;
 }
 
-export async function getAdminEmail(): Promise<string> {
+/** Retorna o e-mail admin configurado, ou null quando não há nenhum (estado seguro). */
+export async function getAdminEmail(): Promise<string | null> {
   const settings = await getSystemSettings();
-  return (settings?.admin_email?.trim() || DEFAULT_ADMIN_EMAIL).toLowerCase();
+  const saved = settings?.admin_email?.trim().toLowerCase();
+  if (saved) return saved;
+  return ENV_ADMIN_EMAIL || null;
 }
 
 export async function isAdminEmail(email: string | null | undefined): Promise<boolean> {
   if (!email) return false;
-  return email.trim().toLowerCase() === (await getAdminEmail());
+  const adminEmail = await getAdminEmail();
+  if (!adminEmail) return false;
+  return email.trim().toLowerCase() === adminEmail;
 }

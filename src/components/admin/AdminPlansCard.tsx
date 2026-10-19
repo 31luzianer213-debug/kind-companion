@@ -187,8 +187,9 @@ export function AdminPlansCard() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-rose-500 hover:text-rose-600"
+                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     disabled={remove.isPending}
+                    aria-label={`Excluir plano ${plan.name}`}
                     onClick={() => {
                       if (confirm(`Excluir o plano "${plan.name}"?`)) remove.mutate(plan.id);
                     }}

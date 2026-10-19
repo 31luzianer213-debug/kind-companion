@@ -58,7 +58,7 @@ export function WhatsAppDiagnosticsPanel() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Card>
             <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><Smartphone className="size-4" /> Status</CardTitle></CardHeader>
-            <CardContent><Badge className={connected ? "bg-success/15 text-success" : "bg-zinc-500/15 text-zinc-400"}>{connected ? "Conectado" : "Desconectado"}</Badge></CardContent>
+            <CardContent><Badge className={connected ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}>{connected ? "Conectado" : "Desconectado"}</Badge></CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><Server className="size-4" /> Instância</CardTitle></CardHeader>
