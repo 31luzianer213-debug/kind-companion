@@ -74,7 +74,7 @@ export function AdminPlansCard() {
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["admin-plans"] });
     queryClient.invalidateQueries({ queryKey: ["admin-plan"] });
-    queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
+    queryClient.invalidateQueries({ queryKey: ["my-subscription-v2"] });
   };
 
   const save = useMutation({

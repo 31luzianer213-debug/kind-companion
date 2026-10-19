@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createMercadoPagoPixPayment } from "./mercadopago.server";
-import { getMercadoPagoToken, getMisticCreds, getSaasProvider } from "./system-settings.server";
+import { getMercadoPagoToken, getMisticCreds, getSaasProvider, isAdminEmail } from "./system-settings.server";
 import { checkMisticTransaction, createMisticPix } from "./misticpay.server";
 import { publicAppUrl } from "./whatsapp-connection.server";
 
@@ -27,6 +27,8 @@ export type SubscriptionSummary = {
   clientsCount: number;
   saasPaymentsEnabled: boolean;
   saasProvider: "mercadopago" | "misticpay" | null;
+  /** Dono do sistema: nunca é bloqueado por assinatura. */
+  isAdmin: boolean;
 };
 
 const GRACE_DAYS = 3;
@@ -62,10 +64,37 @@ export function computeState(sub: { status: string; trial_ends_at: string | null
   return "blocked";
 }
 
-export async function getSubscriptionSummaryServer(userId: string): Promise<SubscriptionSummary> {
+export async function getSubscriptionSummaryServer(userId: string, email?: string | null): Promise<SubscriptionSummary> {
+  const providerPromise = getSaasProvider();
+  const clientsCountPromise = supabaseAdmin.from("clients").select("id", { count: "exact", head: true }).eq("user_id", userId);
+
+  // O administrador do sistema é o dono do painel: ele NUNCA pode ser bloqueado
+  // por assinatura (senão ele não consegue nem entrar para liberar os outros).
+  let adminEmail = email ?? null;
+  if (!adminEmail) {
+    // Tokens sem e-mail no claim: confirma pelo cadastro do usuário.
+    const { data: account } = await supabaseAdmin.auth.admin.getUserById(userId);
+    adminEmail = account?.user?.email ?? null;
+  }
+  if (await isAdminEmail(adminEmail)) {
+    const [{ count }, provider] = await Promise.all([clientsCountPromise, providerPromise]);
+    return {
+      state: "active",
+      status: "admin",
+      plan: null,
+      trialEndsAt: null,
+      currentPeriodEnd: null,
+      daysLeft: 0,
+      clientsCount: count ?? 0,
+      saasPaymentsEnabled: Boolean(provider),
+      saasProvider: provider,
+      isAdmin: true,
+    };
+  }
+
   const [{ data: sub }, { count }] = await Promise.all([
     supabaseAdmin.from("saas_subscriptions").select("*, saas_plans(*)").eq("user_id", userId).maybeSingle(),
-    supabaseAdmin.from("clients").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    clientsCountPromise,
   ]);
 
   let subscription: any = sub;
@@ -106,7 +135,8 @@ export async function getSubscriptionSummaryServer(userId: string): Promise<Subs
     currentPeriodEnd: subscription?.current_period_end ?? null,
     daysLeft,
     clientsCount: count ?? 0,
-    ...(await (async () => { const p = await getSaasProvider(); return { saasPaymentsEnabled: Boolean(p), saasProvider: p }; })()),
+    isAdmin: false,
+    ...(await (async () => { const p = await providerPromise; return { saasPaymentsEnabled: Boolean(p), saasProvider: p }; })()),
   };
 }
 

@@ -15,7 +15,8 @@ export const getMySubscription = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { getSubscriptionSummaryServer } = await import("./subscription.server");
-    return await getSubscriptionSummaryServer(context.userId);
+    const email = typeof context.claims?.email === "string" ? context.claims.email : null;
+    return await getSubscriptionSummaryServer(context.userId, email);
   });
 
 /** Gera um Pix para assinar/renovar um plano do sistema. */

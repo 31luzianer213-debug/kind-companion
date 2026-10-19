@@ -6,25 +6,33 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { getMySubscription } from "@/lib/subscription.functions";
 
-const ALWAYS_ALLOWED = ["/assinatura", "/configuracoes"];
+const ALWAYS_ALLOWED = ["/assinatura", "/configuracoes", "/admin"];
 
 export function useSubscriptionStatus() {
   const subFn = useServerFn(getMySubscription);
   return useQuery({
-    queryKey: ["my-subscription"],
+    // Chave nova (v2): descarta respostas antigas salvas no navegador que ainda
+    // traziam "blocked" de antes da regra do administrador.
+    queryKey: ["my-subscription-v2"],
     queryFn: () => subFn({}),
     staleTime: 60_000,
     refetchInterval: 5 * 60_000,
+    // Se a checagem falhar (rede, sessão renovando), libera o acesso em vez de
+    // mostrar um bloqueio falso de "Assinatura vencida".
+    retry: 1,
   });
 }
 
 /** Aviso de teste/vencimento e bloqueio suave quando a assinatura expira. */
 export function SubscriptionGate({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const { data: sub } = useSubscriptionStatus();
+  const { data: sub, isError } = useSubscriptionStatus();
 
-  if (!sub) return <>{children}</>;
+  if (!sub || isError) return <>{children}</>;
   const allowed = ALWAYS_ALLOWED.some((route) => pathname.startsWith(route));
+
+  // O administrador do sistema não tem assinatura: nunca bloqueia o painel dele.
+  if (sub.isAdmin) return <>{children}</>;
 
   if (sub.state === "blocked" && !allowed) {
     return (

@@ -64,6 +64,7 @@ const stateLabels: Record<string, { label: string; tone: string }> = {
   trialing: { label: "Período de teste", tone: "border-primary/30 bg-primary/10 text-primary" },
   grace: { label: "Vencida — somente leitura", tone: "border-warning/30 bg-warning/10 text-warning" },
   blocked: { label: "Bloqueada", tone: "border-destructive/30 bg-destructive/10 text-destructive" },
+  admin: { label: "Acesso de administrador", tone: "border-primary/30 bg-primary/10 text-primary" },
 };
 
 function AssinaturaPage() {
@@ -80,7 +81,7 @@ function AssinaturaPage() {
   const [payment, setPayment] = useState<{ id: string; pix_code: string | null; pix_qr_base64: string | null; ticket_url: string | null; amount: number; planName: string } | null>(null);
 
   const { data: plansData } = useQuery({ queryKey: ["saas-plans"], queryFn: () => plansFn({}) });
-  const { data: sub } = useQuery({ queryKey: ["my-subscription"], queryFn: () => subFn({}) });
+  const { data: sub } = useQuery({ queryKey: ["my-subscription-v2"], queryFn: () => subFn({}) });
   const plans = plansData?.plans ?? [];
   const needsDoc = sub?.saasProvider === "misticpay";
 
@@ -125,7 +126,7 @@ function AssinaturaPage() {
         if (res.ok && res.status === "approved") {
           toast.success("Pagamento confirmado! Sua assinatura está ativa.");
           setPayment(null);
-          queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
+          queryClient.invalidateQueries({ queryKey: ["my-subscription-v2"] });
         } else if (res.ok && res.status === "cancelled") {
           toast.error("O Pix foi cancelado ou expirou. Gere um novo.");
           setPayment(null);
@@ -135,7 +136,7 @@ function AssinaturaPage() {
     return () => clearInterval(timer);
   }, [payment, checkFn, queryClient]);
 
-  const state = sub?.state ?? "trialing";
+  const state = sub?.isAdmin ? "admin" : sub?.state ?? "trialing";
   const stateInfo = stateLabels[state] ?? stateLabels.trialing;
   const limit = sub?.plan?.max_clients;
   const usage = limit ? Math.min(100, Math.round(((sub?.clientsCount ?? 0) / limit) * 100)) : 0;
@@ -159,10 +160,13 @@ function AssinaturaPage() {
               {state === "active" && `Renovação em ${sub?.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : "—"} (${sub?.daysLeft ?? 0} dia(s) restantes).`}
               {state === "grace" && "Sua assinatura venceu. Você ainda pode consultar os dados, mas novos cadastros estão pausados. Renove para reativar tudo."}
               {state === "blocked" && "Sua assinatura está vencida há mais de 3 dias e o acesso foi bloqueado. Renove para voltar a usar o painel."}
+              {sub?.isAdmin && "Você é o administrador do sistema: seu acesso é vitalício e nunca é bloqueado por assinatura. Os planos abaixo são os que você vende para os revendedores."}
             </p>
             {!sub?.saasPaymentsEnabled && (
               <p className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning" data-testid="saas-payments-disabled">
-                Os pagamentos da assinatura ainda não foram habilitados pelo administrador do sistema (conta de recebimento em Administração).
+                {sub?.isAdmin
+                  ? "Você ainda não configurou a conta que recebe os pagamentos das assinaturas (Administração › Pagamentos). Sem isso, seus revendedores não conseguem assinar."
+                  : "Os pagamentos da assinatura ainda não foram habilitados pelo administrador do sistema (conta de recebimento em Administração)."}
               </p>
             )}
           </div>

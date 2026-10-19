@@ -171,7 +171,7 @@ function ProviderSwitch({ current, hasMp, hasMistic }: { current: string; hasMp:
     onSuccess: (p) => {
       toast.success(p === "misticpay" ? "Agora as assinaturas são pagas pela MisticPay." : "Agora as assinaturas são pagas pelo Mercado Pago.");
       queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
-      queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
+      queryClient.invalidateQueries({ queryKey: ["my-subscription-v2"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -228,7 +228,7 @@ function MisticPayCard({ hasInitial, idHint }: { hasInitial: boolean; idHint: st
       toast.success("MisticPay salva e em uso para as assinaturas.");
       setClientId(""); setSecret(""); setHas(true);
       queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
-      queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
+      queryClient.invalidateQueries({ queryKey: ["my-subscription-v2"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -321,7 +321,7 @@ function MercadoPagoCard({ hasTokenInitial }: { hasTokenInitial: boolean }) {
       setToken("");
       setHasToken(true);
       queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
-      queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
+      queryClient.invalidateQueries({ queryKey: ["my-subscription-v2"] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
