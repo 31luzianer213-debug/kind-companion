@@ -19,6 +19,21 @@ async function handleBillingExecution(request: Request) {
   const { runBillingForUser } = await import("@/lib/billing.server");
   const { runAutomaticBillingForUser } = await import("@/lib/billing-automation.server");
   const { runTrialRemindersForUser } = await import("@/lib/trials.server");
+  const { reconcilePendingSaasPayments } = await import("@/lib/subscription.server");
+
+  // 0) Rede de segurança das assinaturas: libera quem pagou o Pix mas o aviso da
+  // operadora não chegou. Roda antes das cobranças, todo dia.
+  let saasReconcile: unknown = null;
+  try {
+    const mistic = await reconcilePendingSaasPayments({ provider: "misticpay", hours: 48, limit: 50 });
+    const mercadoPago = await reconcilePendingSaasPayments({ provider: "mercadopago", hours: 48, limit: 50 });
+    saasReconcile = {
+      approved: mistic.approved + mercadoPago.approved,
+      checked: mistic.checked + mercadoPago.checked,
+    };
+  } catch (err) {
+    saasReconcile = { error: err instanceof Error ? err.message : "erro" };
+  }
 
   // Localiza contas com auto_send_enabled ou todas ativas
   const { data: accounts, error } = await supabaseAdmin
@@ -54,6 +69,7 @@ async function handleBillingExecution(request: Request) {
     message: "Rotina diária de cobranças executada com sucesso.",
     timestamp: new Date().toISOString(),
     accountsProcessed: results.length,
+    saasReconcile,
     results,
   });
 }

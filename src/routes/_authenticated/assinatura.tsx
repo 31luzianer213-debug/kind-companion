@@ -40,6 +40,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatBRL, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
+  checkMySubscriptionPayments,
   checkSubscriptionPayment,
   createSubscriptionPix,
   getMySubscription,
@@ -73,11 +74,14 @@ function AssinaturaPage() {
   const subFn = useServerFn(getMySubscription);
   const pixFn = useServerFn(createSubscriptionPix);
   const checkFn = useServerFn(checkSubscriptionPayment);
+  const healFn = useServerFn(checkMySubscriptionPayments);
   const [months, setMonths] = useState(1);
   const [cpf, setCpf] = useState("");
   const [payerName, setPayerName] = useState("");
   const [checkoutPlan, setCheckoutPlan] = useState<SaasPlan | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [slowConfirmation, setSlowConfirmation] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [payment, setPayment] = useState<{ id: string; pix_code: string | null; pix_qr_base64: string | null; ticket_url: string | null; amount: number; planName: string } | null>(null);
 
   const { data: plansData } = useQuery({ queryKey: ["saas-plans"], queryFn: () => plansFn({}) });
@@ -120,21 +124,58 @@ function AssinaturaPage() {
 
   useEffect(() => {
     if (!payment) return;
+    let attempts = 0;
     const timer = setInterval(async () => {
+      attempts += 1;
       try {
         const res = await checkFn({ data: { paymentId: payment.id } });
         if (res.ok && res.status === "approved") {
           toast.success("Pagamento confirmado! Sua assinatura está ativa.");
           setPayment(null);
+          setSlowConfirmation(false);
           queryClient.invalidateQueries({ queryKey: ["my-subscription-v2"] });
         } else if (res.ok && res.status === "cancelled") {
           toast.error("O Pix foi cancelado ou expirou. Gere um novo.");
           setPayment(null);
         }
       } catch {}
+      // Depois de 2 minutos sem confirmação, usa a checagem ampla: reconfere
+      // todos os Pix pendentes da conta (caso o aviso da operadora tenha se perdido).
+      if (attempts === 24) {
+        setSlowConfirmation(true);
+        try {
+          const healed = await healFn({ data: {} });
+          if (healed.approved) {
+            toast.success("Pagamento confirmado! Sua assinatura está ativa.");
+            setPayment(null);
+            setSlowConfirmation(false);
+            queryClient.invalidateQueries({ queryKey: ["my-subscription-v2"] });
+          }
+        } catch {}
+      }
     }, 5000);
     return () => clearInterval(timer);
-  }, [payment, checkFn, queryClient]);
+  }, [payment, checkFn, healFn, queryClient]);
+
+  // Ao abrir a tela com assinatura pendente/vencida, reconfere os Pix recentes:
+  // cobre o caso de o cliente ter fechado a página antes da confirmação chegar.
+  useEffect(() => {
+    if (!sub || sub.isAdmin) return;
+    if (sub.state === "active") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const healed = await healFn({ data: {} });
+        if (!cancelled && healed.approved) {
+          toast.success("Encontramos um pagamento aprovado: sua assinatura foi liberada.");
+          queryClient.invalidateQueries({ queryKey: ["my-subscription-v2"] });
+        }
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sub?.state, sub?.isAdmin, healFn, queryClient]);
 
   const state = sub?.isAdmin ? "admin" : sub?.state ?? "trialing";
   const stateInfo = stateLabels[state] ?? stateLabels.trialing;
@@ -206,6 +247,47 @@ function AssinaturaPage() {
                 <Button type="button" variant="ghost" onClick={() => setPayment(null)}>Escolher outro plano</Button>
               </div>
               <p className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin" /> Aguardando confirmação do pagamento…</p>
+              {slowConfirmation && (
+                <div className="space-y-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning" data-testid="subscription-slow-confirmation">
+                  <p className="font-semibold">A confirmação está demorando mais que o normal.</p>
+                  <p>Se você já pagou, toque no botão abaixo: o sistema confere direto na operadora e libera seu acesso na hora.</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                    disabled={verifying}
+                    onClick={async () => {
+                      setVerifying(true);
+                      try {
+                        const healed = await healFn({ data: {} });
+                        if (healed.approved) {
+                          toast.success("Pagamento confirmado! Sua assinatura está ativa.");
+                          setPayment(null);
+                          setSlowConfirmation(false);
+                          queryClient.invalidateQueries({ queryKey: ["my-subscription-v2"] });
+                        } else {
+                          const again = await checkFn({ data: { paymentId: payment.id } });
+                          if (again.ok && again.status === "approved") {
+                            toast.success("Pagamento confirmado! Sua assinatura está ativa.");
+                            setPayment(null);
+                            queryClient.invalidateQueries({ queryKey: ["my-subscription-v2"] });
+                          } else {
+                            toast.info("A operadora ainda não confirmou este Pix. Aguarde alguns instantes ou fale com o suporte.");
+                          }
+                        }
+                      } catch {
+                        toast.error("Não foi possível conferir agora. Tente de novo em instantes.");
+                      } finally {
+                        setVerifying(false);
+                      }
+                    }}
+                    data-testid="subscription-verify-button"
+                  >
+                    {verifying ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5" />} Já paguei, liberar meu acesso
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

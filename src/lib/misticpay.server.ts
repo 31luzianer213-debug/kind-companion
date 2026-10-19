@@ -39,14 +39,42 @@ export async function createMisticPix(
     }
     const d = json.data;
     const b64 = String(d.qrCodeBase64 || "").replace(/^data:image\/\w+;base64,/, "");
-    return { ok: true as const, paymentId: String(d.transactionId), qrCode: String(d.copyPaste || ""), qrCodeBase64: b64 || null };
+    // Guarda o identificador que a MisticPay realmente usa (usa o dela quando
+    // vier; senão mantém o transactionId que nós enviamos).
+    const paymentId = String(d.transactionId || d.id || p.transactionId || "");
+    return { ok: true as const, paymentId, qrCode: String(d.copyPaste || ""), qrCodeBase64: b64 || null };
   } catch {
     return { ok: false as const, error: "Não foi possível falar com a MisticPay." };
   }
 }
 
-/** Retorna PENDENTE | COMPLETO | FALHA | CANCELADO, ou null se não conseguiu consultar. */
-export async function checkMisticTransaction(c: MisticCreds, transactionId: string): Promise<string | null> {
+const PAID_STATES = [
+  "COMPLETO", "COMPLETA", "CONCLUIDO", "CONCLUIDA", "FINALIZADO", "FINALIZADA",
+  "PAGO", "PAGA", "APROVADO", "APROVADA", "APPROVED", "PAID", "SUCCESS", "SUCESSO", "LIQUIDADO",
+];
+const FAILED_STATES = [
+  "FALHA", "ERRO", "ERROR", "CANCELADO", "CANCELADA", "CANCELED", "CANCELLED",
+  "EXPIRADO", "EXPIRADA", "EXPIRED", "RECUSADO", "RECUSADA", "REJECTED", "ESTORNADO", "CHARGEBACK",
+];
+
+export type MisticTransactionState = "paid" | "failed" | "pending" | null;
+
+/**
+ * Traduz o estado devolvido pela MisticPay. Cada versão da API usa um nome
+ * diferente ("COMPLETO", "PAGO", "FINALIZADO"...), por isso a comparação é feita
+ * por palavras conhecidas em vez de um único texto exato.
+ */
+export function classifyMisticState(raw: unknown): MisticTransactionState {
+  if (raw === null || raw === undefined) return null;
+  const state = String(raw).trim().toUpperCase();
+  if (!state) return null;
+  if (PAID_STATES.includes(state)) return "paid";
+  if (FAILED_STATES.includes(state)) return "failed";
+  return "pending";
+}
+
+/** Consulta a transação e devolve paid | failed | pending (null = não deu para consultar). */
+export async function checkMisticTransaction(c: MisticCreds, transactionId: string): Promise<MisticTransactionState> {
   try {
     const res = await fetch(`${BASE}/transactions/check`, {
       method: "POST",
@@ -55,7 +83,16 @@ export async function checkMisticTransaction(c: MisticCreds, transactionId: stri
     });
     if (!res.ok) return null;
     const json: any = await res.json().catch(() => ({}));
-    return json?.transaction?.transactionState ? String(json.transaction.transactionState) : null;
+    const raw =
+      json?.transaction?.transactionState ??
+      json?.transaction?.state ??
+      json?.transaction?.status ??
+      json?.data?.transactionState ??
+      json?.data?.state ??
+      json?.data?.status ??
+      json?.transactionState ??
+      json?.status;
+    return classifyMisticState(raw);
   } catch {
     return null;
   }

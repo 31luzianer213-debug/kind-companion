@@ -51,3 +51,16 @@ export const checkSubscriptionPayment = createServerFn({ method: "POST" })
     const { reconcileSaasPayment } = await import("./subscription.server");
     return await reconcileSaasPayment(data.paymentId, context.userId);
   });
+
+/**
+ * Rede de segurança: reconfere todos os Pix pendentes recentes do próprio
+ * revendedor. Se o webhook da operadora não chegou, o acesso é liberado aqui —
+ * sem precisar de liberação manual pelo administrador.
+ */
+export const checkMySubscriptionPayments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: Record<string, unknown> | undefined) => input ?? {})
+  .handler(async ({ context }) => {
+    const { reconcileMyPendingPayments } = await import("./subscription.server");
+    return await reconcileMyPendingPayments(context.userId);
+  });

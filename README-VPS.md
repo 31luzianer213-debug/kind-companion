@@ -124,3 +124,34 @@ O sistema possui arquitetura unificada com dois mecanismos de proteção:
 | `pm2 restart kind-companion` | Reinicia a aplicação |
 | `pm2 stop kind-companion` | Para o serviço |
 | `pm2 monitor` | Monitor de uso de memória e CPU |
+
+---
+
+## 💳 7. Liberação automática das assinaturas (Pix)
+
+O acesso do revendedor é liberado sozinho quando o Pix da assinatura é pago. Para
+isso, três camadas trabalham juntas:
+
+1. **Webhook** — a operadora avisa o sistema na hora.
+   - Mercado Pago: cadastre `https://seudominio.com/api/public/hooks/saas-mercadopago`
+   - MisticPay: cadastre `https://seudominio.com/api/public/hooks/saas-misticpay`
+2. **Tela de Assinatura** — enquanto o revendedor está na página, o pagamento é
+   conferido a cada 5 segundos; depois de 2 minutos aparece o botão
+   **"Já paguei, liberar meu acesso"**, que confere direto na operadora.
+3. **Rotina periódica** — reconfere os Pix pendentes das últimas 48h e libera quem
+   pagou, mesmo que o webhook não tenha chegado.
+
+### Agendamento da rotina (crontab da VPS)
+
+```cron
+# Todo dia às 8h: cobranças e liberação das assinaturas pendentes
+0 8 * * * curl -s "https://seudominio.com/api/public/hooks/cobranca-diaria?secret=SEU_BILLING_CRON_SECRET" > /dev/null
+
+# A cada 15 minutos: só a conferência das assinaturas (liberação rápida)
+*/15 * * * * curl -s "https://seudominio.com/api/public/hooks/saas-reconcile?secret=SEU_BILLING_CRON_SECRET" > /dev/null
+```
+
+O valor de `SEU_BILLING_CRON_SECRET` é o mesmo configurado em `BILLING_CRON_SECRET`
+no `.env`. O administrador também pode forçar a conferência manualmente em
+**Administração → Assinaturas → "Conferir pagamentos pendentes"**.
+

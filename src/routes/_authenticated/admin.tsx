@@ -42,6 +42,7 @@ import {
   deleteAdminReseller,
   getAdminSettings,
   listAdminSubscriptions,
+  reconcileAdminPayments,
   resetAdminResellerPassword,
   saveAdminSettings,
   startAdminTrial,
@@ -508,6 +509,7 @@ function SubscriptionsCard() {
   const resetFn = useServerFn(resetAdminResellerPassword);
   const trialFn = useServerFn(startAdminTrial);
   const bulkFn = useServerFn(bulkAdminResellers);
+  const reconcileFn = useServerFn(reconcileAdminPayments);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState("all");
   const [detailsId, setDetailsId] = useState<string | null>(null);
@@ -595,6 +597,23 @@ function SubscriptionsCard() {
       else toast.success(`${res.done} conta(s) atualizada(s).`);
       setSelected(new Set());
       refresh();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const reconcile = useMutation({
+    mutationFn: async () => {
+      const res = await reconcileFn({ data: {} });
+      if (!res.ok) throw new Error(res.error || "Falha ao conferir os pagamentos.");
+      return res;
+    },
+    onSuccess: (res) => {
+      if (res.approved) {
+        toast.success(`${res.approved} pagamento(s) liberado(s) automaticamente.`);
+        refresh();
+      } else {
+        toast.info(`Nenhum pagamento novo aprovado (${res.checked} cobrança(s) conferida(s)).`);
+      }
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -735,6 +754,22 @@ function SubscriptionsCard() {
                 data-testid="admin-sub-days"
               />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              Pagou e não liberou? O sistema confere as cobranças pendentes direto na operadora e ativa quem já pagou.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0 gap-1.5"
+              disabled={reconcile.isPending}
+              onClick={() => reconcile.mutate()}
+              data-testid="admin-reconcile-payments"
+            >
+              {reconcile.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5" />} Conferir pagamentos pendentes
+            </Button>
           </div>
 
           <div className="flex flex-wrap gap-1.5">

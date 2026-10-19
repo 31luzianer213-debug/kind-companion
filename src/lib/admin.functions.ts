@@ -773,6 +773,24 @@ export const getAdminResellerDetails = createServerFn({ method: "GET" })
     };
   });
 
+/** Reconcilia as cobranças da assinatura que ficaram pendentes (rede de segurança do webhook). */
+export const reconcileAdminPayments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: Record<string, unknown> | undefined) => input ?? {})
+  .handler(async ({ context }) => {
+    if (!(await assertAdmin(context.claims))) {
+      return { ok: false as const, error: "Acesso restrito ao administrador do sistema.", approved: 0, checked: 0 };
+    }
+    const { reconcilePendingSaasPayments } = await import("./subscription.server");
+    const result = await reconcilePendingSaasPayments({ provider: "misticpay", hours: 72, limit: 50 });
+    const mp = await reconcilePendingSaasPayments({ provider: "mercadopago", hours: 72, limit: 50 });
+    return {
+      ok: true as const,
+      checked: result.checked + mp.checked,
+      approved: result.approved + mp.approved,
+    };
+  });
+
 /** Testa as credenciais da MisticPay consultando uma transação inexistente. */
 export const testMisticPayCreds = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
