@@ -35,6 +35,7 @@ import { AdminOverviewCard } from "@/components/admin/AdminOverviewCard";
 import { AdminConnectionsCard } from "@/components/admin/AdminConnectionsCard";
 import { AdminPlansCard } from "@/components/admin/AdminPlansCard";
 import { AdminResellerDetails } from "@/components/admin/AdminResellerDetails";
+import { AdminDiagnosticsCard } from "@/components/admin/AdminDiagnosticsCard";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   bulkAdminResellers,
@@ -131,6 +132,9 @@ function AdminPage() {
           <TabsTrigger value="recebimento" className="gap-1.5 text-xs sm:text-sm">
             <Wallet className="size-4" /> Recebimento
           </TabsTrigger>
+          <TabsTrigger value="testes" className="gap-1.5 text-xs sm:text-sm">
+            <ShieldCheck className="size-4" /> Testes
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="visao" className="space-y-5">
@@ -153,7 +157,12 @@ function AdminPage() {
           <ProviderSwitch current={data.settings.saas_provider} hasMp={Boolean(data.settings.has_token)} hasMistic={Boolean((data.settings as any).has_mistic)} />
           <MisticPayCard hasInitial={Boolean((data.settings as any).has_mistic)} idHint={(data.settings as any).mistic_client_id_hint ?? ""} />
           <MercadoPagoCard hasTokenInitial={Boolean(data.settings.has_token)} />
+          <AdminEmailCard initial={(data.settings as any).admin_email ?? ""} />
           <WebhookCard />
+        </TabsContent>
+
+        <TabsContent value="testes" className="space-y-5">
+          <AdminDiagnosticsCard />
         </TabsContent>
       </Tabs>
     </div>
@@ -455,10 +464,68 @@ function MercadoPagoCard({ hasTokenInitial }: { hasTokenInitial: boolean }) {
   );
 }
 
+function AdminEmailCard({ initial }: { initial: string }) {
+  const queryClient = useQueryClient();
+  const saveFn = useServerFn(saveAdminSettings);
+  const [email, setEmail] = useState(initial ?? "");
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const res = await saveFn({ data: { admin_email: email } });
+      if (!res.ok) throw new Error(res.error || "Falha ao salvar.");
+    },
+    onSuccess: () => {
+      toast.success("E-mail do administrador salvo.");
+      queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-status"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  return (
+    <Card className="surface-card border-border/70">
+      <CardHeader className="border-b border-border/50 pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <ShieldCheck className="size-5 text-primary" /> Dono do sistema (administrador)
+        </CardTitle>
+        <CardDescription className="mt-1">
+          Quem usa este e-mail entra em Administração e nunca é bloqueado por assinatura. Se ficar vazio e não houver
+          <strong> ADMIN_EMAIL</strong> no servidor, ninguém consegue abrir Administração.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 pt-4">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold">E-mail do administrador</Label>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="seuemail@dominio.com"
+            autoComplete="email"
+            data-testid="admin-email-input"
+          />
+        </div>
+        <div className="flex justify-end border-t border-border/50 pt-3">
+          <Button
+            type="button"
+            onClick={() => save.mutate()}
+            disabled={save.isPending || !email.includes("@")}
+            className="gap-1.5 px-6 font-semibold"
+            data-testid="admin-email-save"
+          >
+            {save.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />} Salvar administrador
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function WebhookCard() {
   const [copied, setCopied] = useState(false);
-  const webhookUrl =
-    (typeof window !== "undefined" ? window.location.origin : "") + "/api/public/hooks/saas-mercadopago";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const webhookUrl = origin + "/api/public/hooks/saas-mercadopago";
+  const reconcileUrl = origin + "/api/public/hooks/saas-reconcile?secret=SEU_BILLING_CRON_SECRET";
 
   return (
     <Card className="surface-card border-primary/20 bg-primary/5">
@@ -468,10 +535,10 @@ function WebhookCard() {
         </CardTitle>
         <CardDescription>
           No Mercado Pago, em <strong>Suas integrações → Webhooks</strong>, cadastre a URL abaixo (evento{" "}
-          <strong>Pagamentos</strong>) para liberar as assinaturas na hora.
+          <strong>Pagamentos</strong>) para liberar as assinaturas na hora. Na MisticPay o endereço já vai junto com cada Pix.
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-2">
+      <CardContent className="space-y-4 pt-2">
         <div className="flex items-center gap-2">
           <Input readOnly value={webhookUrl} className="h-9 rounded-md font-mono text-xs" data-testid="admin-webhook-url" />
           <Button
@@ -491,7 +558,32 @@ function WebhookCard() {
             {copied ? "Copiado!" : "Copiar"}
           </Button>
         </div>
-        <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+
+        <div className="rounded-lg border border-border/60 bg-background/50 p-3">
+          <p className="text-xs font-semibold text-foreground">Rede de segurança (recomendado)</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            Agende esta URL no seu cron (a cada 15 minutos). Ela confere na operadora todo Pix pendente e libera quem pagou,
+            mesmo quando o aviso do banco não chega. Troque <strong>SEU_BILLING_CRON_SECRET</strong> pelo segredo configurado
+            no servidor (<strong>BILLING_CRON_SECRET</strong>).
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <Input readOnly value={reconcileUrl} className="h-8 rounded-md font-mono text-[11px]" />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 shrink-0"
+              onClick={() => {
+                navigator.clipboard.writeText(reconcileUrl);
+                toast.success("URL da rotina copiada!");
+              }}
+            >
+              <Copy className="size-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <Info className="size-3.5 text-primary" />
           O webhook só funciona com o app publicado online (HTTPS).
         </p>

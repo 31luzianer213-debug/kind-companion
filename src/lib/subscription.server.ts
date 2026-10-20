@@ -102,11 +102,28 @@ export async function getSubscriptionSummaryServer(userId: string, email?: strin
     // Conta criada antes da migração ou trigger ausente: garante o período de teste.
     const trialDays = Number(process.env["SAAS_TRIAL_DAYS"] || 7);
     const trialEndsAt = new Date(Date.now() + trialDays * 86_400_000).toISOString();
-    const { data: created } = await supabaseAdmin
-      .from("saas_subscriptions")
-      .upsert({ user_id: userId, plan_id: "ilimitado", status: "trialing", trial_ends_at: trialEndsAt }, { onConflict: "user_id" })
-      .select("*, saas_plans(*)")
+    // O plano "ilimitado" pode ter sido renomeado/excluído pelo administrador.
+    // Antes o upsert falhava por chave estrangeira e a conta ficava sem linha em
+    // saas_subscriptions — o que a função SQL subscription_state() trata como
+    // "blocked", bloqueando o cadastro de clientes no primeiro acesso.
+    const { data: planRow } = await supabaseAdmin
+      .from("saas_plans")
+      .select("id")
+      .eq("active", true)
+      .order("sort_order")
+      .limit(1)
       .maybeSingle();
+    const defaultPlanId = (planRow?.id as string | undefined) ?? null;
+    const { data: created } = defaultPlanId
+      ? await supabaseAdmin
+          .from("saas_subscriptions")
+          .upsert(
+            { user_id: userId, plan_id: defaultPlanId, status: "trialing", trial_ends_at: trialEndsAt },
+            { onConflict: "user_id" },
+          )
+          .select("*, saas_plans(*)")
+          .maybeSingle()
+      : { data: null as any };
     subscription = created;
 
     // Se a gravação falhar (ex.: plano padrão inexistente / FK / RLS), o usuário

@@ -37,7 +37,7 @@ export const getAdminSettings = createServerFn({ method: "GET" })
 /** Salva o Access Token do Mercado Pago. */
 export const saveAdminSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { mercadopago_token?: string; provider?: "mercadopago" | "misticpay"; misticpay_client_id?: string; misticpay_client_secret?: string }) => input)
+  .inputValidator((input: { mercadopago_token?: string; provider?: "mercadopago" | "misticpay"; misticpay_client_id?: string; misticpay_client_secret?: string; admin_email?: string }) => input)
   .handler(async ({ data, context }) => {
     const { isAdminEmail } = await import("./system-settings.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -48,6 +48,15 @@ export const saveAdminSettings = createServerFn({ method: "POST" })
     if (data.provider === "mercadopago" || data.provider === "misticpay") payload.saas_provider = data.provider;
     if (typeof data.misticpay_client_id === "string" && data.misticpay_client_id.trim()) payload.misticpay_client_id = data.misticpay_client_id.trim();
     if (typeof data.misticpay_client_secret === "string" && data.misticpay_client_secret.trim()) payload.misticpay_client_secret = data.misticpay_client_secret.trim();
+    // Sem admin_email no banco nem ADMIN_EMAIL no ambiente, NINGUÉM é administrador:
+    // por isso o campo pode ser definido aqui, direto pelo painel.
+    if (typeof data.admin_email === "string" && data.admin_email.trim()) {
+      const email = data.admin_email.trim().toLowerCase();
+      if (!email.includes("@") || email.length > 160) {
+        return { ok: false as const, error: "Informe um e-mail de administrador válido." };
+      }
+      payload.admin_email = email;
+    }
     // Só sobrescreve o token quando um novo valor é enviado (mantém o atual se vier vazio).
     if (typeof data.mercadopago_token === "string" && data.mercadopago_token.trim()) {
       payload.mercadopago_token = data.mercadopago_token.trim();
@@ -228,26 +237,30 @@ export const updateAdminSubscription = createServerFn({ method: "POST" })
     if (!(await isAdminEmail(emailFromClaims(context.claims)))) {
       return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
     }
+    const admin = supabaseAdmin as any;
     if (data.action === "block") {
-      const { error } = await (supabaseAdmin as any)
-        .from("saas_subscriptions")
-        .update({ status: "canceled", current_period_end: new Date(Date.now() - 86_400_000).toISOString() })
-        .eq("user_id", data.userId);
+      const error = await applySubscriptionState(admin, data.userId, {
+        status: "canceled",
+        current_period_end: blockedPeriodEnd(),
+      });
       if (error) return { ok: false as const, error: error.message };
       return { ok: true as const };
     }
     const days = Math.max(1, Math.min(365, Number(data.days) || 30));
-    const { data: current } = await (supabaseAdmin as any)
+    const { data: current } = await admin
       .from("saas_subscriptions")
-      .select("current_period_end")
+      .select("current_period_end, status")
       .eq("user_id", data.userId)
       .maybeSingle();
-    const base = current?.current_period_end ? new Date(current.current_period_end).getTime() : 0;
+    const base =
+      current?.status === "active" && current?.current_period_end
+        ? new Date(current.current_period_end).getTime()
+        : 0;
     const start = base > Date.now() ? base : Date.now();
-    const { error } = await (supabaseAdmin as any)
-      .from("saas_subscriptions")
-      .update({ status: "active", current_period_end: new Date(start + days * 86_400_000).toISOString() })
-      .eq("user_id", data.userId);
+    const error = await applySubscriptionState(admin, data.userId, {
+      status: "active",
+      current_period_end: new Date(start + days * DAY_MS).toISOString(),
+    });
     if (error) return { ok: false as const, error: error.message };
     return { ok: true as const };
   });
@@ -255,6 +268,70 @@ export const updateAdminSubscription = createServerFn({ method: "POST" })
 async function assertAdmin(claims: any) {
   const { isAdminEmail } = await import("./system-settings.server");
   return isAdminEmail(emailFromClaims(claims));
+}
+
+const DAY_MS = 86_400_000;
+
+/**
+ * Descobre um plano válido para vincular à assinatura.
+ * `saas_subscriptions.plan_id` é obrigatório: sem isso um INSERT falhava por
+ * chave estrangeira e a liberação manual de dias simplesmente não funcionava
+ * em contas que ainda não tinham registro de assinatura.
+ */
+async function resolveDefaultPlanId(admin: any, preferred?: string | null): Promise<string | null> {
+  for (const id of [preferred, "ilimitado"].filter((x): x is string => Boolean(x))) {
+    const { data } = await admin.from("saas_plans").select("id").eq("id", id).maybeSingle();
+    if (data?.id) return data.id as string;
+  }
+  const { data: fallback } = await admin
+    .from("saas_plans")
+    .select("id")
+    .eq("active", true)
+    .order("sort_order")
+    .limit(1)
+    .maybeSingle();
+  return (fallback?.id as string) ?? null;
+}
+
+/**
+ * Aplica o estado da assinatura garantindo que a linha exista.
+ * Antes, `update()` em conta sem linha em saas_subscriptions afetava zero linhas
+ * e retornava sucesso: o admin clicava em "Liberar 30 dias" e nada acontecia.
+ */
+async function applySubscriptionState(
+  admin: any,
+  userId: string,
+  patch: { status: string; current_period_end?: string | null; trial_ends_at?: string | null },
+): Promise<{ message: string } | null> {
+  const { data: existing } = await admin
+    .from("saas_subscriptions")
+    .select("user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (existing?.user_id) {
+    const { error } = await admin
+      .from("saas_subscriptions")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("user_id", userId);
+    return error ?? null;
+  }
+
+  const planId = await resolveDefaultPlanId(admin);
+  if (!planId) {
+    return {
+      message: "Nenhum plano cadastrado. Crie um plano em Administração › Plano antes de liberar acessos.",
+    };
+  }
+  const { error } = await admin
+    .from("saas_subscriptions")
+    .insert({ user_id: userId, plan_id: planId, ...patch, updated_at: new Date().toISOString() });
+  return error ?? null;
+}
+
+/** Data de um bloqueio efetivo: além dos 3 dias de tolerância (estado "grace"). */
+function blockedPeriodEnd() {
+  return new Date(Date.now() - 5 * DAY_MS).toISOString();
 }
 
 /** Cria um novo revendedor (conta de acesso + assinatura ativa). */
@@ -281,13 +358,11 @@ export const createAdminReseller = createServerFn({ method: "POST" })
     if (!userId) return { ok: false as const, error: "Não foi possível criar a conta." };
 
     const days = Math.max(1, Math.min(365, Number(data.days) || 30));
-    const periodEnd = new Date(Date.now() + days * 86_400_000).toISOString();
-    const { error: subError } = await (supabaseAdmin as any)
-      .from("saas_subscriptions")
-      .upsert(
-        { user_id: userId, status: "active", current_period_end: periodEnd, updated_at: new Date().toISOString() },
-        { onConflict: "user_id" },
-      );
+    const periodEnd = new Date(Date.now() + days * DAY_MS).toISOString();
+    const subError = await applySubscriptionState(supabaseAdmin as any, userId, {
+      status: "active",
+      current_period_end: periodEnd,
+    });
     if (subError) return { ok: false as const, error: subError.message };
     return { ok: true as const, userId };
   });
@@ -338,17 +413,11 @@ export const startAdminTrial = createServerFn({ method: "POST" })
       return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
     }
     const days = Math.max(1, Math.min(90, Number(data.days) || 7));
-    const { error } = await (supabaseAdmin as any)
-      .from("saas_subscriptions")
-      .upsert(
-        {
-          user_id: data.userId,
-          status: "trialing",
-          trial_ends_at: new Date(Date.now() + days * 86_400_000).toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" },
-      );
+    const error = await applySubscriptionState(supabaseAdmin as any, data.userId, {
+      status: "trialing",
+      trial_ends_at: new Date(Date.now() + days * DAY_MS).toISOString(),
+      current_period_end: null,
+    });
     if (error) return { ok: false as const, error: error.message };
     return { ok: true as const };
   });
@@ -703,20 +772,29 @@ export const bulkAdminResellers = createServerFn({ method: "POST" })
           const r = await deleteResellerData(admin, id);
           if (!r.ok) error = r.error;
         } else if (data.action === "block") {
-          ({ error } = await admin.from("saas_subscriptions")
-            .update({ status: "canceled", current_period_end: new Date(Date.now() - 86_400_000).toISOString() })
-            .eq("user_id", id));
+          error = await applySubscriptionState(admin, id, {
+            status: "canceled",
+            current_period_end: blockedPeriodEnd(),
+          });
         } else if (data.action === "trial") {
-          ({ error } = await admin.from("saas_subscriptions").upsert(
-            { user_id: id, status: "trialing", trial_ends_at: new Date(Date.now() + 7 * 86_400_000).toISOString() },
-            { onConflict: "user_id" }));
+          error = await applySubscriptionState(admin, id, {
+            status: "trialing",
+            trial_ends_at: new Date(Date.now() + 7 * DAY_MS).toISOString(),
+            current_period_end: null,
+          });
         } else if (data.action === "grant") {
-          const { data: cur } = await admin.from("saas_subscriptions").select("current_period_end").eq("user_id", id).maybeSingle();
-          const base = cur?.current_period_end ? new Date(cur.current_period_end).getTime() : 0;
+          const { data: cur } = await admin
+            .from("saas_subscriptions")
+            .select("current_period_end, status")
+            .eq("user_id", id)
+            .maybeSingle();
+          const base =
+            cur?.status === "active" && cur?.current_period_end ? new Date(cur.current_period_end).getTime() : 0;
           const start = base > Date.now() ? base : Date.now();
-          ({ error } = await admin.from("saas_subscriptions").upsert(
-            { user_id: id, status: "active", current_period_end: new Date(start + days * 86_400_000).toISOString() },
-            { onConflict: "user_id" }));
+          error = await applySubscriptionState(admin, id, {
+            status: "active",
+            current_period_end: new Date(start + days * DAY_MS).toISOString(),
+          });
         } else if (data.action === "suspend" || data.action === "unsuspend") {
           ({ error } = await admin.auth.admin.updateUserById(id, { ban_duration: data.action === "suspend" ? "876000h" : "none" }));
         }
