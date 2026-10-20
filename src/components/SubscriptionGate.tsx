@@ -37,11 +37,11 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
   if (sub.state === "blocked" && !allowed) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center" data-testid="subscription-blocked">
-        <div className="max-w-md space-y-4 rounded-md border border-destructive/30 bg-card p-6 text-center shadow-sm">
-          <span className="mx-auto grid size-12 place-items-center rounded-md bg-destructive/10 text-destructive"><Lock className="size-5" /></span>
-          <h2 className="text-lg font-bold text-foreground">Assinatura vencida</h2>
+        <div className="w-full max-w-md space-y-4 rounded-2xl border border-destructive/25 bg-card p-6 text-center shadow-[0_24px_60px_-40px_rgba(0,0,0,0.5)]">
+          <span className="mx-auto grid size-12 place-items-center rounded-xl bg-destructive/10 text-destructive"><Lock className="size-5" /></span>
+          <h2 className="font-display text-lg font-bold text-foreground">Assinatura vencida</h2>
           <p className="text-sm text-muted-foreground">Seus dados estão guardados com segurança. Renove sua assinatura para voltar a gerenciar clientes, cobranças e o robô do WhatsApp.</p>
-          <Button asChild className="w-full"><Link to="/assinatura">Renovar agora</Link></Button>
+          <Button asChild className="w-full rounded-lg font-bold"><Link to="/assinatura">Renovar agora</Link></Button>
         </div>
       </div>
     );
@@ -54,16 +54,18 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
     <>
       {(showTrial || showGrace) && !pathname.startsWith("/assinatura") && (
         <div
-          className={`mb-4 flex flex-col gap-2 rounded-lg border p-3 text-sm sm:flex-row sm:items-center sm:justify-between ${showGrace ? "border-warning/30 bg-warning/10 text-warning" : "border-primary/30 bg-primary/10 text-foreground"}`}
+          className={`mb-4 flex flex-col gap-2 rounded-xl border p-3 text-sm sm:flex-row sm:items-center sm:justify-between ${showGrace ? "border-warning/35 bg-warning/10" : "border-primary/30 bg-primary/[0.07]"}`}
           data-testid="subscription-banner"
         >
-          <span className="flex items-center gap-2 font-semibold">
-            {showGrace ? <AlertTriangle className="size-4 shrink-0" /> : <Sparkles className="size-4 shrink-0 text-primary" />}
+          <span className="flex items-center gap-2 font-semibold text-foreground">
+            {showGrace ? <AlertTriangle className="size-4 shrink-0 text-warning" /> : <Sparkles className="size-4 shrink-0 text-primary" />}
             {showGrace
               ? "Sua assinatura venceu. Novos cadastros estão pausados até a renovação."
               : `Seu teste grátis termina em ${Math.max(sub.daysLeft, 0)} dia(s).`}
           </span>
-          <Button asChild size="sm" variant={showGrace ? "default" : "outline"}><Link to="/assinatura">{showGrace ? "Renovar" : "Ver planos"}</Link></Button>
+          <Button asChild size="sm" className="shrink-0 rounded-lg font-bold">
+            <Link to="/assinatura">{showGrace ? "Renovar" : "Ver planos"}</Link>
+          </Button>
         </div>
       )}
       {children}

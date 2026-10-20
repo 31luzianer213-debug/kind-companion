@@ -9,6 +9,7 @@ import { MobileClientDelete } from "@/components/clients/MobileClientDelete";
 import { pageDescriptions } from "@/components/layout/navigation";
 import { SigmaLogo } from "@/components/SigmaLogo";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { getWhatsAppStatus } from "@/lib/whatsapp.functions";
@@ -92,8 +93,10 @@ export function AppLayout({
   const { data: counts } = useQuery({
     queryKey: ["sidebar-counts"],
     queryFn: async () => {
+      // `ordersFn` já lança quando a sessão falha; antes isso derrubava a consulta
+      // inteira e o menu ficava sem contadores de clientes/cobranças.
       const [pendingOrders, clients, overdueInvoices, sigmaClients] = await Promise.all([
-        getPendingOrderCount(ordersFn),
+        getPendingOrderCount(ordersFn).catch(() => 0),
         supabase.from("clients").select("id", { count: "exact", head: true }),
         supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "overdue"),
         supabase.from("clients").select("id", { count: "exact", head: true }).not("sigma_customer_id", "is", null),
@@ -108,6 +111,7 @@ export function AppLayout({
     staleTime: 30_000,
     refetchInterval: 60_000,
     refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   const { data: whatsappStatus } = useQuery({    queryKey: ["layout-whatsapp-status"],
@@ -161,25 +165,26 @@ export function AppLayout({
 
   return (
     <div className="app-aurora mobile-native-shell min-h-[100dvh] bg-background text-foreground lg:flex">
-      <header className="mobile-app-header sticky top-0 z-30 grid min-h-[62px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-background/94 px-3 py-2 backdrop-blur-xl lg:hidden sm:px-4">
+      <header className="mobile-app-header sticky top-0 z-30 grid min-h-[60px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-background/92 px-3 py-2 backdrop-blur-xl lg:hidden sm:px-4">
         <div className="flex min-w-0 items-center gap-2.5">
-          <div className="grid size-9 shrink-0 place-items-center rounded-lg border border-border bg-card shadow-sm">
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/12 ring-1 ring-primary/20">
             <SigmaLogo size="sm" />
-          </div>
+          </span>
           <div className="min-w-0">
-            <p className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-primary">Sigma Control</p>
-            <h1 className="truncate font-display text-[15px] font-bold text-foreground">{mobilePageTitle(pathname)}</h1>
+            <p className="truncate text-[9px] font-extrabold uppercase tracking-[0.16em] text-primary">Sigma Control</p>
+            <p className="truncate font-display text-[15px] font-bold text-foreground">{mobilePageTitle(pathname)}</p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <GlobalSearch enableShortcut={false} />
+          <ThemeToggle />
           <Button
             type="button"
             variant="ghost"
             size="icon"
             onClick={() => setDrawerOpen(true)}
             aria-label="Abrir menu"
-            className="size-10 rounded-lg text-muted-foreground"
+            className="size-10 rounded-xl bg-muted/60 text-foreground"
           >
             <Menu className="size-[18px]" />
           </Button>
@@ -217,21 +222,29 @@ export function AppLayout({
         </div>
       )}
 
-      <aside className="app-sidebar sticky top-0 hidden h-[100dvh] w-[var(--ui-sidebar-width)] shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-4 lg:flex">
+      <aside className="app-sidebar sticky top-0 hidden h-[100dvh] w-[var(--ui-sidebar-width)] shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-3 lg:flex">
         <DesktopNavigation {...navigationProps} />
       </aside>
 
       <main className="relative min-w-0 flex-1 overflow-x-hidden">
-        <div className="sticky top-0 z-40 hidden border-b border-border bg-background/85 backdrop-blur-xl lg:block">
-          <div className="mx-auto flex w-full max-w-[var(--ui-page-max)] items-center justify-between gap-6 px-8 py-3 xl:px-10">
+        <div className="sticky top-0 z-40 hidden border-b border-border/80 bg-background/80 backdrop-blur-xl lg:block">
+          <div className="mx-auto flex w-full max-w-[var(--ui-page-max)] items-center justify-between gap-6 px-8 py-2.5 xl:px-10">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Sigma Control</p>
-              <h1 className="truncate font-display text-xl font-bold tracking-tight text-foreground">{mobilePageTitle(pathname)}</h1>
+              <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                <span className="size-1.5 rounded-full bg-primary" />
+                Sigma Control
+              </p>
+              <h1 className="truncate font-display text-lg font-bold tracking-tight text-foreground">{mobilePageTitle(pathname)}</h1>
+              {pageDescriptions[pathname] ? (
+                <p className="mt-0.5 hidden truncate text-[11px] text-muted-foreground xl:block">{pageDescriptions[pathname]}</p>
+              ) : null}
             </div>
-            <div className="flex shrink-0 items-center gap-3">
+            <div className="flex shrink-0 items-center gap-2">
               <GlobalSearch />
+              <span className="mx-1 h-6 w-px bg-border" aria-hidden />
+              <ThemeToggle />
               {email ? (
-                <span className="hidden items-center gap-2 rounded-full border border-border bg-card/70 py-1 pl-1 pr-3 xl:inline-flex">
+                <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-3">
                   <span className="grid size-7 place-items-center rounded-full bg-primary text-[11px] font-black text-primary-foreground">
                     {(email[0] ?? "U").toUpperCase()}
                   </span>
@@ -245,9 +258,6 @@ export function AppLayout({
           key={pathname}
           className="page-enter mobile-app-content relative mx-auto min-h-full w-full max-w-[var(--ui-page-max)] px-3 pb-28 pt-3 sm:px-5 sm:pt-5 md:px-6 md:pb-12 md:pt-6 lg:px-8 lg:pt-7 xl:px-10"
         >
-          {pageDescriptions[pathname] ? (
-            <p className="mb-4 text-xs text-muted-foreground sm:mb-5 sm:text-sm">{pageDescriptions[pathname]}</p>
-          ) : null}
           {children}
         </div>
       </main>

@@ -51,7 +51,7 @@ function TrialServerSelector() {
   }
 
   return (
-    <Card className="surface-card border-primary/25 bg-primary/5 mb-6">
+    <Card className="mb-5 rounded-2xl border-primary/25 bg-primary/[0.05] shadow-none">
       <CardContent className="p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
@@ -116,15 +116,15 @@ function TrialServerSelector() {
 
 function BillingAutomationNotice() {
   return (
-    <Card className="surface-card mb-6 border-success/25 bg-success/5">
+    <Card className="mb-5 rounded-2xl border-primary/25 bg-primary/[0.05] shadow-none">
       <CardContent className="flex items-start gap-3 p-4">
-        <div className="rounded-md bg-success/10 p-2.5 text-success">
+        <div className="rounded-xl bg-primary/12 p-2.5 text-primary">
           <ShieldCheck className="size-5" />
         </div>
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-sm font-bold text-foreground">Cobranças trabalham no automático</h2>
-            <Badge variant="outline" className="border-success/30 text-[10px] text-success">Monitor financeiro</Badge>
+            <Badge variant="outline" className="border-primary/30 text-[10px] font-bold text-primary">Monitor financeiro</Badge>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Use esta tela principalmente para acompanhar pendências, atrasos, pagamentos e falhas. Cobrar manualmente, reenviar mensagem ou dar baixa ficam como ações de exceção quando você realmente precisar intervir.

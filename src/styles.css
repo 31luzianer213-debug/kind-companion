@@ -57,88 +57,90 @@
 }
 
 :root {
-  --radius: 0.75rem;
-  /* Paleta corporativa: base grafite frio + azul-petróleo (indigo) como cor de marca. */
-  --background: oklch(0.982 0.004 264);
-  --foreground: oklch(0.19 0.021 264);
+  --radius: 0.875rem;
+  /* Identidade "Signal": verde-esmeralda como marca sobre neutros frios.
+     A barra lateral é grafite profundo nos dois temas, o que dá o contraste
+     de produto SaaS moderno e separa claramente navegação de conteúdo. */
+  --background: oklch(0.976 0.007 195);
+  --foreground: oklch(0.215 0.022 215);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.19 0.021 264);
+  --card-foreground: oklch(0.215 0.022 215);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.19 0.021 264);
-  --primary: oklch(0.47 0.16 266);
-  --primary-foreground: oklch(0.99 0.005 266);
-  --secondary: oklch(0.955 0.008 264);
-  --secondary-foreground: oklch(0.24 0.022 264);
-  --muted: oklch(0.955 0.008 264);
-  --muted-foreground: oklch(0.5 0.017 264);
-  --accent: oklch(0.945 0.017 266);
-  --accent-foreground: oklch(0.31 0.06 266);
-  --destructive: oklch(0.55 0.2 26);
+  --popover-foreground: oklch(0.215 0.022 215);
+  --primary: oklch(0.55 0.125 172);
+  --primary-foreground: oklch(0.99 0.01 172);
+  --secondary: oklch(0.955 0.012 195);
+  --secondary-foreground: oklch(0.25 0.025 215);
+  --muted: oklch(0.952 0.012 200);
+  --muted-foreground: oklch(0.505 0.022 215);
+  --accent: oklch(0.94 0.035 172);
+  --accent-foreground: oklch(0.31 0.07 172);
+  --destructive: oklch(0.575 0.19 25);
   --destructive-foreground: #ffffff;
-  --border: oklch(0.915 0.008 264);
-  --input: oklch(0.9 0.01 264);
-  --ring: oklch(0.55 0.15 266);
-  --chart-1: oklch(0.52 0.17 266);
-  --chart-2: oklch(0.62 0.11 200);
-  --chart-3: oklch(0.72 0.14 72);
-  --chart-4: oklch(0.6 0.13 158);
-  --chart-5: oklch(0.58 0.16 20);
-  --success: oklch(0.52 0.13 158);
+  --border: oklch(0.9 0.013 200);
+  --input: oklch(0.89 0.015 200);
+  --ring: oklch(0.6 0.13 172);
+  --chart-1: oklch(0.58 0.13 172);
+  --chart-2: oklch(0.62 0.12 230);
+  --chart-3: oklch(0.76 0.15 78);
+  --chart-4: oklch(0.58 0.17 300);
+  --chart-5: oklch(0.62 0.18 15);
+  --success: oklch(0.59 0.14 158);
   --success-foreground: #ffffff;
-  --warning: oklch(0.72 0.15 70);
-  --warning-foreground: oklch(0.26 0.05 70);
-  --info: oklch(0.53 0.12 240);
+  --warning: oklch(0.76 0.15 72);
+  --warning-foreground: oklch(0.27 0.06 72);
+  --info: oklch(0.58 0.12 235);
   --info-foreground: #ffffff;
-  --sidebar: oklch(0.968 0.006 264);
-  --sidebar-foreground: oklch(0.19 0.021 264);
-  --sidebar-primary: oklch(0.47 0.16 266);
-  --sidebar-primary-foreground: oklch(0.99 0.005 266);
-  --sidebar-accent: oklch(0.935 0.017 266);
-  --sidebar-accent-foreground: oklch(0.28 0.05 266);
-  --sidebar-border: oklch(0.915 0.008 264);
-  --sidebar-ring: oklch(0.55 0.15 266);
+  --sidebar: oklch(0.225 0.024 212);
+  --sidebar-foreground: oklch(0.93 0.01 200);
+  --sidebar-primary: oklch(0.78 0.16 168);
+  --sidebar-primary-foreground: oklch(0.19 0.03 205);
+  --sidebar-accent: oklch(0.3 0.03 200);
+  --sidebar-accent-foreground: oklch(0.97 0.01 190);
+  --sidebar-border: oklch(1 0 0 / 0.1);
+  --sidebar-ring: oklch(0.78 0.16 168);
 }
 
 .dark {
-  /* Tema escuro: grafite profundo com acentos indigo, ideal para uso noturno. */
-  --background: oklch(0.16 0.014 264);
-  --foreground: oklch(0.965 0.006 264);
-  --card: oklch(0.203 0.016 264);
-  --card-foreground: oklch(0.965 0.006 264);
-  --popover: oklch(0.215 0.016 264);
-  --popover-foreground: oklch(0.965 0.006 264);
-  --primary: oklch(0.72 0.15 266);
-  --primary-foreground: oklch(0.16 0.03 266);
-  --secondary: oklch(0.25 0.016 264);
-  --secondary-foreground: oklch(0.95 0.006 264);
-  --muted: oklch(0.243 0.016 264);
-  --muted-foreground: oklch(0.73 0.015 264);
-  --accent: oklch(0.3 0.03 266);
-  --accent-foreground: oklch(0.93 0.04 266);
-  --destructive: oklch(0.64 0.2 26);
+  /* Tema escuro: grafite petróleo profundo com acento esmeralda luminoso. */
+  --background: oklch(0.17 0.016 212);
+  --foreground: oklch(0.96 0.008 195);
+  --card: oklch(0.215 0.018 212);
+  --card-foreground: oklch(0.96 0.008 195);
+  --popover: oklch(0.225 0.018 212);
+  --popover-foreground: oklch(0.96 0.008 195);
+  --primary: oklch(0.78 0.15 168);
+  --primary-foreground: oklch(0.18 0.03 175);
+  --secondary: oklch(0.26 0.018 212);
+  --secondary-foreground: oklch(0.95 0.008 195);
+  --muted: oklch(0.255 0.018 212);
+  --muted-foreground: oklch(0.745 0.015 200);
+  --accent: oklch(0.31 0.04 172);
+  --accent-foreground: oklch(0.94 0.04 172);
+  --destructive: oklch(0.65 0.19 25);
   --destructive-foreground: #ffffff;
   --border: oklch(1 0 0 / 0.1);
   --input: oklch(1 0 0 / 0.14);
-  --ring: oklch(0.72 0.15 266);
-  --chart-1: oklch(0.72 0.15 266);
-  --chart-2: oklch(0.75 0.11 200);
-  --chart-3: oklch(0.8 0.14 72);
-  --chart-4: oklch(0.76 0.13 158);
-  --chart-5: oklch(0.7 0.17 20);
-  --success: oklch(0.74 0.15 158);
+  --ring: oklch(0.78 0.15 168);
+  --chart-1: oklch(0.78 0.15 168);
+  --chart-2: oklch(0.72 0.12 235);
+  --chart-3: oklch(0.83 0.15 80);
+  --chart-4: oklch(0.72 0.16 300);
+  --chart-5: oklch(0.7 0.18 18);
+  --success: oklch(0.76 0.15 158);
   --success-foreground: oklch(0.18 0.04 158);
-  --warning: oklch(0.82 0.15 75);
-  --warning-foreground: oklch(0.2 0.05 70);
-  --info: oklch(0.74 0.12 235);
+  --warning: oklch(0.83 0.15 80);
+  --warning-foreground: oklch(0.2 0.05 75);
+  --info: oklch(0.75 0.12 235);
   --info-foreground: oklch(0.18 0.04 235);
-  --sidebar: oklch(0.142 0.014 264);
-  --sidebar-foreground: oklch(0.95 0.006 264);
-  --sidebar-primary: oklch(0.72 0.15 266);
-  --sidebar-primary-foreground: oklch(0.16 0.03 266);
-  --sidebar-accent: oklch(0.25 0.03 266);
-  --sidebar-accent-foreground: oklch(0.95 0.006 264);
+  --sidebar: oklch(0.145 0.016 212);
+  --sidebar-foreground: oklch(0.94 0.008 195);
+  --sidebar-primary: oklch(0.78 0.15 168);
+  --sidebar-primary-foreground: oklch(0.18 0.03 175);
+  --sidebar-accent: oklch(0.26 0.03 175);
+  --sidebar-accent-foreground: oklch(0.96 0.01 195);
   --sidebar-border: oklch(1 0 0 / 0.08);
-  --sidebar-ring: oklch(0.72 0.15 266);
+  --sidebar-ring: oklch(0.78 0.15 168);
 }
 
 @layer base {
@@ -649,3 +651,117 @@ svg.lucide { flex-shrink: 0; vertical-align: middle; }
   button, [role="button"], [role="tab"], a.inline-flex, input[type="checkbox"] + label, select { min-height: 44px; }
   button[data-size="icon"], button.size-8, button.h-8, button.h-9, button.w-9 { min-width: 44px; }
 }
+
+/* =====================================================================
+   Camada "Signal" — novo sistema visual do painel
+   ===================================================================== */
+
+@utility eyebrow {
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* Cartão principal do painel: borda definida, sombra curta e realce no topo */
+@utility panel-card {
+  position: relative;
+  border-radius: var(--radius-2xl);
+  border: 1px solid color-mix(in oklab, var(--border) 88%, transparent);
+  background: var(--card);
+  box-shadow:
+    0 1px 2px color-mix(in oklab, var(--foreground) 5%, transparent),
+    0 18px 40px -34px color-mix(in oklab, var(--foreground) 45%, transparent);
+  overflow: hidden;
+}
+
+/* Bloco de destaque (hero do painel) */
+@utility panel-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-2xl);
+  border: 1px solid color-mix(in oklab, var(--primary) 26%, var(--border));
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in oklab, var(--primary) 16%, transparent), transparent 62%),
+    radial-gradient(90% 120% at 100% 0%, color-mix(in oklab, var(--chart-2) 14%, transparent), transparent 60%),
+    var(--card);
+  box-shadow:
+    0 1px 2px color-mix(in oklab, var(--foreground) 6%, transparent),
+    0 30px 60px -46px color-mix(in oklab, var(--primary) 60%, transparent);
+}
+
+/* Tile de indicador com faixa de cor lateral */
+@utility kpi-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+  background: var(--card);
+  padding: 1rem;
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease, border-color 200ms ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in oklab, var(--primary) 35%, var(--border));
+    box-shadow: 0 18px 34px -28px color-mix(in oklab, var(--primary) 65%, transparent);
+  }
+}
+
+/* Etiqueta/“chip” de status */
+@utility status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  background: var(--card);
+  padding: 0.3125rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  transition: color 160ms ease, border-color 160ms ease;
+
+  &:hover {
+    color: var(--foreground);
+    border-color: color-mix(in oklab, var(--foreground) 25%, var(--border));
+  }
+}
+
+/* Linha de lista com hover suave (faturas, mensagens, clientes) */
+@utility data-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  background: color-mix(in oklab, var(--muted) 45%, transparent);
+  padding: 0.625rem 0.75rem;
+  transition: background-color 160ms ease, border-color 160ms ease;
+
+  &:hover {
+    background: color-mix(in oklab, var(--accent) 55%, transparent);
+    border-color: color-mix(in oklab, var(--primary) 22%, var(--border));
+  }
+}
+
+/* Cabeçalho de seção com régua */
+@utility section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 65%, transparent);
+  padding-bottom: 0.75rem;
+}
+
+/* Realce de número/valor monetário */
+@utility numeric {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+

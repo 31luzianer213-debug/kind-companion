@@ -97,7 +97,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Sigma Control — Gestão de revenda IPTV e cobrança no WhatsApp" },
       { name: "description", content: "Painel para revendedores IPTV: clientes, painel Sigma, pedidos com Pix e cobranças automáticas no WhatsApp." },
       { name: "author", content: "Sigma Control" },
-      { name: "theme-color", content: "#0A0F1C" },
+      { name: "theme-color", content: "#222F36" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
