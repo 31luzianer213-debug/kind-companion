@@ -1,7 +1,12 @@
 # Sigma Control refeito do zero (telas e visual)
 
 ## Objetivo
-Reescrever todas as páginas, menus e componentes com uma identidade visual nova, mantendo intactos os dados, o banco, as integrações (WhatsApp/Evolution, Sigma, MisticPay, Mercado Pago, Telegram) e todas as funções atuais.
+Reescrever do zero todas as páginas, menus e componentes com uma identidade visual nova, corrigindo todos os problemas encontrados pelo caminho, mantendo intactos os dados, o banco, as integrações (WhatsApp/Evolution, Sigma, MisticPay, Mercado Pago, Telegram) e todas as funções atuais.
+
+## Correções incluídas
+- Revisão de cada página e de cada função do servidor que ela usa, corrigindo falhas, telas quebradas, textos cortados, botões sem ação e avisos de erro confusos.
+- Remoção de código morto e duplicado (ex.: sobras do antigo botão de cobrança, estilos repetidos).
+- Varredura de segurança e do verificador do banco ao final, corrigindo o que aparecer.
 
 ## Nova identidade visual
 - Proposta: "Grafite + Âmbar" — fundo grafite quente, superfícies em camadas, destaque âmbar/laranja suave, verde/amarelo/vermelho só para status.
