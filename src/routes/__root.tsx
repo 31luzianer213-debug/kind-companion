@@ -53,7 +53,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const errorMessage =
     error instanceof Response
       ? `Falha HTTP ${error.status}`
-      : error?.message || "Erro inesperado sem detalhes.";
+      : (error as Error)?.message || "Erro inesperado sem detalhes.";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
