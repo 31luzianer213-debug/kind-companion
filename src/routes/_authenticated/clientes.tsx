@@ -131,7 +131,7 @@ export const Route = createFileRoute("/_authenticated/clientes")({
       </div>
       <h2 className="text-lg font-semibold text-foreground">Não foi possível carregar a página de clientes</h2>
       <p className="text-sm text-muted-foreground">
-        {error?.message || "Ocorreu um erro ao processar os dados dos clientes."}
+        {(error as Error)?.message || "Ocorreu um erro ao processar os dados dos clientes."}
       </p>
       <div className="flex justify-center gap-2 pt-2">
         <Button onClick={() => reset()} variant="default" size="sm" className="rounded-md">
