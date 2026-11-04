@@ -255,7 +255,7 @@ function WhatsAppConnection() {
             </div>
             <div className="min-w-0">
               <div className="mb-1 flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-black tracking-tight sm:text-2xl">Central do WhatsApp</h1>
+                <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Central do WhatsApp</h2>
                 <Badge variant={info.variant} className="gap-1.5">
                   <span className={`size-1.5 rounded-full ${info.color} ${status === "connecting" ? "animate-pulse" : ""}`} />
                   {info.label}
