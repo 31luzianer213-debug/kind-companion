@@ -42,8 +42,7 @@
   border-color: color-mix(in oklab, var(--primary) 22%, var(--border)) !important;
   box-shadow: var(--ui-shadow-hover) !important;
 }
-.app-aurora main [class*="grid"] > [class~="bg-card"]:has([class*="text-3xl"]),
-.app-aurora main [class*="grid"] > [class~="bg-card"]:has([class*="text-4xl"]) { min-height: 128px; }
+
 
 /* Destaque onde há número/valor: barras e cards de KPI ganham presença. */
 .app-aurora main [data-testid="client-health-strip"] > a {
