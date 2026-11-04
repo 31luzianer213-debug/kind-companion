@@ -765,3 +765,17 @@ svg.lucide { flex-shrink: 0; vertical-align: middle; }
   letter-spacing: -0.03em;
 }
 
+
+/* ---- Modo sóbrio: sem movimento decorativo (mantém só indicadores de carregamento) ---- */
+.page-enter, .rise-in, .animate-in, .shimmer, [class*="fade-in"], [class*="slide-in"], [class*="zoom-in"] {
+  animation: none !important;
+}
+.animate-pulse:not(.rounded-md), .animate-ping { animation: none !important; }
+[data-reveal], [data-reveal].is-visible { opacity: 1 !important; transform: none !important; transition: none !important; }
+.card-hover:hover, [data-reveal] .rounded-lg.border:hover, .stat-card:hover, [class*="hover:-translate-y"]:hover, [class*="hover:scale"]:hover {
+  transform: none !important;
+}
+.stat-card::before { display: none !important; }
+.stat-card:hover { box-shadow: none !important; }
+.hero-grid { opacity: 0.45; }
+[role="dialog"], [data-radix-popper-content-wrapper] > * { animation-duration: 120ms !important; }
