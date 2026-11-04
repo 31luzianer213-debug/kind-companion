@@ -792,3 +792,7 @@ body { background-image: none !important; }
 [class*="blur-3xl"], [class*="blur-2xl"] { display: none !important; }
 [class*="shadow-primary"], [class*="shadow-success"] { box-shadow: none !important; }
 .app-aurora > aside [class*="shadow"] { box-shadow: none !important; }
+/* O título e a frase da página já aparecem no topo fixo; não repetir dentro da página. */
+.app-aurora > main > :not(.sticky) h1:not([data-keep-title]),
+.app-aurora > main > :not(.sticky) h1:not([data-keep-title]) + p,
+.app-aurora > main > :not(.sticky) :has(> h1:not([data-keep-title])) + p { display: none !important; }

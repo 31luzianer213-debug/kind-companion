@@ -246,7 +246,7 @@ function getRelativeDueInfo(dueDateStr: string | null) {
     return {
       text: "Vence hoje!",
       tone: "text-warning font-bold",
-      badge: "border-warning/40 bg-warning/15 text-warning font-bold animate-pulse",
+      badge: "border-warning/40 bg-warning/15 text-warning font-bold",
     };
   }
   if (diffDays === 1) {
@@ -1059,7 +1059,7 @@ function ClientsRegistry({ autoOpenNew = false, onAutoOpenHandled }: { autoOpenN
             </Badge>
             {isSigmaConfigured ? (
               <Badge className="bg-primary/10 text-primary border-primary/20 text-xs gap-1 font-normal">
-                <span className="size-1.5 rounded-full bg-primary animate-pulse" />
+                <span className="size-1.5 rounded-full bg-primary" />
                 {sigmaServerName}
               </Badge>
             ) : null}

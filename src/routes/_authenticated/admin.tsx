@@ -88,7 +88,7 @@ function AdminPage() {
         <div className="mx-auto mb-4 grid size-14 place-items-center rounded-lg bg-destructive/10 text-destructive">
           <Lock className="size-7" />
         </div>
-        <h1 className="text-xl font-bold text-foreground">Área restrita</h1>
+        <h1 data-keep-title className="text-xl font-bold text-foreground">Área restrita</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Somente o administrador do sistema pode acessar esta página.
         </p>
