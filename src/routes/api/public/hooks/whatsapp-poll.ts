@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { consumeWebhookRateLimit, timingSafeStringEquals, webhookRateLimitKey } from "@/lib/webhook-security.server";
 
 function authorized(request: Request) {
   const url = new URL(request.url);
@@ -7,7 +8,7 @@ function authorized(request: Request) {
   const match = /^Bearer ([^\s,]+)$/i.exec(request.headers.get("authorization") ?? "");
   const provided = querySecret || match?.[1];
   const configured = process.env["BILLING_CRON_SECRET"];
-  return Boolean(configured) && Boolean(provided) && provided === configured;
+  return Boolean(configured) && timingSafeStringEquals(provided, configured);
 }
 
 /**
@@ -23,6 +24,10 @@ async function runPoll(request: Request) {
 
   if (!authorized(request)) {
     return Response.json({ ok: false, error: "Não autorizado" }, { status: 401 });
+  }
+
+  if (!consumeWebhookRateLimit(webhookRateLimitKey(request, "whatsapp-poll"), 10, 60_000)) {
+    return Response.json({ ok: false, error: "Muitas consultas de polling. Tente novamente em instantes." }, { status: 429 });
   }
 
   const { isTenantEvolutionEnabled, tenantListInstances, tenantFetchRecentMessages } = await import(

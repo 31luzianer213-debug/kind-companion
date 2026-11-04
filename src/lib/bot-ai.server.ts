@@ -45,14 +45,28 @@ export function detectMenuIntent(rawText: string): MenuIntentMatch | null {
   const text = normalizeText(rawText);
   if (!text) return null;
 
-  // Compara palavras inteiras: "app" não pode casar com "whatsapp",
-  // nem "erro" com "ferro", nem "3m" com "13m".
+  // Compara palavras inteiras: "app" não casa com "whatsapp",
+  // "erro" não casa com "ferro", e "3m" não casa com "13m".
   const padded = ` ${text} `;
-  const has = (...words: string[]) => words.some((w) => padded.includes(` ${normalizeText(w)} `));
+  const has = (...words: string[]) => words.some((word) => padded.includes(` ${normalizeText(word)} `));
 
-  // 1) Status de pagamento
-  if (has("paguei", "comprovante", "status", "verificar pagamento", "caiu o pix", "ja fiz o pix")) {
+  // Pedido explícito por uma pessoa tem prioridade sobre palavras de compra.
+  if (has("atendente", "humano", "suporte humano", "falar com uma pessoa", "falar com alguem", "pessoa real")) {
+    return { intent: "support", command: "6" };
+  }
+
+  // Confirmações de pagamento.
+  if (has("paguei", "comprovante", "status", "verificar pagamento", "caiu o pix", "ja fiz o pix", "meu pagamento foi aprovado", "confirmar pix")) {
     return { intent: "order_status", command: "status" };
+  }
+
+  // Problemas técnicos têm prioridade sobre compra/planos.
+  if (has(
+    "nao funciona", "nao esta funcionando", "parou de funcionar", "travando", "trava",
+    "sem sinal", "nao abre", "nao entra", "nao consigo entrar", "nao conecta",
+    "nao consigo assistir", "nao carrega", "imagem travada", "erro", "problema", "reclamacao"
+  )) {
+    return { intent: "support", command: "6" };
   }
 
   // 2) Período já escolhido (mais específico primeiro)
@@ -69,31 +83,12 @@ export function detectMenuIntent(rawText: string): MenuIntentMatch | null {
     return { intent: "buy_1m", command: "plano 1m" };
   }
 
-  // 3) Problemas técnicos (antes de "app": "o app não funciona" é suporte)
-  if (
-    has(
-      "nao funciona",
-      "nao esta funcionando",
-      "parou de funcionar",
-      "travando",
-      "trava",
-      "sem sinal",
-      "nao abre",
-      "nao entra",
-      "nao conecta",
-      "erro",
-      "problema",
-      "reclamacao",
-    )
-  ) {
-    return { intent: "support", command: "6" };
-  }
-
-  // 3) Ações do menu — renovar vem antes de testar: "meu teste acabou, quero renovar" é renovação.
-  if (has("renovar", "renova", "renovacao", "segunda via", "venceu", "vencido", "vencimento", "pagar", "pix", "pagamento")) {
+  // 3) Ações do menu
+  // Renovação vem antes de teste: "meu teste acabou, quero renovar" deve renovar.
+  if (has("renovar", "renova", "renovacao", "segunda via", "venceu", "vencido", "vencimento", "vencida", "pagar", "pix", "pagamento", "segunda mensalidade")) {
     return { intent: "renew", command: "2" };
   }
-  if (has("teste", "testar", "testa", "gratis", "demonstracao", "experimentar")) {
+  if (has("teste", "testar", "testa", "gratis", "demonstracao", "experimentar", "quero experimentar", "quero testar")) {
     return { intent: "trial", command: "1" };
   }
   if (has("plano", "planos", "preco", "precos", "valor", "valores", "quanto custa", "quanto e", "comprar", "assinar")) {
@@ -119,11 +114,13 @@ export function detectMenuIntent(rawText: string): MenuIntentMatch | null {
       "ios",
       "computador",
       "notebook",
+      "onde baixo",
+      "como instalar",
     )
   ) {
     return { intent: "apps", command: "4" };
   }
-  if (has("meus dados", "dados de acesso", "usuario", "senha", "login", "m3u", "lista", "perdi", "acesso")) {
+  if (has("meus dados", "dados de acesso", "usuario", "senha", "login", "m3u", "lista", "perdi", "acesso", "esqueci a senha", "recuperar senha", "nao lembro meu login", "nao lembro a senha")) {
     return { intent: "credentials", command: "5" };
   }
   if (
@@ -156,15 +153,14 @@ export function decideWithMenu(text: string): MenuIntentMatch | null {
 }
 
 const GREETING_WORDS = ["oi", "oie", "ola", "opa", "ei", "eae", "e ai", "salve", "bom dia", "boa tarde", "boa noite", "start", "hello", "hi"];
-const GREETING_FILLERS = new Set(["tudo", "bem", "bom", "blz", "beleza", "td", "tranquilo", "como", "vai", "voce", "vc", "amigo", "amiga", "mano", "boa", "bom", "dia", "tarde", "noite", "e", "ai"]);
+const GREETING_FILLERS = new Set(["tudo", "bem", "bom", "blz", "beleza", "td", "tranquilo", "como", "vai", "voce", "vc", "amigo", "amiga", "mano", "boa", "dia", "tarde", "noite", "e", "ai"]);
 
-/** "oi", "boa noite!", "oi tudo bem?" → saudação. "oi quero renovar" → não. */
-export function isPlainGreeting(normalized: string): boolean {
-  const t = normalized.replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
-  if (!t) return false;
-  const start = GREETING_WORDS.find((g) => t === g || t.startsWith(g + " "));
-  if (!start) return false;
-  const rest = t.slice(start.length).trim().split(" ").filter(Boolean);
-  return rest.every((w) => GREETING_FILLERS.has(w));
+/** "oi", "boa noite!", "oi tudo bem?" são saudações; "oi quero renovar" não é. */
+export function isPlainGreeting(value: string): boolean {
+  const text = normalizeText(value);
+  if (!text) return false;
+  const greeting = GREETING_WORDS.find((word) => text === word || text.startsWith(`${word} `));
+  if (!greeting) return false;
+  const remainder = text.slice(greeting.length).trim().split(" ").filter(Boolean);
+  return remainder.every((word) => GREETING_FILLERS.has(word));
 }
-

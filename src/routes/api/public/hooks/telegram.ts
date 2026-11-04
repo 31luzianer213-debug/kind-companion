@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { consumeWebhookRateLimit, timingSafeStringEquals, webhookRateLimitKey } from "@/lib/webhook-security.server";
 
 export const Route = createFileRoute("/api/public/hooks/telegram")({
   server: {
@@ -22,8 +23,12 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
         }
 
         const sent = request.headers.get("x-telegram-bot-api-secret-token") || "";
-        if (sent !== row.webhook_secret) {
+        if (!timingSafeStringEquals(sent, row.webhook_secret)) {
           return new Response("Unauthorized", { status: 401 });
+        }
+
+        if (!consumeWebhookRateLimit(webhookRateLimitKey(request, `telegram:${userId}`), 60, 60_000)) {
+          return new Response("Too Many Requests", { status: 429 });
         }
 
         let update: any = null;

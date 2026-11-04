@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { consumeWebhookRateLimit, timingSafeStringEquals, webhookRateLimitKey } from "@/lib/webhook-security.server";
 
 async function handleBillingExecution(request: Request) {
   const url = new URL(request.url);
@@ -11,8 +12,12 @@ async function handleBillingExecution(request: Request) {
   const configuredSecret = process.env["BILLING_CRON_SECRET"];
 
   // Sem segredo configurado a rotina fica fechada; nunca expor o valor esperado.
-  if (!configuredSecret || !providedSecret || providedSecret !== configuredSecret) {
+  if (!configuredSecret || !timingSafeStringEquals(providedSecret, configuredSecret)) {
     return Response.json({ ok: false, error: "Não autorizado." }, { status: 401 });
+  }
+
+  if (!consumeWebhookRateLimit(webhookRateLimitKey(request, "billing-daily"), 3, 60_000)) {
+    return Response.json({ ok: false, error: "Muitas execuções de cobrança. Tente novamente em instantes." }, { status: 429 });
   }
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

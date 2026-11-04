@@ -12,7 +12,7 @@ import {
   tenantState,
 } from "./evolution-tenant.server";
 
-const BAILEYS_API = process.env["BAILEYS_API_URL"] || "http://localhost:3001";
+import { baileysFetch } from "./baileys-client.server";
 const webhookEnsuredAt = new Map<string, number>();
 
 async function ensureBotWebhook(userId: string) {
@@ -97,13 +97,9 @@ export const getBaileysStatus = createServerFn({ method: "POST" })
       };
     }
 
-    if (!process.env["BAILEYS_API_URL"]) {
-      return { ok: false as const, state: unavailableState(instance) };
-    }
-
     try {
       const q = `?instance=${encodeURIComponent(instance)}`;
-      const res = await fetch(`${BAILEYS_API}/api/status${q}`, { signal: AbortSignal.timeout(3000) });
+      const res = await baileysFetch(`/api/status${q}`, { signal: AbortSignal.timeout(3000) });
       if (res.ok) {
         const state = await res.json();
         return { ok: true as const, state: { ...state, instance } };
@@ -184,12 +180,8 @@ export const connectBaileys = createServerFn({ method: "POST" })
       };
     }
 
-    if (!process.env["BAILEYS_API_URL"]) {
-      return { ok: false as const, state: unavailableState(instance, mode) };
-    }
-
     try {
-      const res = await fetch(`${BAILEYS_API}/api/connect`, {
+      const res = await baileysFetch(`/api/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ instance, mode, phone: data?.phone, force: data?.force }),
@@ -197,13 +189,33 @@ export const connectBaileys = createServerFn({ method: "POST" })
       });
       if (res.ok) {
         const result = await res.json();
-        return { ok: true as const, state: { ...result.state, instance } };
+        const state = { ...result.state, instance };
+        if (state.status === "close" || state.status === "none") {
+          return {
+            ok: false as const,
+            state: { ...state, lastError: state.lastError || "Não foi possível iniciar a sessão Baileys." },
+          };
+        }
+        return { ok: true as const, state };
       }
-    } catch {}
+      const errorBody = await res.json().catch(() => ({}));
+      if (errorBody?.error) throw new Error(errorBody.error);
+    } catch (error) {
+      console.warn("[WhatsApp/Baileys] Falha ao solicitar conexão:", error);
+    }
 
     await new Promise((resolve) => setTimeout(resolve, 600));
     const local = await readLocalStatus(instance);
-    return { ok: true as const, state: local };
+    const hasConnectionProgress =
+      local.status === "open" ||
+      local.status === "connecting" ||
+      Boolean(local.qrCode || local.pairingCode);
+    return {
+      ok: hasConnectionProgress,
+      state: hasConnectionProgress
+        ? local
+        : { ...local, lastError: local.lastError || "O daemon Baileys local não respondeu. Verifique o PM2 e a porta 3001." },
+    };
   });
 
 /** Desconecta apenas a sessão do usuário autenticado. */
@@ -222,15 +234,23 @@ export const disconnectBaileys = createServerFn({ method: "POST" })
     }
 
     try {
-      await fetch(`${BAILEYS_API}/api/logout`, {
+      const response = await baileysFetch("/api/logout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ instance }),
         signal: AbortSignal.timeout(5000),
       });
-    } catch {}
-
-    return { ok: true as const };
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        return { ok: false as const, error: result?.error || "O daemon Baileys recusou a desconexão." };
+      }
+      return { ok: true as const };
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: error instanceof Error ? error.message : "O daemon Baileys não respondeu.",
+      };
+    }
   });
 
 /** Apaga a instância do usuário e gera uma sessão limpa para novo QR. */
@@ -238,29 +258,53 @@ export const resetBaileysSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input?: { origin?: string; userId?: string }) => input)
   .handler(async ({ data, context }) => {
-    if (!isTenantEvolutionEnabled()) {
-      throw new Error("Evolution API não está configurada na VPS.");
+    const instance = tenantInstanceName(context.userId);
+
+    if (isTenantEvolutionEnabled()) {
+      webhookEnsuredAt.delete(context.userId);
+      await tenantDeleteInstance(context.userId);
+      const { botWebhookUrl } = await import("./whatsapp-connection.server");
+      const res = await tenantConnect(context.userId, botWebhookUrl(data?.origin, context.userId));
+      webhookEnsuredAt.set(context.userId, Date.now());
+      return {
+        ok: true as const,
+        state: {
+          instance,
+          provider: "evolution",
+          status: res.state,
+          mode: "qr",
+          qrCode: res.base64,
+          pairingCode: res.code,
+          phone: null,
+          userName: null,
+          lastError: null,
+        },
+      };
     }
 
-    webhookEnsuredAt.delete(context.userId);
-    await tenantDeleteInstance(context.userId);
-    const { botWebhookUrl } = await import("./whatsapp-connection.server");
-    const res = await tenantConnect(context.userId, botWebhookUrl(data?.origin, context.userId));
-    webhookEnsuredAt.set(context.userId, Date.now());
-    return {
-      ok: true as const,
-      state: {
-        instance: tenantInstanceName(context.userId),
-        provider: "evolution",
-        status: res.state,
-        mode: "qr",
-        qrCode: res.base64,
-        pairingCode: res.code,
-        phone: null,
-        userName: null,
-        lastError: null,
-      },
-    };
+    const logoutResponse = await baileysFetch("/api/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ instance }),
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!logoutResponse.ok) {
+      const error = await logoutResponse.json().catch(() => ({}));
+      return { ok: false as const, state: { ...unavailableState(instance), lastError: error?.error || "Não foi possível limpar a sessão Baileys." } };
+    }
+
+    const connectResponse = await baileysFetch("/api/connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ instance, mode: "qr", force: true }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!connectResponse.ok) {
+      const error = await connectResponse.json().catch(() => ({}));
+      return { ok: false as const, state: { ...unavailableState(instance), lastError: error?.error || "Não foi possível gerar um novo QR Code." } };
+    }
+    const result = await connectResponse.json();
+    return { ok: true as const, state: { ...result.state, instance } };
   });
 
 export const sendBaileysTest = createServerFn({ method: "POST" })
@@ -283,7 +327,7 @@ export const sendBaileysTest = createServerFn({ method: "POST" })
     }
 
     try {
-      const res = await fetch(`${BAILEYS_API}/api/send-test`, {
+      const res = await baileysFetch(`/api/send-test`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ instance, to: data.to, text: data.text, type: data.type || "text" }),

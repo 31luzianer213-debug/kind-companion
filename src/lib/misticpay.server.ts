@@ -1,50 +1,91 @@
 /** Integração MisticPay (Pix). Docs: https://docs.misticpay.com */
+import { createHash } from "node:crypto";
+
 const BASE = "https://api.misticpay.com/api";
 
 export type MisticCreds = { clientId: string; clientSecret: string };
+export type MisticTransactionState = "paid" | "failed" | "pending" | null;
+export type MisticTransactionDetails = {
+  transactionId: string;
+  value: number;
+  transactionType: string;
+  state: MisticTransactionState;
+};
 
-function headers(c: MisticCreds): Record<string, string> {
-  const h: Record<string, string> = { "Content-Type": "application/json" };
-  // Chave de acesso nova (pk_/sk_) usa Basic; credencial antiga (ci_/cs_) usa headers ci/cs.
-  if (c.clientId.startsWith("ci_") || c.clientSecret.startsWith("cs_")) {
-    h.ci = c.clientId;
-    h.cs = c.clientSecret;
-  } else {
-    h.Authorization = `Basic ${Buffer.from(`${c.clientId}:${c.clientSecret}`).toString("base64")}`;
+/** Chave curta e estável usada no retry da mesma cobrança MisticPay. */
+export function misticPayPixIdempotencyKey(transactionId: string): string {
+  const normalized = String(transactionId || "").trim();
+  if (!normalized) throw new Error("ID da transação é obrigatório para gerar a chave de idempotência.");
+  const digest = createHash("sha256").update(normalized).digest("hex").slice(0, 48);
+  return `misticpay_pix_${digest}`;
+}
+
+export function isModernMisticCredentialPair(clientId: string, clientSecret: string): boolean {
+  return /^pk_[A-Za-z0-9_-]{8,}$/.test(clientId) && /^sk_[A-Za-z0-9_-]{8,}$/.test(clientSecret);
+}
+
+function headers(credentials: MisticCreds): Record<string, string> {
+  if (!isModernMisticCredentialPair(credentials.clientId, credentials.clientSecret)) {
+    throw new Error(
+      "A MisticPay desativou as credenciais antigas ci_/cs_. Gere uma nova Chave de Acesso pk_/sk_ com as permissões TRANSACTION_CREATE e TRANSACTION_READ.",
+    );
   }
-  return h;
+
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Basic ${Buffer.from(`${credentials.clientId}:${credentials.clientSecret}`).toString("base64")}`,
+  };
 }
 
 export async function createMisticPix(
-  c: MisticCreds,
-  p: { amount: number; payerName: string; payerDocument: string; transactionId: string; description: string; webhookUrl?: string },
+  credentials: MisticCreds,
+  input: {
+    amount: number;
+    payerName: string;
+    payerDocument: string;
+    transactionId: string;
+    description: string;
+    webhookUrl?: string;
+  },
 ) {
   try {
-    const res = await fetch(`${BASE}/transactions/create`, {
+    const response = await fetch(`${BASE}/transactions/create`, {
       method: "POST",
-      headers: headers(c),
+      headers: {
+        ...headers(credentials),
+        "X-Idempotency-Key": misticPayPixIdempotencyKey(input.transactionId),
+      },
       body: JSON.stringify({
-        amount: p.amount,
-        payerName: p.payerName.slice(0, 80),
-        payerDocument: p.payerDocument,
-        transactionId: p.transactionId,
-        description: p.description,
-        ...(p.webhookUrl ? { projectWebhook: p.webhookUrl } : {}),
+        amount: input.amount,
+        payerName: input.payerName.slice(0, 80),
+        payerDocument: input.payerDocument,
+        transactionId: input.transactionId,
+        description: input.description,
+        ...(input.webhookUrl ? { projectWebhook: input.webhookUrl } : {}),
       }),
+      signal: AbortSignal.timeout(10000),
     });
-    const json: any = await res.json().catch(() => ({}));
-    if (!res.ok || !json?.data) {
-      if (res.status === 401 || res.status === 403) return { ok: false as const, error: "Credenciais da MisticPay recusadas. Confira em Administração." };
-      return { ok: false as const, error: json?.message || `MisticPay recusou (${res.status}).` };
+    const json: any = await response.json().catch(() => ({}));
+    if (!response.ok || !json?.data) {
+      if (response.status === 401 || response.status === 403) {
+        return { ok: false as const, error: "Credenciais MisticPay recusadas ou sem escopo TRANSACTION_CREATE." };
+      }
+      return { ok: false as const, error: json?.message || `MisticPay recusou (${response.status}).` };
     }
-    const d = json.data;
-    const b64 = String(d.qrCodeBase64 || "").replace(/^data:image\/\w+;base64,/, "");
-    // Guarda o identificador que a MisticPay realmente usa (usa o dela quando
-    // vier; senão mantém o transactionId que nós enviamos).
-    const paymentId = String(d.transactionId || d.id || p.transactionId || "");
-    return { ok: true as const, paymentId, qrCode: String(d.copyPaste || ""), qrCodeBase64: b64 || null };
-  } catch {
-    return { ok: false as const, error: "Não foi possível falar com a MisticPay." };
+    const data = json.data;
+    const qrCodeBase64 = String(data.qrCodeBase64 || "").replace(/^data:image\/\w+;base64,/, "");
+    const paymentId = String(data.transactionId || data.id || input.transactionId || "");
+    return {
+      ok: true as const,
+      paymentId,
+      qrCode: String(data.copyPaste || ""),
+      qrCodeBase64: qrCodeBase64 || null,
+    };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: error instanceof Error ? error.message : "Não foi possível falar com a MisticPay.",
+    };
   }
 }
 
@@ -57,13 +98,6 @@ const FAILED_STATES = [
   "EXPIRADO", "EXPIRADA", "EXPIRED", "RECUSADO", "RECUSADA", "REJECTED", "ESTORNADO", "CHARGEBACK",
 ];
 
-export type MisticTransactionState = "paid" | "failed" | "pending" | null;
-
-/**
- * Traduz o estado devolvido pela MisticPay. Cada versão da API usa um nome
- * diferente ("COMPLETO", "PAGO", "FINALIZADO"...), por isso a comparação é feita
- * por palavras conhecidas em vez de um único texto exato.
- */
 export function classifyMisticState(raw: unknown): MisticTransactionState {
   if (raw === null || raw === undefined) return null;
   const state = String(raw).trim().toUpperCase();
@@ -73,27 +107,44 @@ export function classifyMisticState(raw: unknown): MisticTransactionState {
   return "pending";
 }
 
-/** Consulta a transação e devolve paid | failed | pending (null = não deu para consultar). */
-export async function checkMisticTransaction(c: MisticCreds, transactionId: string): Promise<MisticTransactionState> {
+/** Consulta a transação e devolve os dados do próprio provedor, não do webhook. */
+export async function fetchMisticTransaction(
+  credentials: MisticCreds,
+  transactionId: string,
+): Promise<MisticTransactionDetails | null> {
   try {
-    const res = await fetch(`${BASE}/transactions/check`, {
+    const response = await fetch(`${BASE}/transactions/check`, {
       method: "POST",
-      headers: headers(c),
+      headers: headers(credentials),
       body: JSON.stringify({ transactionId }),
+      signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) return null;
-    const json: any = await res.json().catch(() => ({}));
-    const raw =
-      json?.transaction?.transactionState ??
-      json?.transaction?.state ??
-      json?.transaction?.status ??
-      json?.data?.transactionState ??
-      json?.data?.state ??
-      json?.data?.status ??
+    if (!response.ok) return null;
+
+    const json: any = await response.json().catch(() => ({}));
+    const transaction = json?.transaction ?? json?.data?.transaction ?? json?.data ?? json;
+    const rawState =
+      transaction?.transactionState ??
+      transaction?.state ??
+      transaction?.status ??
       json?.transactionState ??
       json?.status;
-    return classifyMisticState(raw);
+    const id = String(transaction?.transactionId ?? transaction?.id ?? "");
+    const value = Number(transaction?.value ?? transaction?.amount ?? transaction?.transactionAmount);
+    const type = String(transaction?.transactionType ?? transaction?.type ?? "").toUpperCase();
+
+    if (!id || !Number.isFinite(value) || value <= 0 || !type) return null;
+    return { transactionId: id, value, transactionType: type, state: classifyMisticState(rawState) };
   } catch {
     return null;
   }
+}
+
+/** Compatibilidade para consumidores que precisam apenas do status. */
+export async function checkMisticTransaction(
+  credentials: MisticCreds,
+  transactionId: string,
+): Promise<MisticTransactionState> {
+  const transaction = await fetchMisticTransaction(credentials, transactionId);
+  return transaction?.state ?? null;
 }

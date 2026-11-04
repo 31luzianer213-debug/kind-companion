@@ -280,14 +280,14 @@ function MisticPayCard({ hasInitial, idHint }: { hasInitial: boolean; idHint: st
             </div>
           </div>
         </div>
-        <p className="text-[11px] text-muted-foreground">Ao criar a chave, marque a permissão de receber (cash-in). A credencial antiga ci_/cs_ também funciona, mas a MisticPay desliga ela em 30/09/2026.</p>
+        <p className="text-[11px] text-muted-foreground">Ao criar a Chave de Acesso, marque os escopos TRANSACTION_CREATE (criar Pix) e TRANSACTION_READ (confirmar pagamentos). As credenciais antigas ci_/cs_ foram desativadas em 30/09/2026; use somente pk_/sk_.</p>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold">Endereço de confirmação (opcional)</Label>
           <div className="flex items-center gap-2">
             <Input readOnly value={webhookUrl} className="h-9 font-mono text-xs" />
             <Button type="button" variant="outline" size="sm" className="h-9 shrink-0" onClick={() => { navigator.clipboard.writeText(webhookUrl); toast.success("Endereço copiado!"); }}><Copy className="size-3.5" /></Button>
           </div>
-          <p className="text-[11px] text-muted-foreground">O sistema já manda esse endereço em cada Pix. Mesmo sem ele, a tela do revendedor confere o pagamento sozinha a cada 5 segundos.</p>
+          <p className="text-[11px] text-muted-foreground">O sistema envia esse endereço em cada Pix. A notificação usa MISTICPAY_WEBHOOK_SECRET configurado na VPS; mesmo sem webhook, a tela do revendedor consulta o pagamento autenticado a cada 5 segundos.</p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button type="button" variant="outline" size="sm" onClick={handleTest} disabled={testing || !ready} className="gap-2 text-xs">
@@ -723,7 +723,7 @@ function SubscriptionsCard() {
   }
 
   const busy = bulk.isPending || update.isPending || remove.isPending || trial.isPending || resetPassword.isPending;
-  const rows = data?.ok && Array.isArray(data.rows) ? data.rows : [];
+  const rows = useMemo(() => (data?.ok && Array.isArray(data.rows) ? data.rows : []), [data]);
 
   const stats = useMemo(() => {
     const active = rows.filter((r) => r.status === "active").length;

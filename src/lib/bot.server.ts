@@ -1,6 +1,10 @@
+import { randomInt, randomUUID } from "node:crypto";
 import { generateM3uUrl, generateEpgUrl, extractCleanIptvDns } from "./format";
+import { botConversationKey } from "./bot-conversation";
+import { claimWhatsappBotTrial, completeWhatsappBotTrial, releaseWhatsappBotTrialClaim } from "./whatsapp-trial.server";
+
 import type { SigmaConfig } from "./sigma.panel";
-import { createOrderServer, listOrdersServer, approveAndReleaseOrderServer, updateOrderServer } from "./orders.server";
+import { getOrCreateBotPendingOrder, listOrdersServer, approveAndReleaseOrderServer, updateOrderServer } from "./orders.server";
 import { createMercadoPagoPixPayment } from "./mercadopago.server";
 import type { ButtonItem, ListSection } from "./billing.server";
 import { phoneVariants, samePhone } from "./phone";
@@ -219,6 +223,7 @@ function writeLocalConfig(userId: string | undefined, data: BotConfigData): void
 /** Carrega as configurações do bot com persistência em cache e banco de dados */
 export async function loadBotConfig(supabase: any, userId: string): Promise<BotConfigData> {
   const uid = userId || "default";
+  if (!supabase?.from) return { ...DEFAULT_BOT_CONFIG, enabled: false };
 
   // 1. Cache em memória bem curto (5s). Se o cache disser que o robô está
   //    desligado, sempre reconsulta o banco para que ligar no painel valha na hora.
@@ -236,30 +241,34 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
     let wsRow: any = null;
     try {
       if (supabase) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("whatsapp_settings")
           .select("*")
           .eq("user_id", userId)
           .maybeSingle();
+        if (error) throw error;
         wsRow = data;
       }
-    } catch {
-      wsRow = null;
+    } catch (error) {
+      console.error("[loadBotConfig] Falha ao consultar whatsapp_settings:", error);
+      throw error;
     }
 
     // Fonte principal e permanente: tabela bot_settings (sobrevive a reinícios do servidor)
     let storedConfig: any = null;
     try {
       if (supabase && userId && userId !== "default") {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("bot_settings")
           .select("config")
           .eq("user_id", userId)
           .maybeSingle();
+        if (error) throw error;
         storedConfig = data?.config ?? null;
       }
-    } catch {
-      storedConfig = null;
+    } catch (error) {
+      console.error("[loadBotConfig] Falha ao consultar bot_settings:", error);
+      throw error;
     }
 
     let metaBot: any = null;
@@ -331,7 +340,7 @@ export async function loadBotConfig(supabase: any, userId: string): Promise<BotC
     return config;
   } catch (err) {
     console.error("[loadBotConfig] Fallback para DEFAULT_BOT_CONFIG:", err);
-    return { ...DEFAULT_BOT_CONFIG };
+    return { ...DEFAULT_BOT_CONFIG, enabled: false };
   }
 }
 
@@ -432,7 +441,7 @@ export async function saveBotConfigServer(
   }
 }
 
-/** Cria um teste no Sigma e registra o cliente no sistema */
+/** Cria um teste no Sigma, registra o cliente e permite reenviar o mesmo teste enquanto estiver válido. */
 export async function createTrialForBot(
   supabase: any,
   userId: string,
@@ -451,63 +460,34 @@ export async function createTrialForBot(
   error?: string;
 }> {
   const cleanPhone = params.phone.replace(/\D/g, "");
-  const botConfig = await loadBotConfig(supabase, userId);
+  if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+    return { ok: false, error: "Não consegui identificar um número de WhatsApp válido para liberar o teste." };
+  }
 
-  // Teste grátis desligado no painel: nem o bot nem a geração rápida liberam.
+  const botConfig = await loadBotConfig(supabase, userId);
+  if (!botConfig.enabled) {
+    return { ok: false, error: "O atendimento automático está temporariamente indisponível." };
+  }
   if (botConfig.testEnabled === false) {
     return {
       ok: false,
-      error:
-        `No momento não estamos liberando teste grátis, mas posso te passar os valores ou já deixar seu acesso ativo 😊`,
+      error: "No momento não estamos liberando teste grátis, mas posso te passar os valores ou já deixar seu acesso ativo 😊",
     };
   }
 
-  // 1. Verificação Anti-Fraude: confere se esse número já teve teste nos últimos X dias
-  if (botConfig.blockRepeatDays > 0 && cleanPhone) {
-    const cutoffDate = new Date(Date.now() - botConfig.blockRepeatDays * 24 * 60 * 60 * 1000).toISOString();
-    const { data: recentTrials } = await supabase
-      .from("clients")
-      .select("id, created_at, iptv_username")
-      .eq("user_id", userId)
-      .in("phone", phoneVariants(cleanPhone))
-      .gte("created_at", cutoffDate);
-
-    if (recentTrials && recentTrials.length > 0) {
-      return {
-        ok: false,
-        error:
-          `Poxa, esse número já pegou um teste faz pouco tempo 😅\n\n` +
-          `Mas posso te passar os valores ou já deixar seu acesso ativo, é só me falar o que prefere.`,
-      };
-    }
-  }
-
-  // 2. Carrega as credenciais do painel cadastrado na tela Sigma (com fallback legado)
+  // Carrega o painel antes de reservar a tentativa: sem Sigma/DNS não existe teste para criar.
   const { resolveSigmaPanel } = await import("./sigma-credentials.server");
   const panel = await resolveSigmaPanel(supabase, userId);
-
   const panelUrl = panel.url;
   const panelToken = panel.token;
   const panelUser = panel.username;
   const panelPass = panel.password;
-
   const serverName = botConfig.serverName || panel.serverName || botConfig.businessName || "Meu Servidor";
   const streamingDns = botConfig.streamingDns || panel.streamingDns || "";
-
-  // 3. Gera credenciais aleatórias para o teste
-  const trialUsername = Math.floor(10000000 + Math.random() * 90000000).toString();
-  const trialPassword = Math.floor(100000 + Math.random() * 900000).toString();
-  const clientDisplayName = (params.senderName?.trim() || "Cliente Teste WhatsApp") + " (Teste)";
-
-  const hours = botConfig.testDurationHours || 4;
-  const expiryDate = new Date(Date.now() + hours * 60 * 60 * 1000);
-  const expiryIso = expiryDate.toISOString().slice(0, 10);
-
-  // 4. O teste só existe com painel Sigma configurado E endereço do servidor definido
+  const cleanDns = extractCleanIptvDns(streamingDns) || "";
   const hasPanel = Boolean(panelUrl && (panelToken || (panelUser && panelPass)));
-  const hasDns = Boolean(extractCleanIptvDns(streamingDns));
-  if (!hasPanel || !hasDns) {
-    const motivo = !hasPanel
+  if (!hasPanel || !cleanDns) {
+    const reason = !hasPanel
       ? "Nenhum servidor/painel está conectado na conta."
       : "O endereço (DNS) do servidor não está preenchido nas configurações.";
     try {
@@ -516,26 +496,78 @@ export async function createTrialForBot(
         phone: cleanPhone,
         body: "Pedido de teste grátis recusado pelo robô.",
         status: "failed",
-        error: motivo,
+        error: reason,
       });
-    } catch {}
+    } catch (error) {
+      console.warn("Não foi possível registrar a recusa do teste:", error);
+    }
     return {
       ok: false,
-      error:
-        `Poxa, agora não consigo liberar teste 😕\n\n` +
-        `Vou chamar o atendimento pra te responder rapidinho. Se preferir, posso te passar os valores.`,
+      error: "Poxa, agora não consigo liberar teste 😕\n\nVou chamar o atendimento pra te responder rapidinho. Se preferir, posso te passar os valores.",
     };
   }
 
+  const configuredHours = Number(botConfig.testDurationHours);
+  const hours = Number.isFinite(configuredHours) ? Math.min(24, Math.max(1, configuredHours)) : 4;
+  const expiryDate = new Date(Date.now() + hours * 60 * 60 * 1000);
+  const expiryIso = expiryDate.toISOString().slice(0, 10);
+
+  // Claim transacional: duas mensagens quase simultâneas do mesmo telefone
+  // não podem criar duas contas de teste no painel Sigma.
+  const claimToken = randomUUID();
+  let claim: Awaited<ReturnType<typeof claimWhatsappBotTrial>>;
+  try {
+    claim = await claimWhatsappBotTrial(supabase, {
+      userId,
+      phone: cleanPhone,
+      phoneVariants: phoneVariants(cleanPhone),
+      blockRepeatDays: Math.max(0, Math.min(365, Math.floor(Number(botConfig.blockRepeatDays || 0)))),
+      claimToken,
+    });
+  } catch (error) {
+    console.error("Não foi possível reservar o teste grátis:", error);
+    return {
+      ok: false,
+      error: "Não consegui verificar se esse número pode receber um teste agora. Tente novamente em alguns minutos.",
+    };
+  }
+
+  if (claim.status === "reuse") {
+    return {
+      ok: true,
+      username: claim.username,
+      password: claim.password,
+      m3uUrl: claim.m3uUrl,
+      epgUrl: claim.epgUrl,
+      serverName: claim.serverName || serverName,
+      streamingDns: claim.streamingDns || cleanDns,
+    };
+  }
+  if (claim.status === "processing") {
+    return {
+      ok: false,
+      error: "Já estou preparando seu teste por aqui. Aguarde alguns instantes e envie *teste* novamente para receber os dados.",
+    };
+  }
+  if (claim.status === "repeated") {
+    return {
+      ok: false,
+      error: "Poxa, esse número já pegou um teste faz pouco tempo 😅\n\nMas posso te passar os valores ou já deixar seu acesso ativo, é só me falar o que prefere.",
+    };
+  }
+
+  const trialUsername = randomInt(10_000_000, 100_000_000).toString();
+  const trialPassword = randomInt(100_000, 1_000_000).toString();
+  const clientDisplayName = (params.senderName?.trim() || "Cliente Teste WhatsApp") + " (Teste)";
+  const sigmaConfig: SigmaConfig = {
+    url: panelUrl,
+    token: panelToken,
+    username: panelUser,
+    password: panelPass,
+  };
+
   try {
     const { createSigmaCustomer } = await import("./sigma.panel");
-    const sigmaConfig: SigmaConfig = {
-      url: panelUrl,
-      token: panelToken,
-      username: panelUser,
-      password: panelPass,
-    };
-
     await createSigmaCustomer(sigmaConfig, {
       name: clientDisplayName,
       username: trialUsername,
@@ -545,10 +577,12 @@ export async function createTrialForBot(
       dueDate: expiryIso,
       notes: `Teste automático gerado via Bot WhatsApp (${hours}h)`,
     });
-  } catch (sigmaErr) {
-    const detail = sigmaErr instanceof Error ? sigmaErr.message : String(sigmaErr);
+  } catch (sigmaError) {
+    await releaseWhatsappBotTrialClaim(supabase, userId, cleanPhone, claimToken).catch((releaseError) => {
+      console.error("Não foi possível liberar a reserva do teste após falha no Sigma:", releaseError);
+    });
+    const detail = sigmaError instanceof Error ? sigmaError.message : String(sigmaError);
     console.error("Erro ao criar teste no Sigma:", detail);
-    // Deixa o motivo real registrado para o revendedor ver em Histórico/Logs.
     try {
       await supabase.from("message_logs").insert({
         user_id: userId,
@@ -557,42 +591,61 @@ export async function createTrialForBot(
         status: "failed",
         error: detail.slice(0, 500),
       });
-    } catch {}
+    } catch (logError) {
+      console.warn("Não foi possível registrar a falha do teste:", logError);
+    }
     return {
       ok: false,
-      error:
-        `😕 *Não consegui gerar seu teste agora*\n\n` +
-        `Houve uma falha ao criar o acesso no servidor.\n` +
-        `Tente novamente em alguns minutos ou digite *3* para ver os planos.`,
+      error: "😕 *Não consegui gerar seu teste agora*\n\nHouve uma falha ao criar o acesso no servidor. Tente novamente em alguns minutos ou digite *3* para ver os planos.",
     };
   }
 
-  // 5. Gera links de acesso oficiais do IPTV
-  const cleanDns = extractCleanIptvDns(streamingDns) || "";
   const m3uUrl = generateM3uUrl(cleanDns, trialUsername, trialPassword, "ts");
   const epgUrl = generateEpgUrl(cleanDns, trialUsername, trialPassword);
 
-  // 6. Registra no banco de dados local na tabela `clients`
-  try {
-    await supabase.from("clients").insert({
-      user_id: userId,
-      name: clientDisplayName,
-      phone: cleanPhone,
-      iptv_username: trialUsername,
-      iptv_password: trialPassword,
-      screens: 1,
-      monthly_fee: botConfig.renewalPrice || botConfig.planMonthlyPrice || 35.0,
-      next_due_date: expiryIso,
-      status: "active",
-      notes: `[TESTE_BOT_WHATSAPP]\nM3U: ${m3uUrl}\nServidor: ${serverName}\nPacote: ${botConfig.testPackageName}`,
+  const { error: clientInsertError } = await supabase.from("clients").insert({
+    user_id: userId,
+    name: clientDisplayName,
+    phone: cleanPhone,
+    iptv_username: trialUsername,
+    iptv_password: trialPassword,
+    screens: 1,
+    monthly_fee: botConfig.renewalPrice || botConfig.planMonthlyPrice || 35.0,
+    next_due_date: expiryIso,
+    status: "active",
+    notes: `[TESTE_BOT_WHATSAPP]\nM3U: ${m3uUrl}\nServidor: ${serverName}\nPacote: ${botConfig.testPackageName}`,
+  });
+
+  if (clientInsertError) {
+    console.error("Erro ao registrar cliente teste no banco:", clientInsertError);
+    try {
+      const { deleteSigmaCustomer } = await import("./sigma.panel");
+      await deleteSigmaCustomer(sigmaConfig, { username: trialUsername });
+    } catch (cleanupError) {
+      console.error("Não foi possível remover o teste órfão do Sigma:", cleanupError);
+    }
+    await releaseWhatsappBotTrialClaim(supabase, userId, cleanPhone, claimToken).catch((releaseError) => {
+      console.error("Não foi possível liberar a reserva do teste:", releaseError);
     });
-  } catch (dbErr) {
-    console.error("Erro ao registrar cliente teste no banco:", dbErr);
+    try {
+      await supabase.from("message_logs").insert({
+        user_id: userId,
+        phone: cleanPhone,
+        body: "Teste criado no painel, mas não registrado no sistema.",
+        status: "failed",
+        error: String(clientInsertError.message || "Falha ao persistir o cliente").slice(0, 500),
+      });
+    } catch (logError) {
+      console.warn("Não foi possível registrar a falha ao salvar o teste:", logError);
+    }
+    return {
+      ok: false,
+      error: "O painel criou o acesso, mas não consegui registrar o teste no sistema. O atendimento vai conferir antes de enviar os dados.",
+    };
   }
 
-  // 7. Registra o teste para o lembrete automático antes de expirar
   try {
-    await supabase.from("client_trials").insert({
+    const { error: trialInsertError } = await supabase.from("client_trials").insert({
       user_id: userId,
       name: params.senderName?.trim() || null,
       phone: cleanPhone,
@@ -600,8 +653,28 @@ export async function createTrialForBot(
       password: trialPassword,
       expires_at: expiryDate.toISOString(),
     });
-  } catch (trialErr) {
-    console.error("Erro ao registrar teste para lembrete:", trialErr);
+    if (trialInsertError) console.error("Erro ao registrar lembrete do teste:", trialInsertError);
+  } catch (trialError) {
+    console.error("Erro ao registrar teste para lembrete:", trialError);
+  }
+
+  try {
+    await completeWhatsappBotTrial(supabase, {
+      userId,
+      phone: cleanPhone,
+      claimToken,
+      username: trialUsername,
+      password: trialPassword,
+      m3uUrl,
+      epgUrl,
+      serverName,
+      streamingDns: cleanDns,
+      expiresAt: expiryDate.toISOString(),
+    });
+  } catch (claimError) {
+    // O cliente já está criado e a resposta segue para o WhatsApp. A falha fica
+    // registrada para o suporte; a trava evita que outra conta Sigma seja criada.
+    console.error("Teste criado, mas falhou ao persistir os dados recuperáveis:", claimError);
   }
 
   return {
@@ -759,7 +832,7 @@ async function handlePlanOrderCreation({
     amount = config.planAnnualPrice || 290.0;
   }
 
-  const order = await createOrderServer(userId, {
+  const order = await getOrCreateBotPendingOrder(userId, {
     customer_name: pushName || "Cliente WhatsApp",
     customer_phone: cleanPhone,
     plan_name: planName,
@@ -775,7 +848,9 @@ async function handlePlanOrderCreation({
 
   let mpPixResult: any = null;
 
-  if (mpToken) {
+  if (mpToken && order.pix_code && order.gateway_payment_id && order.payment_method === "mercadopago_pix") {
+    mpPixResult = { ok: true, paymentId: order.gateway_payment_id, qrCode: order.pix_code, qrCodeBase64: null };
+  } else if (mpToken) {
     console.log(`[Bot Plan] ⚡ Gerando Pix Mercado Pago para ${cleanPhone} (R$ ${amount.toFixed(2)})...`);
     mpPixResult = await createMercadoPagoPixPayment({
       token: mpToken,
@@ -892,10 +967,11 @@ async function handleRenewOrderCreation({
     ? Number(clientMatch.monthly_fee)
     : (config.renewalPrice || config.planMonthlyPrice || 35.0);
 
-  const order = await createOrderServer(userId, {
+  const planName = `Renovação Mensal - ${targetUsername}`;
+  const order = await getOrCreateBotPendingOrder(userId, {
     customer_name: clientMatch?.name || pushName || "Cliente WhatsApp",
     customer_phone: cleanPhone,
-    plan_name: `Renovação Mensal - ${targetUsername}`,
+    plan_name: planName,
     amount,
     duration_months: 1,
     screens: clientMatch?.screens || 1,
@@ -909,7 +985,9 @@ async function handleRenewOrderCreation({
 
   let mpPixResult: any = null;
 
-  if (mpToken) {
+  if (mpToken && order.pix_code && order.gateway_payment_id && order.payment_method === "mercadopago_pix") {
+    mpPixResult = { ok: true, paymentId: order.gateway_payment_id, qrCode: order.pix_code, qrCodeBase64: null };
+  } else if (mpToken) {
     console.log(`[Bot Renew] ⚡ Gerando Pix Mercado Pago para renovação de ${targetUsername} (R$ ${amount.toFixed(2)})...`);
     mpPixResult = await createMercadoPagoPixPayment({
       token: mpToken,
@@ -1064,6 +1142,7 @@ export async function processBotMessage(
   params: { phone: string; text: string; pushName?: string },
 ): Promise<BotProcessResult> {
   const phoneKey = String(params.phone || "").replace(/\D/g, "");
+  const conversationKey = botConversationKey(userId, phoneKey);
   const canPersist = Boolean(supabase?.from && userId && userId !== "default" && phoneKey);
   if (canPersist) {
     try {
@@ -1073,8 +1152,8 @@ export async function processBotMessage(
         .eq("user_id", userId)
         .eq("phone", phoneKey)
         .maybeSingle();
-      if (data?.session) conversationSessions.set(phoneKey, data.session as ConversationSession);
-      else conversationSessions.delete(phoneKey);
+      if (data?.session) conversationSessions.set(conversationKey, data.session as ConversationSession);
+      else conversationSessions.delete(conversationKey);
     } catch (err) {
       console.warn("[bot] Não foi possível ler a conversa salva:", err);
     }
@@ -1088,7 +1167,7 @@ export async function processBotMessage(
           {
             user_id: userId,
             phone: phoneKey,
-            session: conversationSessions.get(phoneKey) ?? null,
+            session: conversationSessions.get(conversationKey) ?? null,
           },
           { onConflict: "user_id,phone" },
         );
@@ -1117,6 +1196,7 @@ async function processBotMessageInner(
   }
 
   const cleanPhone = params.phone.replace(/\D/g, "");
+  const conversationKey = botConversationKey(userId, cleanPhone);
   const text = normalizeBotInput(params.text ?? "");
 
   const isGreeting = isPlainGreeting(text);
@@ -1160,10 +1240,10 @@ async function processBotMessageInner(
   // =========================================================================
   // ROTEADOR DO MENU (local, sem IA): entende a intenção e cai no fluxo certo
   // =========================================================================
-  const activeSession = conversationSessions.get(cleanPhone);
+  const activeSession = conversationSessions.get(conversationKey);
   const hasActiveSession = Boolean(activeSession && Date.now() - activeSession.timestamp < 15 * 60 * 1000);
-  // Com conversa em andamento o texto pertence ao passo atual (ex.: digitar o usuário),
-  // exceto quando o cliente avisa que pagou: isso sempre tem prioridade.
+  // Pagamento confirmado tem prioridade mesmo durante uma etapa ativa
+  // (por exemplo, quando o bot aguarda o nome de usuário para renovar).
   const intentNow = opts?.skipRouter ? null : detectMenuIntent(params.text);
   const routed = !intentNow ? null : hasActiveSession && intentNow.intent !== "order_status" ? null : intentNow;
   if (routed) {
@@ -1360,9 +1440,9 @@ async function processBotMessageInner(
   // GERENCIAMENTO DE SESSÃO MULTI-PASSO (Ex: pergunta de usuário na renovação)
   // =========================================================================
   const now = Date.now();
-  const session = conversationSessions.get(cleanPhone);
+  const session = conversationSessions.get(conversationKey);
   const isSessionValid = session && now - session.timestamp < 15 * 60 * 1000;
-  if (session && !isSessionValid) conversationSessions.delete(cleanPhone);
+  if (session && !isSessionValid) conversationSessions.delete(conversationKey);
   if (isSessionValid && session) session.timestamp = now;
 
   // Se o cliente digitou comando para trocar de opção, limpa o estado anterior
@@ -1375,7 +1455,7 @@ async function processBotMessageInner(
     (session?.step !== "awaiting_plan_choice" &&
       (text === "1" || text === "2" || text === "3" || text === "4" || text === "5" || text === "6"))
   ) {
-    if (session) conversationSessions.delete(cleanPhone);
+    if (session) conversationSessions.delete(conversationKey);
   } else if (isSessionValid && session) {
     // -----------------------------------------------------------------------
     // Etapa de Escolha do Plano (Opção 3 via texto)
@@ -1403,11 +1483,11 @@ async function processBotMessageInner(
       }
 
       if (isMenuOptionText) {
-        conversationSessions.delete(cleanPhone);
+        conversationSessions.delete(conversationKey);
       }
 
       if (chosenMonths > 0) {
-        conversationSessions.delete(cleanPhone);
+        conversationSessions.delete(conversationKey);
         return await handlePlanOrderCreation({
           userId,
           cleanPhone,
@@ -1435,7 +1515,7 @@ async function processBotMessageInner(
         ? (session.data?.candidateUsername || cleanPhone)
         : params.text.trim();
 
-      conversationSessions.delete(cleanPhone);
+      conversationSessions.delete(conversationKey);
 
       let clientMatch: any = null;
       try {
@@ -1466,7 +1546,7 @@ async function processBotMessageInner(
     // -----------------------------------------------------------------------
     if (session.step === "awaiting_renew_username") {
       const targetUsername = params.text.trim();
-      conversationSessions.delete(cleanPhone);
+      conversationSessions.delete(conversationKey);
 
       let clientMatch: any = null;
       try {
@@ -1662,7 +1742,7 @@ async function processBotMessageInner(
       const c = matchingClients[0];
       const fee = c.monthly_fee ? `R$ ${Number(c.monthly_fee).toFixed(2).replace(".", ",")}` : "R$ 35,00";
 
-      conversationSessions.set(cleanPhone, {
+      conversationSessions.set(conversationKey, {
         step: "awaiting_renew_confirm",
         timestamp: Date.now(),
         data: {
@@ -1697,7 +1777,7 @@ async function processBotMessageInner(
 
     // Caso B: Mais de 1 linha associada a este WhatsApp
     if (matchingClients.length > 1) {
-      conversationSessions.set(cleanPhone, {
+      conversationSessions.set(conversationKey, {
         step: "awaiting_renew_username",
         timestamp: Date.now(),
       });
@@ -1736,7 +1816,7 @@ async function processBotMessageInner(
     }
 
     // Caso C: Nenhuma linha encontrada para este WhatsApp -> Pergunta o usuário
-    conversationSessions.set(cleanPhone, {
+    conversationSessions.set(conversationKey, {
       step: "awaiting_renew_username",
       timestamp: Date.now(),
     });
@@ -1761,7 +1841,7 @@ async function processBotMessageInner(
     text.includes("preco") ||
     text.includes("valor")
   ) {
-    conversationSessions.set(cleanPhone, {
+    conversationSessions.set(conversationKey, {
       step: "awaiting_plan_choice",
       timestamp: Date.now(),
     });

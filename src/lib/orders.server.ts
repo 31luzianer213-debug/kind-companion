@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { addMonths } from "date-fns";
 import { generateM3uUrl, generateEpgUrl, extractCleanIptvDns } from "./format";
 import type { SigmaConfig } from "./sigma.panel";
@@ -81,6 +82,57 @@ export async function updateOrderServer(
   return data ? mapRow(data) : null;
 }
 
+
+/**
+ * Cria ou reaproveita atomicamente uma cobrança pendente do bot.
+ * O RPC serializa criação por revendedor; a busca JS é só fallback para bancos
+ * que ainda não receberam a migration, mantendo a mesma janela de idempotência.
+ */
+export async function getOrCreateBotPendingOrder(
+  userId: string,
+  params: {
+    customer_name: string;
+    customer_phone: string;
+    plan_name: string;
+    amount: number;
+    duration_months?: number;
+    screens?: number;
+    type?: "new_access" | "renewal";
+    target_username?: string;
+  },
+): Promise<OrderItem> {
+  const requestId = `ord_${randomUUID()}`;
+  const normalizedPhone = onlyDigits(params.customer_phone);
+  const durationMonths = Math.max(1, Math.min(12, Number(params.duration_months || 1)));
+  const orderType = params.type || "new_access";
+  const targetUsername = params.target_username || null;
+
+  const { data, error } = await supabaseAdmin.rpc("get_or_create_bot_pending_order", {
+    p_user_id: userId,
+    p_order_id: requestId,
+    p_customer_name: params.customer_name || "Cliente",
+    p_customer_phone: normalizedPhone,
+    p_plan_name: params.plan_name,
+    p_amount: Number(params.amount),
+    p_duration_months: durationMonths,
+    p_screens: Math.max(1, Number(params.screens || 1)),
+    p_type: orderType,
+    p_target_username: targetUsername,
+    p_window_minutes: 30,
+  });
+
+  // Não degrada silenciosamente para SELECT + INSERT: isso reabre a corrida
+  // entre duas mensagens simultâneas justamente quando a migração não existe.
+  if (error) {
+    throw new Error(
+      `A criação segura de pedidos não está habilitada. Aplique a migração 20261104001000_bot_order_idempotency.sql. Detalhe: ${error.message}`,
+    );
+  }
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("O banco não retornou um pedido válido após a reserva atômica.");
+  }
+  return mapRow(data);
+}
 
 /** Cria um novo pedido (novo acesso ou renovação) */
 export async function createOrderServer(
@@ -240,7 +292,7 @@ export async function approveAndReleaseOrderServer(
   const expiryIso = expiryDate.toISOString().slice(0, 10);
 
   let username = order.target_username;
-  let password = Math.floor(100000 + Math.random() * 900000).toString();
+  const password = Math.floor(100000 + Math.random() * 900000).toString();
 
   // Se é novo acesso, gera usuário aleatório de 8 dígitos caso não tenha sido informado
   if (order.type === "new_access" || !username) {

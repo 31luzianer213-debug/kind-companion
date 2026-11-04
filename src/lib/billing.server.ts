@@ -319,7 +319,6 @@ function iso(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export async function runBillingForUser(
   supabase: SupabaseClient<any>,
   userId: string,
@@ -344,23 +343,29 @@ export async function runBillingForUser(
       client.next_due_date ??
       iso(new Date(today.getFullYear(), today.getMonth(), Math.min(client.due_day || 10, 28)));
 
-    const { data: existing } = await supabase
-      .from("invoices")
-      .select("id")
-      .eq("client_id", client.id)
-      .eq("due_date", dueDate)
-      .maybeSingle();
+    const { data: result, error } = await supabase.rpc("create_invoice_if_absent", {
+      p_user_id: userId,
+      p_client_id: client.id,
+      p_due_date: dueDate,
+      p_amount: Number(client.monthly_fee || 0),
+    });
 
-    if (!existing) {
-      const { error } = await supabase.from("invoices").insert({
-        user_id: userId,
-        client_id: client.id,
-        amount: client.monthly_fee,
-        due_date: dueDate,
-        status: "pending",
-      });
-      if (!error) created += 1;
+    if (error) {
+      failed += 1;
+      if (errors.length < 3) errors.push(`Falha ao criar fatura de ${client.name || client.id}: ${error.message}`);
+      console.error("[Billing] Falha na criação atômica da fatura:", error);
+      continue;
     }
+
+    const invoiceResult = result as { ok?: boolean; created?: boolean; error?: string } | null;
+    if (!invoiceResult?.ok) {
+      failed += 1;
+      if (errors.length < 3) {
+        errors.push(invoiceResult?.error || `O banco não confirmou a fatura de ${client.name || client.id}.`);
+      }
+      continue;
+    }
+    if (invoiceResult.created) created += 1;
   }
 
   await supabase

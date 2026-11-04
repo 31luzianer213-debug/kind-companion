@@ -9,12 +9,10 @@
  * para não quebrar importações antigas, mas hoje apenas repassam para o modo ativo.
  */
 
-import {
-  getRequest,
-} from "@tanstack/react-start/server";
+import { getRequest } from "@tanstack/react-start/server";
+import { BAILEYS_API_URL, baileysFetch } from "./baileys-client.server";
 
-const BAILEYS_PORT = process.env.BAILEYS_PORT ? Number(process.env.BAILEYS_PORT) : 3001;
-const BAILEYS_URL = process.env.BAILEYS_API_URL || `http://127.0.0.1:${BAILEYS_PORT}`;
+const BAILEYS_URL = BAILEYS_API_URL;
 
 export const DEFAULT_INSTANCE_NAME = "baileys_default";
 export type ConnectionState = "open" | "connecting" | "close" | "none" | "unknown";
@@ -41,7 +39,7 @@ export function getEvolutionConfig() {
 
 export async function evolutionRequest<T = any>(path: string, init: RequestInit = {}): Promise<T> {
   const url = `${BAILEYS_URL}${path}`;
-  const res = await fetch(url, init);
+  const res = await baileysFetch(path, init);
   return (await res.json()) as T;
 }
 
@@ -115,7 +113,7 @@ export async function fetchConnectionState(instanceName?: string): Promise<{
   }
   try {
     const q = instanceName ? `?instance=${encodeURIComponent(instanceName)}` : "";
-    const res = await fetch(`${BAILEYS_URL}/api/status${q}`, { signal: AbortSignal.timeout(3000) });
+    const res = await baileysFetch(`/api/status${q}`, { signal: AbortSignal.timeout(3000) });
     if (res.ok) {
       const data = await res.json();
       const state: ConnectionState = data.status || "close";
@@ -142,7 +140,7 @@ export async function ensureAndConnectInstance(
     };
   }
   try {
-    const res = await fetch(`${BAILEYS_URL}/api/connect`, {
+    const res = await baileysFetch(`/api/connect`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ instance: instanceName, mode, phone }),
@@ -211,7 +209,7 @@ export async function sendWhatsAppText(to: string, text: string, instance?: stri
   }
 
   try {
-    const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
+    const res = await baileysFetch(`/api/send-message`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ to: normalized, text, instance }),
@@ -299,7 +297,7 @@ export async function sendWhatsAppButtons(
   });
 
   try {
-    const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
+    const res = await baileysFetch(`/api/send-message`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -350,7 +348,7 @@ export async function sendWhatsAppList(
   }
 
   try {
-    const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
+    const res = await baileysFetch(`/api/send-message`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -394,7 +392,7 @@ export async function sendWhatsAppMedia(
   }
 
   try {
-    const res = await fetch(`${BAILEYS_URL}/api/send-message`, {
+    const res = await baileysFetch(`/api/send-message`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

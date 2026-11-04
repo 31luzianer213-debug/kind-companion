@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { consumeWebhookRateLimit, timingSafeStringEquals, webhookRateLimitKey } from "@/lib/webhook-security.server";
 
 /**
  * Rede de segurança das assinaturas (SaaS): reconfere na operadora os Pix que
@@ -16,8 +17,12 @@ async function runReconcile(request: Request) {
   const match = /^Bearer ([^\s,]+)$/i.exec(request.headers.get("authorization") ?? "");
   const provided = querySecret || match?.[1];
   const configured = process.env["BILLING_CRON_SECRET"];
-  if (!configured || !provided || provided !== configured) {
+  if (!configured || !timingSafeStringEquals(provided, configured)) {
     return Response.json({ ok: false, error: "Não autorizado." }, { status: 401 });
+  }
+
+  if (!consumeWebhookRateLimit(webhookRateLimitKey(request, "saas-reconcile"), 6, 60_000)) {
+    return Response.json({ ok: false, error: "Muitas reconciliações. Tente novamente em instantes." }, { status: 429 });
   }
 
   try {

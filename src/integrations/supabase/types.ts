@@ -857,6 +857,54 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_bot_trial_claims: {
+        Row: {
+          claim_token: string
+          created_at: string
+          epg_url: string | null
+          expires_at: string | null
+          m3u_url: string | null
+          password: string | null
+          phone: string
+          server_name: string | null
+          status: string
+          streaming_dns: string | null
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          claim_token: string
+          created_at?: string
+          epg_url?: string | null
+          expires_at?: string | null
+          m3u_url?: string | null
+          password?: string | null
+          phone: string
+          server_name?: string | null
+          status: string
+          streaming_dns?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          claim_token?: string
+          created_at?: string
+          epg_url?: string | null
+          expires_at?: string | null
+          m3u_url?: string | null
+          password?: string | null
+          phone?: string
+          server_name?: string | null
+          status?: string
+          streaming_dns?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_processed_messages: {
         Row: {
           message_id: string
@@ -1014,6 +1062,13 @@ export type Database = {
       cleanup_old_logs: { Args: never; Returns: undefined }
       restore_deleted_clients: { Args: { p_since?: string }; Returns: number }
       subscription_state: { Args: { p_user: string }; Returns: string }
+      activate_saas_payment_from_payment: { Args: { p_payment_id: string }; Returns: Json }
+      get_or_create_saas_pending_payment: { Args: { p_amount: number; p_months: number; p_plan_id: string; p_provider: string; p_user_id: string }; Returns: Json }
+      get_or_create_bot_pending_order: { Args: { p_amount: number; p_customer_name: string; p_customer_phone: string; p_duration_months: number; p_order_id: string; p_plan_name: string; p_screens: number; p_target_username: string | null; p_type: string; p_user_id: string; p_window_minutes: number }; Returns: Json }
+      claim_whatsapp_bot_trial: { Args: { p_block_repeat_days: number; p_claim_token: string; p_phone: string; p_phone_variants: string[]; p_user_id: string }; Returns: Json }
+      complete_whatsapp_bot_trial: { Args: { p_claim_token: string; p_epg_url: string; p_expires_at: string; p_m3u_url: string; p_password: string; p_phone: string; p_server_name: string; p_streaming_dns: string; p_user_id: string; p_username: string }; Returns: boolean }
+      release_whatsapp_bot_trial_claim: { Args: { p_claim_token: string; p_phone: string; p_user_id: string }; Returns: boolean }
+      create_invoice_if_absent: { Args: { p_amount: number; p_client_id: string; p_due_date: string; p_user_id: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
