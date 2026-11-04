@@ -1004,6 +1004,19 @@ async function handleRenewOrderCreation({
  * Processador central de mensagens do Bot.
  * Recebe o texto que o cliente mandou, decide o fluxo e devolve a resposta formatada.
  */
+const GREETING_WORDS = ["oi", "oie", "ola", "opa", "ei", "eae", "e ai", "salve", "bom dia", "boa tarde", "boa noite", "start", "hello", "hi"];
+const GREETING_FILLERS = new Set(["tudo", "bem", "bom", "blz", "beleza", "td", "tranquilo", "como", "vai", "voce", "vc", "amigo", "amiga", "mano", "boa", "bom", "dia", "tarde", "noite", "e", "ai"]);
+
+/** "oi", "boa noite!", "oi tudo bem?" → saudação. "oi quero renovar" → não. */
+export function isPlainGreeting(normalized: string): boolean {
+  const t = normalized.replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  if (!t) return false;
+  const start = GREETING_WORDS.find((g) => t === g || t.startsWith(g + " "));
+  if (!start) return false;
+  const rest = t.slice(start.length).trim().split(" ").filter(Boolean);
+  return rest.every((w) => GREETING_FILLERS.has(w));
+}
+
 function normalizeBotInput(value: string): string {
   return value
     .toLowerCase()
@@ -1119,7 +1132,7 @@ async function processBotMessageInner(
   const cleanPhone = params.phone.replace(/\D/g, "");
   const text = normalizeBotInput(params.text ?? "");
 
-  const isGreeting = ["oi", "olá", "ola", "opa", "ei", "eae", "e ai", "bom dia", "boa tarde", "boa noite", "start"].includes(text);
+  const isGreeting = isPlainGreeting(text);
   const wantsMenu = ["menu", "início", "inicio", "0", "voltar ao menu", "voltar menu", "menu inicial", "menu principal"].includes(text);
 
   // Saudações e pedido explícito de menu não precisam consultar mais nada:
@@ -1162,7 +1175,10 @@ async function processBotMessageInner(
   // =========================================================================
   const activeSession = conversationSessions.get(cleanPhone);
   const hasActiveSession = Boolean(activeSession && Date.now() - activeSession.timestamp < 15 * 60 * 1000);
-  const routed = opts?.skipRouter || hasActiveSession ? null : detectMenuIntent(params.text);
+  // Com conversa em andamento o texto pertence ao passo atual (ex.: digitar o usuário),
+  // exceto quando o cliente avisa que pagou: isso sempre tem prioridade.
+  const intentNow = opts?.skipRouter ? null : detectMenuIntent(params.text);
+  const routed = !intentNow ? null : hasActiveSession && intentNow.intent !== "order_status" ? null : intentNow;
   if (routed) {
     // Em renovação o texto original é importante: pode trazer o usuário junto
     // ("renovar carlos123"). Nos outros casos basta o comando da opção do menu.
