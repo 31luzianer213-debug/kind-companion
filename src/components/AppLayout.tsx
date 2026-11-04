@@ -225,7 +225,7 @@ export function AppLayout({
               </p>
               <h1 className="truncate font-display text-lg font-bold tracking-tight text-foreground">{mobilePageTitle(pathname)}</h1>
               {pageDescriptions[pathname] ? (
-                <p className="mt-0.5 hidden truncate text-[11px] text-muted-foreground xl:block">{pageDescriptions[pathname]}</p>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">{pageDescriptions[pathname]}</p>
               ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-2">
