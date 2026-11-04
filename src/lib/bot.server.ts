@@ -4,7 +4,7 @@ import { createOrderServer, listOrdersServer, approveAndReleaseOrderServer, upda
 import { createMercadoPagoPixPayment } from "./mercadopago.server";
 import type { ButtonItem, ListSection } from "./billing.server";
 import { phoneVariants, samePhone } from "./phone";
-import { detectMenuIntent } from "./bot-ai.server";
+import { detectMenuIntent, isPlainGreeting } from "./bot-ai.server";
 
 export type BotInteractivePayload =
   | {
@@ -1119,7 +1119,7 @@ async function processBotMessageInner(
   const cleanPhone = params.phone.replace(/\D/g, "");
   const text = normalizeBotInput(params.text ?? "");
 
-  const isGreeting = ["oi", "olá", "ola", "opa", "ei", "eae", "e ai", "bom dia", "boa tarde", "boa noite", "start"].includes(text);
+  const isGreeting = isPlainGreeting(text);
   const wantsMenu = ["menu", "início", "inicio", "0", "voltar ao menu", "voltar menu", "menu inicial", "menu principal"].includes(text);
 
   // Saudações e pedido explícito de menu não precisam consultar mais nada:
@@ -1162,7 +1162,10 @@ async function processBotMessageInner(
   // =========================================================================
   const activeSession = conversationSessions.get(cleanPhone);
   const hasActiveSession = Boolean(activeSession && Date.now() - activeSession.timestamp < 15 * 60 * 1000);
-  const routed = opts?.skipRouter || hasActiveSession ? null : detectMenuIntent(params.text);
+  // Com conversa em andamento o texto pertence ao passo atual (ex.: digitar o usuário),
+  // exceto quando o cliente avisa que pagou: isso sempre tem prioridade.
+  const intentNow = opts?.skipRouter ? null : detectMenuIntent(params.text);
+  const routed = !intentNow ? null : hasActiveSession && intentNow.intent !== "order_status" ? null : intentNow;
   if (routed) {
     // Em renovação o texto original é importante: pode trazer o usuário junto
     // ("renovar carlos123"). Nos outros casos basta o comando da opção do menu.

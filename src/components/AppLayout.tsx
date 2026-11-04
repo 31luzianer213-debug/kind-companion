@@ -5,7 +5,6 @@ import { X, Menu } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { DesktopNavigation, MobileBottomNavigation, MobileDrawer } from "@/components/layout/AppNavigation";
-import { MobileClientDelete } from "@/components/clients/MobileClientDelete";
 import { pageDescriptions } from "@/components/layout/navigation";
 import { SigmaLogo } from "@/components/SigmaLogo";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -178,16 +177,6 @@ export function AppLayout({
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <GlobalSearch enableShortcut={false} />
           <ThemeToggle />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setDrawerOpen(true)}
-            aria-label="Abrir menu"
-            className="size-10 rounded-xl bg-muted/60 text-foreground"
-          >
-            <Menu className="size-[18px]" />
-          </Button>
         </div>
       </header>
 
@@ -263,7 +252,7 @@ export function AppLayout({
       </main>
 
 
-      {pathname === "/clientes" ? <MobileClientDelete /> : null}
+
 
       <MobileBottomNavigation
         pathname={pathname}

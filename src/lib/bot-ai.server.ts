@@ -45,7 +45,10 @@ export function detectMenuIntent(rawText: string): MenuIntentMatch | null {
   const text = normalizeText(rawText);
   if (!text) return null;
 
-  const has = (...words: string[]) => words.some((w) => text.includes(w));
+  // Compara palavras inteiras: "app" não pode casar com "whatsapp",
+  // nem "erro" com "ferro", nem "3m" com "13m".
+  const padded = ` ${text} `;
+  const has = (...words: string[]) => words.some((w) => padded.includes(` ${normalizeText(w)} `));
 
   // 1) Status de pagamento
   if (has("paguei", "comprovante", "status", "verificar pagamento", "caiu o pix", "ja fiz o pix")) {
@@ -86,12 +89,12 @@ export function detectMenuIntent(rawText: string): MenuIntentMatch | null {
     return { intent: "support", command: "6" };
   }
 
-  // 3) Ações do menu
-  if (has("teste", "testar", "gratis", "demonstracao", "experimentar")) {
-    return { intent: "trial", command: "1" };
-  }
-  if (has("renovar", "renovacao", "segunda via", "venceu", "vencimento", "pagar", "pix", "pagamento")) {
+  // 3) Ações do menu — renovar vem antes de testar: "meu teste acabou, quero renovar" é renovação.
+  if (has("renovar", "renova", "renovacao", "segunda via", "venceu", "vencido", "vencimento", "pagar", "pix", "pagamento")) {
     return { intent: "renew", command: "2" };
+  }
+  if (has("teste", "testar", "testa", "gratis", "demonstracao", "experimentar")) {
+    return { intent: "trial", command: "1" };
   }
   if (has("plano", "planos", "preco", "precos", "valor", "valores", "quanto custa", "quanto e", "comprar", "assinar")) {
     return { intent: "plans", command: "3" };
@@ -151,3 +154,17 @@ export function detectMenuIntent(rawText: string): MenuIntentMatch | null {
 export function decideWithMenu(text: string): MenuIntentMatch | null {
   return detectMenuIntent(text);
 }
+
+const GREETING_WORDS = ["oi", "oie", "ola", "opa", "ei", "eae", "e ai", "salve", "bom dia", "boa tarde", "boa noite", "start", "hello", "hi"];
+const GREETING_FILLERS = new Set(["tudo", "bem", "bom", "blz", "beleza", "td", "tranquilo", "como", "vai", "voce", "vc", "amigo", "amiga", "mano", "boa", "bom", "dia", "tarde", "noite", "e", "ai"]);
+
+/** "oi", "boa noite!", "oi tudo bem?" → saudação. "oi quero renovar" → não. */
+export function isPlainGreeting(normalized: string): boolean {
+  const t = normalized.replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  if (!t) return false;
+  const start = GREETING_WORDS.find((g) => t === g || t.startsWith(g + " "));
+  if (!start) return false;
+  const rest = t.slice(start.length).trim().split(" ").filter(Boolean);
+  return rest.every((w) => GREETING_FILLERS.has(w));
+}
+
