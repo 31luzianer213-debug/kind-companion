@@ -4,7 +4,7 @@ import { createOrderServer, listOrdersServer, approveAndReleaseOrderServer, upda
 import { createMercadoPagoPixPayment } from "./mercadopago.server";
 import type { ButtonItem, ListSection } from "./billing.server";
 import { phoneVariants, samePhone } from "./phone";
-import { detectMenuIntent } from "./bot-ai.server";
+import { detectMenuIntent, isPlainGreeting } from "./bot-ai.server";
 
 export type BotInteractivePayload =
   | {
@@ -1004,19 +1004,6 @@ async function handleRenewOrderCreation({
  * Processador central de mensagens do Bot.
  * Recebe o texto que o cliente mandou, decide o fluxo e devolve a resposta formatada.
  */
-const GREETING_WORDS = ["oi", "oie", "ola", "opa", "ei", "eae", "e ai", "salve", "bom dia", "boa tarde", "boa noite", "start", "hello", "hi"];
-const GREETING_FILLERS = new Set(["tudo", "bem", "bom", "blz", "beleza", "td", "tranquilo", "como", "vai", "voce", "vc", "amigo", "amiga", "mano", "boa", "bom", "dia", "tarde", "noite", "e", "ai"]);
-
-/** "oi", "boa noite!", "oi tudo bem?" → saudação. "oi quero renovar" → não. */
-export function isPlainGreeting(normalized: string): boolean {
-  const t = normalized.replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
-  if (!t) return false;
-  const start = GREETING_WORDS.find((g) => t === g || t.startsWith(g + " "));
-  if (!start) return false;
-  const rest = t.slice(start.length).trim().split(" ").filter(Boolean);
-  return rest.every((w) => GREETING_FILLERS.has(w));
-}
-
 function normalizeBotInput(value: string): string {
   return value
     .toLowerCase()
