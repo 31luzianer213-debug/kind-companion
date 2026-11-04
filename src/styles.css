@@ -556,7 +556,7 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.025em; }
 :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 6px; }
 button:focus-visible, a:focus-visible, [role="tab"]:focus-visible { outline-offset: 3px; }
 body { line-height: 1.6; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-p + p { margin-top: 0.75em; }
+.prose p + p { margin-top: 0.75em; }
 h1, h2, h3, h4 { line-height: 1.15; text-wrap: balance; }
 p { text-wrap: pretty; }
 svg.lucide { flex-shrink: 0; vertical-align: middle; }
@@ -779,3 +779,20 @@ svg.lucide { flex-shrink: 0; vertical-align: middle; }
 .stat-card:hover { box-shadow: none !important; }
 .hero-grid { opacity: 0.45; }
 [role="dialog"], [data-radix-popper-content-wrapper] > * { animation-duration: 120ms !important; }
+
+/* ---- Visual profissional: sem brilhos, sem sombras coloridas ---- */
+body { background-image: none !important; }
+.app-aurora { background-image: none !important; }
+.panel-hero {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 6%, transparent) !important;
+}
+.panel-hero .hero-grid, .panel-hero [class*="app-grid"] { display: none !important; }
+[class*="blur-3xl"], [class*="blur-2xl"] { display: none !important; }
+[class*="shadow-primary"], [class*="shadow-success"] { box-shadow: none !important; }
+.app-aurora > aside [class*="shadow"] { box-shadow: none !important; }
+/* O título e a frase da página já aparecem no topo fixo; não repetir dentro da página. */
+.app-aurora > main > :not(.sticky) h1:not([data-keep-title]),
+.app-aurora > main > :not(.sticky) h1:not([data-keep-title]) + p,
+.app-aurora > main > :not(.sticky) :has(> h1:not([data-keep-title])) + p { display: none !important; }

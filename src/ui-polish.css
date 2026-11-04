@@ -7,18 +7,17 @@
   --ui-shadow-soft: 0 1px 2px color-mix(in oklab, var(--foreground) 5%, transparent),
     0 18px 40px -34px color-mix(in oklab, var(--foreground) 22%, transparent);
   --ui-shadow-hover: 0 1px 2px color-mix(in oklab, var(--foreground) 6%, transparent),
-    0 26px 54px -34px color-mix(in oklab, var(--primary) 42%, transparent);
+    0 8px 24px -18px color-mix(in oklab, var(--foreground) 25%, transparent);
 }
 
 .app-aurora {
   min-height: 100dvh;
-  background: linear-gradient(to bottom, color-mix(in oklab, var(--primary) 2.5%, transparent), transparent 30rem), var(--background) !important;
+  background: var(--background) !important;
 }
 
 .app-aurora > aside {
   width: var(--ui-sidebar-width) !important;
   background:
-    radial-gradient(120% 90% at 0% 0%, color-mix(in oklab, var(--sidebar-primary) 12%, transparent), transparent 55%),
     var(--sidebar) !important;
   box-shadow: 14px 0 40px -38px color-mix(in oklab, #000 60%, transparent);
 }
@@ -43,8 +42,7 @@
   border-color: color-mix(in oklab, var(--primary) 22%, var(--border)) !important;
   box-shadow: var(--ui-shadow-hover) !important;
 }
-.app-aurora main [class*="grid"] > [class~="bg-card"]:has([class*="text-3xl"]),
-.app-aurora main [class*="grid"] > [class~="bg-card"]:has([class*="text-4xl"]) { min-height: 128px; }
+
 
 /* Destaque onde há número/valor: barras e cards de KPI ganham presença. */
 .app-aurora main [data-testid="client-health-strip"] > a {
@@ -61,7 +59,7 @@
   font-weight: 650;
   transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease, border-color 160ms ease;
 }
-.app-aurora main button:not(:disabled):hover { transform: translateY(-1px); }
+
 .app-aurora main button:not(:disabled):active { transform: none; }
 .app-aurora main input,
 .app-aurora main textarea,

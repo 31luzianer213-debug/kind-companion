@@ -89,17 +89,15 @@ export function OverviewHero(props: OverviewHeroProps) {
     <section className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <p className="eyebrow">{props.greet} · resumo de {props.monthName}</p>
-          <h1 className="mt-1 font-display text-2xl font-black tracking-tight text-foreground sm:text-[30px]">
-            Sua operação hoje
-          </h1>
+          <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+            {props.greet}! Este é o resumo de {props.monthName}.
+          </h2>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {props.statuses.map((status) => (
             <Link key={status.label} to={status.to as never} className="status-chip">
               <span className="relative flex size-2">
-                {status.ok ? <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-50" /> : null}
-                <span className={cn("relative inline-flex size-2 rounded-full", status.ok ? "bg-primary" : "bg-warning")} />
+                                <span className={cn("relative inline-flex size-2 rounded-full", status.ok ? "bg-primary" : "bg-warning")} />
               </span>
               {status.label}
             </Link>

@@ -375,11 +375,11 @@ function BotPage() {
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={form.enabled ? "success" : "secondary"} className="gap-1.5 px-2.5 py-0.5 text-xs">
-              <span className={`size-1.5 rounded-full ${form.enabled ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
+              <span className={`size-1.5 rounded-full ${form.enabled ? "bg-success" : "bg-muted-foreground"}`} />
               {form.enabled ? "Robô ativo 24h" : "Robô pausado"}
             </Badge>
             <Badge variant={whatsappConnected ? "success" : "destructive"} className="gap-1.5 px-2.5 py-0.5 text-xs">
-              <span className={`size-1.5 rounded-full ${whatsappConnected ? "bg-success animate-pulse" : "bg-destructive"}`} />
+              <span className={`size-1.5 rounded-full ${whatsappConnected ? "bg-success" : "bg-destructive"}`} />
               {whatsappConnected ? "WhatsApp conectado" : "WhatsApp desconectado"}
             </Badge>
           </div>
@@ -996,7 +996,7 @@ function BotPage() {
               <div className="leading-tight flex-1">
                 <p className="text-xs font-bold truncate text-foreground">{form.businessName || "Minha Revenda IPTV"}</p>
                 <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  <span className={`size-1.5 rounded-full inline-block ${whatsappConnected ? "bg-success animate-pulse" : "bg-destructive"}`} /> {whatsappConnected ? "WhatsApp conectado" : "WhatsApp desconectado"}
+                  <span className={`size-1.5 rounded-full inline-block ${whatsappConnected ? "bg-success" : "bg-destructive"}`} /> {whatsappConnected ? "WhatsApp conectado" : "WhatsApp desconectado"}
                 </p>
               </div>
               <Badge variant="outline" className={isMpActive ? "border-success/30 bg-success/10 text-success text-[10px]" : "border-border bg-muted/40 text-muted-foreground text-[10px]"}>
