@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { isMercadoPagoAmountSufficient, validateMercadoPagoPayment } from "@/lib/mercadopago-webhook.server";
+import { consumeWebhookRateLimit, webhookRateLimitKey } from "@/lib/webhook-security.server";
 
 export const Route = createFileRoute("/api/public/hooks/mercadopago")({
   server: {
@@ -14,6 +16,10 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago")({
           try { body = await request.json(); } catch {}
           if (!paymentId && body?.data?.id) paymentId = String(body.data.id);
           if (!paymentId) return Response.json({ ok: true, message: "Evento sem ID de pagamento ignorado." });
+
+          if (!consumeWebhookRateLimit(webhookRateLimitKey(request, "reseller-mercadopago"), 60, 60_000)) {
+            return Response.json({ ok: false, error: "Muitas notificações do Mercado Pago. Tente novamente." }, { status: 429 });
+          }
 
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -44,49 +50,81 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago")({
           if (!paymentData) {
             return Response.json({ ok: true, message: "Pagamento não encontrado na conta do Mercado Pago informada." });
           }
-          if (paymentData.status !== "approved") {
+          const paymentIdText = String(paymentId);
+          const externalRef = String(paymentData.external_reference || "").trim();
+          const baseValidation = validateMercadoPagoPayment(paymentData, paymentIdText);
+          if (baseValidation === "not_approved") {
             return Response.json({ ok: true, message: `Status do pagamento: ${paymentData.status}. Aguardando aprovação.` });
           }
-
-          const externalRef = String(paymentData.external_reference || "").trim();
+          if (baseValidation) {
+            return Response.json({ ok: false, needsReview: true, error: `Pagamento Mercado Pago inválido (${baseValidation}).` }, { status: 409 });
+          }
 
           if (externalRef.startsWith("ord_")) {
-            try {
-              const { approveAndReleaseOrderServer } = await import("@/lib/orders.server");
-              const orderResult = await approveAndReleaseOrderServer(matchedSettings.user_id, externalRef);
-              if (orderResult.ok) {
-                return Response.json({
-                  ok: true,
-                  message: `Pedido #${orderResult.order?.order_number} aprovado com sucesso via Mercado Pago! Acesso entregue.`,
-                  order: orderResult.order,
-                });
-              }
-            } catch (error) {
-              console.warn("Falha ao processar pedido pago no Mercado Pago:", error);
+            const { data: order, error: orderError } = await supabaseAdmin
+              .from("orders")
+              .select("id,user_id,order_number,amount,status")
+              .eq("id", externalRef)
+              .eq("user_id", matchedSettings.user_id)
+              .maybeSingle();
+
+            if (orderError) {
+              console.error("Falha ao localizar pedido do Mercado Pago:", orderError);
+              return Response.json({ ok: false, error: "Não foi possível localizar o pedido." }, { status: 500 });
             }
+            if (!order) {
+              return Response.json({ ok: true, needsReview: true, message: "Pagamento aprovado, mas o pedido correspondente não foi encontrado." });
+            }
+            if (validateMercadoPagoPayment(paymentData, paymentIdText, order.id) ||
+                !isMercadoPagoAmountSufficient(paymentData.transaction_amount, order.amount)) {
+              return Response.json({ ok: false, needsReview: true, error: "O pagamento não corresponde ao pedido ou foi recebido com valor insuficiente." }, { status: 409 });
+            }
+            if (order.status === "approved") {
+              return Response.json({ ok: true, alreadyProcessed: true, message: `Pedido #${order.order_number} já estava aprovado. Evento duplicado ignorado.` });
+            }
+            if (order.status !== "pending") {
+              return Response.json({ ok: false, needsReview: true, error: "O pedido não está pendente e não pode ser liberado automaticamente." }, { status: 409 });
+            }
+
+            const { approveAndReleaseOrderServer } = await import("@/lib/orders.server");
+            const orderResult = await approveAndReleaseOrderServer(matchedSettings.user_id, externalRef);
+            if (orderResult.ok) {
+              return Response.json({
+                ok: true,
+                message: `Pedido #${orderResult.order?.order_number} aprovado com sucesso via Mercado Pago! Acesso entregue.`,
+                order: orderResult.order,
+              });
+            }
+            return Response.json({ ok: false, needsReview: true, error: orderResult.message }, { status: 409 });
           }
 
           let invoice: any = null;
           if (externalRef) {
-            const { data } = await supabaseAdmin
+            const { data, error: invoiceLookupError } = await supabaseAdmin
               .from("invoices")
               .select("*")
               .eq("id", externalRef)
               .eq("user_id", matchedSettings.user_id)
               .maybeSingle();
+            if (invoiceLookupError) {
+              console.error("Falha ao localizar fatura do Mercado Pago:", invoiceLookupError);
+              return Response.json({ ok: false, error: "Não foi possível localizar a fatura." }, { status: 500 });
+            }
             invoice = data;
-          }
-
-          // Compatibilidade com cobranças antigas sem external_reference:
-          // só processa automaticamente quando existe UMA ÚNICA fatura do mesmo valor.
-          if (!invoice) {
-            const { data: candidates } = await supabaseAdmin
+          } else {
+            // Compatibilidade com cobranças antigas sem external_reference:
+            // só processa automaticamente quando existe UMA ÚNICA fatura do mesmo valor.
+            const { data: candidates, error: candidateError } = await supabaseAdmin
               .from("invoices")
               .select("*")
               .eq("user_id", matchedSettings.user_id)
               .in("status", ["pending", "overdue"])
               .order("due_date", { ascending: true })
               .limit(50);
+            if (candidateError) {
+              console.error("Falha ao localizar cobranças pendentes:", candidateError);
+              return Response.json({ ok: false, error: "Não foi possível localizar cobranças pendentes." }, { status: 500 });
+            }
             const amount = Number(paymentData.transaction_amount ?? 0);
             const sameAmount = (candidates ?? []).filter((item: any) => Math.abs(Number(item.amount) - amount) < 0.01);
             if (sameAmount.length === 1) invoice = sameAmount[0];
@@ -102,8 +140,15 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago")({
           if (!invoice) {
             return Response.json({ ok: true, needsReview: true, message: "Pagamento aprovado, mas nenhuma fatura correspondente foi encontrada." });
           }
+          if (validateMercadoPagoPayment(paymentData, paymentIdText, externalRef || undefined) ||
+              !isMercadoPagoAmountSufficient(paymentData.transaction_amount, invoice.amount)) {
+            return Response.json({ ok: false, needsReview: true, error: "O pagamento não corresponde à fatura ou foi recebido com valor insuficiente." }, { status: 409 });
+          }
           if (invoice.status === "paid") {
-            return Response.json({ ok: true, message: "Fatura já estava paga. Evento ignorado." });
+            return Response.json({ ok: true, alreadyProcessed: true, message: "Fatura já estava paga. Evento duplicado ignorado." });
+          }
+          if (invoice.status !== "pending" && invoice.status !== "overdue") {
+            return Response.json({ ok: false, needsReview: true, error: "A fatura não está pendente e não pode ser liquidada automaticamente." }, { status: 409 });
           }
 
           const { processPaidInvoiceAutomation } = await import("@/lib/payment-automation.server");

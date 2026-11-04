@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { processBotMessage, loadBotConfig, type BotInteractivePayload } from "./bot.server";
+import { processBotMessage, loadBotConfig } from "./bot.server";
 import {
   isTenantEvolutionEnabled,
   tenantInstanceName,
@@ -9,6 +9,8 @@ import {
 import { sendWhatsAppMedia, sendWhatsAppText } from "./whatsapp-connection.server";
 import { instanceNameFor } from "./evolution.server";
 import { parseEvolutionMessages } from "./whatsapp-event.server";
+import { completeBotReply } from "./whatsapp-message-format";
+import { isDuplicateMessage, releaseDuplicateMessage } from "./whatsapp-message-dedupe";
 
 const Pix_MEDIA_ACTIONS = new Set([
   "order_created_mp",
@@ -17,23 +19,6 @@ const Pix_MEDIA_ACTIONS = new Set([
   "renew_pix_manual_sent",
   "order_status_checked",
 ]);
-
-const processedMessages = new Map<string, number>();
-
-function pruneProcessedMessages(now: number) {
-  for (const [key, timestamp] of processedMessages) {
-    if (now - timestamp > 10 * 60_000) processedMessages.delete(key);
-  }
-}
-
-export function isDuplicateMessage(messageId: string, phone: string): boolean {
-  const key = messageId || `${phone}:${Math.floor(Date.now() / 2000)}`;
-  const now = Date.now();
-  pruneProcessedMessages(now);
-  if (processedMessages.has(key)) return true;
-  processedMessages.set(key, now);
-  return false;
-}
 
 export async function resolveTargetUserId(
   explicitUserId?: string | null,
@@ -79,25 +64,6 @@ export async function resolveTargetUserId(
   );
 }
 
-function interactiveAsText(interactive: BotInteractivePayload): string {
-  if (interactive.type === "buttons") {
-    const options = interactive.buttons.map((button) => {
-      const value = button.copyCode || button.url;
-      const command = button.type === "reply" || (!button.copyCode && !button.url) ? `${button.id}. ` : "";
-      return `${command}${button.displayText}${value ? `\n${value}` : ""}`;
-    });
-    return options.length ? options.join("\n\n") : "";
-  }
-
-  const rows = interactive.sections.flatMap((section) =>
-    section.rows.map((row) => `${row.rowId}. ${row.title}${row.description ? ` — ${row.description}` : ""}`),
-  );
-  return rows.join("\n");
-}
-
-function completeReply(reply: string, _interactive?: BotInteractivePayload, _action?: string): string {
-  return reply.trim();
-}
 
 async function recordMessage(params: {
   userId: string;
@@ -198,103 +164,133 @@ export async function processIncomingWhatsAppEvent(
       lastResult = { handled: false, ignored: "empty_text" };
       continue;
     }
-    if (isDuplicateMessage(message.messageId, message.phone)) {
+    if (isDuplicateMessage(message.messageId, message.phone, message.instance)) {
       lastResult = { handled: false, ignored: "duplicate" };
       continue;
     }
 
-    const userPromise = resolveTargetUserId(queryUserId, message.instance);
-    const claimPromise = message.messageId
-      ? supabaseAdmin.from("whatsapp_processed_messages").insert({ message_id: message.messageId })
-      : Promise.resolve({ error: null } as any);
-
-    const [userId, claimResult] = await Promise.all([userPromise, claimPromise]);
-    const claimError = claimResult?.error;
-    if (claimError?.code === "23505") {
-      lastResult = { handled: false, ignored: "duplicate" };
-      continue;
-    }
-    if (claimError) {
-      console.warn("[WhatsApp Bot] Deduplicação persistente indisponível:", claimError.message);
+    let userId: string;
+    try {
+      userId = await resolveTargetUserId(queryUserId, message.instance);
+    } catch (error) {
+      releaseDuplicateMessage(message.messageId, message.phone, message.instance);
+      throw error;
     }
 
-    const config = await loadBotConfig(supabaseAdmin, userId);
-    if (!config.enabled) {
-      lastResult = { handled: false, ignored: "bot_disabled" };
-      continue;
-    }
-
-    const contextualText = await recoverRenewalConversationInput(userId, message.phone, message.text);
-    const result = await processBotMessage(supabaseAdmin, userId, {
-      phone: message.phone,
-      text: contextualText,
-      pushName: message.pushName,
-    });
-    const reply = completeReply(result.reply, result.interactive, result.action);
-    if (!reply) {
-      lastResult = { handled: true, action: result.action, phone: message.phone };
-      continue;
-    }
-
-    const replyTarget = message.senderJid || message.phone;
-    const evolutionInstance = message.instance || tenantInstanceName(userId);
-    const sent = isTenantEvolutionEnabled()
-      ? await tenantSendText(evolutionInstance, replyTarget, reply, true)
-      : await sendWhatsAppText(replyTarget, reply, message.instance || undefined);
-
-    if (!sent.ok) {
-      await recordMessage({
-        userId,
-        phone: message.phone,
-        body: reply,
-        status: "failed",
-        error: sent.error,
-      });
-      // Libera a marca de "já processada" para que a mensagem possa ser reprocessada.
-      if (message.messageId) {
-        processedMessages.delete(message.messageId);
-        await supabaseAdmin
+    // A chave persistente inclui o tenant, evitando colisões de messageId entre contas.
+    const persistedMessageId = message.messageId ? `${userId}:${message.messageId}` : "";
+    if (persistedMessageId) {
+      let claimError: { code?: string; message?: string } | null = null;
+      try {
+        const result = await supabaseAdmin
           .from("whatsapp_processed_messages")
-          .delete()
-          .eq("message_id", message.messageId);
+          .insert({ message_id: persistedMessageId });
+        claimError = result.error;
+      } catch (error) {
+        releaseDuplicateMessage(message.messageId, message.phone, message.instance);
+        throw new Error(
+          `Não foi possível registrar o processamento da mensagem: ${error instanceof Error ? error.message : "falha de rede"}`,
+        );
       }
-      throw new Error(`A resposta foi gerada, mas o WhatsApp recusou o envio: ${sent.error}`);
+
+      if (claimError?.code === "23505") {
+        releaseDuplicateMessage(message.messageId, message.phone, message.instance);
+        lastResult = { handled: false, ignored: "duplicate" };
+        continue;
+      }
+      if (claimError) {
+        releaseDuplicateMessage(message.messageId, message.phone, message.instance);
+        throw new Error(`Não foi possível proteger o processamento contra duplicatas: ${claimError.message}`);
+      }
     }
 
-    await recordMessage({ userId, phone: message.phone, body: reply, status: "sent" });
+    let replySent = false;
+    try {
+      const config = await loadBotConfig(supabaseAdmin, userId);
+      if (!config.enabled) {
+        lastResult = { handled: false, ignored: "bot_disabled" };
+        continue;
+      }
 
-    if (result.media?.base64 && Pix_MEDIA_ACTIONS.has(result.action)) {
-      const media = {
-        base64: result.media.base64,
-        caption: result.media.caption || "QR Code Pix",
-        mimetype: "image/png",
-        fileName: "qrcode-pix.png",
+      const contextualText = await recoverRenewalConversationInput(userId, message.phone, message.text);
+      const result = await processBotMessage(supabaseAdmin, userId, {
+        phone: message.phone,
+        text: contextualText,
+        pushName: message.pushName,
+      });
+      const reply = completeBotReply(result.reply, result.interactive);
+      if (!reply) {
+        lastResult = { handled: true, action: result.action, phone: message.phone };
+        continue;
+      }
+
+      const replyTarget = message.senderJid || message.phone;
+      const evolutionInstance = message.instance || tenantInstanceName(userId);
+      const sent = isTenantEvolutionEnabled()
+        ? await tenantSendText(evolutionInstance, replyTarget, reply, true)
+        : await sendWhatsAppText(replyTarget, reply, message.instance || undefined);
+
+      if (!sent.ok) {
+        await recordMessage({
+          userId,
+          phone: message.phone,
+          body: reply,
+          status: "failed",
+          error: sent.error,
+        });
+        throw new Error(`A resposta foi gerada, mas o WhatsApp recusou o envio: ${sent.error}`);
+      }
+
+      replySent = true;
+      await recordMessage({ userId, phone: message.phone, body: reply, status: "sent" });
+
+      if (result.media?.base64 && Pix_MEDIA_ACTIONS.has(result.action)) {
+        const media = {
+          base64: result.media.base64,
+          caption: result.media.caption || "QR Code Pix",
+          mimetype: "image/png",
+          fileName: "qrcode-pix.png",
+        };
+        if (isTenantEvolutionEnabled()) {
+          await tenantSendMedia(evolutionInstance, replyTarget, media, true);
+        } else {
+          await sendWhatsAppMedia(replyTarget, media, message.instance || undefined);
+        }
+      }
+
+      const hasCopyValue =
+        result.interactive?.type === "buttons" &&
+        result.interactive.buttons.some((button) => Boolean(button.copyCode));
+      for (const extra of hasCopyValue ? [] : result.extraMessages ?? []) {
+        if (!extra.trim()) continue;
+        if (isTenantEvolutionEnabled()) {
+          await tenantSendText(evolutionInstance, replyTarget, extra, true);
+        } else {
+          await sendWhatsAppText(replyTarget, extra, message.instance || undefined);
+        }
+      }
+
+      lastResult = {
+        handled: true,
+        action: result.action,
+        reply,
+        phone: message.phone,
       };
-      if (isTenantEvolutionEnabled()) {
-        await tenantSendMedia(evolutionInstance, replyTarget, media, true);
-      } else {
-        await sendWhatsAppMedia(replyTarget, media, message.instance || undefined);
+    } catch (error) {
+      // Antes de enviar texto, libera a chave para retry; depois do envio,
+      // mantém a marca para não duplicar a resposta em caso de falha de mídia/log.
+      if (!replySent) {
+        releaseDuplicateMessage(message.messageId, message.phone, message.instance);
+        if (persistedMessageId) {
+          await supabaseAdmin
+            .from("whatsapp_processed_messages")
+            .delete()
+            .eq("message_id", persistedMessageId)
+            .catch(() => undefined);
+        }
       }
+      throw error;
     }
-
-    const hasCopyValue =
-      result.interactive?.type === "buttons" &&
-      result.interactive.buttons.some((button) => Boolean(button.copyCode));
-    for (const extra of hasCopyValue ? [] : result.extraMessages ?? []) {
-      if (!extra.trim()) continue;
-      if (isTenantEvolutionEnabled()) {
-        await tenantSendText(evolutionInstance, replyTarget, extra, true);
-      } else {
-        await sendWhatsAppText(replyTarget, extra, message.instance || undefined);
-      }
-    }
-
-    lastResult = {
-      handled: true,
-      action: result.action,
-      reply,
-      phone: message.phone,
-    };
   }
 
   return lastResult;

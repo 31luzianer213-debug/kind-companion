@@ -58,6 +58,7 @@ const defaults: PaymentSettingsPayload = {
   payment_provider: "pix",
   mercadopago_token: "",
   asaas_token: "",
+  asaas_webhook_token: "",
   asaas_env: "production",
 };
 
@@ -74,6 +75,7 @@ function PagamentosPage() {
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [showMpToken, setShowMpToken] = useState(false);
   const [showAsaasToken, setShowAsaasToken] = useState(false);
+  const [showAsaasWebhookToken, setShowAsaasWebhookToken] = useState(false);
 
   // Estados de teste de conexão dos gateways
   const [testingMp, setTestingMp] = useState(false);
@@ -101,6 +103,7 @@ function PagamentosPage() {
         // Tokens ficam guardados só no servidor; o campo continua em branco.
         mercadopago_token: prev.mercadopago_token,
         asaas_token: prev.asaas_token,
+        asaas_webhook_token: prev.asaas_webhook_token,
         asaas_env: data.asaas_env ?? prev.asaas_env,
       }));
     }
@@ -651,6 +654,34 @@ function PagamentosPage() {
                 </div>
               </div>
 
+              <div className="space-y-1.5 rounded-md border border-primary/20 bg-primary/5 p-3">
+                <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                  <ShieldCheck className="size-3.5 text-primary" /> Auth Token do Webhook Asaas *
+                </Label>
+                <div className="relative flex items-center">
+                  <Input
+                    type={showAsaasWebhookToken ? "text" : "password"}
+                    placeholder={(data as any)?.has_asaas_webhook_token ? "Auth Token salvo — deixe em branco para manter" : "Cole o Auth Token de 32 a 255 caracteres"}
+                    value={form.asaas_webhook_token || ""}
+                    onChange={(e) => setForm({ ...form, asaas_webhook_token: e.target.value })}
+                    className="rounded-md font-mono text-sm pr-10"
+                    required={activeProvider === "asaas" && !(data as any)?.has_asaas_webhook_token}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAsaasWebhookToken(!showAsaasWebhookToken)}
+                    className="absolute right-1 size-7 text-muted-foreground hover:text-foreground"
+                  >
+                    {showAsaasWebhookToken ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  </Button>
+                </div>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  Gere um Auth Token no cadastro do Webhook do Asaas e use o mesmo valor aqui. Ele deve ter entre 32 e 255 caracteres, sem espaços. Não use sua Chave de API neste campo.
+                </p>
+              </div>
+
               {/* Testar Conexão Asaas */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <Button
@@ -693,7 +724,7 @@ function PagamentosPage() {
               <div className="flex items-center gap-2">
                 <Zap className="size-5 text-primary" />
                 <CardTitle className="text-base text-foreground">
-                  Webhooks para Confirmação Automática (Pix 100% Autônomo)
+                  Webhooks para Confirmação Automática de Pagamentos
                 </CardTitle>
               </div>
               <Badge variant="outline" className="border-primary/30 text-primary text-xs font-semibold">
@@ -701,7 +732,7 @@ function PagamentosPage() {
               </Badge>
             </div>
             <CardDescription>
-              Cadastre estas URLs nos seus portais do Mercado Pago e Asaas para liquidar faturas e renovar linhas no Sigma imediatamente quando o cliente pagar.
+              O Mercado Pago recebe o Pix gerado pelo sistema. No Asaas, crie a cobrança na própria conta e use o ID da fatura como External Reference; quando o pagamento for confirmado, o webhook dá baixa na fatura e solicita a renovação no Sigma.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-4 text-xs">
@@ -744,7 +775,7 @@ function PagamentosPage() {
                   <Building className="size-3.5 text-primary" />
                   URL do Webhook Asaas
                 </span>
-                <span className="text-[11px] text-muted-foreground">Eventos: Pagamento Recebido / Confirmado</span>
+                <span className="text-[11px] text-muted-foreground">Eventos: PAYMENT_RECEIVED / PAYMENT_CONFIRMED</span>
               </div>
               <div className="flex items-center gap-2">
                 <Input
@@ -767,6 +798,9 @@ function PagamentosPage() {
                   Copiar
                 </Button>
               </div>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Ao gerar a cobrança no Asaas, informe em <strong>External Reference</strong> o ID copiado em Cobranças → Ver. Sem essa referência o sistema não associa o recebimento a uma fatura. O Auth Token do webhook também precisa ser igual ao salvo acima.
+              </p>
             </div>
           </CardContent>
         </Card>

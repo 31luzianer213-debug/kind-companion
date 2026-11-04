@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { isModernMisticCredentialPair } from "./misticpay.server";
 
 /**
  * E-mail do admin definido por ambiente — usado apenas quando o painel Admin
@@ -41,7 +42,9 @@ export async function getMisticCreds(): Promise<{ clientId: string; clientSecret
   const s = await getSystemSettings();
   const clientId = s?.misticpay_client_id?.trim();
   const clientSecret = s?.misticpay_client_secret?.trim();
-  return clientId && clientSecret ? { clientId, clientSecret } : null;
+  return clientId && clientSecret && isModernMisticCredentialPair(clientId, clientSecret)
+    ? { clientId, clientSecret }
+    : null;
 }
 
 /** Qual conta recebe as assinaturas agora. */

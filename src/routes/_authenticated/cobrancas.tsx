@@ -153,6 +153,11 @@ function Cobrancas() {
     toast.success("Pix copiado.");
   }
 
+  function copyInvoiceReference(invoice: InvoiceRow) {
+    navigator.clipboard.writeText(invoice.id);
+    toast.success("Referência externa da fatura copiada.");
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="page-header flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -237,6 +242,18 @@ function Cobrancas() {
               <div className="rounded-lg border bg-muted/30 p-3"><p className="text-xs text-muted-foreground">Valor</p><p className="font-mono font-bold">{formatBRL(details.amount)}</p></div>
               <div className="rounded-lg border bg-muted/30 p-3"><p className="text-xs text-muted-foreground">Vencimento</p><p className="font-semibold">{formatDate(details.due_date)}</p></div>
               <div className="rounded-lg border bg-muted/30 p-3"><p className="text-xs text-muted-foreground">Lembretes</p><p className="font-semibold">{details.reminders_sent || 0}</p></div>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+              <div>
+                <p className="text-xs text-muted-foreground">External Reference para o Asaas</p>
+                <p className="break-all font-mono text-xs">{details.id}</p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={() => copyInvoiceReference(details)} className="w-full gap-2">
+                <Copy className="size-3.5" /> Copiar referência da fatura
+              </Button>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Ao criar esta cobrança no Asaas, cole este ID no campo External Reference. O webhook só confirma a fatura quando a referência e o valor correspondem.
+              </p>
             </div>
             {details.paid_at ? <div className="rounded-lg border border-success/20 bg-success/5 p-3"><p className="text-xs text-muted-foreground">Pagamento confirmado</p><p className="font-semibold text-success">{formatDate(details.paid_at)}</p></div> : null}
             {((details as any).pix_code || data?.settings?.pix_key) ? <Button variant="outline" onClick={() => copyPix(details)} className="w-full gap-2"><Copy className="size-4" /> Copiar Pix registrado</Button> : null}

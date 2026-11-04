@@ -2,9 +2,10 @@ name: Validate application
 
 on:
   push:
-    branches: [main]
+    branches: [main, qa/mass-regression-tests]
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 permissions:
@@ -15,21 +16,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
+          bun-version: latest
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: bun install --frozen-lockfile
 
-      - name: Build
-        run: npm run build
+      - name: Unit tests
+        run: bun run test
+
+      - name: Vitest intent-router regressions
+        run: bun run test:vitest
+
+      - name: Lint critical bot and integration modules
+        run: bun run lint:qa
+
+      - name: Production build
+        run: bun run build

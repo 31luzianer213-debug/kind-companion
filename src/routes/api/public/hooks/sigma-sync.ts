@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { consumeWebhookRateLimit, timingSafeStringEquals, webhookRateLimitKey } from "@/lib/webhook-security.server";
 
 export const Route = createFileRoute("/api/public/hooks/sigma-sync")({
   server: {
@@ -17,8 +18,12 @@ async function handleSync(request: Request) {
   const passedSecret = match?.[1] || url.searchParams.get("secret");
 
   // Sem segredo configurado a rotina permanece fechada.
-  if (!secret || !passedSecret || passedSecret !== secret) {
+  if (!secret || !timingSafeStringEquals(passedSecret, secret)) {
     return Response.json({ ok: false, error: "Não autorizado." }, { status: 401 });
+  }
+
+  if (!consumeWebhookRateLimit(webhookRateLimitKey(request, "sigma-sync"), 5, 60_000)) {
+    return Response.json({ ok: false, error: "Muitas solicitações de sincronização. Tente novamente em instantes." }, { status: 429 });
   }
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

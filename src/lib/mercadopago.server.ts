@@ -13,6 +13,13 @@ export interface CreateMercadoPagoPixInput {
   webhookUrl?: string;
 }
 
+/** Chave estável: retries do mesmo pedido não criam cobranças Pix diferentes. */
+export function mercadoPagoPixIdempotencyKey(orderId: string): string {
+  const normalized = String(orderId || "").trim();
+  if (!normalized) throw new Error("ID do pedido é obrigatório para gerar a chave de idempotência.");
+  return `ord_pix_${normalized}`;
+}
+
 export interface CreateMercadoPagoPixResult {
   ok: boolean;
   paymentId?: string;
@@ -62,7 +69,7 @@ export async function createMercadoPagoPixPayment(
   }
 
   try {
-    const idempotencyKey = `ord_pix_${input.orderId}_${Date.now()}`;
+    const idempotencyKey = mercadoPagoPixIdempotencyKey(input.orderId);
     const res = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
       headers: {

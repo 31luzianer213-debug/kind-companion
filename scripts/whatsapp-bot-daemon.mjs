@@ -18,6 +18,7 @@
  */
 
 import { createRequire } from "module";
+import { isAuthorizedRequest, isSafeInstanceId, normalizePrivateRecipient, readJsonBody } from "./whatsapp-bot-security.mjs";
 const require = createRequire(import.meta.url);
 
 // Shim de compatibilidade (redireciona @whiskeysockets/baileys → whaileys)
@@ -52,6 +53,8 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 
+try { process.loadEnvFile(path.resolve(process.cwd(), ".env")); } catch {}
+
 if (!global.crypto) {
   global.crypto = require("crypto").webcrypto || require("crypto");
 }
@@ -60,7 +63,11 @@ const AUTH_DIR = path.resolve(process.cwd(), "auth_baileys");
 const DATA_DIR = path.resolve(process.cwd(), "data");
 const STATUS_FILE = path.join(DATA_DIR, "baileys_status.json");
 const HTTP_PORT = process.env.BAILEYS_PORT ? Number(process.env.BAILEYS_PORT) : 3001;
+const HTTP_HOST = process.env.BAILEYS_API_HOST?.trim() || "127.0.0.1";
+const API_TOKEN = process.env.BAILEYS_API_TOKEN?.trim() || "";
+const LOOPBACK_ONLY = ["127.0.0.1", "::1", "localhost"].includes(HTTP_HOST);
 const WEB_SERVER_PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
+if (!LOOPBACK_ONLY && !API_TOKEN) throw new Error("BAILEYS_API_TOKEN é obrigatório quando BAILEYS_API_HOST não é localhost.");
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
@@ -98,16 +105,7 @@ function normalizeButtons(buttons) {
   });
 }
 
-function formatTargetJid(raw) {
-  if (!raw) return "";
-  const s = String(raw).trim();
-  if (s.endsWith("@s.whatsapp.net") || s.endsWith("@lid") || s.endsWith("@g.us")) return s;
-  let digits = s.replace(/\D/g, "");
-  if (!digits.startsWith("55") && (digits.length === 10 || digits.length === 11)) {
-    digits = `55${digits}`;
-  }
-  return `${digits}@s.whatsapp.net`;
-}
+function formatTargetJid(raw) { return normalizePrivateRecipient(raw); }
 
 /**
  * Gera variações BR (com/sem o nono dígito) para um número.
@@ -184,67 +182,7 @@ function listToText(text, sections, footer) {
 // por padrão o bot usa texto puro, que nunca aparece como indisponível.
 const INTERACTIVE_ENABLED = process.env.BAILEYS_INTERACTIVE === "1";
 
-function extractCleanText(messageObj) {
-  if (!messageObj || typeof messageObj !== "object") return "";
-  const unwrapped =
-    messageObj.ephemeralMessage?.message ||
-    messageObj.viewOnceMessage?.message ||
-    messageObj.viewOnceMessageV2?.message ||
-    messageObj.documentWithCaptionMessage?.message ||
-    messageObj;
-
-  let text =
-    unwrapped?.conversation ||
-    unwrapped?.extendedTextMessage?.text ||
-    unwrapped?.buttonsResponseMessage?.selectedButtonId ||
-    unwrapped?.buttonsResponseMessage?.selectedDisplayText ||
-    unwrapped?.listResponseMessage?.singleSelectReply?.selectedRowId ||
-    unwrapped?.listResponseMessage?.title ||
-    unwrapped?.templateButtonReplyMessage?.selectedId ||
-    unwrapped?.interactiveResponseMessage?.body?.text ||
-    "";
-
-  if (!text && unwrapped?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
-    try {
-      const parsed = JSON.parse(unwrapped.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
-      text = parsed.id || parsed.rowId || parsed.selectedId || "";
-    } catch {}
-  }
-
-  return String(text || "").trim();
-}
-
-function loadLocalBotConfig(instanceId) {
-  try {
-    const instConfig = path.join(DATA_DIR, `bot_config_${instanceId}.json`);
-    if (fs.existsSync(instConfig)) {
-      return JSON.parse(fs.readFileSync(instConfig, "utf8"));
-    }
-  } catch {}
-  try {
-    const defConfig = path.join(DATA_DIR, "bot_config_default.json");
-    if (fs.existsSync(defConfig)) {
-      return JSON.parse(fs.readFileSync(defConfig, "utf8"));
-    }
-  } catch {}
-
-  return {
-    enabled: true,
-    businessName: "Alpha IPTV",
-    serverName: "Alpha server IPTV",
-    streamingDns: "http://karen256.top",
-    testEnabled: true,
-    testDurationHours: 4,
-    pixKey: "Consulte nossa chave PIX no atendimento",
-    pixHolder: "Alpha IPTV",
-    planMonthlyPrice: 35,
-    planQuarterlyPrice: 90,
-    planSemiannualPrice: 160,
-    planAnnualPrice: 290,
-    appAndroidApk: "https://bit.ly/app-xciptv-oficial",
-    appAndroidDownloaderCode: "389471",
-  };
-}
+// Fallback local removido: ações comerciais só podem ser executadas pelo backend.
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║        CLASSE DE SESSÃO BAILEYS MULTI-INSTÂNCIA             ║
@@ -562,191 +500,30 @@ class WhatsAppSession {
 
   async handleIncomingMessage(msg) {
     if (!msg.message || msg.key.fromMe) return;
-
     const jid = msg.key.remoteJid;
     if (!jid || jid.includes("@g.us") || jid.includes("@broadcast")) return;
 
-    const pushName = msg.pushName || "Cliente";
+    const webhookUrl = `http://127.0.0.1:${WEB_SERVER_PORT}/api/public/hooks/whatsapp-bot?userId=${encodeURIComponent(this.instanceId)}`;
+    const headers = { "Content-Type": "application/json" };
+    const webhookToken = process.env.WHATSAPP_WEBHOOK_TOKEN?.trim();
+    if (webhookToken) headers["x-webhook-token"] = webhookToken;
 
-    // 1. Tenta delegar para o webhook oficial do Servidor Web IPTV (porta 3000)
     try {
-      const webhookUrl = `http://127.0.0.1:${WEB_SERVER_PORT}/api/public/hooks/whatsapp-bot?userId=${encodeURIComponent(this.instanceId)}`;
-      const res = await fetch(webhookUrl, {
+      const response = await fetch(webhookUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          event: "messages.upsert",
-          instance: this.instanceId,
-          data: msg,
-        }),
+        headers,
+        body: JSON.stringify({ event: "messages.upsert", instance: this.instanceId, data: msg }),
         signal: AbortSignal.timeout(8000),
       });
-
-      if (res.ok) {
-        const json = await res.json();
-        if (json.handled) {
-          console.log(`[${this.instanceId}] ✅ Mensagem tratada pelo webhook IPTV: ${json.action || "ok"}`);
-          return;
-        }
+      if (!response.ok) {
+        console.error(`[${this.instanceId}] Webhook recusou a mensagem (HTTP ${response.status}); sem fallback local.`);
+        return;
       }
-    } catch (whErr) {
-      console.warn(`[${this.instanceId}] Webhook local (${whErr.message}), usando fallback integrado.`);
+      const result = await response.json().catch(() => null);
+      console.log(`[${this.instanceId}] Webhook: ${result?.action || result?.ignored || "sem ação"}`);
+    } catch (error) {
+      console.error(`[${this.instanceId}] Backend indisponível; mensagem não processada: ${error?.message || error}`);
     }
-
-    // 2. Fallback integrado do bot de IPTV (caso o webhook web esteja offline ou reiniciando)
-    await this.handleFallbackIptvMessage(msg, jid, pushName);
-  }
-
-  async handleFallbackIptvMessage(msg, jid, pushName) {
-    const rawText = extractCleanText(msg.message);
-    const text = rawText.toLowerCase();
-    const config = loadLocalBotConfig(this.instanceId);
-    const phone = jid.replace(/\D/g, "");
-
-    console.log(`[${this.instanceId}] 🤖 Resposta local Baileys para ${phone} ("${rawText}")`);
-
-    if (
-      text === "1" ||
-      text === "1." ||
-      text === "btn_teste" ||
-      text.includes("teste") ||
-      text.includes("testar") ||
-      text.includes("gratis") ||
-      text.includes("grátis")
-    ) {
-      const user = Math.floor(10000000 + Math.random() * 90000000).toString();
-      const pass = Math.floor(100000 + Math.random() * 900000).toString();
-      const dns = config.streamingDns || "http://karen256.top";
-      const m3uUrl = `${dns}/get.php?username=${user}&password=${pass}&type=m3u_plus&output=ts`;
-
-      await this.sendButtonsMessage(jid, {
-        text:
-          `🎉 *SEU TESTE GRÁTIS FOI GERADO COM SUCESSO!* 🍿\n\n` +
-          `👤 *Cliente:* ${pushName}\n` +
-          `📺 *Servidor:* ${config.serverName || "Alpha IPTV"}\n` +
-          `🌐 *URL / DNS:* ${dns}\n` +
-          `🔑 *Usuário:* *${user}*\n` +
-          `🔒 *Senha:* *${pass}*\n` +
-          `⏳ *Validade:* ${config.testDurationHours || 4} Horas\n\n` +
-          `🔗 *Lista M3U Plus:*\n${m3uUrl}\n\n` +
-          `Toque abaixo para baixar nosso aplicativo oficial:`,
-        footer: `${config.businessName || "Alpha IPTV"} • Suporte 24h`,
-        buttons: [
-          {
-            name: "cta_url",
-            buttonParamsJson: JSON.stringify({
-              display_text: "📲 Baixar App Oficial",
-              url: config.appAndroidApk || "https://bit.ly/app-xciptv-oficial",
-            }),
-          },
-          { id: "3", text: "🛒 Ver Nossos Planos" },
-          { id: "voltar_menu", text: "⬅️ Menu Principal" },
-        ],
-      });
-      return;
-    }
-
-    if (
-      text === "2" ||
-      text === "2." ||
-      text === "btn_renovar" ||
-      text.startsWith("plano_") ||
-      text.includes("renovar") ||
-      text.includes("pix") ||
-      text.includes("pagar")
-    ) {
-      const pix = config.pixKey || "00020126580014br.gov.bcb.pix0136pix-iptv-cobranca-automatica-20265204000053039865802BR5915IPTV ASSINATURA6009SAO PAULO62070503***6304ABCD";
-      await this.sendCopyButtonMessage(
-        jid,
-        pix,
-        `💳 *PAGAMENTO VIA PIX AUTOMÁTICO* 📺\n\n` +
-          `💰 *Valor:* R$ ${Number(config.planMonthlyPrice || 35).toFixed(2).replace(".", ",")}\n` +
-          `👤 *Titular:* ${config.pixHolder || config.businessName || "Central IPTV"}\n` +
-          `⚡ Liberação automática no servidor assim que o PIX for concluído!\n\n` +
-          `👇 Toque no botão abaixo para copiar o código PIX Copia e Cola:`,
-      );
-      return;
-    }
-
-    if (text === "3" || text === "3." || text === "btn_planos" || text.includes("plano") || text.includes("preço")) {
-      const m = Number(config.planMonthlyPrice || 35).toFixed(2).replace(".", ",");
-      const q = Number(config.planQuarterlyPrice || 90).toFixed(2).replace(".", ",");
-      const s = Number(config.planSemiannualPrice || 160).toFixed(2).replace(".", ",");
-      const a = Number(config.planAnnualPrice || 290).toFixed(2).replace(".", ",");
-
-      await this.sendListMessage(jid, {
-        title: "🍿 Planos IPTV",
-        text:
-          `🛒 *PLANOS E ASSINATURAS ${config.serverName?.toUpperCase() || "IPTV"}* 🍿\n\n` +
-          `📺 *1 Mês:* R$ ${m}\n` +
-          `📺 *3 Meses:* R$ ${q} (Econômico!)\n` +
-          `📺 *6 Meses:* R$ ${s} (Mais Vendido 🔥)\n` +
-          `📺 *12 Meses:* R$ ${a} (Super Desconto ⭐)\n\n` +
-          `⭐ *Mais de 80.000 conteúdos com canais 4K, filmes, séries e EPG.*`,
-        buttonText: "📋 Ver Opções de Planos",
-        footer: "Toque abaixo para assinar:",
-        rows: [
-          { rowId: "plano_1m", title: `1️⃣ 1 Mês — R$ ${m}`, description: "1 tela / Ativação Imediata" },
-          { rowId: "plano_3m", title: `2️⃣ 3 Meses — R$ ${q}`, description: "Econômico / 1 tela" },
-          { rowId: "plano_6m", title: `3️⃣ 6 Meses — R$ ${s}`, description: "Mais Vendido 🔥" },
-          { rowId: "plano_12m", title: `4️⃣ 12 Meses — R$ ${a}`, description: "Super Desconto ⭐" },
-          { rowId: "0", title: "⬅️ Menu Principal", description: "Voltar ao início" },
-        ],
-      });
-      return;
-    }
-
-    if (text === "4" || text === "4." || text === "btn_apps" || text.includes("app") || text.includes("baixar")) {
-      await this.sendButtonsMessage(jid, {
-        text:
-          `📲 *APLICATIVOS OFICIAIS DISPONÍVEIS* 🍿\n\n` +
-          `• *TV Box & Android:* No aplicativo *Downloader*, digite o código rápido: *${config.appAndroidDownloaderCode || "389471"}*\n` +
-          `• *Celular Android:* Toque no botão *Baixar APK Android* abaixo.\n` +
-          `• *iPhone / iPad / Apple TV:* Toque no botão *App iPhone / iPad* abaixo.\n` +
-          `• *Computador (PC):* Toque no botão *App Windows (PC)* abaixo.\n` +
-          `• *Smart TVs:* Baixe o IBO Player ou SmartOne na loja da TV.\n\n` +
-          `Toque no botão correspondente ao seu aparelho para baixar direto:`,
-        footer: `${config.businessName || "Alpha IPTV"} • Suporte 24h`,
-        buttons: [
-          {
-            name: "cta_url",
-            buttonParamsJson: JSON.stringify({
-              display_text: "🤖 Baixar APK Android",
-              url: config.appAndroidApk || "https://bit.ly/app-xciptv-oficial",
-            }),
-          },
-          {
-            name: "cta_url",
-            buttonParamsJson: JSON.stringify({
-              display_text: "🍏 App iPhone / iPad",
-              url: config.appIosLink || "https://apps.apple.com/app/smarters-player-lite/id1628995509",
-            }),
-          },
-          {
-            name: "cta_url",
-            buttonParamsJson: JSON.stringify({
-              display_text: "💻 App Windows (PC)",
-              url: config.appWindowsLink || "https://www.iptvsmarters.com/download?download=windows",
-            }),
-          },
-        ],
-      });
-      return;
-    }
-
-    // Menu Principal Padrão
-    await this.sendButtonsMessage(jid, {
-      text:
-        `👋 Olá, *${pushName}*! Seja muito bem-vindo(a) à *${config.businessName || "Alpha IPTV"}*! 🍿\n\n` +
-        `Eu sou o assistente virtual 24h e estou pronto para te atender.\n` +
-        `Escolha uma das opções abaixo para começar:`,
-      footer: "Atendimento 100% Automático",
-      buttons: [
-        { id: "1", text: "1️⃣ Gerar Teste Grátis" },
-        { id: "2", text: "2️⃣ Renovar / Pagar PIX" },
-        { id: "3", text: "3️⃣ Ver Nossos Planos" },
-      ],
-    });
   }
 }
 
@@ -758,6 +535,7 @@ const sessions = new Map();
 
 export function getOrCreateSession(instanceId = "default") {
   const id = instanceId?.trim() || "default";
+  if (!isSafeInstanceId(id)) throw new Error("Identificador de instância inválido.");
   if (!sessions.has(id)) {
     const s = new WhatsAppSession(id);
     sessions.set(id, s);
@@ -780,7 +558,7 @@ async function autoStartSavedSessions() {
   try {
     const entries = fs.readdirSync(AUTH_DIR, { withFileTypes: true });
     for (const ent of entries) {
-      if (ent.isDirectory()) {
+      if (ent.isDirectory() && isSafeInstanceId(ent.name)) {
         const subCreds = path.join(AUTH_DIR, ent.name, "creds.json");
         if (fs.existsSync(subCreds)) {
           console.log(`⚡ Sessão de usuário '${ent.name}' encontrada com credenciais. Conectando...`);
@@ -798,205 +576,126 @@ async function autoStartSavedSessions() {
 // ║        SERVIDOR HTTP DE CONTROLE LOCAL (PORTA 3001)           ║
 // ╚══════════════════════════════════════════════════════════════╝
 
-const server = http.createServer(async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Instance");
+function sendJson(res, status, payload) {
+  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+  res.end(JSON.stringify(payload));
+}
 
-  if (req.method === "OPTIONS") {
-    res.writeHead(200);
-    res.end();
-    return;
+const server = http.createServer(async (req, res) => {
+  if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
+  if (!isAuthorizedRequest(req, API_TOKEN, LOOPBACK_ONLY)) {
+    sendJson(res, 401, { ok: false, error: "Não autorizado." }); return;
   }
 
   const parsedUrl = new URL(req.url || "/", `http://localhost:${HTTP_PORT}`);
   const pathname = parsedUrl.pathname;
-  const instanceParam =
-    parsedUrl.searchParams.get("instance") ||
-    req.headers["x-instance"] ||
-    "default";
+  const instanceParam = String(parsedUrl.searchParams.get("instance") || req.headers["x-instance"] || "default");
+  if (pathname !== "/api/sessions" && !isSafeInstanceId(instanceParam)) {
+    sendJson(res, 400, { ok: false, error: "Identificador de instância inválido." }); return;
+  }
 
-  // GET /api/sessions — lista o estado de todas as sessões ativas
   if (pathname === "/api/sessions" && req.method === "GET") {
-    const list = Array.from(sessions.values()).map((s) => s.state);
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ ok: true, sessions: list }));
-    return;
+    sendJson(res, 200, { ok: true, sessions: Array.from(sessions.values()).map((s) => s.state) }); return;
   }
-
-  // GET /api/status?instance=<id>
   if (pathname === "/api/status" && req.method === "GET") {
-    const session = getOrCreateSession(instanceParam);
-    let state = session.state;
-    // Se essa instância não está conectada, mas existe outra sessão conectada,
-    // devolve a conectada para o painel mostrar o número corretamente.
-    if (state?.status !== "open") {
-      for (const s of sessions.values()) {
-        if (s.state?.status === "open") {
-          state = s.state;
-          break;
-        }
-      }
-    }
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(state));
-    return;
+    sendJson(res, 200, getOrCreateSession(instanceParam).state); return;
   }
 
-  // POST /api/connect
   if (pathname === "/api/connect" && req.method === "POST") {
-    let body = "";
-    req.on("data", (chunk) => (body += chunk));
-    req.on("end", async () => {
-      try {
-        const payload = JSON.parse(body || "{}");
-        const instanceId = payload.instance || instanceParam || "default";
-        const mode = payload.mode || "qr";
-        const force = Boolean(payload.force);
-
-        const session = getOrCreateSession(instanceId);
-
-        // Se já tem QR Code fresco gerado nos últimos 30s e não foi forçado
-        if (!force && mode === "qr" && session.state.qrCode && Date.now() - session.state.updatedAt < 30000) {
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: true, state: session.state }));
-          return;
-        }
-
-        await session.connect({ mode, phone: payload.phone, force });
-
-        // Aguarda até 5.5 segundos para emissão do QR Code ou Pairing Code
-        const timeoutAt = Date.now() + 5500;
-        while (Date.now() < timeoutAt) {
-          if (mode === "qr" && session.state.qrCode) break;
-          if (mode === "pairing" && session.state.pairingCode) break;
-          if (session.state.status === "open") break;
-          await new Promise((r) => setTimeout(r, 200));
-        }
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: true, state: session.state }));
-      } catch (e) {
-        res.writeHead(500, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: false, error: e.message }));
+    try {
+      const payload = await readJsonBody(req);
+      const instanceId = String(payload.instance || instanceParam || "default");
+      if (!isSafeInstanceId(instanceId)) { sendJson(res, 400, { ok: false, error: "Instância inválida." }); return; }
+      const mode = payload.mode === "pairing" ? "pairing" : "qr";
+      const phone = String(payload.phone || "").replace(/\D/g, "");
+      if (mode === "pairing" && (phone.length < 10 || phone.length > 15)) {
+        sendJson(res, 400, { ok: false, error: "Informe um telefone válido para pareamento." }); return;
       }
-    });
+      const session = getOrCreateSession(instanceId);
+      if (!payload.force && mode === "qr" && session.state.qrCode && Date.now() - session.state.updatedAt < 30000) {
+        sendJson(res, 200, { ok: true, state: session.state }); return;
+      }
+      await session.connect({ mode, phone: phone || null, force: Boolean(payload.force) });
+      const timeoutAt = Date.now() + 5500;
+      while (Date.now() < timeoutAt) {
+        if ((mode === "qr" && session.state.qrCode) || (mode === "pairing" && session.state.pairingCode) || session.state.status === "open") break;
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      sendJson(res, 200, { ok: true, state: session.state });
+    } catch (error) { sendJson(res, error?.statusCode || 400, { ok: false, error: error?.message || "Falha ao conectar." }); }
     return;
   }
 
-  // POST /api/logout
   if (pathname === "/api/logout" && req.method === "POST") {
-    let body = "";
-    req.on("data", (chunk) => (body += chunk));
-    req.on("end", async () => {
-      try {
-        const payload = JSON.parse(body || "{}");
-        const instanceId = payload.instance || instanceParam || "default";
-        const session = getOrCreateSession(instanceId);
-        await session.logout();
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: true }));
-      } catch (e) {
-        res.writeHead(500, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: false, error: e.message }));
-      }
-    });
+    try {
+      const payload = await readJsonBody(req);
+      const instanceId = String(payload.instance || instanceParam || "default");
+      if (!isSafeInstanceId(instanceId)) { sendJson(res, 400, { ok: false, error: "Instância inválida." }); return; }
+      await getOrCreateSession(instanceId).logout();
+      sendJson(res, 200, { ok: true });
+    } catch (error) { sendJson(res, error?.statusCode || 400, { ok: false, error: error?.message || "Falha ao desconectar." }); }
     return;
   }
 
-  // POST /api/send-message, /api/send-test, /message/sendText
-  if (
-    (pathname === "/api/send-message" || pathname === "/api/send-test" || pathname.startsWith("/message/send")) &&
-    req.method === "POST"
-  ) {
-    let body = "";
-    req.on("data", (chunk) => (body += chunk));
-    req.on("end", async () => {
-      try {
-        const payload = JSON.parse(body || "{}");
-        const instanceId = payload.instance || instanceParam || "default";
+  if ((pathname === "/api/send-message" || pathname === "/api/send-test" || pathname.startsWith("/message/send")) && req.method === "POST") {
+    try {
+      const payload = await readJsonBody(req, 6 * 1024 * 1024);
+      const instanceId = String(payload.instance || instanceParam || "default");
+      if (!isSafeInstanceId(instanceId)) { sendJson(res, 400, { ok: false, error: "Instância inválida." }); return; }
 
-        // Procura a sessão específica, ou default, ou qualquer sessão aberta
-        let session = sessions.get(instanceId);
-        if (!session || session.state.status !== "open") {
-          session = sessions.get("default");
-        }
-        if (!session || session.state.status !== "open") {
-          session = Array.from(sessions.values()).find((s) => s.state.status === "open");
-        }
-
-        if (!session || !session.sock) {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: false, error: "Nenhum WhatsApp conectado no momento." }));
-          return;
-        }
-
-        const rawTo = payload.to || payload.number || payload.phone;
-        const jid = formatTargetJid(rawTo);
-        const text = payload.text || payload.body || payload.caption || "";
-        const type = payload.type || (payload.buttons ? "buttons" : payload.sections ? "list" : "text");
-
-        let ok = false;
-
-        // Disparo de Mídia (ex: QR Code PIX em foto separada)
-        if (payload.media && payload.media.base64) {
-          const buffer = Buffer.from(payload.media.base64.replace(/^data:[^;]+;base64,/, ""), "base64");
-          const target = await resolveJid(session.sock, jid);
-          await session.sock.sendMessage(target, {
-            image: buffer,
-            caption: text || payload.media.caption || "",
-            mimetype: payload.media.mimetype || "image/png",
-          });
-          ok = true;
-        } else if (type === "buttons" || payload.buttons) {
-          ok = await session.sendButtonsMessage(jid, {
-            text,
-            footer: payload.footer,
-            buttons: payload.buttons,
-          });
-        } else if (type === "list" || payload.sections) {
-          ok = await session.sendListMessage(jid, {
-            text,
-            title: payload.title,
-            footer: payload.footer,
-            buttonText: payload.buttonText,
-            sections: payload.sections,
-            rows: payload.rows,
-          });
-        } else if (type === "pix_copy") {
-          ok = await session.sendCopyButtonMessage(
-            jid,
-            payload.pix_code || "Consulte o suporte para chave PIX",
-            text,
-          );
-        } else {
-          ok = await session.sendTextSafe(jid, text);
-        }
-
-        if (!ok) {
-          res.writeHead(502, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: false, error: "Falha ao entregar a mensagem no WhatsApp." }));
-          return;
-        }
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: true, instance: session.instanceId }));
-      } catch (e) {
-        console.error("Erro no envio Baileys:", e.message);
-        res.writeHead(500, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: false, error: e.message }));
+      // A mensagem usa exclusivamente a sessão solicitada: nunca troca para outro revendedor.
+      const session = sessions.get(instanceId);
+      if (!session || session.state.status !== "open" || !session.sock) {
+        sendJson(res, 409, { ok: false, error: "A instância solicitada não está conectada." }); return;
       }
-    });
+
+      const jid = formatTargetJid(payload.to || payload.number || payload.phone);
+      if (!jid) { sendJson(res, 400, { ok: false, error: "Número individual inválido; grupos e LIDs não são destinos aceitos." }); return; }
+      const text = String(payload.text || payload.body || payload.caption || "");
+      if (text.length > 12000) { sendJson(res, 413, { ok: false, error: "Mensagem muito grande." }); return; }
+
+      const type = payload.type || (payload.buttons ? "buttons" : payload.sections ? "list" : "text");
+      let ok = false;
+      if (payload.media?.base64) {
+        const encoded = String(payload.media.base64).replace(/^data:[^;]+;base64,/, "");
+        if (!/^[A-Za-z0-9+/]*={0,2}$/.test(encoded) || encoded.length > 7 * 1024 * 1024) {
+          sendJson(res, 400, { ok: false, error: "Arquivo de mídia inválido ou muito grande." }); return;
+        }
+        const buffer = Buffer.from(encoded, "base64");
+        if (!buffer.length || buffer.length > 5 * 1024 * 1024) {
+          sendJson(res, 400, { ok: false, error: "Arquivo de mídia inválido ou muito grande." }); return;
+        }
+        await session.sock.sendMessage(await resolveJid(session.sock, jid), {
+          image: buffer, caption: text || payload.media.caption || "", mimetype: payload.media.mimetype || "image/png",
+        });
+        ok = true;
+      } else if (type === "buttons" || payload.buttons) {
+        ok = await session.sendButtonsMessage(jid, { text, footer: payload.footer, buttons: payload.buttons });
+      } else if (type === "list" || payload.sections) {
+        ok = await session.sendListMessage(jid, {
+          text, title: payload.title, footer: payload.footer, buttonText: payload.buttonText,
+          sections: payload.sections, rows: payload.rows,
+        });
+      } else if (type === "pix_copy") {
+        if (!payload.pix_code) { sendJson(res, 400, { ok: false, error: "Código Pix não informado." }); return; }
+        ok = await session.sendCopyButtonMessage(jid, String(payload.pix_code), text);
+      } else if (text.trim()) {
+        ok = await session.sendTextSafe(jid, text);
+      } else {
+        sendJson(res, 400, { ok: false, error: "Informe uma mensagem para enviar." }); return;
+      }
+
+      if (!ok) { sendJson(res, 502, { ok: false, error: "Falha ao entregar mensagem." }); return; }
+      sendJson(res, 200, { ok: true, instance: session.instanceId });
+    } catch (error) { sendJson(res, error?.statusCode || 400, { ok: false, error: error?.message || "Falha ao enviar." }); }
     return;
   }
 
-  res.writeHead(404, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ error: "Endpoint não encontrado" }));
+  sendJson(res, 404, { ok: false, error: "Endpoint não encontrado." });
 });
 
-server.listen(HTTP_PORT, "0.0.0.0", async () => {
-  console.log(`🚀 Motor WhatsApp Baileys Nativo Multi-Instância ativo na porta ${HTTP_PORT}`);
+server.listen(HTTP_PORT, HTTP_HOST, async () => {
+  console.log(`🚀 Motor WhatsApp Baileys ativo em ${HTTP_HOST}:${HTTP_PORT}`);
   console.log(`🔗 Webhook IPTV vinculado à porta ${WEB_SERVER_PORT}`);
   await autoStartSavedSessions();
 });

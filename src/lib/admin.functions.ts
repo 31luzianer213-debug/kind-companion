@@ -22,13 +22,18 @@ export const getAdminSettings = createServerFn({ method: "GET" })
       return { ok: false as const, error: "Acesso restrito ao administrador do sistema." };
     }
     const settings = await getSystemSettings();
+    const { isModernMisticCredentialPair } = await import("./misticpay.server");
+    const misticReady = Boolean(
+      settings?.misticpay_client_id && settings?.misticpay_client_secret &&
+      isModernMisticCredentialPair(settings.misticpay_client_id, settings.misticpay_client_secret),
+    );
     return {
       ok: true as const,
       settings: {
         saas_provider: settings?.saas_provider ?? "mercadopago",
         has_token: Boolean(settings?.mercadopago_token),
-        has_mistic: Boolean(settings?.misticpay_client_id && settings?.misticpay_client_secret),
-        mistic_client_id_hint: settings?.misticpay_client_id ? `${settings.misticpay_client_id.slice(0, 6)}…` : "",
+        has_mistic: misticReady,
+        mistic_client_id_hint: misticReady ? `${settings!.misticpay_client_id!.slice(0, 6)}…` : "",
         admin_email: settings?.admin_email ?? "",
       },
     };
@@ -46,8 +51,20 @@ export const saveAdminSettings = createServerFn({ method: "POST" })
     }
     const payload: Record<string, unknown> = { id: "global" };
     if (data.provider === "mercadopago" || data.provider === "misticpay") payload.saas_provider = data.provider;
-    if (typeof data.misticpay_client_id === "string" && data.misticpay_client_id.trim()) payload.misticpay_client_id = data.misticpay_client_id.trim();
-    if (typeof data.misticpay_client_secret === "string" && data.misticpay_client_secret.trim()) payload.misticpay_client_secret = data.misticpay_client_secret.trim();
+    const hasMisticId = typeof data.misticpay_client_id === "string" && data.misticpay_client_id.trim();
+    const hasMisticSecret = typeof data.misticpay_client_secret === "string" && data.misticpay_client_secret.trim();
+    if (hasMisticId !== hasMisticSecret) {
+      return { ok: false as const, error: "Informe o Client ID e o Client Secret da MisticPay juntos." };
+    }
+    if (hasMisticId && hasMisticSecret) {
+      const clientId = data.misticpay_client_id!.trim();
+      const clientSecret = data.misticpay_client_secret!.trim();
+      if (!/^pk_[A-Za-z0-9_-]{8,}$/.test(clientId) || !/^sk_[A-Za-z0-9_-]{8,}$/.test(clientSecret)) {
+        return { ok: false as const, error: "Use uma Chave de Acesso MisticPay atual (Client ID pk_… e Client Secret sk_…). As credenciais antigas ci_/cs_ foram desativadas." };
+      }
+      payload.misticpay_client_id = clientId;
+      payload.misticpay_client_secret = clientSecret;
+    }
     // Sem admin_email no banco nem ADMIN_EMAIL no ambiente, NINGUÉM é administrador:
     // por isso o campo pode ser definido aqui, direto pelo painel.
     if (typeof data.admin_email === "string" && data.admin_email.trim()) {
@@ -881,17 +898,28 @@ export const testMisticPayCreds = createServerFn({ method: "POST" })
     const clientId = data.clientId?.trim();
     const clientSecret = data.clientSecret?.trim();
     if (!clientId || !clientSecret) return { ok: false as const, error: "Preencha o Client ID e o Client Secret." };
-    const basic = !(clientId.startsWith("ci_") || clientSecret.startsWith("cs_"));
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (basic) headers.Authorization = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`;
-    else { headers.ci = clientId; headers.cs = clientSecret; }
+    if (!/^pk_[A-Za-z0-9_-]{8,}$/.test(clientId) || !/^sk_[A-Za-z0-9_-]{8,}$/.test(clientSecret)) {
+      return { ok: false as const, error: "Use a Chave de Acesso atual pk_/sk_. Credenciais ci_/cs_ foram desativadas." };
+    }
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+    };
     try {
       const res = await fetch("https://api.misticpay.com/api/transactions/check", {
         method: "POST",
         headers,
         body: JSON.stringify({ transactionId: "0" }),
+        signal: AbortSignal.timeout(8000),
       });
-      if (res.status === 401 || res.status === 403) return { ok: false as const, error: "A MisticPay recusou essas credenciais." };
+      if (res.status === 401 || res.status === 403) return { ok: false as const, error: "A MisticPay recusou as credenciais ou a permissão TRANSACTION_READ." };
+      if (res.status === 404) {
+        const responseBody = await res.json().catch(() => ({}));
+        if (responseBody?.code === "TRANSACTION_NOT_FOUND") {
+          return { ok: true as const, message: "Chave de Acesso autenticada e com permissão para consultar transações." };
+        }
+      }
+      if (!res.ok) return { ok: false as const, error: `A MisticPay respondeu HTTP ${res.status}. Verifique os escopos TRANSACTION_CREATE e TRANSACTION_READ.` };
       return { ok: true as const, message: "Credenciais aceitas pela MisticPay." };
     } catch {
       return { ok: false as const, error: "Não foi possível falar com a MisticPay." };

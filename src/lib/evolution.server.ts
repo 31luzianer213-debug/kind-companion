@@ -3,8 +3,9 @@
  * Quando a Evolution está configurada, cada usuário opera sua própria instância.
  */
 
-const BAILEYS_PORT = process.env.BAILEYS_PORT ? Number(process.env.BAILEYS_PORT) : 3001;
-const BAILEYS_URL = process.env.BAILEYS_API_URL || `http://127.0.0.1:${BAILEYS_PORT}`;
+import { BAILEYS_API_URL, baileysFetch } from "./baileys-client.server";
+
+const BAILEYS_URL = BAILEYS_API_URL;
 
 import {
   isTenantEvolutionEnabled,
@@ -36,7 +37,7 @@ export async function fetchState(userId?: string): Promise<"open" | "connecting"
   }
   try {
     const instance = instanceNameFor(userId);
-    const res = await fetch(`${BAILEYS_URL}/api/status?instance=${encodeURIComponent(instance)}`, {
+    const res = await baileysFetch(`/api/status?instance=${encodeURIComponent(instance)}`, {
       signal: AbortSignal.timeout(2500),
     });
     if (res.ok) {
@@ -72,7 +73,7 @@ export async function connectInstance(userId?: string, publicAppUrl?: string, _f
 
   const instance = instanceNameFor(userId);
   try {
-    const res = await fetch(`${BAILEYS_URL}/api/connect`, {
+    const res = await baileysFetch(`/api/connect`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ instance, mode: "qr" }),
@@ -99,7 +100,7 @@ export async function deleteInstance(userId?: string) {
 
   const instance = instanceNameFor(userId);
   try {
-    await fetch(`${BAILEYS_URL}/api/logout`, {
+    await baileysFetch(`/api/logout`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ instance }),

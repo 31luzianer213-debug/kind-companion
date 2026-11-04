@@ -40,27 +40,65 @@ nano .env
 Configurações recomendadas no `.env`:
 ```env
 # Supabase
-SUPABASE_URL="https://tcwhewlfwetlhywpghtk.supabase.co"
-SUPABASE_PUBLISHABLE_KEY="sua_chave_aqui"
-SUPABASE_SERVICE_ROLE_KEY="sua_service_role_key_aqui"
+SUPABASE_URL="https://SEU-PROJETO.supabase.co"
+SUPABASE_PUBLISHABLE_KEY="SUA_CHAVE_PUBLICA"
+SUPABASE_SERVICE_ROLE_KEY="SUA_CHAVE_PRIVADA"
 
-# WhatsApp (Evolution API)
-EVOLUTION_API_URL="https://cobrancas-whatsapp.shop"
-EVOLUTION_API_KEY="evolutionApiGlobalTokenSecure2026"
-EVOLUTION_INSTANCE="iptv_ccd7362726074f97"
+# WhatsApp (Evolution API) — use os dados da sua própria instância
+EVOLUTION_API_URL="https://SUA-EVOLUTION-API"
+EVOLUTION_API_KEY="SUA_CHAVE_DA_EVOLUTION"
+
+# Baileys local (a porta 3001 não deve ser exposta à internet)
+BAILEYS_API_HOST="127.0.0.1"
+BAILEYS_API_TOKEN=""
+WHATSAPP_WEBHOOK_TOKEN="GERE_UM_TOKEN_LONGO_ALEATORIO"
+
+# Webhooks de pagamento e rotinas protegidas
+MISTICPAY_WEBHOOK_SECRET="SEGREDO_ALEATORIO_COM_32_OU_MAIS_CARACTERES"
+SAAS_MERCADOPAGO_WEBHOOK_SECRET="SEGREDO_HMAC_COPIADO_DO_MERCADO_PAGO"
+BILLING_CRON_SECRET="SEGREDO_ALEATORIO_COM_32_OU_MAIS_CARACTERES"
 
 # Servidor
 PORT=3000
 NODE_ENV=production
 ```
 
-### Passo 3: Compilar para Produção (Preset VPS)
+### Passo 3: Aplicar as migrações do banco
+
+Antes de iniciar a versão nova, aplique as migrações pendentes do Supabase na ordem do diretório:
+
+```bash
+supabase db push
+```
+
+Esta revisão adiciona as migrações `20261104000000_atomic_saas_payment_activation.sql`,
+`20261104001000_bot_order_idempotency.sql` e
+`20261104002000_whatsapp_bot_trial_claims.sql` e
+`20261104003000_invoice_creation_idempotency.sql`. Elas são necessárias para a liquidação
+atômica da assinatura SaaS, a reutilização segura de pedidos pendentes e a trava/recuperação
+de testes grátis do WhatsApp. Não publique o código sem aplicar as migrações.
+
+### Segredos e rotação
+
+Gere segredos longos com pelo menos 32 caracteres (por exemplo, usando
+`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).
+Configure `MISTICPAY_WEBHOOK_SECRET`, `SAAS_MERCADOPAGO_WEBHOOK_SECRET`,
+`BILLING_CRON_SECRET` e `WHATSAPP_WEBHOOK_TOKEN` no `.env` da VPS. O segredo
+HMAC do Mercado Pago SaaS também precisa ser copiado da configuração de Webhooks
+no painel do Mercado Pago. O Asaas usa o Auth Token configurado na tela de pagamentos.
+
+**Importante:** o repositório já teve um arquivo `.env` versionado. A remoção do arquivo
+na branch atual não apaga versões antigas do histórico Git. Antes de produção, revogue e
+gere novamente a chave secreta da Evolution API (e qualquer outra credencial de API que
+tenha sido armazenada no histórico). Não reutilize valores antigos.
+
+### Passo 4: Compilar para Produção (Preset VPS)
 ```bash
 npm install --legacy-peer-deps
 npm run build:vps
 ```
 
-### Passo 4: Iniciar com o PM2
+### Passo 5: Iniciar com o PM2
 ```bash
 pm2 start ecosystem.config.cjs
 pm2 save
@@ -104,10 +142,13 @@ sudo certbot --nginx -d seudominio.com -d www.seudominio.com
 ## 🤖 5. Conexão do WhatsApp & Robô Automático
 
 ### Webhook na Evolution API
-Quando rodando na VPS com domínio ou IP público, a Evolution API entrega todas as mensagens diretamente no endpoint:
-`https://seudominio.com/api/public/hooks/whatsapp-bot`
+Quando o provedor é Evolution API, configure o webhook por revendedor usando o link exibido em **WhatsApp → Conexão**. Quando o provedor é Baileys, o daemon encaminha as mensagens ao backend em `127.0.0.1` e envia `WHATSAPP_WEBHOOK_TOKEN` no cabeçalho `x-webhook-token`. Não cadastre manualmente um webhook sem o identificador da conta e sem o token.
 
-### Prevenção Total de Duplicatas
+### Proteção do daemon Baileys
+
+O daemon escuta em `127.0.0.1` por padrão e não habilita CORS público. Não publique a porta `3001` no firewall nem no Nginx. Caso precise escutar em uma interface externa, configure `BAILEYS_API_HOST` e defina obrigatoriamente `BAILEYS_API_TOKEN`; o servidor web envia esse token nas chamadas internas. O webhook interno também exige `WHATSAPP_WEBHOOK_TOKEN`. Se o backend ficar indisponível, o daemon não inventa testes, preços ou códigos Pix: a mensagem não é processada e o erro aparece no log.
+
+### Prevenção de mensagens duplicadas
 O sistema possui arquitetura unificada com dois mecanismos de proteção:
 1. **Deduplicação por Stanza ID (`messageId`)**: Se a Evolution API emitir mais de um evento para o mesmo pacote, o ID é descartado imediatamente.
 2. **Debounce de 4 Segundos por Telefone**: Quando o Baileys emite eventos simultâneos para `@lid` e `@s.whatsapp.net`, o sistema resolve o LID para o telefone real e ignora qualquer disparo redundante na janela de 4 segundos.

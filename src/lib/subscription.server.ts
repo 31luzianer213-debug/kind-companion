@@ -1,7 +1,8 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createMercadoPagoPixPayment } from "./mercadopago.server";
 import { getMercadoPagoToken, getMisticCreds, getSaasProvider, isAdminEmail } from "./system-settings.server";
-import { checkMisticTransaction, createMisticPix, type MisticTransactionState } from "./misticpay.server";
+import { fetchMisticTransaction, createMisticPix } from "./misticpay.server";
+import { buildMisticWebhookUrl, validateMisticPaymentTransaction } from "./misticpay-webhook.server";
 import { publicAppUrl } from "./whatsapp-connection.server";
 
 export type SubscriptionState = "active" | "trialing" | "grace" | "blocked";
@@ -181,27 +182,40 @@ export async function createSubscriptionPixServer(params: {
   const discount = months >= 12 ? 0.8 : months >= 6 ? 0.9 : 1;
   const amount = Number((plan.price_monthly * months * discount).toFixed(2));
 
-  // Reaproveita um Pix pendente recente do mesmo plano/período (evita cobranças duplicadas).
-  const { data: pending } = await supabaseAdmin
-    .from("saas_payments")
-    .select("*")
-    .eq("user_id", params.userId)
-    .eq("plan_id", plan.id)
-    .eq("months", months)
-    .eq("status", "pending")
-    .eq("provider", provider)
-    .gte("created_at", new Date(Date.now() - 30 * 60_000).toISOString())
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (pending?.pix_code) return { ok: true as const, payment: pending, amount };
-
-  const { data: payment, error } = await supabaseAdmin
-    .from("saas_payments")
-    .insert({ user_id: params.userId, plan_id: plan.id, amount, months, status: "pending", provider })
-    .select("*")
-    .single();
-  if (error || !payment) return { ok: false as const, error: error?.message || "Não foi possível registrar o pagamento." };
+  // Cria ou reutiliza o Pix pendente de forma atômica por revendedor/plano/período.
+  const { data: paymentData, error: paymentError } = await supabaseAdmin.rpc(
+    "get_or_create_saas_pending_payment",
+    {
+      p_user_id: params.userId,
+      p_plan_id: plan.id,
+      p_months: months,
+      p_provider: provider,
+      p_amount: amount,
+    },
+  );
+  if (paymentError || !paymentData || typeof paymentData !== "object") {
+    return {
+      ok: false as const,
+      error: paymentError?.message || "Não foi possível registrar o pagamento.",
+    };
+  }
+  const payment = paymentData as {
+    id: string;
+    user_id: string;
+    plan_id: string;
+    amount: number;
+    months: number;
+    status: string;
+    provider: string;
+    provider_payment_id: string | null;
+    pix_code: string | null;
+    pix_qr_base64: string | null;
+    ticket_url: string | null;
+    approved_at: string | null;
+    created_at: string;
+    updated_at: string;
+  };
+  if (payment.pix_code) return { ok: true as const, payment, amount };
 
   const description = `Sigma Control - Plano ${plan.name} (${months} mes${months > 1 ? "es" : ""})`;
   const pix =
@@ -212,7 +226,7 @@ export async function createSubscriptionPixServer(params: {
           payerDocument: cpf,
           transactionId: `saas_${payment.id}`,
           description,
-          webhookUrl: `${publicAppUrl()}/api/public/hooks/saas-misticpay`,
+          webhookUrl: buildMisticWebhookUrl(publicAppUrl(), process.env.MISTICPAY_WEBHOOK_SECRET),
         }).then((r) => (r.ok ? { ok: true as const, paymentId: r.paymentId, qrCode: r.qrCode, qrCodeBase64: r.qrCodeBase64, ticketUrl: null } : { ok: false as const, error: r.error }))
       : await createMercadoPagoPixPayment({
           token: (await getMercadoPagoToken())!,
@@ -241,59 +255,31 @@ export async function createSubscriptionPixServer(params: {
 
 /** Ativa/renova a assinatura a partir de um pagamento aprovado (idempotente). */
 export async function activateSubscriptionFromPayment(paymentId: string) {
-  const { data: payment } = await supabaseAdmin.from("saas_payments").select("*").eq("id", paymentId).maybeSingle();
-  if (!payment) return { ok: false as const, error: "Pagamento não encontrado." };
-  if (payment.status === "approved") return { ok: true as const, alreadyApproved: true };
+  const { data, error } = await supabaseAdmin.rpc("activate_saas_payment_from_payment", {
+    p_payment_id: paymentId,
+  });
 
-  const { data: sub } = await supabaseAdmin.from("saas_subscriptions").select("*").eq("user_id", payment.user_id).maybeSingle();
-  const now = Date.now();
-  const currentEnd = sub?.status === "active" && sub.current_period_end ? new Date(sub.current_period_end).getTime() : 0;
-  const base = currentEnd > now && sub?.plan_id === payment.plan_id ? currentEnd : now;
-  const periodEnd = new Date(base + Number(payment.months || 1) * 30 * 86_400_000).toISOString();
+  if (error) {
+    console.error("Falha na liquidação transacional da assinatura SaaS:", error);
+    return { ok: false as const, error: "Não foi possível ativar a assinatura de forma segura. A cobrança continuará pendente para nova conferência." };
+  }
 
-  // O plano do pagamento pode ter sido excluído do catálogo. Antes isso fazia o
-  // upsert falhar por chave estrangeira e o acesso NUNCA era liberado, mesmo com
-  // o dinheiro na conta — agora cai para um plano válido.
-  const planExists = async (id?: string | null) => {
-    if (!id) return false;
-    const { data } = await supabaseAdmin.from("saas_plans").select("id").eq("id", id).maybeSingle();
-    return Boolean(data?.id);
+  const result = data as {
+    ok?: boolean;
+    alreadyApproved?: boolean;
+    periodEnd?: string;
+    error?: string;
+  } | null;
+
+  if (!result?.ok) {
+    return { ok: false as const, error: result?.error || "O pagamento não pôde ser liquidado." };
+  }
+
+  return {
+    ok: true as const,
+    alreadyApproved: Boolean(result.alreadyApproved),
+    periodEnd: result.periodEnd ?? null,
   };
-  let planId = payment.plan_id as string;
-  if (!(await planExists(planId))) {
-    if (await planExists(sub?.plan_id)) {
-      planId = sub!.plan_id as string;
-    } else {
-      const { data: fallback } = await supabaseAdmin
-        .from("saas_plans")
-        .select("id")
-        .eq("active", true)
-        .order("sort_order")
-        .limit(1)
-        .maybeSingle();
-      if (!fallback?.id) return { ok: false as const, error: "Nenhum plano ativo para vincular ao pagamento." };
-      planId = fallback.id;
-    }
-  }
-
-  let { error: subError } = await supabaseAdmin
-    .from("saas_subscriptions")
-    .upsert({ user_id: payment.user_id, plan_id: planId, status: "active", current_period_end: periodEnd }, { onConflict: "user_id" });
-  if (subError && sub?.plan_id) {
-    // Segunda tentativa: mantém o plano que já estava na assinatura.
-    ({ error: subError } = await supabaseAdmin
-      .from("saas_subscriptions")
-      .upsert({ user_id: payment.user_id, plan_id: sub.plan_id, status: "active", current_period_end: periodEnd }, { onConflict: "user_id" }));
-  }
-  if (subError) return { ok: false as const, error: `${subError.message} (avise o suporte: o pagamento está aprovado)` };
-
-  await supabaseAdmin
-    .from("saas_payments")
-    .update({ status: "approved", approved_at: new Date().toISOString() })
-    .eq("id", payment.id)
-    .neq("status", "approved");
-
-  return { ok: true as const, periodEnd };
 }
 
 /**
@@ -369,27 +355,34 @@ export async function reconcileSaasPayment(paymentId: string, userId?: string) {
     const references = Array.from(
       new Set([payment.provider_payment_id, `saas_${payment.id}`].filter((r): r is string => Boolean(r))),
     );
-    let state: MisticTransactionState = null;
+    let verified: Awaited<ReturnType<typeof fetchMisticTransaction>> = null;
+    let lastMismatch: string | null = null;
+
     for (const reference of references) {
-      const found = await checkMisticTransaction(creds, reference);
-      if (found) {
-        state = found;
+      const candidate = await fetchMisticTransaction(creds, reference);
+      if (!candidate) continue;
+      const mismatch = validateMisticPaymentTransaction(candidate, reference, Number(payment.amount));
+      if (!mismatch) {
+        verified = candidate;
         break;
       }
+      lastMismatch = mismatch;
     }
 
-    if (state === "paid") {
+    if (!verified) {
+      if (lastMismatch) {
+        return { ok: false as const, error: `A transação MisticPay não corresponde a esta assinatura (${lastMismatch}).` };
+      }
+      return { ok: false as const, error: "Não foi possível consultar a transação MisticPay agora." };
+    }
+
+    if (verified.state === "paid") {
       const result = await activateSubscriptionFromPayment(payment.id);
       return result.ok ? { ok: true as const, status: "approved" as const } : { ok: false as const, error: result.error };
     }
-    if (state === "failed") {
+    if (verified.state === "failed") {
       await supabaseAdmin.from("saas_payments").update({ status: "cancelled" }).eq("id", payment.id).neq("status", "approved");
       return { ok: true as const, status: "cancelled" as const };
-    }
-    // null = não foi possível consultar agora. Avisa para que o chamador
-    // (webhook) responda com erro e receba a notificação de novo.
-    if (state === null) {
-      return { ok: false as const, error: "Não foi possível confirmar o pagamento na MisticPay agora." };
     }
     return { ok: true as const, status: payment.status };
   }

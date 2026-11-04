@@ -9,6 +9,7 @@ export type PaymentSettingsPayload = {
   payment_provider?: string;
   mercadopago_token?: string;
   asaas_token?: string;
+  asaas_webhook_token?: string;
   asaas_env?: string;
 };
 
@@ -54,10 +55,12 @@ export const getPaymentSettings = createServerFn({ method: "POST" })
       payment_provider: dbData?.payment_provider || metaPayment?.payment_provider || localPayment?.payment_provider || "pix",
       mercadopago_token: dbData?.mercadopago_token || metaPayment?.mercadopago_token || localPayment?.mercadopago_token || "",
       asaas_token: dbData?.asaas_token || metaPayment?.asaas_token || localPayment?.asaas_token || "",
+      // Auth Token de webhook é secreto e só vem do banco/armazenamento server-side.
+      asaas_webhook_token: dbData?.asaas_webhook_token || localPayment?.asaas_webhook_token || "",
       asaas_env: dbData?.asaas_env || metaPayment?.asaas_env || localPayment?.asaas_env || "production",
     };
 
-    if (resolvedSettings.mercadopago_token || resolvedSettings.pix_key) {
+    if (resolvedSettings.mercadopago_token || resolvedSettings.asaas_token || resolvedSettings.asaas_webhook_token || resolvedSettings.pix_key) {
       try {
         const { writeLocalPaymentSettings } = await import("./bot.server");
         writeLocalPaymentSettings(userId, resolvedSettings);
@@ -65,7 +68,7 @@ export const getPaymentSettings = createServerFn({ method: "POST" })
     }
 
     // Os tokens dos gateways nunca são enviados ao navegador.
-    const { mercadopago_token, asaas_token, ...publicSettings } = resolvedSettings;
+    const { mercadopago_token, asaas_token, asaas_webhook_token, ...publicSettings } = resolvedSettings;
 
     return {
       ok: true as const,
@@ -73,6 +76,8 @@ export const getPaymentSettings = createServerFn({ method: "POST" })
         ...publicSettings,
         mercadopago_token: "",
         asaas_token: "",
+        asaas_webhook_token: "",
+        has_asaas_webhook_token: Boolean(asaas_webhook_token),
         has_mercadopago_token: Boolean(mercadopago_token),
         has_asaas_token: Boolean(asaas_token),
       },
@@ -93,12 +98,34 @@ export const savePaymentSettings = createServerFn({ method: "POST" })
     try {
       const { data: row } = await supabase
         .from("whatsapp_settings")
-        .select("mercadopago_token, asaas_token")
+        .select("mercadopago_token, asaas_token, asaas_webhook_token")
         .eq("user_id", userId)
         .maybeSingle();
       existing = row ?? null;
     } catch {
       existing = null;
+    }
+
+    const incomingWebhookToken = (data.asaas_webhook_token ?? "").trim();
+    const isValidWebhookToken = (value: string) =>
+      value.length >= 32 && value.length <= 255 && !/\s/.test(value);
+    if (incomingWebhookToken && !isValidWebhookToken(incomingWebhookToken)) {
+      return { ok: false as const, error: "O Auth Token do Asaas deve ter entre 32 e 255 caracteres, sem espaços." };
+    }
+    const asaasWebhookToken = incomingWebhookToken || existing?.asaas_webhook_token || "";
+    const asaasApiToken = (data.asaas_token ?? "").trim() || existing?.asaas_token || "";
+    const asaasEnvironment = data.asaas_env ?? "production";
+
+    if (data.payment_provider === "asaas") {
+      if (!asaasApiToken) {
+        return { ok: false as const, error: "Configure a Chave de API do Asaas antes de ativar o recebimento automático." };
+      }
+      if (!isValidWebhookToken(asaasWebhookToken)) {
+        return { ok: false as const, error: "Configure um Auth Token válido do Webhook Asaas (32 a 255 caracteres, sem espaços)." };
+      }
+    }
+    if (asaasEnvironment !== "production" && asaasEnvironment !== "sandbox") {
+      return { ok: false as const, error: "Ambiente Asaas inválido." };
     }
 
     const payload = {
@@ -109,8 +136,9 @@ export const savePaymentSettings = createServerFn({ method: "POST" })
       payment_link: (data.payment_link ?? "").trim(),
       payment_provider: data.payment_provider ?? "pix",
       mercadopago_token: (data.mercadopago_token ?? "").trim() || existing?.mercadopago_token || "",
-      asaas_token: (data.asaas_token ?? "").trim() || existing?.asaas_token || "",
-      asaas_env: data.asaas_env ?? "production",
+      asaas_token: asaasApiToken,
+      asaas_webhook_token: asaasWebhookToken,
+      asaas_env: asaasEnvironment,
     };
 
     // 0. Salva no disco imediatamente para o Bot acessar na hora
@@ -136,6 +164,12 @@ export const savePaymentSettings = createServerFn({ method: "POST" })
       if (!error) dbSaved = true;
     } catch {
       dbSaved = false;
+    }
+
+    // Asaas só pode ser ativado se os segredos foram persistidos no banco,
+    // pois o webhook usa as credenciais server-side para verificar o pagamento.
+    if (!dbSaved && data.payment_provider === "asaas") {
+      return { ok: false as const, error: "Não foi possível salvar as credenciais do Asaas no banco. Verifique a tabela whatsapp_settings e tente novamente." };
     }
 
     // Se falhou por colunas faltantes, tenta salvar ao menos as colunas básicas de Pix
@@ -290,7 +324,7 @@ export const testAsaasConnection = createServerFn({ method: "POST" })
     const token = rawToken.replace(/^Bearer\s+/i, "").replace(/^["']|["']$/g, "").trim();
     if (!token) return { ok: false as const, error: "Informe o token do Asaas." };
 
-    const baseUrl = data.env === "sandbox" ? "https://sandbox.asaas.com/api/v3" : "https://api.asaas.com/v3";
+    const baseUrl = data.env === "sandbox" ? "https://api-sandbox.asaas.com/v3" : "https://api.asaas.com/v3";
     try {
       const res = await fetch(`${baseUrl}/myAccount`, {
         headers: { access_token: token },
