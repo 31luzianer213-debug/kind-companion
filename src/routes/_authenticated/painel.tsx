@@ -596,7 +596,7 @@ function Painel() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <p className="text-sm text-muted-foreground">{tabs.find((item) => item.value === tab)?.description}</p>
+        <div />
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="grid w-full grid-cols-3 sm:w-auto">
             {tabs.map((item) => (
