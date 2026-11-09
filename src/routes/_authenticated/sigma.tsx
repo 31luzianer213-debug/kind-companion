@@ -7,9 +7,12 @@ import { useState } from "react";
 import { toast } from "sonner";
 import {
   CheckCircle2,
+  ExternalLink,
   Eye,
   EyeOff,
+  KeyRound,
   Loader2,
+  MonitorPlay,
   Plus,
   RefreshCw,
   Server,
@@ -522,6 +525,102 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
   );
 }
 
+const TBM_PA_URL = "https://cms.gestorspace.net";
+const TBM_PA_CREDENTIALS = { username: "Karen27", password: "Kary26#" };
+
+function TbmPaPanel() {
+  const [iframeKey, setIframeKey] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <div className="mx-auto w-full space-y-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
+        <Card className="flex min-h-[480px] flex-col overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border/60 pb-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <MonitorPlay className="size-4 text-primary" /> TBM PA
+              </CardTitle>
+              <CardDescription className="font-mono text-[11px]">{TBM_PA_URL}</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setIframeKey((k) => k + 1)} className="gap-1.5">
+              <RefreshCw className="size-3.5" /> Recarregar
+            </Button>
+          </CardHeader>
+          <CardContent className="min-h-0 flex-1 p-0">
+            <iframe
+              key={iframeKey}
+              src={TBM_PA_URL}
+              title="TBM PA — GestorSpace CMS"
+              className="h-full min-h-[420px] w-full border-0"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals"
+            />
+          </CardContent>
+        </Card>
+
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <KeyRound className="size-4 text-primary" /> Acesso TBM PA
+              </CardTitle>
+              <CardDescription className="text-[11px]">
+                Use estas credenciais na área de login do TBM PA acima.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2.5">
+              <div className="flex items-center justify-between rounded-md bg-muted/45 p-3 text-xs">
+                <span className="text-muted-foreground">Usuário</span>
+                <span className="font-mono font-bold">{TBM_PA_CREDENTIALS.username}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-md bg-muted/45 p-3 text-xs">
+                <span className="text-muted-foreground">Senha</span>
+                <span className="flex items-center gap-2">
+                  <span className={`font-mono font-bold ${showPassword ? "" : "tracking-widest"}`}>
+                    {showPassword ? TBM_PA_CREDENTIALS.password : "••••••••"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  </button>
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">O que é o TBM PA</CardTitle>
+              <CardDescription className="text-[11px]">
+                Painel TBM PA (cms.gestorspace.net), acessado pelo próprio Sigma Control.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                O TBM PA está embutido acima para você não precisar sair do Sigma Control. Se a área ficar
+                em branco, é porque o site bloqueia acesso dentro de outro site (iframe) — nesse caso, use
+                o botão abaixo para abrir em uma nova aba e fazer login por lá.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => window.open(TBM_PA_URL, "_blank", "noopener,noreferrer")}
+              >
+                <ExternalLink className="size-3.5" /> Abrir TBM PA em nova aba
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SigmaServersPage() {
   const [tab, setTab] = useState("servidores");
   return (
@@ -530,9 +629,10 @@ function SigmaServersPage() {
         <TabsList>
           <TabsTrigger value="servidores">Servidores</TabsTrigger>
           <TabsTrigger value="sincronizacao">Sincronização</TabsTrigger>
+          <TabsTrigger value="tbmpa">TBM PA</TabsTrigger>
         </TabsList>
       </Tabs>
-      {tab === "servidores" ? <SigmaServersSettings /> : <SigmaSyncPanel />}
+      {tab === "servidores" ? <SigmaServersSettings /> : tab === "sincronizacao" ? <SigmaSyncPanel /> : <TbmPaPanel />}
     </div>
   );
 }
