@@ -385,8 +385,10 @@ function extractServerMessage(payload: any, text: string): string | null {
 }
 
 const LOGIN_ENDPOINTS = [
-  "/api/auth/login",
+  // Painéis CMS de IPTV no estilo GestorSpace (cms.*): login clássico em /login
+  "/login",
   "/api/login",
+  "/api/auth/login",
   "/api/v1/auth/login",
   "/api/v1/login",
   "/api/v1/reseller/login",
@@ -395,7 +397,6 @@ const LOGIN_ENDPOINTS = [
   "/api/signin",
   "/api/session",
   "/api/auth",
-  "/login",
   "/api/token",
 ];
 
