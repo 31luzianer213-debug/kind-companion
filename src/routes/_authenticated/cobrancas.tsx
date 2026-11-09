@@ -32,7 +32,7 @@ import {
 export const Route = createFileRoute("/_authenticated/cobrancas")({
   head: () => ({
     meta: [
-      { title: "Monitor de Cobranças — Sigma Control" },
+      { title: "Cobranças a receber — Sigma Control" },
       { name: "description", content: "Acompanhe cobranças, pagamentos e renovações processadas automaticamente." },
     ],
   }),
@@ -158,7 +158,7 @@ function Cobrancas() {
       <div className="page-header flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="mb-1 flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">Monitor de Cobranças</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Cobranças a receber</h1>
             <Badge variant="secondary" className="font-mono text-xs">{metrics.openCount} em aberto</Badge>
           </div>
           <p className="max-w-3xl text-sm text-muted-foreground">

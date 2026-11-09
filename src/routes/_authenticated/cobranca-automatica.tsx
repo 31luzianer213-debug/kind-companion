@@ -16,9 +16,9 @@ import { Textarea } from "@/components/ui/textarea";
 export const Route = createFileRoute("/_authenticated/cobranca-automatica")({
   head: () => ({
     meta: [
-      { title: "Cobrança automática — Sigma Control" },
+      { title: "Régua de cobrança — Sigma Control" },
       { name: "description", content: "Ligue o envio automático e escreva a mensagem de cada etapa da cobrança." },
-      { property: "og:title", content: "Cobrança automática — Sigma Control" },
+      { property: "og:title", content: "Régua de cobrança — Sigma Control" },
       { property: "og:description", content: "Ligue o envio automático e escreva a mensagem de cada etapa da cobrança." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -159,7 +159,7 @@ function AutomaticBillingPage() {
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Automação</p>
           <h1 className="mt-1 flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
             <BellRing className="size-6 text-primary" />
-            Cobrança automática
+            Régua de cobrança
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Tudo sobre cobrança fica aqui: ligar o envio, escolher as etapas e escrever cada mensagem. O sistema nunca repete a mesma etapa para o mesmo vencimento.

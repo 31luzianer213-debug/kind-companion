@@ -50,28 +50,33 @@ export interface NavigationGroup {
 
 export const navigationGroups: NavigationGroup[] = [
   {
-    title: "Dia a dia",
+    title: "Operação",
     items: [
-      { to: "/painel", label: "Início", shortLabel: "Início", icon: LayoutDashboard, mobilePrimary: true },
+      { to: "/painel", label: "Painel", shortLabel: "Painel", icon: LayoutDashboard, mobilePrimary: true },
       { to: "/clientes", label: "Clientes", shortLabel: "Clientes", icon: Users, badgeKey: "clients", mobilePrimary: true },
-      { to: "/cobrancas", label: "Cobranças", shortLabel: "Cobranças", icon: Receipt, badgeKey: "invoices", mobilePrimary: true },
       { to: "/pedidos", label: "Pedidos", shortLabel: "Pedidos", icon: ShoppingBag, badgeKey: "orders" },
+      { to: "/cobrancas", label: "Cobranças a receber", shortLabel: "Cobranças", icon: Receipt, badgeKey: "invoices", mobilePrimary: true },
     ],
   },
   {
     title: "Automação",
     items: [
-      { to: "/whatsapp", label: "WhatsApp", shortLabel: "WhatsApp", icon: MessageCircle, badgeKey: "whatsapp", mobilePrimary: true },
-      { to: "/bot", label: "Atendimento automático", shortLabel: "Atendimento", icon: Bot },
-      { to: "/cobranca-automatica", label: "Cobrança automática", shortLabel: "Cobrança", icon: Timer },
+      { to: "/bot", label: "Robô WhatsApp", shortLabel: "Robô", icon: Bot },
+      { to: "/cobranca-automatica", label: "Régua de cobrança", shortLabel: "Régua", icon: Timer },
       { to: "/mensagens", label: "Modelos de mensagem", shortLabel: "Mensagens", icon: MessageSquareText },
+    ],
+  },
+  {
+    title: "Conexões",
+    items: [
+      { to: "/sigma", label: "Painel Sigma", shortLabel: "Sigma", icon: Server, badgeKey: "sigma" },
+      { to: "/whatsapp", label: "WhatsApp", shortLabel: "WhatsApp", icon: MessageCircle, badgeKey: "whatsapp", mobilePrimary: true },
+      { to: "/pagamentos", label: "Recebimentos (Pix)", shortLabel: "Pix", icon: CreditCard },
     ],
   },
   {
     title: "Conta",
     items: [
-      { to: "/sigma", label: "Painel Sigma", shortLabel: "Sigma", icon: Server, badgeKey: "sigma" },
-      { to: "/pagamentos", label: "Recebimentos", shortLabel: "Receber", icon: CreditCard },
       { to: "/assinatura", label: "Assinatura", shortLabel: "Plano", icon: Crown },
       { to: "/configuracoes", label: "Configurações", shortLabel: "Ajustes", icon: Settings },
       { to: "/admin", label: "Administração", shortLabel: "Admin", icon: ShieldCheck, adminOnly: true },
@@ -80,15 +85,15 @@ export const navigationGroups: NavigationGroup[] = [
 ];
 
 export const pageDescriptions: Record<string, string> = {
-  "/painel": "Resumo do mês e o que precisa da sua atenção hoje.",
+  "/painel": "Visão geral da sua operação em um só lugar.",
   "/clientes": "Todos os seus clientes, vencimentos e acessos.",
-  "/cobrancas": "Quem está devendo e quem já pagou.",
   "/pedidos": "Pedidos feitos pelos clientes no WhatsApp esperando aprovação.",
-  "/whatsapp": "Conecte o número que envia cobranças e responde clientes.",
-  "/bot": "Como o atendimento responde sozinho aos seus clientes.",
+  "/cobrancas": "Quem está devendo e quem já pagou.",
+  "/bot": "O robô que atende, vende e renova no WhatsApp.",
   "/cobranca-automatica": "Quando e como as cobranças são enviadas sozinhas.",
   "/mensagens": "Textos usados nas cobranças e avisos.",
   "/sigma": "Ligue seu painel Sigma para sincronizar e renovar acessos.",
+  "/whatsapp": "Conecte o número que envia cobranças e responde clientes.",
   "/pagamentos": "Chave Pix e formas de receber dos clientes.",
   "/assinatura": "Seu plano no Sigma Control.",
   "/configuracoes": "Dados da sua revenda e preferências.",
