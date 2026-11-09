@@ -391,13 +391,14 @@ const LOGIN_ENDPOINTS = [
   "/api/auth/login",
   "/api/v1/auth/login",
   "/api/v1/login",
-  "/api/v1/reseller/login",
-  "/api/reseller/login",
   "/api/sign-in",
   "/api/signin",
   "/api/session",
   "/api/auth",
   "/api/token",
+  // Painéis no estilo GestorSpace (cms.gestorspace.net): API REST em /api
+  "/api/reseller/login",
+  "/api/reseller/auth/login",
 ];
 
 /** Realiza login no painel Sigma e devolve o token de acesso. */
@@ -1003,6 +1004,14 @@ export async function listSigmaCustomers(config: SigmaConfig): Promise<SigmaCust
     "/api/subscribers",
     "/api/subresellers",
     "/api/members",
+    // Painéis no estilo GestorSpace (cms.gestorspace.net)
+    "/api/customer",
+    "/api/customers?scope=all",
+    "/api/reseller/clients",
+    "/api/reseller/customer",
+    "/api/reseller/resellers/me/customers",
+    "/api/resellers/lines",
+    "/api/reseller/lines?scope=all",
   );
 
   if (token && !token.startsWith("xtream:") && !token.startsWith("cookie:")) {
@@ -1563,6 +1572,15 @@ export async function createSigmaCustomer(
     "/api/user/create",
     "/api/user/add",
     "/api/subscribers",
+    // Painéis no estilo GestorSpace (cms.gestorspace.net)
+    "/api/customer",
+    "/api/line",
+    "/api/lines",
+    "/api/reseller/customer",
+    "/api/reseller/line",
+    "/api/reseller/lines",
+    "/api/resellers/customers",
+    "/api/reseller/customers",
   ];
 
   // Variantes de payload aceitas por diferentes builds do Sigma
